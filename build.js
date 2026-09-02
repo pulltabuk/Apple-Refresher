@@ -27,10 +27,7 @@ async function loadProducts() {
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     const { createClient } = require('@supabase/supabase-js');
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data, error } = await supabase.from('products').select('*');
-    if (error) throw error;
-    console.log(`Loaded ${data.length} products from Supabase.`);
-    return data;
+    const { data, error } = await supabase.from('products').select('*'); if (error) throw error; if (!data || data.length === 0) { console.log('Connected to Supabase but no products yet — building with sample data instead.'); return require('./src/data.sample').products; } console.log(`Loaded ${data.length} products from Supabase.`); return data;
   }
   console.log('No Supabase credentials set — building with sample data.');
   return require('./src/data.sample').products;
