@@ -296,46 +296,52 @@
 
   productForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const name = document.getElementById('name').value.trim();
-    const slug = editingId ? editingSlug : slugify(name);
+    try {
+      const name = document.getElementById('name').value.trim();
+      const slug = editingId ? editingSlug : slugify(name);
 
-    const payload = {
-      slug,
-      name,
-      category: document.getElementById('category').value.trim() || 'Other',
-      price: document.getElementById('price').value.trim() || null,
-      chip: document.getElementById('chip').value.trim() || null,
-      external_link: document.getElementById('external_link').value.trim() || null,
-      refresh_history: currentRefreshHistory,
-      rumor_note: document.getElementById('rumor_note').value.trim() || null,
-      featured: document.getElementById('featured').checked,
-      coming_soon: document.getElementById('coming_soon').checked,
-      expected_date: document.getElementById('expected_date').value || null,
-      discontinued: document.getElementById('discontinued').checked,
-      discontinued_date: document.getElementById('discontinued_date').value || null,
-      image_urls: currentImageUrls,
-      video_url: currentVideoUrl,
-    };
+      const payload = {
+        slug,
+        name,
+        category: document.getElementById('category').value.trim() || 'Other',
+        price: document.getElementById('price').value.trim() || null,
+        chip: document.getElementById('chip').value.trim() || null,
+        external_link: document.getElementById('external_link').value.trim() || null,
+        refresh_history: currentRefreshHistory,
+        rumor_note: document.getElementById('rumor_note').value.trim() || null,
+        featured: document.getElementById('featured').checked,
+        coming_soon: document.getElementById('coming_soon').checked,
+        expected_date: document.getElementById('expected_date').value || null,
+        discontinued: document.getElementById('discontinued').checked,
+        discontinued_date: document.getElementById('discontinued_date').value || null,
+        image_urls: currentImageUrls,
+        video_url: currentVideoUrl,
+      };
 
-    const result = editingId
-      ? await client.from('products').update(payload).eq('id', editingId)
-      : await client.from('products').insert(payload);
+      const result = editingId
+        ? await client.from('products').update(payload).eq('id', editingId)
+        : await client.from('products').insert(payload);
 
-    if (result.error) {
-      window.alert('Save failed: ' + result.error.message);
-      return;
+      if (result.error) {
+        console.error('Save failed:', result.error);
+        window.alert('Save failed: ' + result.error.message);
+        return;
+      }
+      productForm.reset();
+      editingId = null;
+      editingSlug = null;
+      currentRefreshHistory = [];
+      currentImageUrls = [];
+      currentVideoUrl = null;
+      renderRefreshHistory();
+      renderImageThumbs();
+      renderVideoStatus();
+      document.getElementById('form-title').textContent = 'Add product';
+      loadProducts();
+    } catch (err) {
+      console.error('Unexpected error while saving:', err);
+      window.alert('Something went wrong saving this product: ' + err.message + '. Check the browser console for the full error.');
     }
-    productForm.reset();
-    editingId = null;
-    editingSlug = null;
-    currentRefreshHistory = [];
-    currentImageUrls = [];
-    currentVideoUrl = null;
-    renderRefreshHistory();
-    renderImageThumbs();
-    renderVideoStatus();
-    document.getElementById('form-title').textContent = 'Add product';
-    loadProducts();
   });
 
   // --- File upload (shared: product photos, video, and the about image) ---
