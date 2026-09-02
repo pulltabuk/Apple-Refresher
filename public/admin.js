@@ -227,11 +227,18 @@
     });
   }
 
+  const DATE_PATTERN = /^\d{4}(-\d{2}(-\d{2})?)?$/;
+
   document.getElementById('add-refresh-date-btn').addEventListener('click', () => {
     const input = document.getElementById('new-refresh-date');
-    if (!input.value) return;
-    if (currentRefreshHistory.indexOf(input.value) === -1) {
-      currentRefreshHistory.push(input.value);
+    const value = input.value.trim();
+    if (!value) return;
+    if (!DATE_PATTERN.test(value)) {
+      window.alert('Enter a date as YYYY-MM-DD, YYYY-MM, or just YYYY.');
+      return;
+    }
+    if (currentRefreshHistory.indexOf(value) === -1) {
+      currentRefreshHistory.push(value);
       currentRefreshHistory.sort();
     }
     input.value = '';
@@ -300,6 +307,8 @@
     document.getElementById('discontinued_date').value = p.discontinued_date || '';
     document.getElementById('replaced_by').value = p.replaced_by || '';
     document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
+    document.getElementById('previous_model').value = p.previous_model || '';
+    document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     currentRefreshHistory = (p.refresh_history || []).slice();
     currentImageUrls = (p.image_urls && p.image_urls.length ? p.image_urls : p.image_url ? [p.image_url] : []).slice();
     currentVideoUrl = p.video_url || null;
@@ -351,6 +360,17 @@
       const name = document.getElementById('name').value.trim();
       const slug = editingId ? editingSlug : slugify(name);
 
+      const expectedDateRaw = document.getElementById('expected_date').value.trim();
+      const discontinuedDateRaw = document.getElementById('discontinued_date').value.trim();
+      if (expectedDateRaw && !DATE_PATTERN.test(expectedDateRaw)) {
+        window.alert('Expected date should be YYYY-MM-DD, YYYY-MM, or just YYYY.');
+        return;
+      }
+      if (discontinuedDateRaw && !DATE_PATTERN.test(discontinuedDateRaw)) {
+        window.alert('Discontinued date should be YYYY-MM-DD, YYYY-MM, or just YYYY.');
+        return;
+      }
+
       const payload = {
         slug,
         name,
@@ -361,10 +381,12 @@
         refresh_history: currentRefreshHistory,
         rumor_note: document.getElementById('rumor_note').value.trim() || null,
         featured: document.getElementById('featured').checked,
+        days_basis: document.querySelector('input[name="days_basis"]:checked').value,
+        previous_model: document.getElementById('previous_model').value.trim() || null,
         coming_soon: document.getElementById('coming_soon').checked,
-        expected_date: document.getElementById('expected_date').value || null,
+        expected_date: expectedDateRaw || null,
         discontinued: document.getElementById('discontinued').checked,
-        discontinued_date: document.getElementById('discontinued_date').value || null,
+        discontinued_date: discontinuedDateRaw || null,
         replaced_by: document.getElementById('replaced_by').value.trim() || null,
         discontinued_reason: document.getElementById('discontinued_reason').value.trim() || null,
         image_urls: currentImageUrls,

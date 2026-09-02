@@ -321,7 +321,7 @@ label.admin-btn { cursor: pointer; }
 /* Cards */
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   grid-auto-rows: 1fr;
   gap: 14px;
   margin-top: 1.5rem;
@@ -423,7 +423,7 @@ label.admin-btn { cursor: pointer; }
 .card-meta { font-size: 12px; color: var(--text-secondary); margin: 0; }
 
 /* Category index tiles */
-.category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-top: 1.5rem; }
+.category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; margin-top: 1.5rem; }
 .category-tile {
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -451,7 +451,10 @@ label.admin-btn { cursor: pointer; }
 .external-link { margin-top: 1rem; font-size: 14px; }
 .external-link a { color: var(--text-accent, #185fa5); text-decoration: underline; }
 
-.verdict-row { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1.5rem; font-size: 14px; }
+.waiting-stat { font-size: 13px; color: var(--text-secondary); margin: 0 0 0.75rem; }
+.waiting-stat .wait-count-value { font-weight: 700; color: var(--text); }
+
+.admin-hint { font-size: 12px; color: var(--text-secondary); margin: 4px 0 0; }
 
 .page-intro { color: var(--text-secondary); font-size: 14px; }
 

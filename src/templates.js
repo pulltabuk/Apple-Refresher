@@ -29,8 +29,22 @@ function slugify(str) {
     .replace(/(^-+|-+$)/g, '');
 }
 
-function formatDate(d) {
-  return new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+function datePrecision(str) {
+  if (!str) return null;
+  if (/^\d{4}$/.test(str)) return 'year';
+  if (/^\d{4}-\d{2}$/.test(str)) return 'month';
+  return 'day';
+}
+
+function formatDate(str) {
+  if (!str) return '';
+  const precision = datePrecision(str);
+  if (precision === 'year') return str;
+  if (precision === 'month') {
+    const [y, m] = str.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+  }
+  return new Date(str).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function sortedHistory(product) {
@@ -90,10 +104,21 @@ function categoryPill(category) {
   return `<a class="pill" href="/categories/${slugify(category)}/">${escapeHtml(category)}</a>`;
 }
 
-function badgeHtml(statusInfo) {
+function badgeDaysInfo(product, statusInfo) {
+  if (!statusInfo) return null;
+  if (product.days_basis === 'launch') {
+    const launch = launchDate(product);
+    if (launch) {
+      return { days: daysBetween(launch, new Date().toISOString().slice(0, 10)), suffix: 'since launch' };
+    }
+  }
+  return { days: statusInfo.daysSince, suffix: 'since refresh' };
+}
+
+function badgeHtml(product, statusInfo) {
   if (!statusInfo) return '';
-  const { status, daysSince } = statusInfo;
-  return `<span class="badge badge--${status}">${daysSince} days since refresh</span>`;
+  const info = badgeDaysInfo(product, statusInfo);
+  return `<span class="badge badge--${statusInfo.status}">${info.days} days ${info.suffix}</span>`;
 }
 
 function productBadge(product, statusInfo) {
@@ -104,7 +129,7 @@ function productBadge(product, statusInfo) {
   if (product.coming_soon) {
     return `<span class="badge badge--coming-soon">Coming soon</span>`;
   }
-  return badgeHtml(statusInfo);
+  return badgeHtml(product, statusInfo);
 }
 
 const DEFAULT_SCRIPTS = [
@@ -372,11 +397,15 @@ function specRow(label, valueHtml) {
   return valueHtml ? `<div class="spec-row"><dt>${label}</dt><dd>${valueHtml}</dd></div>` : '';
 }
 
+function externalLinkLabel(product) {
+  const isWiki = /wikipedia\.org/i.test(product.external_link || '');
+  return `${product.name}${isWiki ? ' (Wiki)' : ''}`;
+}
+
 function productPage({ product, status, history, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const sortedDates = history.slice().sort();
   const launch = sortedDates[0] || null;
   const latest = sortedDates[sortedDates.length - 1] || null;
-  const today = new Date().toISOString().slice(0, 10);
 
   const timelineItems = sortedDates
     .slice()
@@ -389,15 +418,6 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
       </div>`;
     })
     .join('\n');
-
-  const verdict =
-    !status || product.coming_soon || product.discontinued
-      ? null
-      : status.status === 'fresh'
-      ? { text: 'Good time to buy', cls: 'fresh' }
-      : status.status === 'aging'
-      ? { text: 'Fine to buy, refresh due within the year', cls: 'aging' }
-      : { text: 'Wait, refresh is overdue', cls: 'overdue' };
 
   const images = product.image_urls && product.image_urls.length ? product.image_urls : product.image_url ? [product.image_url] : [];
   const mainImage = images[0]
@@ -420,6 +440,13 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     ? escapeHtml(product.replaced_by)
     : '';
 
+  const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
+  const previousModelHtml = predecessor
+    ? `<a href="/products/${predecessor.slug}/">${escapeHtml(predecessor.name)}</a>`
+    : product.previous_model
+    ? escapeHtml(product.previous_model)
+    : '';
+
   const specs = [
     specRow('Category', categoryPill(product.category)),
     specRow('Status', product.discontinued ? 'Discontinued' : product.coming_soon ? 'Coming soon' : 'Current'),
@@ -431,12 +458,12 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     sortedDates.length > 1 ? specRow('Times refreshed', String(sortedDates.length - 1)) : '',
     product.discontinued && product.discontinued_date ? specRow('Discontinued', formatDate(product.discontinued_date)) : '',
     launch && product.discontinued && product.discontinued_date ? specRow('Lifespan', lifespanText(launch, product.discontinued_date)) : '',
-    launch && !product.discontinued && !product.coming_soon ? specRow('On sale for', `${daysBetween(launch, today)} days`) : '',
     specRow('Starting price', escapeHtml(formatPrice(product.price))),
     specRow('Chip', escapeHtml(product.chip)),
+    specRow('Previous model', previousModelHtml),
     specRow('Replaced by', replacedByHtml),
     product.discontinued ? specRow('Why it went', escapeHtml(product.discontinued_reason)) : '',
-    product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(product.external_link.replace(/^https?:\/\//, '').replace(/\/.*$/, ''))} &#8599;</a>`) : '',
+    product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(externalLinkLabel(product))} &#8599;</a>`) : '',
   ].filter(Boolean).join('\n');
 
   const releaseHistorySection = sortedDates.length
@@ -453,6 +480,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
       ${videoBlock}
     </div>
     <div class="product-info">
+      ${product.discontinued ? '' : `<p class="waiting-stat"><span class="wait-count-value">${product.waiting_count || 0}</span> people waiting</p>`}
       <div class="product-header">
         <div>
           ${categoryPill(product.category)}
@@ -467,11 +495,6 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
       <dl class="spec-list">
         ${specs}
       </dl>
-
-      ${verdict ? `<div class="verdict-row">
-        <span>Verdict</span>
-        <span class="badge badge--${verdict.cls}">${verdict.text}</span>
-      </div>` : ''}
 
       ${product.discontinued ? '' : `<button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
         Waiting for a refresh?
@@ -571,9 +594,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <span class="admin-subfield-label">Refresh history (the first date is treated as the launch date)</span>
           <ul id="refresh-history-list" class="refresh-history-list"></ul>
           <div class="refresh-history-add">
-            <input type="date" id="new-refresh-date">
+            <input type="text" id="new-refresh-date" placeholder="YYYY-MM-DD, YYYY-MM, or YYYY" class="date-precision-input">
             <button type="button" id="add-refresh-date-btn" class="admin-btn admin-btn--small">Add date</button>
           </div>
+          <p class="admin-hint">Use a full date when you know it. For older products, YYYY-MM or just YYYY is fine.</p>
         </div>
 
         <label>Notes<textarea id="rumor_note" rows="3"></textarea></label>
@@ -593,11 +617,22 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </div>
 
         <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
+
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Badge shows</span>
+          <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked> Days since refresh</label>
+          <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_launch" value="launch"> Days since launch</label>
+        </div>
+
+        <label>Previous model (pick a product, or leave blank)
+          <input type="text" id="previous_model" list="product-options" placeholder="Start typing a product name">
+        </label>
+
         <label class="checkbox-label"><input type="checkbox" id="coming_soon"> Coming soon</label>
-        <label>Expected date (if known)<input type="date" id="expected_date"></label>
+        <label>Expected date (if known)<input type="text" id="expected_date" placeholder="YYYY-MM-DD, YYYY-MM, or YYYY" class="date-precision-input"></label>
 
         <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
-        <label>Discontinued date<input type="date" id="discontinued_date"></label>
+        <label>Discontinued date<input type="text" id="discontinued_date" placeholder="YYYY-MM-DD, YYYY-MM, or YYYY" class="date-precision-input"></label>
         <label>Replaced by (pick a product, or leave blank)
           <input type="text" id="replaced_by" list="product-options" placeholder="Start typing a product name">
           <datalist id="product-options"></datalist>

@@ -36,8 +36,22 @@
     return String(str || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '');
   }
 
-  function formatDateJS(d) {
-    return new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+  function datePrecisionJS(str) {
+    if (!str) return null;
+    if (/^\d{4}$/.test(str)) return 'year';
+    if (/^\d{4}-\d{2}$/.test(str)) return 'month';
+    return 'day';
+  }
+
+  function formatDateJS(str) {
+    if (!str) return '';
+    var precision = datePrecisionJS(str);
+    if (precision === 'year') return str;
+    if (precision === 'month') {
+      var parts = str.split('-');
+      return new Date(Number(parts[0]), Number(parts[1]) - 1, 1).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+    }
+    return new Date(str).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   function sortedHistoryJS(product) {
@@ -104,6 +118,17 @@
     return '<a class="pill" href="/categories/' + slugifyJS(category) + '/">' + escapeHtmlJS(category) + '</a>';
   }
 
+  function badgeDaysInfoJS(product, statusInfo) {
+    if (!statusInfo) return null;
+    if (product.days_basis === 'launch') {
+      var launch = launchDateJS(product);
+      if (launch) {
+        return { days: daysBetweenJS(launch, new Date().toISOString().slice(0, 10)), suffix: 'since launch' };
+      }
+    }
+    return { days: statusInfo.daysSince, suffix: 'since refresh' };
+  }
+
   function badgeHtmlJS(product, statusInfo) {
     if (product.discontinued) {
       var date = product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '';
@@ -111,7 +136,8 @@
     }
     if (product.coming_soon) return '<span class="badge badge--coming-soon">Coming soon</span>';
     if (!statusInfo) return '';
-    return '<span class="badge badge--' + statusInfo.status + '">' + statusInfo.daysSince + ' days since refresh</span>';
+    var info = badgeDaysInfoJS(product, statusInfo);
+    return '<span class="badge badge--' + statusInfo.status + '">' + info.days + ' days ' + info.suffix + '</span>';
   }
 
   function cardHtmlJS(product, statusInfo) {
@@ -146,11 +172,15 @@
     return valueHtml ? '<div class="spec-row"><dt>' + label + '</dt><dd>' + valueHtml + '</dd></div>' : '';
   }
 
+  function externalLinkLabelJS(product) {
+    var isWiki = /wikipedia\.org/i.test(product.external_link || '');
+    return product.name + (isWiki ? ' (Wiki)' : '');
+  }
+
   function productBodyHtmlJS(product, status, productsBySlug) {
     var sortedDates = sortedHistoryJS(product);
     var launch = sortedDates[0] || null;
     var latest = sortedDates[sortedDates.length - 1] || null;
-    var today = new Date().toISOString().slice(0, 10);
 
     var images = product.image_urls && product.image_urls.length ? product.image_urls : product.image_url ? [product.image_url] : [];
     var mainImage = images[0]
@@ -168,6 +198,11 @@
       ? '<a href="/products/' + successor.slug + '/">' + escapeHtmlJS(successor.name) + '</a>'
       : product.replaced_by ? escapeHtmlJS(product.replaced_by) : '';
 
+    var predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
+    var previousModelHtml = predecessor
+      ? '<a href="/products/' + predecessor.slug + '/">' + escapeHtmlJS(predecessor.name) + '</a>'
+      : product.previous_model ? escapeHtmlJS(product.previous_model) : '';
+
     var specs = [
       specRowJS('Category', pillJS(product.category)),
       specRowJS('Status', product.discontinued ? 'Discontinued' : product.coming_soon ? 'Coming soon' : 'Current'),
@@ -177,12 +212,12 @@
       sortedDates.length > 1 ? specRowJS('Times refreshed', String(sortedDates.length - 1)) : '',
       product.discontinued && product.discontinued_date ? specRowJS('Discontinued', formatDateJS(product.discontinued_date)) : '',
       launch && product.discontinued && product.discontinued_date ? specRowJS('Lifespan', lifespanTextJS(launch, product.discontinued_date)) : '',
-      launch && !product.discontinued && !product.coming_soon ? specRowJS('On sale for', daysBetweenJS(launch, today) + ' days') : '',
       specRowJS('Starting price', escapeHtmlJS(formatPriceJS(product.price))),
       specRowJS('Chip', escapeHtmlJS(product.chip)),
+      specRowJS('Previous model', previousModelHtml),
       specRowJS('Replaced by', replacedByHtml),
       product.discontinued ? specRowJS('Why it went', escapeHtmlJS(product.discontinued_reason)) : '',
-      product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(product.external_link.replace(/^https?:\/\//, '').replace(/\/.*$/, '')) + ' &#8599;</a>') : '',
+      product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
     ].filter(Boolean).join('');
 
     var timelineItems = sortedDates.slice().reverse().map(function (d, i) {
@@ -190,13 +225,6 @@
       return '<div class="timeline-item"><p class="timeline-name">' + escapeHtmlJS(label) + '</p><p class="timeline-date">' + formatDateJS(d) + '</p></div>';
     }).join('');
     var releaseHistorySection = sortedDates.length ? '<h2>Release history</h2><div class="timeline">' + timelineItems + '</div>' : '';
-
-    var verdict = null;
-    if (status && !product.coming_soon && !product.discontinued) {
-      if (status.status === 'fresh') verdict = { text: 'Good time to buy', cls: 'fresh' };
-      else if (status.status === 'aging') verdict = { text: 'Fine to buy, refresh due within the year', cls: 'aging' };
-      else verdict = { text: 'Wait, refresh is overdue', cls: 'overdue' };
-    }
 
     return (
       '<div class="product-top">' +
@@ -206,6 +234,7 @@
           videoBlock +
         '</div>' +
         '<div class="product-info">' +
+          (product.discontinued ? '' : '<p class="waiting-stat"><span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people waiting</p>') +
           '<div class="product-header">' +
             '<div>' + pillJS(product.category) + '<h1>' + escapeHtmlJS(product.name) + '</h1></div>' +
             '<div class="product-header-right">' +
@@ -214,7 +243,6 @@
             '</div>' +
           '</div>' +
           '<dl class="spec-list">' + specs + '</dl>' +
-          (verdict ? '<div class="verdict-row"><span>Verdict</span><span class="badge badge--' + verdict.cls + '">' + verdict.text + '</span></div>' : '') +
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Waiting for a refresh?</button>') +
         '</div>' +
       '</div>' +
@@ -238,9 +266,12 @@
     buttons.forEach(function (btn) {
       var slug = btn.getAttribute('data-slug');
       var baseCount = parseInt(btn.getAttribute('data-count'), 10) || 0;
+      var container = btn.closest('.product-info');
+      var countEl = container ? container.querySelector('.wait-count-value') : null;
 
       function showVoted(count) {
-        btn.textContent = count + ' people are waiting for a refresh';
+        if (countEl) countEl.textContent = count;
+        btn.textContent = "You're on the list";
         btn.classList.add('voted');
         btn.disabled = true;
       }
