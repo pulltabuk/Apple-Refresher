@@ -177,6 +177,17 @@
     return product.name + (isWiki ? ' (Wiki)' : '');
   }
 
+  function heroStatHtmlJS(product, statusInfo) {
+    if (product.discontinued) {
+      var date = product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '';
+      return '<p class="days-hero days-hero--discontinued">Discontinued' + date + '</p>';
+    }
+    if (product.coming_soon) return '<p class="days-hero days-hero--coming-soon">Coming soon</p>';
+    if (!statusInfo) return '';
+    var info = badgeDaysInfoJS(product, statusInfo);
+    return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> days ' + info.suffix + '</p>';
+  }
+
   function productBodyHtmlJS(product, status, productsBySlug) {
     var sortedDates = sortedHistoryJS(product);
     var launch = sortedDates[0] || null;
@@ -203,6 +214,8 @@
       ? '<a href="/products/' + predecessor.slug + '/">' + escapeHtmlJS(predecessor.name) + '</a>'
       : product.previous_model ? escapeHtmlJS(product.previous_model) : '';
 
+    var daysInfo = status ? badgeDaysInfoJS(product, status) : null;
+
     var specs = [
       specRowJS('Category', pillJS(product.category)),
       specRowJS('Status', product.discontinued ? 'Discontinued' : product.coming_soon ? 'Coming soon' : 'Current'),
@@ -213,12 +226,13 @@
       product.discontinued && product.discontinued_date ? specRowJS('Discontinued', formatDateJS(product.discontinued_date)) : '',
       launch && product.discontinued && product.discontinued_date ? specRowJS('Lifespan', lifespanTextJS(launch, product.discontinued_date)) : '',
       specRowJS('Starting price', escapeHtmlJS(formatPriceJS(product.price))),
-      !product.discontinued && !product.coming_soon ? specRowJS('Days counted from', product.days_basis === 'launch' ? 'Launch' : 'Refresh') : '',
+      daysInfo ? specRowJS('Days counted from', (product.days_basis === 'launch' ? 'Launch' : 'Refresh') + ': ' + daysInfo.days + ' days') : '',
       specRowJS('Chip', escapeHtmlJS(product.chip)),
       specRowJS('Previous model', previousModelHtml),
       specRowJS('Replaced by', replacedByHtml),
       product.discontinued ? specRowJS('Why it went', escapeHtmlJS(product.discontinued_reason)) : '',
       product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
+      product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people'),
     ].filter(Boolean).join('');
 
     var timelineItems = sortedDates.slice().reverse().map(function (d, i) {
@@ -235,14 +249,12 @@
           videoBlock +
         '</div>' +
         '<div class="product-info">' +
-          (product.discontinued ? '' : '<p class="waiting-stat"><span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people waiting for a refresh</p>') +
           '<div class="product-header">' +
-            '<div>' + pillJS(product.category) + '<h1>' + escapeHtmlJS(product.name) + '</h1></div>' +
+            '<div>' + pillJS(product.category) + '<h1>' + escapeHtmlJS(product.name) + '</h1>' + heroStatHtmlJS(product, status) + '</div>' +
             '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
           '</div>' +
           '<dl class="spec-list">' + specs + '</dl>' +
-          badgeHtmlJS(product, status) +
-          (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Waiting for a refresh?</button>') +
+          (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
         '</div>' +
       '</div>' +
       releaseHistorySection +
@@ -270,9 +282,7 @@
 
       function showVoted(count) {
         if (countEl) countEl.textContent = count;
-        btn.textContent = "You're waiting for a refresh too";
-        btn.classList.add('voted');
-        btn.disabled = true;
+        btn.style.display = 'none';
       }
 
       if (localStorage.getItem(votedKey(slug))) {

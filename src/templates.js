@@ -397,6 +397,19 @@ function specRow(label, valueHtml) {
   return valueHtml ? `<div class="spec-row"><dt>${label}</dt><dd>${valueHtml}</dd></div>` : '';
 }
 
+function heroStatHtml(product, statusInfo) {
+  if (product.discontinued) {
+    const date = product.discontinued_date ? ` ${formatDate(product.discontinued_date)}` : '';
+    return `<p class="days-hero days-hero--discontinued">Discontinued${date}</p>`;
+  }
+  if (product.coming_soon) {
+    return `<p class="days-hero days-hero--coming-soon">Coming soon</p>`;
+  }
+  if (!statusInfo) return '';
+  const info = badgeDaysInfo(product, statusInfo);
+  return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> days ${info.suffix}</p>`;
+}
+
 function externalLinkLabel(product) {
   const isWiki = /wikipedia\.org/i.test(product.external_link || '');
   return `${product.name}${isWiki ? ' (Wiki)' : ''}`;
@@ -447,6 +460,8 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     ? escapeHtml(product.previous_model)
     : '';
 
+  const daysInfo = status ? badgeDaysInfo(product, status) : null;
+
   const specs = [
     specRow('Category', categoryPill(product.category)),
     specRow('Status', product.discontinued ? 'Discontinued' : product.coming_soon ? 'Coming soon' : 'Current'),
@@ -459,12 +474,13 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     product.discontinued && product.discontinued_date ? specRow('Discontinued', formatDate(product.discontinued_date)) : '',
     launch && product.discontinued && product.discontinued_date ? specRow('Lifespan', lifespanText(launch, product.discontinued_date)) : '',
     specRow('Starting price', escapeHtml(formatPrice(product.price))),
-    !product.discontinued && !product.coming_soon ? specRow('Days counted from', product.days_basis === 'launch' ? 'Launch' : 'Refresh') : '',
+    daysInfo ? specRow('Days counted from', `${product.days_basis === 'launch' ? 'Launch' : 'Refresh'}: ${daysInfo.days} days`) : '',
     specRow('Chip', escapeHtml(product.chip)),
     specRow('Previous model', previousModelHtml),
     specRow('Replaced by', replacedByHtml),
     product.discontinued ? specRow('Why it went', escapeHtml(product.discontinued_reason)) : '',
     product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(externalLinkLabel(product))} &#8599;</a>`) : '',
+    product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> people`),
   ].filter(Boolean).join('\n');
 
   const releaseHistorySection = sortedDates.length
@@ -481,11 +497,11 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
       ${videoBlock}
     </div>
     <div class="product-info">
-      ${product.discontinued ? '' : `<p class="waiting-stat"><span class="wait-count-value">${product.waiting_count || 0}</span> people waiting for a refresh</p>`}
       <div class="product-header">
         <div>
           ${categoryPill(product.category)}
           <h1>${escapeHtml(product.name)}</h1>
+          ${heroStatHtml(product, status)}
         </div>
         <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
       </div>
@@ -494,10 +510,8 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
         ${specs}
       </dl>
 
-      ${productBadge(product, status)}
-
       ${product.discontinued ? '' : `<button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
-        Waiting for a refresh?
+        Are you looking forward to a new ${escapeHtml(product.category)}?
       </button>`}
     </div>
   </div>
