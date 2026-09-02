@@ -70,6 +70,33 @@
     return Math.max(0, months);
   }
 
+  function horizontalTimelineHtmlJS(product, sortedDates) {
+    if (!sortedDates.length) return '';
+    var points = sortedDates.map(function (d, i) {
+      return { date: d, label: i === 0 ? 'Launch' : 'Refresh', type: i === 0 ? 'launch' : 'refresh' };
+    });
+    if (product.discontinued && product.discontinued_date) {
+      points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued' });
+    }
+    var items = points.map(function (pt) {
+      return '<div class="timeline-point timeline-point--' + pt.type + '">' +
+        '<span class="timeline-point-line"></span>' +
+        '<span class="timeline-dot"></span>' +
+        '<p class="timeline-point-label">' + pt.label + '</p>' +
+        '<p class="timeline-point-date">' + formatDateJS(pt.date) + '</p>' +
+      '</div>';
+    }).join('');
+    return '<div class="timeline-horizontal">' + items + '</div>';
+  }
+
+  function appleSupportStatusJS(product) {
+    if (!product.discontinued || !product.discontinued_date) return null;
+    var years = daysBetweenJS(product.discontinued_date, new Date().toISOString().slice(0, 10)) / 365.25;
+    if (years >= 7) return 'Obsolete (Apple no longer services it)';
+    if (years >= 5) return 'Vintage (limited repairs, subject to parts)';
+    return 'Discontinued, not yet Vintage';
+  }
+
   function lifespanTextJS(start, end) {
     var months = monthsBetweenJS(start, end);
     var years = Math.floor(months / 12), rem = months % 12, parts = [];
@@ -251,6 +278,7 @@
         : '',
       product.discontinued && product.discontinued_date ? specRowJS('Discontinued', formatDateJS(product.discontinued_date)) : '',
       launch && product.discontinued && product.discontinued_date ? specRowJS('Lifespan', lifespanTextJS(launch, product.discontinued_date)) : '',
+      product.discontinued ? specRowJS('Apple support status', appleSupportStatusJS(product)) : '',
       specRowJS('Starting price', escapeHtmlJS(formatPriceJS(product.price))),
       sortedDates.length ? specRowJS('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
       daysInfo ? specRowJS('Days counted from', (product.days_basis === 'launch' ? 'Launch' : 'Refresh') + ': ' + daysInfo.days + ' days') : '',
@@ -262,11 +290,7 @@
       product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people'),
     ].filter(Boolean).join('');
 
-    var timelineItems = sortedDates.slice().reverse().map(function (d, i) {
-      var label = i === 0 ? product.name : product.name + ' (earlier)';
-      return '<div class="timeline-item"><p class="timeline-name">' + escapeHtmlJS(label) + '</p><p class="timeline-date">' + formatDateJS(d) + '</p></div>';
-    }).join('');
-    var releaseHistorySection = sortedDates.length ? '<h2>Release history</h2><div class="timeline">' + timelineItems + '</div>' : '';
+    var releaseHistorySection = sortedDates.length ? '<h2>Release history</h2>' + horizontalTimelineHtmlJS(product, sortedDates) : '';
 
     return (
       '<div class="product-top">' +

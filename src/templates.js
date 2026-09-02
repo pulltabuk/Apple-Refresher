@@ -91,6 +91,33 @@ function monthsBetween(a, b) {
   return Math.max(0, months);
 }
 
+function horizontalTimelineHtml(product, sortedDates) {
+  if (!sortedDates.length) return '';
+  const points = sortedDates.map((d, i) => ({
+    date: d,
+    label: i === 0 ? 'Launch' : 'Refresh',
+    type: i === 0 ? 'launch' : 'refresh',
+  }));
+  if (product.discontinued && product.discontinued_date) {
+    points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued' });
+  }
+  const items = points.map((pt) => `<div class="timeline-point timeline-point--${pt.type}">
+    <span class="timeline-point-line"></span>
+    <span class="timeline-dot"></span>
+    <p class="timeline-point-label">${pt.label}</p>
+    <p class="timeline-point-date">${formatDate(pt.date)}</p>
+  </div>`).join('\n');
+  return `<div class="timeline-horizontal">${items}</div>`;
+}
+
+function appleSupportStatus(product) {
+  if (!product.discontinued || !product.discontinued_date) return null;
+  const years = daysBetween(product.discontinued_date, new Date().toISOString().slice(0, 10)) / 365.25;
+  if (years >= 7) return 'Obsolete (Apple no longer services it)';
+  if (years >= 5) return 'Vintage (limited repairs, subject to parts)';
+  return 'Discontinued, not yet Vintage';
+}
+
 function lifespanText(start, end) {
   const months = monthsBetween(start, end);
   const years = Math.floor(months / 12);
@@ -442,17 +469,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
   const launch = sortedDates[0] || null;
   const latest = sortedDates[sortedDates.length - 1] || null;
 
-  const timelineItems = sortedDates
-    .slice()
-    .reverse()
-    .map((d, i) => {
-      const label = i === 0 ? product.name : `${product.name} (earlier)`;
-      return `<div class="timeline-item">
-        <p class="timeline-name">${escapeHtml(label)}</p>
-        <p class="timeline-date">${formatDate(d)}</p>
-      </div>`;
-    })
-    .join('\n');
+  const timelineHtml = horizontalTimelineHtml(product, sortedDates);
 
   const images = product.image_urls && product.image_urls.length ? product.image_urls : product.image_url ? [product.image_url] : [];
   const mainImage = images[0]
@@ -499,6 +516,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
       : '',
     product.discontinued && product.discontinued_date ? specRow('Discontinued', formatDate(product.discontinued_date)) : '',
     launch && product.discontinued && product.discontinued_date ? specRow('Lifespan', lifespanText(launch, product.discontinued_date)) : '',
+    product.discontinued ? specRow('Apple support status', appleSupportStatus(product)) : '',
     specRow('Starting price', escapeHtml(formatPrice(product.price))),
     sortedDates.length ? specRow('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
     daysInfo ? specRow('Days counted from', `${product.days_basis === 'launch' ? 'Launch' : 'Refresh'}: ${daysInfo.days} days`) : '',
@@ -512,7 +530,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
 
   const releaseHistorySection = sortedDates.length
     ? `<h2>Release history</h2>
-  <div class="timeline">${timelineItems}</div>`
+  ${timelineHtml}`
     : '';
 
   const body = `
@@ -649,6 +667,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <button type="button" data-cmd="insertParagraph">&para;</button>
             <button type="button" id="richtext-link-btn">&#128279;</button>
             <button type="button" data-cmd="removeFormat" class="richtext-clear">&times;</button>
+            <button type="button" id="richtext-clear-all-btn" class="richtext-clear-all">Clear all formatting</button>
           </div>
           <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
         </div>
