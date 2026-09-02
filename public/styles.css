@@ -51,6 +51,70 @@ a { color: inherit; text-decoration: none; }
   color: var(--text-secondary);
   border-top: 1px solid var(--border);
 }
+.footer-nav { margin-bottom: 0.75rem; }
+.footer-nav a { margin-right: 1.25rem; font-size: 13px; color: var(--text-secondary); }
+.footer-nav a:hover { color: var(--text); }
+
+/* About page */
+.about-page h1 { margin-top: 1.5rem; }
+.about-image { margin-top: 1rem; border-radius: 12px; overflow: hidden; }
+.about-image img { width: 100%; display: block; }
+.about-body { margin-top: 1.5rem; font-size: 15px; }
+.about-body p { margin: 0 0 1rem; }
+
+/* Admin */
+.admin-form { display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 1rem 0 2rem; }
+.admin-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-secondary); }
+.admin-form input[type="text"],
+.admin-form input[type="email"],
+.admin-form input[type="password"],
+.admin-form input[type="date"],
+.admin-form input[type="file"],
+.admin-form select,
+.admin-form textarea {
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+}
+.admin-form textarea { resize: vertical; }
+.checkbox-label { flex-direction: row !important; align-items: center; gap: 8px !important; }
+.admin-btn {
+  align-self: flex-start;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--graphite);
+  background: var(--graphite);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.admin-btn:hover { background: var(--graphite-hover); }
+.form-error { color: var(--overdue-text); font-size: 13px; }
+.admin-list { display: flex; flex-direction: column; gap: 6px; margin: 1rem 0; max-width: 480px; }
+.admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.admin-row-actions button {
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin-left: 6px;
+  cursor: pointer;
+}
+.admin-row-actions button:hover { border-color: var(--graphite); }
 
 /* Badges */
 .badge {

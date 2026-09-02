@@ -6,15 +6,19 @@ No JavaScript rendering on the way in, so it's crawlable from day one.
 ## 1. Supabase
 
 1. Create a new project (or use an existing one).
-2. Open the SQL editor and run `supabase-schema.sql`.
-3. Add your first few products in Table Editor > products. Minimum fields:
-   `slug`, `name`, `category`, `refresh_history` (a JSON array of past
-   refresh dates, oldest first, e.g. `["2024-09-20", "2025-09-19"]`).
-4. For a product screenshot: Storage > create a bucket called
-   `product-images` (public) > upload the image > copy its public URL into
-   that product's `image_url` column.
-5. Settings > API: copy the Project URL, the `service_role` key, and the
-   `anon` key, you'll need all three in step 3 below.
+2. Open the SQL editor and run `supabase-schema.sql`, then
+   `supabase-schema-update.sql`. The second one adds the About page's
+   content table and lets a logged-in admin edit products.
+3. Storage > create a bucket called `product-images`, mark it Public.
+4. Settings > API: copy the Project URL, the `service_role` key, and the
+   `anon` key, you'll need all three below.
+5. Authentication > Users > Add user: create yourself a login (email +
+   password). This is what you'll use to sign into `/admin/` on the live
+   site, it's the only account that can add, edit, or delete products
+   and the About page.
+
+You can still add products directly in Table Editor if you'd rather, the
+admin panel is just a friendlier way to do the same thing.
 
 ## 2. Local preview
 
@@ -46,6 +50,19 @@ whenever a product changes:
 
 Now editing a row in Supabase's table editor triggers a fresh build
 automatically, no separate admin panel needed.
+
+## 5. Using the admin panel
+
+Once the site's live, go to `your-site.netlify.app/admin/` and log in with
+the email and password you created in Supabase. From there you can add,
+edit, and delete products (with screenshot upload), and edit the About
+page's heading, text, and image. Changes save straight to Supabase, they
+go live on the site's next rebuild, so set up the webhook in step 4 above
+if you haven't already.
+
+The admin link sits in the site's footer. It's marked `noindex` so search
+engines won't list it, but it isn't hidden, anyone who finds the URL
+still needs your login to change anything.
 
 ## Notes
 

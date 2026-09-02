@@ -14,7 +14,8 @@ function badgeHtml(statusInfo) {
   return `<span class="badge badge--${status}">${daysSince}d &middot; ${STATUS_LABEL[status]}</span>`;
 }
 
-function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supabaseAnonKey }) {
+function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supabaseAnonKey, noindex, scripts }) {
+  const scriptTags = (scripts || ['<script src="/app.js" defer></script>']).join('\n');
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -22,6 +23,7 @@ function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supab
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeHtml(description)}">
+${noindex ? '<meta name="robots" content="noindex">' : ''}
 <link rel="canonical" href="${siteUrl}${path}">
 <link rel="stylesheet" href="/styles.css">
 </head>
@@ -31,19 +33,24 @@ function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supab
   <nav class="site-nav">
     <a href="/products/">All products</a>
     <a href="/discontinued/">Discontinued</a>
+    <a href="/about/">About</a>
   </nav>
 </header>
 <main>
 ${bodyHtml}
 </main>
 <footer class="site-footer">
+  <nav class="footer-nav">
+    <a href="/about/">About us</a>
+    <a href="/admin/">Admin</a>
+  </nav>
   <p>Apple Refresher is an independent tracker and is not affiliated with Apple Inc.</p>
 </footer>
 <script>
   window.SUPABASE_URL = ${JSON.stringify(supabaseUrl || '')};
   window.SUPABASE_ANON_KEY = ${JSON.stringify(supabaseAnonKey || '')};
 </script>
-<script src="/app.js" defer></script>
+${scriptTags}
 </body>
 </html>`;
 }
@@ -204,4 +211,101 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
   });
 }
 
-module.exports = { homePage, allProductsPage, discontinuedPage, productPage, cardHtml };
+function aboutPage({ content, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const paragraphs = (content.body || '')
+    .split('\n\n')
+    .filter(Boolean)
+    .map((p) => `<p>${escapeHtml(p)}</p>`)
+    .join('\n');
+
+  const body = `
+<article class="about-page">
+  <h1>${escapeHtml(content.heading || 'About Apple Refresher')}</h1>
+  ${content.image_url ? `<div class="about-image"><img src="${content.image_url}" alt=""></div>` : ''}
+  <div class="about-body">${paragraphs}</div>
+</article>`;
+
+  return shell({
+    title: 'About — Apple Refresher',
+    description: 'What Apple Refresher is and why it exists.',
+    siteUrl,
+    path: '/about/',
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
+}
+
+function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const body = `
+<h1>Admin</h1>
+
+<section id="login-section">
+  <form id="login-form" class="admin-form">
+    <label>Email<input type="email" id="email" required></label>
+    <label>Password<input type="password" id="password" required></label>
+    <button type="submit" class="admin-btn">Log in</button>
+    <p id="login-error" class="form-error"></p>
+  </form>
+</section>
+
+<section id="dashboard" style="display:none;">
+  <button id="logout-btn" class="admin-btn">Log out</button>
+
+  <h2>Products</h2>
+  <button id="new-product-btn" class="admin-btn">Add new product</button>
+  <div id="product-list" class="admin-list"></div>
+
+  <h3 id="form-title">Add product</h3>
+  <form id="product-form" class="admin-form">
+    <label>Slug (used in the URL, e.g. iphone-17-pro)<input type="text" id="slug" required></label>
+    <label>Name<input type="text" id="name" required></label>
+    <label>Category
+      <select id="category">
+        <option>iPhone</option>
+        <option>Mac</option>
+        <option>iPad</option>
+        <option>Apple Watch</option>
+        <option>AirPods</option>
+        <option>Other</option>
+      </select>
+    </label>
+    <label>Price<input type="text" id="price" placeholder="£799"></label>
+    <label>Chip<input type="text" id="chip"></label>
+    <label>Refresh history (comma separated, oldest first, YYYY-MM-DD)<input type="text" id="refresh_history" placeholder="2024-09-20, 2025-09-19"></label>
+    <label>What's next note<textarea id="rumor_note" rows="3"></textarea></label>
+    <label>Screenshot<input type="file" id="image-upload" accept="image/*"></label>
+    <input type="hidden" id="image_url">
+    <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
+    <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
+    <label>Discontinued date<input type="date" id="discontinued_date"></label>
+    <button type="submit" class="admin-btn">Save product</button>
+  </form>
+
+  <h2>About page</h2>
+  <form id="about-form" class="admin-form">
+    <label>Heading<input type="text" id="about_heading"></label>
+    <label>Body text (leave a blank line between paragraphs)<textarea id="about_body" rows="6"></textarea></label>
+    <label>Image<input type="file" id="about-image-upload" accept="image/*"></label>
+    <input type="hidden" id="about_image_url">
+    <button type="submit" class="admin-btn">Save about page</button>
+  </form>
+</section>`;
+
+  return shell({
+    title: 'Admin — Apple Refresher',
+    description: 'Manage products and site content.',
+    siteUrl,
+    path: '/admin/',
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+    noindex: true,
+    scripts: [
+      '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>',
+      '<script src="/admin.js" defer></script>',
+    ],
+  });
+}
+
+module.exports = { homePage, allProductsPage, discontinuedPage, productPage, aboutPage, adminPage, cardHtml };
