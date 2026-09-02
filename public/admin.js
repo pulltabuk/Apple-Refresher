@@ -268,7 +268,7 @@
     renderRefreshHistory();
     renderImageThumbs();
     renderVideoStatus();
-    window.scrollTo(0, 0);
+    document.getElementById('form-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   document.getElementById('new-product-btn').addEventListener('click', () => {
