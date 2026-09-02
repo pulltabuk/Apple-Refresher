@@ -71,14 +71,17 @@ async function main() {
 
   const withStatus = active
     .map((product) => ({ product, status: computeStatus(product) }))
-    .filter((i) => i.status);
+    .filter((i) => i.status || i.product.coming_soon);
 
-  // Featured: an explicitly flagged product, or the most overdue one.
+  // Featured: an explicitly flagged product, or the most overdue one
+  // among products with real refresh data (Coming soon items have no
+  // ratio to rank by, so they only become featured if flagged directly).
+  const rankable = withStatus.filter((i) => i.status);
   let featured = withStatus.find((i) => i.product.featured);
   if (!featured) {
-    featured = [...withStatus].sort((a, b) => b.status.ratio - a.status.ratio)[0];
+    featured = [...rankable].sort((a, b) => b.status.ratio - a.status.ratio)[0] || withStatus[0];
   }
-  const rest = withStatus
+  const rest = rankable
     .filter((i) => i.product.id !== featured.product.id)
     .sort((a, b) => b.status.ratio - a.status.ratio)
     .slice(0, 4);

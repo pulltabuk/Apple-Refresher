@@ -211,6 +211,7 @@ a { color: inherit; text-decoration: none; }
 .badge--aging { background: var(--aging-bg); color: var(--aging-text); }
 .badge--overdue { background: var(--overdue-bg); color: var(--overdue-text); }
 .badge--discontinued { background: var(--discontinued-bg); color: var(--discontinued-text); }
+.badge--coming-soon { background: #e6f1fb; color: #0c447c; }
 
 /* Intro hero */
 .intro-hero { padding: 2rem 0 0.5rem; }
@@ -337,6 +338,8 @@ a { color: inherit; text-decoration: none; }
 .callout { background: #eef4fb; border-radius: 10px; padding: 1rem; margin-top: 1.5rem; }
 .callout-label { font-size: 13px; font-weight: 600; margin: 0 0 4px; color: #0c447c; }
 .callout p:last-child { margin: 0; color: #0c447c; font-size: 13px; }
+.external-link { margin-top: 1rem; font-size: 14px; }
+.external-link a { color: var(--text-accent, #185fa5); text-decoration: underline; }
 
 .verdict-row { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1.5rem; font-size: 14px; }
 

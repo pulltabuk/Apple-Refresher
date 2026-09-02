@@ -81,6 +81,20 @@
 
   // --- Products ---
 
+  const DEFAULT_CATEGORIES = ['iPhone', 'Mac', 'iPad', 'Apple Watch', 'AirPods', 'Vision Pro', 'Other'];
+
+  function updateCategoryOptions() {
+    const categoryOptions = document.getElementById('category-options');
+    const categories = new Set(DEFAULT_CATEGORIES);
+    cachedProducts.forEach((p) => { if (p.category) categories.add(p.category); });
+    categoryOptions.innerHTML = '';
+    categories.forEach((c) => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      categoryOptions.appendChild(opt);
+    });
+  }
+
   async function loadProducts() {
     const { data, error } = await client.from('products').select('*').order('name');
     productListEl.innerHTML = '';
@@ -89,6 +103,7 @@
       return;
     }
     cachedProducts = data;
+    updateCategoryOptions();
     data.forEach((p) => {
       const row = document.createElement('div');
       row.className = 'admin-row';
@@ -192,11 +207,14 @@
     editingSlug = p.slug;
     document.getElementById('form-title').textContent = 'Edit product';
     document.getElementById('name').value = p.name || '';
-    document.getElementById('category').value = p.category || 'Other';
+    document.getElementById('category').value = p.category || '';
     document.getElementById('price').value = p.price || '';
     document.getElementById('chip').value = p.chip || '';
+    document.getElementById('external_link').value = p.external_link || '';
     document.getElementById('rumor_note').value = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
+    document.getElementById('coming_soon').checked = !!p.coming_soon;
+    document.getElementById('expected_date').value = p.expected_date || '';
     document.getElementById('discontinued').checked = !!p.discontinued;
     document.getElementById('discontinued_date').value = p.discontinued_date || '';
     currentRefreshHistory = (p.refresh_history || []).slice();
@@ -239,12 +257,15 @@
     const payload = {
       slug,
       name,
-      category: document.getElementById('category').value,
+      category: document.getElementById('category').value.trim() || 'Other',
       price: document.getElementById('price').value.trim() || null,
       chip: document.getElementById('chip').value.trim() || null,
+      external_link: document.getElementById('external_link').value.trim() || null,
       refresh_history: currentRefreshHistory,
       rumor_note: document.getElementById('rumor_note').value.trim() || null,
       featured: document.getElementById('featured').checked,
+      coming_soon: document.getElementById('coming_soon').checked,
+      expected_date: document.getElementById('expected_date').value || null,
       discontinued: document.getElementById('discontinued').checked,
       discontinued_date: document.getElementById('discontinued_date').value || null,
       image_urls: currentImageUrls,

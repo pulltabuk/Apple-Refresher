@@ -7,7 +7,8 @@ No JavaScript rendering on the way in, so it's crawlable from day one.
 
 1. Create a new project (or use an existing one).
 2. Open the SQL editor and run, in order: `supabase-schema.sql`, then
-   `supabase-schema-update.sql`, then `supabase-schema-update-2.sql`.
+   `supabase-schema-update.sql`, then `supabase-schema-update-2.sql`,
+   then `supabase-schema-update-3.sql`.
 3. Storage: create a bucket called exactly `product-images`, and make
    sure its **Public** toggle is on. Uploads will silently produce
    broken image links if this is off, even though the upload itself

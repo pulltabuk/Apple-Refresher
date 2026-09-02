@@ -13,6 +13,7 @@ const CATEGORY_ICONS = {
   iPad: `<rect x="7" y="8" width="26" height="24" rx="3"/><line x1="19" y1="27" x2="21" y2="27"/>`,
   'Apple Watch': `<rect x="12" y="10" width="16" height="20" rx="5"/><rect x="27.5" y="17" width="3" height="6" rx="1"/>`,
   AirPods: `<path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/>`,
+  'Vision Pro': `<path d="M6 18c0-4 3-6 14-6s14 2 14 6-3 6-14 6S6 22 6 18z"/><circle cx="15" cy="18" r="2.5"/><circle cx="25" cy="18" r="2.5"/>`,
   Other: `<rect x="8" y="8" width="24" height="24" rx="4"/>`,
 };
 
@@ -42,6 +43,13 @@ function badgeHtml(statusInfo) {
   if (!statusInfo) return '';
   const { status, daysSince } = statusInfo;
   return `<span class="badge badge--${status}">${daysSince}d &middot; ${STATUS_LABEL[status]}</span>`;
+}
+
+function productBadge(product, statusInfo) {
+  if (product.coming_soon) {
+    return `<span class="badge badge--coming-soon">Coming soon</span>`;
+  }
+  return badgeHtml(statusInfo);
 }
 
 const DEFAULT_SCRIPTS = [
@@ -97,7 +105,7 @@ function cardHtml(product, statusInfo) {
     <div class="card-image">${primaryImage(product) ? `<img src="${primaryImage(product)}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
     ${categoryPill(product.category)}
     <p class="card-name">${escapeHtml(product.name)}</p>
-    ${badgeHtml(statusInfo)}
+    ${productBadge(product, statusInfo)}
   </a>
   <button class="wait-btn" data-product-id="${product.id}" data-slug="${product.slug}">
     <span class="wait-count">${product.waiting_count || 0}</span> waiting for this
@@ -133,7 +141,7 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
       <p class="hero-eyebrow">Featured</p>
       ${categoryPill(featured.product.category)}
       <p class="hero-name">${escapeHtml(featured.product.name)}</p>
-      ${badgeHtml(featuredStatus)}
+      ${productBadge(featured.product, featuredStatus)}
     </div>
   </a>
   <div class="hero-grid">
@@ -208,7 +216,9 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
     .join('\n');
 
   const verdict =
-    status.status === 'fresh'
+    !status || product.coming_soon
+      ? null
+      : status.status === 'fresh'
       ? { text: 'Good time to buy', cls: 'fresh' }
       : status.status === 'aging'
       ? { text: 'Fine to buy, refresh due within the year', cls: 'aging' }
@@ -228,6 +238,25 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
     ? `<video class="product-video" src="${product.video_url}" controls></video>`
     : '';
 
+  const firstStat = product.coming_soon
+    ? `<div class="stat"><p class="stat-label">Expected</p><p class="stat-value">${
+        product.expected_date
+          ? new Date(product.expected_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
+          : 'Not yet announced'
+      }</p></div>`
+    : status
+    ? `<div class="stat"><p class="stat-label">Last refreshed</p><p class="stat-value">${new Date(status.lastRefresh).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}</p></div>`
+    : '';
+
+  const releaseHistorySection = history.length
+    ? `<h2>Release history</h2>
+  <div class="timeline">${timelineItems}</div>`
+    : '';
+
+  const externalLinkBlock = product.external_link
+    ? `<p class="external-link"><a href="${product.external_link}" target="_blank" rel="noopener">More information &#8599;</a></p>`
+    : '';
+
   const body = `
 <article class="product-page">
   <div class="product-header">
@@ -236,7 +265,7 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
       <h1>${escapeHtml(product.name)}</h1>
     </div>
     <div class="product-header-right">
-      ${badgeHtml(status)}
+      ${productBadge(product, status)}
       <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
     </div>
   </div>
@@ -246,20 +275,21 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
   ${videoBlock}
 
   <div class="stat-row">
-    <div class="stat"><p class="stat-label">Last refreshed</p><p class="stat-value">${new Date(status.lastRefresh).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}</p></div>
+    ${firstStat}
     ${product.price ? `<div class="stat"><p class="stat-label">Starting price</p><p class="stat-value">${escapeHtml(product.price)}</p></div>` : ''}
     ${product.chip ? `<div class="stat"><p class="stat-label">Chip</p><p class="stat-value">${escapeHtml(product.chip)}</p></div>` : ''}
   </div>
 
-  <h2>Release history</h2>
-  <div class="timeline">${timelineItems}</div>
+  ${releaseHistorySection}
 
   ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><p>${escapeHtml(product.rumor_note)}</p></div>` : ''}
 
-  <div class="verdict-row">
+  ${externalLinkBlock}
+
+  ${verdict ? `<div class="verdict-row">
     <span>Verdict</span>
     <span class="badge badge--${verdict.cls}">${verdict.text}</span>
-  </div>
+  </div>` : ''}
 
   <button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}">
     <span class="wait-count">${product.waiting_count || 0}</span> waiting for this
@@ -268,7 +298,9 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
 
   return shell({
     title: `${product.name} — Apple Refresher`,
-    description: `${product.name} was last refreshed ${status.daysSince} days ago. See the full release history and whether now is a good time to buy.`,
+    description: status
+      ? `${product.name} was last refreshed ${status.daysSince} days ago. See the full release history and whether now is a good time to buy.`
+      : `${product.name} on Apple Refresher.`,
     siteUrl,
     path: `/products/${product.slug}/`,
     bodyHtml: body,
@@ -332,17 +364,12 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     <form id="product-form" class="admin-form">
       <label>Name<input type="text" id="name" required></label>
       <label>Category
-        <select id="category">
-          <option>iPhone</option>
-          <option>Mac</option>
-          <option>iPad</option>
-          <option>Apple Watch</option>
-          <option>AirPods</option>
-          <option>Other</option>
-        </select>
+        <input type="text" id="category" list="category-options" placeholder="e.g. iPhone, Vision Pro">
+        <datalist id="category-options"></datalist>
       </label>
       <label>Starting price<input type="text" id="price" placeholder="£799"></label>
       <label>Chip<input type="text" id="chip"></label>
+      <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
 
       <div class="admin-subfield">
         <span class="admin-subfield-label">Refresh history</span>
@@ -368,6 +395,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       </div>
 
       <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
+      <label class="checkbox-label"><input type="checkbox" id="coming_soon"> Coming soon</label>
+      <label>Expected date (if known)<input type="date" id="expected_date"></label>
       <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
       <label>Discontinued date<input type="date" id="discontinued_date"></label>
       <button type="submit" class="admin-btn">Save product</button>
@@ -401,4 +430,4 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   });
 }
 
-module.exports = { homePage, allProductsPage, discontinuedPage, productPage, aboutPage, adminPage, cardHtml };
+module.exports = { homePage, allProductsPage, discontinuedPage, productPage, aboutPage, adminPage, cardHtml, productBadge };
