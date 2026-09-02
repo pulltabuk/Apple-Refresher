@@ -1,5 +1,3 @@
-const STATUS_LABEL = { fresh: 'fresh', aging: 'aging', overdue: 'overdue' };
-
 const LOGO_SVG = `<svg width="26" height="26" viewBox="0 0 48 48" fill="none" aria-hidden="true">
   <rect width="48" height="48" rx="12" fill="#5F5E5A"/>
   <circle cx="24" cy="24" r="13" stroke="#ffffff" stroke-width="2"/>
@@ -42,7 +40,7 @@ function categoryPill(category) {
 function badgeHtml(statusInfo) {
   if (!statusInfo) return '';
   const { status, daysSince } = statusInfo;
-  return `<span class="badge badge--${status}">${daysSince} days since refresh &middot; ${STATUS_LABEL[status]}</span>`;
+  return `<span class="badge badge--${status}">${daysSince} days since refresh</span>`;
 }
 
 function productBadge(product, statusInfo) {
@@ -108,7 +106,7 @@ function cardHtml(product, statusInfo) {
     ${productBadge(product, statusInfo)}
   </a>
   <button class="wait-btn" data-product-id="${product.id}" data-slug="${product.slug}">
-    I&#8217;m waiting too (<span class="wait-count">${product.waiting_count || 0}</span>)
+    Waiting for this? (<span class="wait-count">${product.waiting_count || 0}</span>)
   </button>
 </article>`;
 }
@@ -292,7 +290,7 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
   </div>` : ''}
 
   <button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}">
-    I&#8217;m waiting too (<span class="wait-count">${product.waiting_count || 0}</span>)
+    Waiting for this? (<span class="wait-count">${product.waiting_count || 0}</span>)
   </button>
 </article>`;
 
