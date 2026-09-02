@@ -76,9 +76,6 @@
           '<p class="card-name">' + escapeHtmlJS(product.name) + '</p>' +
           badgeHtmlJS(product, statusInfo) +
         '</a>' +
-        '<button class="wait-btn" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">' +
-          'Waiting for a refresh?' +
-        '</button>' +
       '</article>'
     );
   }

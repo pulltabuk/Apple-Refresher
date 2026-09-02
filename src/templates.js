@@ -106,9 +106,6 @@ function cardHtml(product, statusInfo) {
     <p class="card-name">${escapeHtml(product.name)}</p>
     ${productBadge(product, statusInfo)}
   </a>
-  <button class="wait-btn" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
-    Waiting for a refresh?
-  </button>
 </article>`;
 }
 
