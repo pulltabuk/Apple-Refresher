@@ -6,10 +6,13 @@ No JavaScript rendering on the way in, so it's crawlable from day one.
 ## 1. Supabase
 
 1. Create a new project (or use an existing one).
-2. Open the SQL editor and run `supabase-schema.sql`, then
-   `supabase-schema-update.sql`. The second one adds the About page's
-   content table and lets a logged-in admin edit products.
-3. Storage > create a bucket called `product-images`, mark it Public.
+2. Open the SQL editor and run, in order: `supabase-schema.sql`, then
+   `supabase-schema-update.sql`, then `supabase-schema-update-2.sql`.
+3. Storage: create a bucket called exactly `product-images`, and make
+   sure its **Public** toggle is on. Uploads will silently produce
+   broken image links if this is off, even though the upload itself
+   succeeds, so this is the first thing to check if a photo doesn't
+   show up after uploading it.
 4. Settings > API: copy the Project URL, the `service_role` key, and the
    `anon` key, you'll need all three below.
 5. Authentication > Users > Add user: create yourself a login (email +

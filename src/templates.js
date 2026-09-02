@@ -29,6 +29,11 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
+function primaryImage(product) {
+  if (product.image_urls && product.image_urls.length) return product.image_urls[0];
+  return product.image_url || null;
+}
+
 function categoryPill(category) {
   return `<span class="pill">${escapeHtml(category)}</span>`;
 }
@@ -89,7 +94,7 @@ ${scriptTags}
 function cardHtml(product, statusInfo) {
   return `<article class="card" data-category="${escapeHtml(product.category)}">
   <a class="card-link" href="/products/${product.slug}/">
-    <div class="card-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
+    <div class="card-image">${primaryImage(product) ? `<img src="${primaryImage(product)}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
     ${categoryPill(product.category)}
     <p class="card-name">${escapeHtml(product.name)}</p>
     ${badgeHtml(statusInfo)}
@@ -105,7 +110,7 @@ function discontinuedCardHtml(product) {
     ? new Date(product.discontinued_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
     : '';
   return `<article class="card card--discontinued">
-  <div class="card-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
+  <div class="card-image">${primaryImage(product) ? `<img src="${primaryImage(product)}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
   ${categoryPill(product.category)}
   <p class="card-name">${escapeHtml(product.name)}</p>
   <span class="badge badge--discontinued">Discontinued ${date}</span>
@@ -123,7 +128,7 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
 </section>
 <section class="hero">
   <a class="hero-card" href="/products/${featured.product.slug}/">
-    <div class="hero-image">${featured.product.image_url ? `<img src="${featured.product.image_url}" alt="${escapeHtml(featured.product.name)}">` : categoryIcon(featured.product.category)}</div>
+    <div class="hero-image">${primaryImage(featured.product) ? `<img src="${primaryImage(featured.product)}" alt="${escapeHtml(featured.product.name)}">` : categoryIcon(featured.product.category)}</div>
     <div class="hero-body">
       <p class="hero-eyebrow">Featured</p>
       ${categoryPill(featured.product.category)}
@@ -209,6 +214,20 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
       ? { text: 'Fine to buy, refresh due within the year', cls: 'aging' }
       : { text: 'Wait, refresh is overdue', cls: 'overdue' };
 
+  const images = product.image_urls && product.image_urls.length ? product.image_urls : product.image_url ? [product.image_url] : [];
+  const mainImage = images[0]
+    ? `<img src="${images[0]}" alt="${escapeHtml(product.name)}">`
+    : categoryIcon(product.category);
+  const galleryRest = images.length > 1
+    ? `<div class="product-gallery">${images
+        .slice(1)
+        .map((url) => `<div class="product-gallery-item"><img src="${url}" alt="${escapeHtml(product.name)}"></div>`)
+        .join('\n')}</div>`
+    : '';
+  const videoBlock = product.video_url
+    ? `<video class="product-video" src="${product.video_url}" controls></video>`
+    : '';
+
   const body = `
 <article class="product-page">
   <div class="product-header">
@@ -222,18 +241,20 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
     </div>
   </div>
 
-  <div class="card-image product-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
+  <div class="card-image product-image">${mainImage}</div>
+  ${galleryRest}
+  ${videoBlock}
 
   <div class="stat-row">
     <div class="stat"><p class="stat-label">Last refreshed</p><p class="stat-value">${new Date(status.lastRefresh).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}</p></div>
-    ${product.price ? `<div class="stat"><p class="stat-label">Price</p><p class="stat-value">${escapeHtml(product.price)}</p></div>` : ''}
+    ${product.price ? `<div class="stat"><p class="stat-label">Starting price</p><p class="stat-value">${escapeHtml(product.price)}</p></div>` : ''}
     ${product.chip ? `<div class="stat"><p class="stat-label">Chip</p><p class="stat-value">${escapeHtml(product.chip)}</p></div>` : ''}
   </div>
 
   <h2>Release history</h2>
   <div class="timeline">${timelineItems}</div>
 
-  ${product.rumor_note ? `<div class="callout"><p class="callout-label">Likely next refresh</p><p>${escapeHtml(product.rumor_note)}</p></div>` : ''}
+  ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><p>${escapeHtml(product.rumor_note)}</p></div>` : ''}
 
   <div class="verdict-row">
     <span>Verdict</span>
@@ -295,46 +316,73 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 </section>
 
 <section id="dashboard" style="display:none;">
-  <button id="logout-btn" class="admin-btn">Log out</button>
+  <div class="admin-topbar">
+    <div class="admin-tabs">
+      <button type="button" class="admin-tab-btn active" data-tab="products">Products</button>
+      <button type="button" class="admin-tab-btn" data-tab="about">About page</button>
+    </div>
+    <button id="logout-btn" class="admin-btn">Log out</button>
+  </div>
 
-  <h2>Products</h2>
-  <button id="new-product-btn" class="admin-btn">Add new product</button>
-  <div id="product-list" class="admin-list"></div>
+  <div id="tab-products" class="admin-tab-panel">
+    <button id="new-product-btn" class="admin-btn">Add new product</button>
+    <div id="product-list" class="admin-list"></div>
 
-  <h3 id="form-title">Add product</h3>
-  <form id="product-form" class="admin-form">
-    <label>Slug (used in the URL, e.g. iphone-17-pro)<input type="text" id="slug" required></label>
-    <label>Name<input type="text" id="name" required></label>
-    <label>Category
-      <select id="category">
-        <option>iPhone</option>
-        <option>Mac</option>
-        <option>iPad</option>
-        <option>Apple Watch</option>
-        <option>AirPods</option>
-        <option>Other</option>
-      </select>
-    </label>
-    <label>Price<input type="text" id="price" placeholder="£799"></label>
-    <label>Chip<input type="text" id="chip"></label>
-    <label>Refresh history (comma separated, oldest first, YYYY-MM-DD)<input type="text" id="refresh_history" placeholder="2024-09-20, 2025-09-19"></label>
-    <label>What's next note<textarea id="rumor_note" rows="3"></textarea></label>
-    <label>Screenshot<input type="file" id="image-upload" accept="image/*"></label>
-    <input type="hidden" id="image_url">
-    <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
-    <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
-    <label>Discontinued date<input type="date" id="discontinued_date"></label>
-    <button type="submit" class="admin-btn">Save product</button>
-  </form>
+    <h3 id="form-title">Add product</h3>
+    <form id="product-form" class="admin-form">
+      <label>Name<input type="text" id="name" required></label>
+      <label>Category
+        <select id="category">
+          <option>iPhone</option>
+          <option>Mac</option>
+          <option>iPad</option>
+          <option>Apple Watch</option>
+          <option>AirPods</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label>Starting price<input type="text" id="price" placeholder="£799"></label>
+      <label>Chip<input type="text" id="chip"></label>
 
-  <h2>About page</h2>
-  <form id="about-form" class="admin-form">
-    <label>Heading<input type="text" id="about_heading"></label>
-    <label>Body text (leave a blank line between paragraphs)<textarea id="about_body" rows="6"></textarea></label>
-    <label>Image<input type="file" id="about-image-upload" accept="image/*"></label>
-    <input type="hidden" id="about_image_url">
-    <button type="submit" class="admin-btn">Save about page</button>
-  </form>
+      <div class="admin-subfield">
+        <span class="admin-subfield-label">Refresh history</span>
+        <ul id="refresh-history-list" class="refresh-history-list"></ul>
+        <div class="refresh-history-add">
+          <input type="date" id="new-refresh-date">
+          <button type="button" id="add-refresh-date-btn" class="admin-btn admin-btn--small">Add date</button>
+        </div>
+      </div>
+
+      <label>Notes<textarea id="rumor_note" rows="3"></textarea></label>
+
+      <div class="admin-subfield">
+        <span class="admin-subfield-label">Photos (up to 6)</span>
+        <div id="image-thumbs" class="admin-thumbs"></div>
+        <input type="file" id="image-upload" accept="image/*" multiple>
+      </div>
+
+      <div class="admin-subfield">
+        <span class="admin-subfield-label">Video</span>
+        <div id="video-status" class="admin-video-status">No video uploaded.</div>
+        <input type="file" id="video-upload" accept="video/*">
+      </div>
+
+      <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
+      <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
+      <label>Discontinued date<input type="date" id="discontinued_date"></label>
+      <button type="submit" class="admin-btn">Save product</button>
+    </form>
+  </div>
+
+  <div id="tab-about" class="admin-tab-panel" style="display:none;">
+    <form id="about-form" class="admin-form">
+      <label>Heading<input type="text" id="about_heading"></label>
+      <label>Body text (leave a blank line between paragraphs)<textarea id="about_body" rows="6"></textarea></label>
+      <label>Image<input type="file" id="about-image-upload" accept="image/*"></label>
+      <input type="hidden" id="about_image_url">
+      <button type="submit" class="admin-btn">Save about page</button>
+    </form>
+  </div>
 </section>`;
 
   return shell({

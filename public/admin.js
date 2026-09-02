@@ -9,8 +9,37 @@
   const productListEl = document.getElementById('product-list');
   const productForm = document.getElementById('product-form');
   const aboutForm = document.getElementById('about-form');
+  const refreshHistoryListEl = document.getElementById('refresh-history-list');
+  const imageThumbsEl = document.getElementById('image-thumbs');
+  const videoStatusEl = document.getElementById('video-status');
+
+  const MAX_IMAGES = 6;
   let editingId = null;
+  let editingSlug = null;
   let cachedProducts = [];
+  let currentRefreshHistory = [];
+  let currentImageUrls = [];
+  let currentVideoUrl = null;
+
+  function slugify(name) {
+    return (name || '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-+|-+$)/g, '');
+  }
+
+  // --- Tabs ---
+
+  document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.admin-tab-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.getAttribute('data-tab');
+      document.getElementById('tab-products').style.display = tab === 'products' ? 'block' : 'none';
+      document.getElementById('tab-about').style.display = tab === 'about' ? 'block' : 'none';
+    });
+  });
 
   async function showDashboard() {
     loginSection.style.display = 'none';
@@ -86,29 +115,109 @@
     });
   }
 
+  function renderRefreshHistory() {
+    refreshHistoryListEl.innerHTML = '';
+    currentRefreshHistory.forEach((date, i) => {
+      const li = document.createElement('li');
+      const span = document.createElement('span');
+      span.textContent = date;
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', () => {
+        currentRefreshHistory.splice(i, 1);
+        renderRefreshHistory();
+      });
+      li.appendChild(span);
+      li.appendChild(removeBtn);
+      refreshHistoryListEl.appendChild(li);
+    });
+  }
+
+  document.getElementById('add-refresh-date-btn').addEventListener('click', () => {
+    const input = document.getElementById('new-refresh-date');
+    if (!input.value) return;
+    if (currentRefreshHistory.indexOf(input.value) === -1) {
+      currentRefreshHistory.push(input.value);
+      currentRefreshHistory.sort();
+    }
+    input.value = '';
+    renderRefreshHistory();
+  });
+
+  function renderImageThumbs() {
+    imageThumbsEl.innerHTML = '';
+    currentImageUrls.forEach((url, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'admin-thumb';
+      const img = document.createElement('img');
+      img.src = url;
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = '\u00d7';
+      removeBtn.setAttribute('aria-label', 'Remove photo');
+      removeBtn.addEventListener('click', () => {
+        currentImageUrls.splice(i, 1);
+        renderImageThumbs();
+      });
+      wrap.appendChild(img);
+      wrap.appendChild(removeBtn);
+      imageThumbsEl.appendChild(wrap);
+    });
+  }
+
+  function renderVideoStatus() {
+    videoStatusEl.innerHTML = '';
+    if (!currentVideoUrl) {
+      videoStatusEl.textContent = 'No video uploaded.';
+      return;
+    }
+    const span = document.createElement('span');
+    span.textContent = 'Video attached. ';
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', () => {
+      currentVideoUrl = null;
+      renderVideoStatus();
+    });
+    videoStatusEl.appendChild(span);
+    videoStatusEl.appendChild(removeBtn);
+  }
+
   function editProduct(id) {
     const p = cachedProducts.find((x) => x.id === id);
     if (!p) return;
     editingId = id;
+    editingSlug = p.slug;
     document.getElementById('form-title').textContent = 'Edit product';
-    document.getElementById('slug').value = p.slug || '';
     document.getElementById('name').value = p.name || '';
     document.getElementById('category').value = p.category || 'Other';
     document.getElementById('price').value = p.price || '';
     document.getElementById('chip').value = p.chip || '';
-    document.getElementById('refresh_history').value = (p.refresh_history || []).join(', ');
     document.getElementById('rumor_note').value = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
     document.getElementById('discontinued').checked = !!p.discontinued;
     document.getElementById('discontinued_date').value = p.discontinued_date || '';
-    document.getElementById('image_url').value = p.image_url || '';
+    currentRefreshHistory = (p.refresh_history || []).slice();
+    currentImageUrls = (p.image_urls && p.image_urls.length ? p.image_urls : p.image_url ? [p.image_url] : []).slice();
+    currentVideoUrl = p.video_url || null;
+    renderRefreshHistory();
+    renderImageThumbs();
+    renderVideoStatus();
     window.scrollTo(0, 0);
   }
 
   document.getElementById('new-product-btn').addEventListener('click', () => {
     editingId = null;
+    editingSlug = null;
     productForm.reset();
-    document.getElementById('image_url').value = '';
+    currentRefreshHistory = [];
+    currentImageUrls = [];
+    currentVideoUrl = null;
+    renderRefreshHistory();
+    renderImageThumbs();
+    renderVideoStatus();
     document.getElementById('form-title').textContent = 'Add product';
   });
 
@@ -124,24 +233,22 @@
 
   productForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const historyRaw = document.getElementById('refresh_history').value;
-    const refresh_history = historyRaw
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const name = document.getElementById('name').value.trim();
+    const slug = editingId ? editingSlug : slugify(name);
 
     const payload = {
-      slug: document.getElementById('slug').value.trim(),
-      name: document.getElementById('name').value.trim(),
+      slug,
+      name,
       category: document.getElementById('category').value,
       price: document.getElementById('price').value.trim() || null,
       chip: document.getElementById('chip').value.trim() || null,
-      refresh_history,
+      refresh_history: currentRefreshHistory,
       rumor_note: document.getElementById('rumor_note').value.trim() || null,
       featured: document.getElementById('featured').checked,
       discontinued: document.getElementById('discontinued').checked,
       discontinued_date: document.getElementById('discontinued_date').value || null,
-      image_url: document.getElementById('image_url').value.trim() || null,
+      image_urls: currentImageUrls,
+      video_url: currentVideoUrl,
     };
 
     const result = editingId
@@ -154,35 +261,73 @@
     }
     productForm.reset();
     editingId = null;
+    editingSlug = null;
+    currentRefreshHistory = [];
+    currentImageUrls = [];
+    currentVideoUrl = null;
+    renderRefreshHistory();
+    renderImageThumbs();
+    renderVideoStatus();
     document.getElementById('form-title').textContent = 'Add product';
     loadProducts();
   });
 
-  // --- Image upload (shared by product and about forms) ---
+  // --- File upload (shared: product photos, video, and the about image) ---
 
-  async function uploadImage(file) {
-    const path = Date.now() + '-' + file.name.replace(/\s+/g, '-');
+  async function uploadFile(file) {
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '-');
+    const path = Date.now() + '-' + safeName;
     const { error } = await client.storage.from('product-images').upload(path, file);
-    if (error) throw error;
+    if (error) {
+      console.error('Storage upload failed:', error);
+      throw error;
+    }
     const { data } = client.storage.from('product-images').getPublicUrl(path);
     return data.publicUrl;
   }
 
   document.getElementById('image-upload').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const remaining = MAX_IMAGES - currentImageUrls.length;
+    if (remaining <= 0) {
+      window.alert('You already have 6 photos, remove one first.');
+      e.target.value = '';
+      return;
+    }
+    const toUpload = files.slice(0, remaining);
+    if (files.length > remaining) {
+      window.alert('Only ' + remaining + ' more photo(s) can be added (6 max), the rest were skipped.');
+    }
+    for (const file of toUpload) {
+      try {
+        const url = await uploadFile(file);
+        currentImageUrls.push(url);
+        renderImageThumbs();
+      } catch (err) {
+        window.alert('Upload failed: ' + err.message + '. Check the browser console for details, and that the product-images bucket exists, is Public, and the storage upload policy has been run.');
+      }
+    }
+    e.target.value = '';
+  });
+
+  document.getElementById('video-upload').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      document.getElementById('image_url').value = await uploadImage(file);
+      currentVideoUrl = await uploadFile(file);
+      renderVideoStatus();
     } catch (err) {
-      window.alert('Upload failed: ' + err.message);
+      window.alert('Video upload failed: ' + err.message);
     }
+    e.target.value = '';
   });
 
   document.getElementById('about-image-upload').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      document.getElementById('about_image_url').value = await uploadImage(file);
+      document.getElementById('about_image_url').value = await uploadFile(file);
     } catch (err) {
       window.alert('Upload failed: ' + err.message);
     }
@@ -213,7 +358,7 @@
       window.alert('Save failed: ' + error.message);
       return;
     }
-    window.alert('About page saved. It goes live on the next site rebuild.');
+    window.alert('About page saved.');
   });
 
   checkSession();
