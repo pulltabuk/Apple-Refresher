@@ -1,0 +1,86 @@
+const fs = require('fs');
+const path = require('path');
+const { computeStatus } = require('./src/status');
+const { homePage, allProductsPage, discontinuedPage, productPage } = require('./src/templates');
+
+const SITE_URL = process.env.SITE_URL || 'https://example.netlify.app';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+
+const DIST = path.join(__dirname, 'dist');
+
+function write(relPath, content) {
+  const fullPath = path.join(DIST, relPath);
+  fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+  fs.writeFileSync(fullPath, content);
+}
+
+function copyStatic() {
+  const publicDir = path.join(__dirname, 'public');
+  for (const file of fs.readdirSync(publicDir)) {
+    fs.copyFileSync(path.join(publicDir, file), path.join(DIST, file));
+  }
+}
+
+async function loadProducts() {
+  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data, error } = await supabase.from('products').select('*');
+    if (error) throw error;
+    console.log(`Loaded ${data.length} products from Supabase.`);
+    return data;
+  }
+  console.log('No Supabase credentials set — building with sample data.');
+  return require('./src/data.sample').products;
+}
+
+async function main() {
+  const products = await loadProducts();
+
+  const active = products.filter((p) => !p.discontinued);
+  const discontinued = products
+    .filter((p) => p.discontinued)
+    .sort((a, b) => new Date(b.discontinued_date || 0) - new Date(a.discontinued_date || 0));
+
+  const withStatus = active
+    .map((product) => ({ product, status: computeStatus(product) }))
+    .filter((i) => i.status);
+
+  // Featured: an explicitly flagged product, or the most overdue one.
+  let featured = withStatus.find((i) => i.product.featured);
+  if (!featured) {
+    featured = [...withStatus].sort((a, b) => b.status.ratio - a.status.ratio)[0];
+  }
+  const rest = withStatus
+    .filter((i) => i.product.id !== featured.product.id)
+    .sort((a, b) => b.status.ratio - a.status.ratio)
+    .slice(0, 4);
+
+  const opts = { siteUrl: SITE_URL, supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON_KEY };
+
+  write('index.html', homePage({ featured, rest, ...opts }));
+  write('products/index.html', allProductsPage({ items: withStatus, ...opts }));
+  write('discontinued/index.html', discontinuedPage({ items: discontinued, ...opts }));
+
+  for (const item of withStatus) {
+    write(
+      `products/${item.product.slug}/index.html`,
+      productPage({
+        product: item.product,
+        status: item.status,
+        history: item.product.refresh_history || [],
+        ...opts,
+      })
+    );
+  }
+
+  copyStatic();
+  console.log(`Built ${withStatus.length} product pages, 1 home page, 1 discontinued page.`);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
