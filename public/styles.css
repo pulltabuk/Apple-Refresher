@@ -452,13 +452,21 @@ label.admin-btn { cursor: pointer; }
 .external-link { margin-top: 1rem; font-size: 14px; }
 .external-link a { color: var(--text-accent, #185fa5); text-decoration: underline; }
 
-.days-hero { margin: 6px 0 0; font-size: 16px; font-weight: 500; }
+.days-hero {
+  display: inline-block;
+  margin: 8px 0 0;
+  padding: 10px 22px;
+  border-radius: 20px;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+}
 .days-hero-number { display: block; font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
-.days-hero--fresh { color: var(--fresh-text); }
-.days-hero--aging { color: var(--aging-text); }
-.days-hero--overdue { color: var(--overdue-text); }
-.days-hero--discontinued { color: var(--discontinued-text); font-size: 20px; font-weight: 700; }
-.days-hero--coming-soon { color: #0c447c; font-size: 20px; font-weight: 700; }
+.days-hero--fresh { background: var(--fresh-bg); color: var(--fresh-text); }
+.days-hero--aging { background: var(--aging-bg); color: var(--aging-text); }
+.days-hero--overdue { background: var(--overdue-bg); color: var(--overdue-text); }
+.days-hero--discontinued { background: var(--discontinued-bg); color: var(--discontinued-text); font-size: 15px; font-weight: 600; padding: 8px 18px; border-radius: 999px; }
+.days-hero--coming-soon { background: #e6f1fb; color: #0c447c; font-size: 15px; font-weight: 600; padding: 8px 18px; border-radius: 999px; }
 .spec-row dd .wait-count-value { font-weight: 700; }
 
 .admin-hint { font-size: 12px; color: var(--text-secondary); margin: 4px 0 0; }
