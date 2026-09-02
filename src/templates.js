@@ -75,6 +75,12 @@ function productStatusKey(product) {
   return 'current';
 }
 
+function formatPrice(price) {
+  if (!price) return null;
+  const trimmed = String(price).trim();
+  return /^[£$€]/.test(trimmed) ? trimmed : `£${trimmed}`;
+}
+
 function primaryImage(product) {
   if (product.image_urls && product.image_urls.length) return product.image_urls[0];
   return product.image_url || null;
@@ -311,11 +317,15 @@ ${filterBar('decade', decades)}
 }
 
 function categoriesIndexPage({ groups, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const tiles = groups.map(({ category, current, discontinued }) => `<a class="category-tile" href="/categories/${slugify(category)}/">
+  const tiles = groups.map(({ category, current, discontinued }) => {
+    const total = current + discontinued;
+    return `<a class="category-tile" href="/categories/${slugify(category)}/">
   <div class="category-tile-icon">${categoryIcon(category)}</div>
   <p class="category-tile-name">${escapeHtml(category)}</p>
-  <p class="category-tile-count">${current} current${discontinued ? ` &middot; ${discontinued} discontinued` : ''}</p>
-</a>`).join('\n');
+  <p class="category-tile-count">${total}</p>
+  <p class="category-tile-caption">Product${total === 1 ? '' : 's'}</p>
+</a>`;
+  }).join('\n');
   const body = `
 <h1>Browse by category</h1>
 <p class="page-intro">Every product line on the site, current and discontinued.</p>
@@ -421,8 +431,8 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     sortedDates.length > 1 ? specRow('Times refreshed', String(sortedDates.length - 1)) : '',
     product.discontinued && product.discontinued_date ? specRow('Discontinued', formatDate(product.discontinued_date)) : '',
     launch && product.discontinued && product.discontinued_date ? specRow('Lifespan', lifespanText(launch, product.discontinued_date)) : '',
-    launch && !product.discontinued && !product.coming_soon ? specRow('On sale for', lifespanText(launch, today)) : '',
-    specRow('Starting price', escapeHtml(product.price)),
+    launch && !product.discontinued && !product.coming_soon ? specRow('On sale for', `${daysBetween(launch, today)} days`) : '',
+    specRow('Starting price', escapeHtml(formatPrice(product.price))),
     specRow('Chip', escapeHtml(product.chip)),
     specRow('Replaced by', replacedByHtml),
     product.discontinued ? specRow('Why it went', escapeHtml(product.discontinued_reason)) : '',
@@ -436,37 +446,42 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
 
   const body = `
 <article class="product-page">
-  <div class="product-header">
-    <div>
-      ${categoryPill(product.category)}
-      <h1>${escapeHtml(product.name)}</h1>
+  <div class="product-top">
+    <div class="product-media">
+      <div class="card-image product-image">${mainImage}</div>
+      ${galleryRest}
+      ${videoBlock}
     </div>
-    <div class="product-header-right">
-      ${productBadge(product, status)}
-      <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
+    <div class="product-info">
+      <div class="product-header">
+        <div>
+          ${categoryPill(product.category)}
+          <h1>${escapeHtml(product.name)}</h1>
+        </div>
+        <div class="product-header-right">
+          ${productBadge(product, status)}
+          <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
+        </div>
+      </div>
+
+      <dl class="spec-list">
+        ${specs}
+      </dl>
+
+      ${verdict ? `<div class="verdict-row">
+        <span>Verdict</span>
+        <span class="badge badge--${verdict.cls}">${verdict.text}</span>
+      </div>` : ''}
+
+      ${product.discontinued ? '' : `<button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
+        Waiting for a refresh?
+      </button>`}
     </div>
   </div>
-
-  <div class="card-image product-image">${mainImage}</div>
-  ${galleryRest}
-  ${videoBlock}
-
-  <dl class="spec-list">
-    ${specs}
-  </dl>
 
   ${releaseHistorySection}
 
   ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><p>${escapeHtml(product.rumor_note)}</p></div>` : ''}
-
-  ${verdict ? `<div class="verdict-row">
-    <span>Verdict</span>
-    <span class="badge badge--${verdict.cls}">${verdict.text}</span>
-  </div>` : ''}
-
-  ${product.discontinued ? '' : `<button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
-    Waiting for a refresh?
-  </button>`}
 </article>`;
 
   const description = product.discontinued
@@ -562,13 +577,15 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <div class="admin-subfield">
         <span class="admin-subfield-label">Photos (up to 6)</span>
         <div id="image-thumbs" class="admin-thumbs"></div>
-        <input type="file" id="image-upload" accept="image/*" multiple>
+        <label for="image-upload" class="admin-btn admin-btn--small">Add photos</label>
+        <input type="file" id="image-upload" accept="image/*" multiple class="admin-file-input">
       </div>
 
       <div class="admin-subfield">
         <span class="admin-subfield-label">Video</span>
         <div id="video-status" class="admin-video-status">No video uploaded.</div>
-        <input type="file" id="video-upload" accept="video/*">
+        <label for="video-upload" class="admin-btn admin-btn--small">Add video</label>
+        <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
       </div>
 
       <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
@@ -591,7 +608,11 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     <form id="about-form" class="admin-form">
       <label>Heading<input type="text" id="about_heading"></label>
       <label>Body text (leave a blank line between paragraphs)<textarea id="about_body" rows="6"></textarea></label>
-      <label>Image<input type="file" id="about-image-upload" accept="image/*"></label>
+      <div class="admin-subfield">
+        <span class="admin-subfield-label">Image</span>
+        <label for="about-image-upload" class="admin-btn admin-btn--small">Choose image</label>
+        <input type="file" id="about-image-upload" accept="image/*" class="admin-file-input">
+      </div>
       <input type="hidden" id="about_image_url">
       <button type="submit" class="admin-btn">Save about page</button>
     </form>

@@ -68,6 +68,12 @@
     return Math.floor((new Date(b) - new Date(a)) / 86400000);
   }
 
+  function formatPriceJS(price) {
+    if (!price) return null;
+    var trimmed = String(price).trim();
+    return /^[£$€]/.test(trimmed) ? trimmed : '£' + trimmed;
+  }
+
   function statusKeyJS(product) {
     if (product.discontinued) return 'discontinued';
     if (product.coming_soon) return 'coming-soon';
@@ -171,8 +177,8 @@
       sortedDates.length > 1 ? specRowJS('Times refreshed', String(sortedDates.length - 1)) : '',
       product.discontinued && product.discontinued_date ? specRowJS('Discontinued', formatDateJS(product.discontinued_date)) : '',
       launch && product.discontinued && product.discontinued_date ? specRowJS('Lifespan', lifespanTextJS(launch, product.discontinued_date)) : '',
-      launch && !product.discontinued && !product.coming_soon ? specRowJS('On sale for', lifespanTextJS(launch, today)) : '',
-      specRowJS('Starting price', escapeHtmlJS(product.price)),
+      launch && !product.discontinued && !product.coming_soon ? specRowJS('On sale for', daysBetweenJS(launch, today) + ' days') : '',
+      specRowJS('Starting price', escapeHtmlJS(formatPriceJS(product.price))),
       specRowJS('Chip', escapeHtmlJS(product.chip)),
       specRowJS('Replaced by', replacedByHtml),
       product.discontinued ? specRowJS('Why it went', escapeHtmlJS(product.discontinued_reason)) : '',
@@ -193,21 +199,27 @@
     }
 
     return (
-      '<div class="product-header">' +
-        '<div>' + pillJS(product.category) + '<h1>' + escapeHtmlJS(product.name) + '</h1></div>' +
-        '<div class="product-header-right">' +
-          badgeHtmlJS(product, status) +
-          '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
+      '<div class="product-top">' +
+        '<div class="product-media">' +
+          '<div class="card-image product-image">' + mainImage + '</div>' +
+          galleryRest +
+          videoBlock +
+        '</div>' +
+        '<div class="product-info">' +
+          '<div class="product-header">' +
+            '<div>' + pillJS(product.category) + '<h1>' + escapeHtmlJS(product.name) + '</h1></div>' +
+            '<div class="product-header-right">' +
+              badgeHtmlJS(product, status) +
+              '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
+            '</div>' +
+          '</div>' +
+          '<dl class="spec-list">' + specs + '</dl>' +
+          (verdict ? '<div class="verdict-row"><span>Verdict</span><span class="badge badge--' + verdict.cls + '">' + verdict.text + '</span></div>' : '') +
+          (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Waiting for a refresh?</button>') +
         '</div>' +
       '</div>' +
-      '<div class="card-image product-image">' + mainImage + '</div>' +
-      galleryRest +
-      videoBlock +
-      '<dl class="spec-list">' + specs + '</dl>' +
       releaseHistorySection +
-      (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><p>' + escapeHtmlJS(product.rumor_note) + '</p></div>' : '') +
-      (verdict ? '<div class="verdict-row"><span>Verdict</span><span class="badge badge--' + verdict.cls + '">' + verdict.text + '</span></div>' : '') +
-      (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Waiting for a refresh?</button>')
+      (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><p>' + escapeHtmlJS(product.rumor_note) + '</p></div>' : '')
     );
   }
 

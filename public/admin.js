@@ -154,7 +154,7 @@
       categoryTd.textContent = p.category || '';
 
       const priceTd = document.createElement('td');
-      priceTd.textContent = p.price || '\u2014';
+      priceTd.textContent = p.price ? (/^[£$€]/.test(p.price.trim()) ? p.price : '£' + p.price) : '\u2014';
 
       const statusTd = document.createElement('td');
       statusTd.textContent = p.discontinued ? 'Discontinued' : p.coming_soon ? 'Coming soon' : 'Active';
@@ -262,6 +262,9 @@
     if (!p) return;
     editingId = id;
     editingSlug = p.slug;
+    if (window.history && window.history.pushState) {
+      window.history.pushState({}, '', '/admin/?edit=' + id);
+    }
     document.getElementById('form-title').textContent = 'Edit product';
     document.getElementById('name').value = p.name || '';
     document.getElementById('category').value = p.category || '';
@@ -288,6 +291,9 @@
   document.getElementById('new-product-btn').addEventListener('click', () => {
     editingId = null;
     editingSlug = null;
+    if (window.history && window.history.pushState) {
+      window.history.pushState({}, '', '/admin/');
+    }
     productForm.reset();
     currentRefreshHistory = [];
     currentImageUrls = [];
