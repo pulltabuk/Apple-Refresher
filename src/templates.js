@@ -51,11 +51,11 @@ function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supab
 ${noindex ? '<meta name="robots" content="noindex">' : ''}
 <link rel="canonical" href="${siteUrl}${path}">
 <link rel="stylesheet" href="/styles.css">
-<link rel="icon" href="/logo.svg">
+<link rel="icon" type="image/png" href="/favicon.png">
 </head>
 <body>
 <header class="site-header">
-  <a class="site-title" href="/">${LOGO_SVG}<span>Apple Refresher</span></a>
+  <a class="site-title" href="/"><img src="/logo.png" alt="" class="site-logo"><span>Apple Refresher</span></a>
   <nav class="site-nav">
     <a href="/products/">All products</a>
     <a href="/discontinued/">Discontinued</a>
