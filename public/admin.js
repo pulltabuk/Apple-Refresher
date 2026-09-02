@@ -104,13 +104,51 @@
     }
     cachedProducts = data;
     updateCategoryOptions();
+
+    if (!data.length) {
+      productListEl.textContent = 'No products yet, add your first one below.';
+      return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'admin-table';
+
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr>';
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
     data.forEach((p) => {
-      const row = document.createElement('div');
-      row.className = 'admin-row';
-      const label = document.createElement('span');
-      label.textContent = p.name + (p.discontinued ? ' (discontinued)' : '');
-      const actions = document.createElement('span');
-      actions.className = 'admin-row-actions';
+      const tr = document.createElement('tr');
+
+      const photoTd = document.createElement('td');
+      photoTd.className = 'admin-table-photo';
+      const thumbUrl = (p.image_urls && p.image_urls[0]) || p.image_url;
+      if (thumbUrl) {
+        const img = document.createElement('img');
+        img.src = thumbUrl;
+        img.alt = '';
+        photoTd.appendChild(img);
+      } else {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'admin-table-photo-placeholder';
+        photoTd.appendChild(placeholder);
+      }
+
+      const nameTd = document.createElement('td');
+      nameTd.textContent = p.name;
+
+      const categoryTd = document.createElement('td');
+      categoryTd.textContent = p.category || '';
+
+      const priceTd = document.createElement('td');
+      priceTd.textContent = p.price || '\u2014';
+
+      const statusTd = document.createElement('td');
+      statusTd.textContent = p.discontinued ? 'Discontinued' : p.coming_soon ? 'Coming soon' : 'Active';
+
+      const actionsTd = document.createElement('td');
+      actionsTd.className = 'admin-row-actions';
 
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
@@ -122,12 +160,19 @@
       deleteBtn.textContent = 'Delete';
       deleteBtn.addEventListener('click', () => deleteProduct(p.id));
 
-      actions.appendChild(editBtn);
-      actions.appendChild(deleteBtn);
-      row.appendChild(label);
-      row.appendChild(actions);
-      productListEl.appendChild(row);
+      actionsTd.appendChild(editBtn);
+      actionsTd.appendChild(deleteBtn);
+
+      tr.appendChild(photoTd);
+      tr.appendChild(nameTd);
+      tr.appendChild(categoryTd);
+      tr.appendChild(priceTd);
+      tr.appendChild(statusTd);
+      tr.appendChild(actionsTd);
+      tbody.appendChild(tr);
     });
+    table.appendChild(tbody);
+    productListEl.appendChild(table);
   }
 
   function renderRefreshHistory() {
