@@ -1,5 +1,26 @@
 const STATUS_LABEL = { fresh: 'fresh', aging: 'aging', overdue: 'overdue' };
 
+const LOGO_SVG = `<svg width="26" height="26" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+  <rect width="48" height="48" rx="12" fill="#5F5E5A"/>
+  <circle cx="24" cy="24" r="13" stroke="#ffffff" stroke-width="2"/>
+  <path d="M24 24V16" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <path d="M24 24H30" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
+
+const CATEGORY_ICONS = {
+  iPhone: `<rect x="13" y="4" width="14" height="32" rx="3"/><line x1="17" y1="31" x2="23" y2="31"/>`,
+  Mac: `<rect x="8" y="9" width="24" height="16" rx="1.5"/><path d="M5 30h30l-2.5-3h-25z"/>`,
+  iPad: `<rect x="7" y="8" width="26" height="24" rx="3"/><line x1="19" y1="27" x2="21" y2="27"/>`,
+  'Apple Watch': `<rect x="12" y="10" width="16" height="20" rx="5"/><rect x="27.5" y="17" width="3" height="6" rx="1"/>`,
+  AirPods: `<path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/>`,
+  Other: `<rect x="8" y="8" width="24" height="24" rx="4"/>`,
+};
+
+function categoryIcon(category) {
+  const shape = CATEGORY_ICONS[category] || CATEGORY_ICONS.Other;
+  return `<svg class="placeholder-icon" viewBox="0 0 40 40" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
+}
+
 function escapeHtml(str) {
   if (str == null) return '';
   return String(str)
@@ -26,10 +47,11 @@ function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supab
 ${noindex ? '<meta name="robots" content="noindex">' : ''}
 <link rel="canonical" href="${siteUrl}${path}">
 <link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="/logo.svg">
 </head>
 <body>
 <header class="site-header">
-  <a class="site-title" href="/">Apple Refresher</a>
+  <a class="site-title" href="/">${LOGO_SVG}<span>Apple Refresher</span></a>
   <nav class="site-nav">
     <a href="/products/">All products</a>
     <a href="/discontinued/">Discontinued</a>
@@ -58,7 +80,7 @@ ${scriptTags}
 function cardHtml(product, statusInfo) {
   return `<article class="card" data-category="${escapeHtml(product.category)}">
   <a class="card-link" href="/products/${product.slug}/">
-    <div class="card-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : '<span class="card-image-placeholder"></span>'}</div>
+    <div class="card-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
     <p class="card-name">${escapeHtml(product.name)}</p>
     ${badgeHtml(statusInfo)}
   </a>
@@ -73,7 +95,7 @@ function discontinuedCardHtml(product) {
     ? new Date(product.discontinued_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
     : '';
   return `<article class="card card--discontinued">
-  <div class="card-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : '<span class="card-image-placeholder"></span>'}</div>
+  <div class="card-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
   <p class="card-name">${escapeHtml(product.name)}</p>
   <span class="badge badge--discontinued">Discontinued ${date}</span>
 </article>`;
@@ -84,7 +106,7 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const body = `
 <section class="hero">
   <a class="hero-card" href="/products/${featured.product.slug}/">
-    <div class="hero-image">${featured.product.image_url ? `<img src="${featured.product.image_url}" alt="${escapeHtml(featured.product.name)}">` : '<span class="card-image-placeholder"></span>'}</div>
+    <div class="hero-image">${featured.product.image_url ? `<img src="${featured.product.image_url}" alt="${escapeHtml(featured.product.name)}">` : categoryIcon(featured.product.category)}</div>
     <div class="hero-body">
       <p class="hero-eyebrow">Featured</p>
       <p class="hero-name">${escapeHtml(featured.product.name)}</p>
@@ -177,7 +199,7 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
     ${badgeHtml(status)}
   </div>
 
-  <div class="card-image product-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : '<span class="card-image-placeholder"></span>'}</div>
+  <div class="card-image product-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
 
   <div class="stat-row">
     <div class="stat"><p class="stat-label">Last refreshed</p><p class="stat-value">${new Date(status.lastRefresh).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}</p></div>
