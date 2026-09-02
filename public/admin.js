@@ -41,13 +41,34 @@
     });
   });
 
+  const productListView = document.getElementById('product-list-view');
+  const productFormView = document.getElementById('product-form-view');
+
+  function showProductList() {
+    productListView.style.display = 'block';
+    productFormView.style.display = 'none';
+  }
+
+  function showProductForm() {
+    productListView.style.display = 'none';
+    productFormView.style.display = 'block';
+    window.scrollTo(0, 0);
+  }
+
   async function showDashboard() {
     loginSection.style.display = 'none';
     dashboard.style.display = 'block';
     await loadProducts();
     loadAbout();
-    const editId = new URLSearchParams(window.location.search).get('edit');
-    if (editId) editProduct(editId);
+    const params = new URLSearchParams(window.location.search);
+    const editId = params.get('edit');
+    if (editId) {
+      editProduct(editId);
+    } else if (params.get('new')) {
+      startNewProduct();
+    } else {
+      showProductList();
+    }
   }
 
   function showLogin() {
@@ -285,14 +306,14 @@
     renderRefreshHistory();
     renderImageThumbs();
     renderVideoStatus();
-    document.getElementById('form-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showProductForm();
   }
 
-  document.getElementById('new-product-btn').addEventListener('click', () => {
+  function startNewProduct() {
     editingId = null;
     editingSlug = null;
     if (window.history && window.history.pushState) {
-      window.history.pushState({}, '', '/admin/');
+      window.history.pushState({}, '', '/admin/?new=1');
     }
     productForm.reset();
     currentRefreshHistory = [];
@@ -302,6 +323,16 @@
     renderImageThumbs();
     renderVideoStatus();
     document.getElementById('form-title').textContent = 'Add product';
+    showProductForm();
+  }
+
+  document.getElementById('new-product-btn').addEventListener('click', startNewProduct);
+
+  document.getElementById('back-to-list-btn').addEventListener('click', () => {
+    if (window.history && window.history.pushState) {
+      window.history.pushState({}, '', '/admin/');
+    }
+    showProductList();
   });
 
   async function deleteProduct(id) {
@@ -359,7 +390,11 @@
       renderImageThumbs();
       renderVideoStatus();
       document.getElementById('form-title').textContent = 'Add product';
-      loadProducts();
+      await loadProducts();
+      if (window.history && window.history.pushState) {
+        window.history.pushState({}, '', '/admin/');
+      }
+      showProductList();
     } catch (err) {
       console.error('Unexpected error while saving:', err);
       window.alert('Something went wrong saving this product: ' + err.message + '. Check the browser console for the full error.');

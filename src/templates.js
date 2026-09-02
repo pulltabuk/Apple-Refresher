@@ -549,59 +549,64 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   </div>
 
   <div id="tab-products" class="admin-tab-panel">
-    <button id="new-product-btn" class="admin-btn">Add new product</button>
-    <div id="product-list" class="admin-list"></div>
+    <div id="product-list-view">
+      <button id="new-product-btn" class="admin-btn admin-btn--primary">Add new product</button>
+      <div id="product-list" class="admin-list"></div>
+    </div>
 
-    <h3 id="form-title">Add product</h3>
-    <form id="product-form" class="admin-form">
-      <label>Name<input type="text" id="name" required></label>
-      <label>Category
-        <input type="text" id="category" list="category-options" placeholder="e.g. iPhone, Vision Pro">
-        <datalist id="category-options"></datalist>
-      </label>
-      <label>Starting price<input type="text" id="price" placeholder="£799"></label>
-      <label>Chip<input type="text" id="chip"></label>
-      <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
+    <div id="product-form-view" style="display:none;">
+      <button type="button" id="back-to-list-btn" class="admin-back-link">&larr; Back to products</button>
+      <h3 id="form-title">Add product</h3>
+      <form id="product-form" class="admin-form">
+        <label>Name<input type="text" id="name" required></label>
+        <label>Category
+          <input type="text" id="category" list="category-options" placeholder="e.g. iPhone, Vision Pro">
+          <datalist id="category-options"></datalist>
+        </label>
+        <label>Starting price<input type="text" id="price" placeholder="£799"></label>
+        <label>Chip<input type="text" id="chip"></label>
+        <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
 
-      <div class="admin-subfield">
-        <span class="admin-subfield-label">Refresh history (the first date is treated as the launch date)</span>
-        <ul id="refresh-history-list" class="refresh-history-list"></ul>
-        <div class="refresh-history-add">
-          <input type="date" id="new-refresh-date">
-          <button type="button" id="add-refresh-date-btn" class="admin-btn admin-btn--small">Add date</button>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Refresh history (the first date is treated as the launch date)</span>
+          <ul id="refresh-history-list" class="refresh-history-list"></ul>
+          <div class="refresh-history-add">
+            <input type="date" id="new-refresh-date">
+            <button type="button" id="add-refresh-date-btn" class="admin-btn admin-btn--small">Add date</button>
+          </div>
         </div>
-      </div>
 
-      <label>Notes<textarea id="rumor_note" rows="3"></textarea></label>
+        <label>Notes<textarea id="rumor_note" rows="3"></textarea></label>
 
-      <div class="admin-subfield">
-        <span class="admin-subfield-label">Photos (up to 6)</span>
-        <div id="image-thumbs" class="admin-thumbs"></div>
-        <label for="image-upload" class="admin-btn admin-btn--small">Add photos</label>
-        <input type="file" id="image-upload" accept="image/*" multiple class="admin-file-input">
-      </div>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Photos (up to 6)</span>
+          <div id="image-thumbs" class="admin-thumbs"></div>
+          <label for="image-upload" class="admin-btn admin-btn--small">Add photos</label>
+          <input type="file" id="image-upload" accept="image/*" multiple class="admin-file-input">
+        </div>
 
-      <div class="admin-subfield">
-        <span class="admin-subfield-label">Video</span>
-        <div id="video-status" class="admin-video-status">No video uploaded.</div>
-        <label for="video-upload" class="admin-btn admin-btn--small">Add video</label>
-        <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
-      </div>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Video</span>
+          <div id="video-status" class="admin-video-status">No video uploaded.</div>
+          <label for="video-upload" class="admin-btn admin-btn--small">Add video</label>
+          <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
+        </div>
 
-      <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
-      <label class="checkbox-label"><input type="checkbox" id="coming_soon"> Coming soon</label>
-      <label>Expected date (if known)<input type="date" id="expected_date"></label>
+        <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
+        <label class="checkbox-label"><input type="checkbox" id="coming_soon"> Coming soon</label>
+        <label>Expected date (if known)<input type="date" id="expected_date"></label>
 
-      <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
-      <label>Discontinued date<input type="date" id="discontinued_date"></label>
-      <label>Replaced by (pick a product, or leave blank)
-        <input type="text" id="replaced_by" list="product-options" placeholder="Start typing a product name">
-        <datalist id="product-options"></datalist>
-      </label>
-      <label>Why it went (short, e.g. "Replaced by the iPhone" or "Folded into the Pro line")<textarea id="discontinued_reason" rows="2"></textarea></label>
+        <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
+        <label>Discontinued date<input type="date" id="discontinued_date"></label>
+        <label>Replaced by (pick a product, or leave blank)
+          <input type="text" id="replaced_by" list="product-options" placeholder="Start typing a product name">
+          <datalist id="product-options"></datalist>
+        </label>
+        <label>Why it went (short, e.g. "Replaced by the iPhone" or "Folded into the Pro line")<textarea id="discontinued_reason" rows="2"></textarea></label>
 
-      <button type="submit" class="admin-btn">Save product</button>
-    </form>
+        <button type="submit" class="admin-btn admin-btn--primary">Save product</button>
+      </form>
+    </div>
   </div>
 
   <div id="tab-about" class="admin-tab-panel" style="display:none;">

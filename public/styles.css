@@ -183,6 +183,20 @@ a { color: inherit; text-decoration: none; }
 .admin-video-status button { font-size: 12px; border: none; background: transparent; color: var(--overdue-text); cursor: pointer; margin-left: 4px; }
 
 .admin-btn--small { padding: 6px 12px; font-size: 12px; }
+.admin-btn--primary { background: #185fa5; border-color: #185fa5; }
+.admin-btn--primary:hover { background: #0c447c; border-color: #0c447c; }
+.admin-back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.admin-back-link:hover { color: var(--text); }
 label.admin-btn { cursor: pointer; }
 .admin-file-input {
   position: absolute;
