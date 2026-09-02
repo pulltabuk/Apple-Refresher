@@ -105,8 +105,8 @@ function cardHtml(product, statusInfo) {
     <p class="card-name">${escapeHtml(product.name)}</p>
     ${productBadge(product, statusInfo)}
   </a>
-  <button class="wait-btn" data-product-id="${product.id}" data-slug="${product.slug}">
-    Waiting for this? (<span class="wait-count">${product.waiting_count || 0}</span>)
+  <button class="wait-btn" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
+    Waiting for this?
   </button>
 </article>`;
 }
@@ -289,8 +289,8 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
     <span class="badge badge--${verdict.cls}">${verdict.text}</span>
   </div>` : ''}
 
-  <button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}">
-    Waiting for this? (<span class="wait-count">${product.waiting_count || 0}</span>)
+  <button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
+    Waiting for this?
   </button>
 </article>`;
 

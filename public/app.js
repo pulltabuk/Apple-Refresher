@@ -46,23 +46,30 @@
   }
 
   function votedKey(slug) { return 'waited_' + slug; }
+  function votedCountKey(slug) { return 'waited_count_' + slug; }
 
   document.querySelectorAll('.wait-btn').forEach(function (btn) {
     var slug = btn.getAttribute('data-slug');
-    if (localStorage.getItem(votedKey(slug))) {
+    var baseCount = parseInt(btn.getAttribute('data-count'), 10) || 0;
+
+    function showVoted(count) {
+      btn.textContent = count + ' people are waiting for this';
       btn.classList.add('voted');
       btn.disabled = true;
+    }
+
+    if (localStorage.getItem(votedKey(slug))) {
+      var storedCount = parseInt(localStorage.getItem(votedCountKey(slug)), 10);
+      showVoted(isNaN(storedCount) ? baseCount : storedCount);
     }
 
     btn.addEventListener('click', function () {
       if (localStorage.getItem(votedKey(slug))) return;
 
-      var countEl = btn.querySelector('.wait-count');
-      var newCount = parseInt(countEl.textContent, 10) + 1;
-      countEl.textContent = newCount;
-      btn.classList.add('voted');
-      btn.disabled = true;
+      var newCount = baseCount + 1;
+      showVoted(newCount);
       localStorage.setItem(votedKey(slug), '1');
+      localStorage.setItem(votedCountKey(slug), String(newCount));
 
       var productId = btn.getAttribute('data-product-id');
       if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
