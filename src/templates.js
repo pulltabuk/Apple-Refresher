@@ -39,8 +39,13 @@ function badgeHtml(statusInfo) {
   return `<span class="badge badge--${status}">${daysSince}d &middot; ${STATUS_LABEL[status]}</span>`;
 }
 
+const DEFAULT_SCRIPTS = [
+  '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>',
+  '<script src="/app.js" defer></script>',
+];
+
 function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supabaseAnonKey, noindex, scripts }) {
-  const scriptTags = (scripts || ['<script src="/app.js" defer></script>']).join('\n');
+  const scriptTags = (scripts || DEFAULT_SCRIPTS).join('\n');
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -211,7 +216,10 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
       ${categoryPill(product.category)}
       <h1>${escapeHtml(product.name)}</h1>
     </div>
-    ${badgeHtml(status)}
+    <div class="product-header-right">
+      ${badgeHtml(status)}
+      <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
+    </div>
   </div>
 
   <div class="card-image product-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>

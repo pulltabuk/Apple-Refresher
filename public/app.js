@@ -33,10 +33,16 @@
     searchInput.addEventListener('input', applyFilters);
   }
 
-  // Waiting button
-  var supabase = null;
-  if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY && window.supabaseClient) {
-    supabase = window.supabaseClient;
+  // Reveal the "Edit this product" link, but only to the logged-in
+  // admin — every other visitor never sees it.
+  var editLinks = document.querySelectorAll('.admin-edit-link');
+  if (editLinks.length && window.SUPABASE_URL && window.SUPABASE_ANON_KEY && window.supabase) {
+    var authClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    authClient.auth.getSession().then(function (result) {
+      if (result.data && result.data.session) {
+        editLinks.forEach(function (el) { el.style.display = ''; });
+      }
+    });
   }
 
   function votedKey(slug) { return 'waited_' + slug; }

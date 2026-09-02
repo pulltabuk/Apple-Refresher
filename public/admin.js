@@ -12,11 +12,13 @@
   let editingId = null;
   let cachedProducts = [];
 
-  function showDashboard() {
+  async function showDashboard() {
     loginSection.style.display = 'none';
     dashboard.style.display = 'block';
-    loadProducts();
+    await loadProducts();
     loadAbout();
+    const editId = new URLSearchParams(window.location.search).get('edit');
+    if (editId) editProduct(editId);
   }
 
   function showLogin() {
