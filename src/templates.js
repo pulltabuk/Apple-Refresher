@@ -42,7 +42,7 @@ function categoryPill(category) {
 function badgeHtml(statusInfo) {
   if (!statusInfo) return '';
   const { status, daysSince } = statusInfo;
-  return `<span class="badge badge--${status}">${daysSince}d &middot; ${STATUS_LABEL[status]}</span>`;
+  return `<span class="badge badge--${status}">${daysSince} days since refresh &middot; ${STATUS_LABEL[status]}</span>`;
 }
 
 function productBadge(product, statusInfo) {
@@ -108,7 +108,7 @@ function cardHtml(product, statusInfo) {
     ${productBadge(product, statusInfo)}
   </a>
   <button class="wait-btn" data-product-id="${product.id}" data-slug="${product.slug}">
-    <span class="wait-count">${product.waiting_count || 0}</span> waiting for this
+    I&#8217;m waiting too (<span class="wait-count">${product.waiting_count || 0}</span>)
   </button>
 </article>`;
 }
@@ -292,7 +292,7 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
   </div>` : ''}
 
   <button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}">
-    <span class="wait-count">${product.waiting_count || 0}</span> waiting for this
+    I&#8217;m waiting too (<span class="wait-count">${product.waiting_count || 0}</span>)
   </button>
 </article>`;
 

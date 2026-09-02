@@ -5,7 +5,7 @@ const { homePage, allProductsPage, discontinuedPage, productPage, aboutPage, adm
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Refresher',
-  body: "Apple Refresher tracks how long it's been since every current Apple product was last updated, so you can tell at a glance whether now's a good time to buy or worth holding off.\n\nIt's an independent project and isn't affiliated with Apple.",
+  body: "Apple Refresher tracks how long it's been since every current Apple product was last updated, so you can tell at a glance whether now's a good time to buy or worth holding off.\n\nIt isn't trying to replace Apple's own site or the Apple news sites, there's no reviews or rumours here beyond a short note where relevant. It's simply a countdown for what's current and a searchable archive for what's been discontinued, one place to check either.\n\nIt's an independent project and isn't affiliated with Apple.",
   image_url: null,
 };
 
