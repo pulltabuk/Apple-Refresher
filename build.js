@@ -79,12 +79,14 @@ async function main() {
   const rankable = withStatus.filter((i) => i.status);
   let featured = withStatus.find((i) => i.product.featured);
   if (!featured) {
-    featured = [...rankable].sort((a, b) => b.status.ratio - a.status.ratio)[0] || withStatus[0];
+    featured = [...rankable].sort((a, b) => b.status.ratio - a.status.ratio)[0] || withStatus[0] || null;
   }
-  const rest = rankable
-    .filter((i) => i.product.id !== featured.product.id)
-    .sort((a, b) => b.status.ratio - a.status.ratio)
-    .slice(0, 4);
+  const rest = featured
+    ? rankable
+        .filter((i) => i.product.id !== featured.product.id)
+        .sort((a, b) => b.status.ratio - a.status.ratio)
+        .slice(0, 4)
+    : [];
 
   const opts = { siteUrl: SITE_URL, supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON_KEY };
 

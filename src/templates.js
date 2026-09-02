@@ -124,7 +124,24 @@ function discontinuedCardHtml(product) {
 }
 
 function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const featuredStatus = featured.status;
+  const heroSection = featured
+    ? `<section class="hero">
+  <a class="hero-card" href="/products/${featured.product.slug}/">
+    <div class="hero-image">${primaryImage(featured.product) ? `<img src="${primaryImage(featured.product)}" alt="${escapeHtml(featured.product.name)}">` : categoryIcon(featured.product.category)}</div>
+    <div class="hero-body">
+      <p class="hero-eyebrow">Featured</p>
+      ${categoryPill(featured.product.category)}
+      <p class="hero-name">${escapeHtml(featured.product.name)}</p>
+      ${productBadge(featured.product, featured.status)}
+    </div>
+  </a>
+  <div class="hero-grid">
+    ${rest.map((r) => cardHtml(r.product, r.status)).join('\n')}
+  </div>
+</section>
+<p class="see-all"><a href="/products/">See all products &rarr;</a></p>`
+    : `<p class="page-intro">No products yet, or none with a refresh date set. Add one in <a href="/admin/">/admin/</a>, every product needs at least one refresh date, or a Coming soon flag, to show up here.</p>`;
+
   const body = `
 <section class="intro-hero">
   <p class="intro-eyebrow"><span class="eyebrow-dash"></span>Apple product refresh tracker</p>
@@ -132,21 +149,7 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
   <p class="intro-subtitle">Every current Apple product, and exactly how long it's been since its last refresh, so you're never guessing.</p>
   <a class="intro-cta" href="/products/">Browse all products</a>
 </section>
-<section class="hero">
-  <a class="hero-card" href="/products/${featured.product.slug}/">
-    <div class="hero-image">${primaryImage(featured.product) ? `<img src="${primaryImage(featured.product)}" alt="${escapeHtml(featured.product.name)}">` : categoryIcon(featured.product.category)}</div>
-    <div class="hero-body">
-      <p class="hero-eyebrow">Featured</p>
-      ${categoryPill(featured.product.category)}
-      <p class="hero-name">${escapeHtml(featured.product.name)}</p>
-      ${productBadge(featured.product, featuredStatus)}
-    </div>
-  </a>
-  <div class="hero-grid">
-    ${rest.map((r) => cardHtml(r.product, r.status)).join('\n')}
-  </div>
-</section>
-<p class="see-all"><a href="/products/">See all products &rarr;</a></p>`;
+${heroSection}`;
   return shell({
     title: 'Apple Refresher — time since every Apple product was last refreshed',
     description: 'A quick look at how long it has been since every current Apple product was last updated.',
@@ -160,7 +163,8 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
 
 function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const categories = [...new Set(items.map((i) => i.product.category))];
-  const body = `
+  const body = items.length
+    ? `
 <h1>All products</h1>
 <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
 <div class="filter-bar">
@@ -170,7 +174,10 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
-</div>`;
+</div>`
+    : `
+<h1>All products</h1>
+<p class="page-intro">No products yet, or none with a refresh date set. Add one in <a href="/admin/">/admin/</a>, every product needs at least one refresh date, or a Coming soon flag, to show up here.</p>`;
   return shell({
     title: 'All products — Apple Refresher',
     description: 'Every current Apple product and how long it has been since its last refresh.',
