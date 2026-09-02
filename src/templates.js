@@ -170,7 +170,8 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
   <select id="sort-select" class="sort-select" aria-label="Sort products">
-    <option value="days-desc" selected>Days since refresh: high to low</option>
+    <option value="" selected disabled>Sort by...</option>
+    <option value="days-desc">Days since refresh: high to low</option>
     <option value="days-asc">Days since refresh: low to high</option>
     <option value="name-asc">Name: A to Z</option>
     <option value="name-desc">Name: Z to A</option>

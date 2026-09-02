@@ -249,6 +249,7 @@
     var grid = document.getElementById('grid');
     if (!grid || !sortSelect) return;
     var sortValue = sortSelect.value;
+    if (!sortValue) return; // "Sort by..." placeholder still showing, nothing chosen yet
     var cards = Array.prototype.slice.call(grid.querySelectorAll('.card'));
 
     cards.sort(function (a, b) {
