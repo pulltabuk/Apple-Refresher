@@ -459,6 +459,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     product.discontinued && product.discontinued_date ? specRow('Discontinued', formatDate(product.discontinued_date)) : '',
     launch && product.discontinued && product.discontinued_date ? specRow('Lifespan', lifespanText(launch, product.discontinued_date)) : '',
     specRow('Starting price', escapeHtml(formatPrice(product.price))),
+    !product.discontinued && !product.coming_soon ? specRow('Days counted from', product.days_basis === 'launch' ? 'Launch' : 'Refresh') : '',
     specRow('Chip', escapeHtml(product.chip)),
     specRow('Previous model', previousModelHtml),
     specRow('Replaced by', replacedByHtml),
@@ -480,21 +481,20 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
       ${videoBlock}
     </div>
     <div class="product-info">
-      ${product.discontinued ? '' : `<p class="waiting-stat"><span class="wait-count-value">${product.waiting_count || 0}</span> people waiting</p>`}
+      ${product.discontinued ? '' : `<p class="waiting-stat"><span class="wait-count-value">${product.waiting_count || 0}</span> people waiting for a refresh</p>`}
       <div class="product-header">
         <div>
           ${categoryPill(product.category)}
           <h1>${escapeHtml(product.name)}</h1>
         </div>
-        <div class="product-header-right">
-          ${productBadge(product, status)}
-          <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
-        </div>
+        <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
       </div>
 
       <dl class="spec-list">
         ${specs}
       </dl>
+
+      ${productBadge(product, status)}
 
       ${product.discontinued ? '' : `<button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
         Waiting for a refresh?

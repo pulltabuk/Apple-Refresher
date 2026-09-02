@@ -213,6 +213,7 @@
       product.discontinued && product.discontinued_date ? specRowJS('Discontinued', formatDateJS(product.discontinued_date)) : '',
       launch && product.discontinued && product.discontinued_date ? specRowJS('Lifespan', lifespanTextJS(launch, product.discontinued_date)) : '',
       specRowJS('Starting price', escapeHtmlJS(formatPriceJS(product.price))),
+      !product.discontinued && !product.coming_soon ? specRowJS('Days counted from', product.days_basis === 'launch' ? 'Launch' : 'Refresh') : '',
       specRowJS('Chip', escapeHtmlJS(product.chip)),
       specRowJS('Previous model', previousModelHtml),
       specRowJS('Replaced by', replacedByHtml),
@@ -234,15 +235,13 @@
           videoBlock +
         '</div>' +
         '<div class="product-info">' +
-          (product.discontinued ? '' : '<p class="waiting-stat"><span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people waiting</p>') +
+          (product.discontinued ? '' : '<p class="waiting-stat"><span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people waiting for a refresh</p>') +
           '<div class="product-header">' +
             '<div>' + pillJS(product.category) + '<h1>' + escapeHtmlJS(product.name) + '</h1></div>' +
-            '<div class="product-header-right">' +
-              badgeHtmlJS(product, status) +
-              '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
-            '</div>' +
+            '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
           '</div>' +
           '<dl class="spec-list">' + specs + '</dl>' +
+          badgeHtmlJS(product, status) +
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Waiting for a refresh?</button>') +
         '</div>' +
       '</div>' +
@@ -271,7 +270,7 @@
 
       function showVoted(count) {
         if (countEl) countEl.textContent = count;
-        btn.textContent = "You're on the list";
+        btn.textContent = "You're waiting for a refresh too";
         btn.classList.add('voted');
         btn.disabled = true;
       }
