@@ -229,6 +229,25 @@
 
   const DATE_PATTERN = /^\d{4}(-\d{2}(-\d{2})?)?$/;
 
+  const richTextEditor = document.getElementById('rumor_note_editor');
+  if (document.queryCommandSupported && document.queryCommandSupported('defaultParagraphSeparator')) {
+    document.execCommand('defaultParagraphSeparator', false, 'p');
+  }
+
+  document.querySelectorAll('.richtext-toolbar [data-cmd]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      richTextEditor.focus();
+      document.execCommand(btn.getAttribute('data-cmd'));
+    });
+  });
+
+  document.getElementById('richtext-link-btn').addEventListener('click', () => {
+    const url = window.prompt('Link URL (include https://)');
+    if (!url) return;
+    richTextEditor.focus();
+    document.execCommand('createLink', false, url);
+  });
+
   document.getElementById('add-refresh-date-btn').addEventListener('click', () => {
     const input = document.getElementById('new-refresh-date');
     const value = input.value.trim();
@@ -299,7 +318,7 @@
     document.getElementById('price').value = p.price || '';
     document.getElementById('chip').value = p.chip || '';
     document.getElementById('external_link').value = p.external_link || '';
-    document.getElementById('rumor_note').value = p.rumor_note || '';
+    document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
     document.getElementById('coming_soon').checked = !!p.coming_soon;
     document.getElementById('expected_date').value = p.expected_date || '';
@@ -326,6 +345,7 @@
       window.history.pushState({}, '', '/admin/?new=1');
     }
     productForm.reset();
+    document.getElementById('rumor_note_editor').innerHTML = '';
     currentRefreshHistory = [];
     currentImageUrls = [];
     currentVideoUrl = null;
@@ -380,7 +400,10 @@
         chip: document.getElementById('chip').value.trim() || null,
         external_link: document.getElementById('external_link').value.trim() || null,
         refresh_history: currentRefreshHistory,
-        rumor_note: document.getElementById('rumor_note').value.trim() || null,
+        rumor_note: (function () {
+          var html = document.getElementById('rumor_note_editor').innerHTML.trim();
+          return html && html !== '<br>' ? html : null;
+        })(),
         featured: document.getElementById('featured').checked,
         days_basis: document.querySelector('input[name="days_basis"]:checked').value,
         is_new_launch: document.getElementById('is_new_launch').checked,
@@ -405,6 +428,7 @@
         return;
       }
       productForm.reset();
+      document.getElementById('rumor_note_editor').innerHTML = '';
       editingId = null;
       editingSlug = null;
       currentRefreshHistory = [];

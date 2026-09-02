@@ -13,6 +13,28 @@ function categoryIcon(category) {
   return `<svg class="placeholder-icon" viewBox="0 0 40 40" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
 }
 
+function sanitizeRichText(html) {
+  if (!html) return '';
+  const allowed = new Set(['p', 'b', 'strong', 'i', 'em', 'u', 'br', 'a']);
+  let out = String(html);
+  out = out.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
+  out = out.replace(/<div([^>]*)>/gi, '<p>').replace(/<\/div>/gi, '</p>');
+  out = out.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g, (match, tag, attrs) => {
+    const lower = tag.toLowerCase();
+    const isClosing = match.charAt(1) === '/';
+    if (!allowed.has(lower)) return '';
+    if (lower === 'a') {
+      if (isClosing) return '</a>';
+      const hrefMatch = attrs.match(/href\s*=\s*"([^"]*)"/i) || attrs.match(/href\s*=\s*'([^']*)'/i);
+      const href = hrefMatch ? hrefMatch[1] : '';
+      const safeHref = /^https?:\/\//i.test(href) ? href.replace(/"/g, '&quot;') : '#';
+      return `<a href="${safeHref}" target="_blank" rel="noopener">`;
+    }
+    return isClosing ? `</${lower}>` : `<${lower}>`;
+  });
+  return out;
+}
+
 function escapeHtml(str) {
   if (str == null) return '';
   return String(str)
@@ -522,7 +544,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
 
   ${releaseHistorySection}
 
-  ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><p>${escapeHtml(product.rumor_note)}</p></div>` : ''}
+  ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note)}</div></div>` : ''}
 </article>`;
 
   const description = product.discontinued
@@ -618,7 +640,18 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <p class="admin-hint">Use a full date when you know it. For older products, YYYY-MM or just YYYY is fine.</p>
         </div>
 
-        <label>Notes<textarea id="rumor_note" rows="3"></textarea></label>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Notes</span>
+          <div class="richtext-toolbar">
+            <button type="button" data-cmd="bold"><b>B</b></button>
+            <button type="button" data-cmd="italic"><i>I</i></button>
+            <button type="button" data-cmd="underline"><u>U</u></button>
+            <button type="button" data-cmd="insertParagraph">&para;</button>
+            <button type="button" id="richtext-link-btn">&#128279;</button>
+            <button type="button" data-cmd="removeFormat" class="richtext-clear">&times;</button>
+          </div>
+          <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
+        </div>
 
         <div class="admin-subfield">
           <span class="admin-subfield-label">Photos (up to 6)</span>
@@ -696,6 +729,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 }
 
 module.exports = {
+  sanitizeRichText,
   homePage,
   allProductsPage,
   discontinuedPage,

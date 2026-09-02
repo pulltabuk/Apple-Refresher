@@ -172,6 +172,28 @@
     return valueHtml ? '<div class="spec-row"><dt>' + label + '</dt><dd>' + valueHtml + '</dd></div>' : '';
   }
 
+  function sanitizeRichTextJS(html) {
+    if (!html) return '';
+    var allowed = { p: 1, b: 1, strong: 1, i: 1, em: 1, u: 1, br: 1, a: 1 };
+    var out = String(html);
+    out = out.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
+    out = out.replace(/<div([^>]*)>/gi, '<p>').replace(/<\/div>/gi, '</p>');
+    out = out.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g, function (match, tag, attrs) {
+      var lower = tag.toLowerCase();
+      var isClosing = match.charAt(1) === '/';
+      if (!allowed[lower]) return '';
+      if (lower === 'a') {
+        if (isClosing) return '</a>';
+        var hrefMatch = attrs.match(/href\s*=\s*"([^"]*)"/i) || attrs.match(/href\s*=\s*'([^']*)'/i);
+        var href = hrefMatch ? hrefMatch[1] : '';
+        var safeHref = /^https?:\/\//i.test(href) ? href.replace(/"/g, '&quot;') : '#';
+        return '<a href="' + safeHref + '" target="_blank" rel="noopener">';
+      }
+      return isClosing ? '</' + lower + '>' : '<' + lower + '>';
+    });
+    return out;
+  }
+
   function externalLinkLabelJS(product) {
     var isWiki = /wikipedia\.org/i.test(product.external_link || '');
     return product.name + (isWiki ? ' (Wiki)' : '');
@@ -263,7 +285,7 @@
         '</div>' +
       '</div>' +
       releaseHistorySection +
-      (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><p>' + escapeHtmlJS(product.rumor_note) + '</p></div>' : '')
+      (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '')
     );
   }
 

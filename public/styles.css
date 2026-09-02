@@ -448,7 +448,11 @@ label.admin-btn { cursor: pointer; }
 
 .callout { background: #eef4fb; border-radius: 10px; padding: 1rem; margin-top: 1.5rem; }
 .callout-label { font-size: 13px; font-weight: 600; margin: 0 0 4px; color: #0c447c; }
-.callout p:last-child { margin: 0; color: #0c447c; font-size: 13px; }
+.callout-body { color: #0c447c; font-size: 13px; }
+.callout-body p { margin: 0 0 0.75rem; }
+.callout-body p:last-child { margin: 0; }
+.callout-body a { color: #0c447c; text-decoration: underline; }
+.callout-body b, .callout-body strong { font-weight: 700; }
 .external-link { margin-top: 1rem; font-size: 14px; }
 .external-link a { color: var(--text-accent, #185fa5); text-decoration: underline; }
 
@@ -470,6 +474,33 @@ label.admin-btn { cursor: pointer; }
 .spec-row dd .wait-count-value { font-weight: 700; }
 
 .admin-hint { font-size: 12px; color: var(--text-secondary); margin: 4px 0 0; }
+
+.richtext-toolbar { display: flex; gap: 6px; }
+.richtext-toolbar button {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+}
+.richtext-toolbar button:hover { border-color: var(--graphite); }
+.richtext-toolbar button.richtext-clear { color: var(--overdue-text); border-color: var(--overdue-text); }
+.richtext-editor {
+  min-height: 90px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text);
+}
+.richtext-editor:focus { outline: 2px solid #185fa5; outline-offset: -1px; }
+.richtext-editor p { margin: 0 0 0.75rem; }
+.richtext-editor p:last-child { margin: 0; }
 
 .page-intro { color: var(--text-secondary); font-size: 14px; }
 
