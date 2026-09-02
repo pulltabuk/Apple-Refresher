@@ -93,6 +93,18 @@
       opt.value = c;
       categoryOptions.appendChild(opt);
     });
+
+    // "Replaced by" picker: the value saved is the product's slug, the
+    // label shown is its name.
+    const productOptions = document.getElementById('product-options');
+    productOptions.innerHTML = '';
+    cachedProducts.forEach((p) => {
+      const opt = document.createElement('option');
+      opt.value = p.slug;
+      opt.label = p.name;
+      opt.textContent = p.name;
+      productOptions.appendChild(opt);
+    });
   }
 
   async function loadProducts() {
@@ -262,6 +274,8 @@
     document.getElementById('expected_date').value = p.expected_date || '';
     document.getElementById('discontinued').checked = !!p.discontinued;
     document.getElementById('discontinued_date').value = p.discontinued_date || '';
+    document.getElementById('replaced_by').value = p.replaced_by || '';
+    document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
     currentRefreshHistory = (p.refresh_history || []).slice();
     currentImageUrls = (p.image_urls && p.image_urls.length ? p.image_urls : p.image_url ? [p.image_url] : []).slice();
     currentVideoUrl = p.video_url || null;
@@ -314,6 +328,8 @@
         expected_date: document.getElementById('expected_date').value || null,
         discontinued: document.getElementById('discontinued').checked,
         discontinued_date: document.getElementById('discontinued_date').value || null,
+        replaced_by: document.getElementById('replaced_by').value.trim() || null,
+        discontinued_reason: document.getElementById('discontinued_reason').value.trim() || null,
         image_urls: currentImageUrls,
         video_url: currentVideoUrl,
       };

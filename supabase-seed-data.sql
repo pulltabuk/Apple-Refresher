@@ -66,3 +66,40 @@ insert into products (slug, name, category, price, chip, external_link, refresh_
  'https://en.wikipedia.org/wiki/IPhone_18', '[]', 'Announced at Apple''s September 9 event. Retail availability typically follows one to two weeks after announcement, based on past years.', true, '2026-09-09'),
 ('iphone-fold', 'iPhone Ultra (foldable)', 'iPhone', null, 'A20 Pro',
  'https://en.wikipedia.org/wiki/IPhone_Fold', '[]', 'Apple''s first foldable iPhone, announced at the September 9 event. Name unconfirmed until Apple''s keynote.', true, '2026-09-09');
+
+-- Discontinued products, to get the archive started. Dates are from
+-- Apple's own announcements and are well documented, but as with the
+-- rest of this file, correct anything via /admin/ if you spot an issue.
+-- replaced_by references slugs defined above in this same file.
+
+insert into products (slug, name, category, price, chip, external_link, refresh_history, rumor_note, discontinued, discontinued_date, replaced_by, discontinued_reason) values
+
+('ipod-touch', 'iPod touch (7th generation)', 'iPod', '£199', 'A10 Fusion',
+ 'https://en.wikipedia.org/wiki/IPod_Touch', '["2019-05-28"]', null,
+ true, '2022-05-10', null,
+ 'The last iPod of any kind. Apple said the iPod''s features were now in every other product it made.'),
+
+('ipod-classic', 'iPod classic', 'iPod', '£199', null,
+ 'https://en.wikipedia.org/wiki/IPod_Classic', '["2001-10-23", "2007-09-05", "2009-09-09"]', null,
+ true, '2014-09-09', 'ipod-touch',
+ 'Quietly removed from the Apple Store the day the iPhone 6 was announced. Tim Cook later said Apple could no longer get the parts.'),
+
+('iphone-5c', 'iPhone 5c', 'iPhone', '£469', 'A6',
+ 'https://en.wikipedia.org/wiki/IPhone_5C', '["2013-09-20"]', null,
+ true, '2015-09-09', null,
+ 'Apple''s plastic, colourful iPhone sold well but not as well as hoped. Dropped after two years and never revisited.'),
+
+('homepod-original', 'HomePod (1st generation)', 'HomePod', '£319', 'A8',
+ 'https://en.wikipedia.org/wiki/HomePod', '["2018-02-09"]', null,
+ true, '2021-03-12', null,
+ 'Outsold by the far cheaper HomePod mini. A second-generation HomePod arrived two years later at a lower price.'),
+
+('macbook-12-inch', 'MacBook (12-inch)', 'Mac', '£1,249', 'Intel Core m3',
+ 'https://en.wikipedia.org/wiki/MacBook_(2015%E2%80%932019)', '["2015-04-10", "2016-04-19", "2017-06-05"]', null,
+ true, '2019-07-09', 'macbook-air-m5',
+ 'Squeezed out by the redesigned MacBook Air, which was thinner, faster and cheaper.'),
+
+('iphone-mini', 'iPhone 13 mini', 'iPhone', '£679', 'A15 Bionic',
+ 'https://en.wikipedia.org/wiki/IPhone_13', '["2021-09-24"]', null,
+ true, '2023-09-12', 'iphone-17',
+ 'The small iPhone never sold in the numbers Apple wanted. Replaced in the lineup by the larger Plus model.');

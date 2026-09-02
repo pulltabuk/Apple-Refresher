@@ -99,6 +99,8 @@ const products = [
     waiting_count: 6,
     discontinued: true,
     discontinued_date: '2022-05-10',
+    replaced_by: 'iphone-17-pro',
+    discontinued_reason: 'The last iPod. The iPhone had long since made a phone-less iPod redundant.',
   },
   {
     id: 'sample-homepod-original',
@@ -114,6 +116,8 @@ const products = [
     waiting_count: 3,
     discontinued: true,
     discontinued_date: '2021-03-12',
+    replaced_by: null,
+    discontinued_reason: 'Outsold by the cheaper HomePod mini. A second-generation HomePod arrived two years later.',
   },
   {
     id: 'sample-macbook-12inch',
@@ -129,6 +133,8 @@ const products = [
     waiting_count: 2,
     discontinued: true,
     discontinued_date: '2019-07-09',
+    replaced_by: 'macbook-air',
+    discontinued_reason: 'Squeezed out by the redesigned MacBook Air, which was thinner, faster and cheaper.',
   },
 ];
 

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
-const { homePage, allProductsPage, discontinuedPage, productPage, aboutPage, adminPage } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, slugify } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Refresher',
@@ -64,14 +64,24 @@ async function main() {
   const products = await loadProducts();
   const aboutContent = await loadSiteContent();
 
+  const productsBySlug = {};
+  products.forEach((p) => { productsBySlug[p.slug] = p; });
+
   const active = products.filter((p) => !p.discontinued);
   const discontinued = products
     .filter((p) => p.discontinued)
     .sort((a, b) => new Date(b.discontinued_date || 0) - new Date(a.discontinued_date || 0));
 
+  // Current products (with refresh data or a Coming soon flag) drive the
+  // homepage. Discontinued products get their own pages and grids too.
   const withStatus = active
     .map((product) => ({ product, status: computeStatus(product) }))
     .filter((i) => i.status || i.product.coming_soon);
+
+  const discontinuedItems = discontinued.map((product) => ({ product, status: null }));
+
+  // Everything with a page: current items plus discontinued ones.
+  const allItems = withStatus.concat(discontinuedItems);
 
   // Featured: an explicitly flagged product, or the most overdue one
   // among products with real refresh data (Coming soon items have no
@@ -91,25 +101,42 @@ async function main() {
   const opts = { siteUrl: SITE_URL, supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON_KEY };
 
   write('index.html', homePage({ featured, rest, ...opts }));
-  write('products/index.html', allProductsPage({ items: withStatus, ...opts }));
+  write('products/index.html', allProductsPage({ items: allItems, ...opts }));
   write('discontinued/index.html', discontinuedPage({ items: discontinued, ...opts }));
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));
   write('admin/index.html', adminPage(opts));
 
-  for (const item of withStatus) {
+  // Category index + one page per category, current and discontinued together.
+  const categoryNames = [...new Set(allItems.map((i) => i.product.category))].sort();
+  const groups = categoryNames.map((category) => {
+    const inCategory = allItems.filter((i) => i.product.category === category);
+    return {
+      category,
+      current: inCategory.filter((i) => !i.product.discontinued).length,
+      discontinued: inCategory.filter((i) => i.product.discontinued).length,
+    };
+  });
+  write('categories/index.html', categoriesIndexPage({ groups, ...opts }));
+  for (const category of categoryNames) {
+    const items = allItems.filter((i) => i.product.category === category);
+    write(`categories/${slugify(category)}/index.html`, categoryPage({ category, items, ...opts }));
+  }
+
+  for (const item of allItems) {
     write(
       `products/${item.product.slug}/index.html`,
       productPage({
         product: item.product,
         status: item.status,
         history: item.product.refresh_history || [],
+        productsBySlug,
         ...opts,
       })
     );
   }
 
   copyStatic();
-  console.log(`Built ${withStatus.length} product pages, 1 home page, 1 discontinued page.`);
+  console.log(`Built ${allItems.length} product pages (${discontinuedItems.length} discontinued), ${categoryNames.length} category pages, 1 home page.`);
 }
 
 main().catch((err) => {

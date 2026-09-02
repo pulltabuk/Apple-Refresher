@@ -1,10 +1,3 @@
-const LOGO_SVG = `<svg width="26" height="26" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-  <rect width="48" height="48" rx="12" fill="#5F5E5A"/>
-  <circle cx="24" cy="24" r="13" stroke="#ffffff" stroke-width="2"/>
-  <path d="M24 24V16" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-  <path d="M24 24H30" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-</svg>`;
-
 const CATEGORY_ICONS = {
   iPhone: `<rect x="13" y="4" width="14" height="32" rx="3"/><line x1="17" y1="31" x2="23" y2="31"/>`,
   Mac: `<rect x="8" y="9" width="24" height="16" rx="1.5"/><path d="M5 30h30l-2.5-3h-25z"/>`,
@@ -28,13 +21,67 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
+function slugify(str) {
+  return String(str || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-+|-+$)/g, '');
+}
+
+function formatDate(d) {
+  return new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+}
+
+function sortedHistory(product) {
+  return (product.refresh_history || []).slice().sort();
+}
+
+function launchDate(product) {
+  const h = sortedHistory(product);
+  return h.length ? h[0] : null;
+}
+
+function latestRefresh(product) {
+  const h = sortedHistory(product);
+  return h.length ? h[h.length - 1] : null;
+}
+
+function monthsBetween(a, b) {
+  const start = new Date(a);
+  const end = new Date(b);
+  let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+  if (end.getDate() < start.getDate()) months -= 1;
+  return Math.max(0, months);
+}
+
+function lifespanText(start, end) {
+  const months = monthsBetween(start, end);
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  const parts = [];
+  if (years) parts.push(`${years} year${years === 1 ? '' : 's'}`);
+  if (rem || !years) parts.push(`${rem} month${rem === 1 ? '' : 's'}`);
+  return parts.join(', ');
+}
+
+function daysBetween(a, b) {
+  return Math.floor((new Date(b) - new Date(a)) / 86400000);
+}
+
+function productStatusKey(product) {
+  if (product.discontinued) return 'discontinued';
+  if (product.coming_soon) return 'coming-soon';
+  return 'current';
+}
+
 function primaryImage(product) {
   if (product.image_urls && product.image_urls.length) return product.image_urls[0];
   return product.image_url || null;
 }
 
 function categoryPill(category) {
-  return `<span class="pill">${escapeHtml(category)}</span>`;
+  return `<a class="pill" href="/categories/${slugify(category)}/">${escapeHtml(category)}</a>`;
 }
 
 function badgeHtml(statusInfo) {
@@ -44,6 +91,10 @@ function badgeHtml(statusInfo) {
 }
 
 function productBadge(product, statusInfo) {
+  if (product.discontinued) {
+    const date = product.discontinued_date ? ` ${formatDate(product.discontinued_date)}` : '';
+    return `<span class="badge badge--discontinued">Discontinued${date}</span>`;
+  }
   if (product.coming_soon) {
     return `<span class="badge badge--coming-soon">Coming soon</span>`;
   }
@@ -74,6 +125,7 @@ ${noindex ? '<meta name="robots" content="noindex">' : ''}
   <a class="site-title" href="/"><img src="/logo.png" alt="" class="site-logo"><span>Apple Refresher</span></a>
   <nav class="site-nav">
     <a href="/products/">All products</a>
+    <a href="/categories/">Categories</a>
     <a href="/discontinued/">Discontinued</a>
     <a href="/about/">About</a>
   </nav>
@@ -97,28 +149,69 @@ ${scriptTags}
 </html>`;
 }
 
+// One card component for every grid: current, coming soon, and
+// discontinued products all render through this, with data attributes
+// that the client-side sort and filter controls read from.
 function cardHtml(product, statusInfo) {
-  const days = statusInfo && !product.coming_soon ? statusInfo.daysSince : '';
-  return `<article class="card" data-category="${escapeHtml(product.category)}" data-days="${days}">
+  const status = productStatusKey(product);
+  const launch = launchDate(product);
+  const days = statusInfo && status === 'current' ? statusInfo.daysSince : '';
+  const launchTs = launch ? new Date(launch).getTime() : '';
+  const discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
+  const lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetween(launch, product.discontinued_date) : '';
+  const decade = product.discontinued && product.discontinued_date ? `${Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10}s` : '';
+  const meta = launch && product.discontinued && product.discontinued_date
+    ? `<p class="card-meta">Lived ${lifespanText(launch, product.discontinued_date)}</p>`
+    : '';
+  return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <a class="card-link" href="/products/${product.slug}/">
     <div class="card-image">${primaryImage(product) ? `<img src="${primaryImage(product)}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
-    ${categoryPill(product.category)}
     <p class="card-name">${escapeHtml(product.name)}</p>
     ${productBadge(product, statusInfo)}
+    ${meta}
   </a>
+  ${categoryPill(product.category)}
 </article>`;
 }
 
-function discontinuedCardHtml(product) {
-  const date = product.discontinued_date
-    ? new Date(product.discontinued_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
-    : '';
-  return `<article class="card card--discontinued">
-  <div class="card-image">${primaryImage(product) ? `<img src="${primaryImage(product)}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
-  ${categoryPill(product.category)}
-  <p class="card-name">${escapeHtml(product.name)}</p>
-  <span class="badge badge--discontinued">Discontinued ${date}</span>
-</article>`;
+function filterBar(key, values, labels) {
+  return `<div class="filter-bar" data-filter-key="${key}">
+  <button class="filter-btn active" data-filter-value="all">All</button>
+  ${values.map((v, i) => `<button class="filter-btn" data-filter-value="${escapeHtml(v)}">${escapeHtml(labels ? labels[i] : v)}</button>`).join('\n')}
+</div>`;
+}
+
+function sortSelect(options) {
+  return `<select id="sort-select" class="sort-select" aria-label="Sort products">
+    <option value="" selected disabled>Sort by...</option>
+    ${options.map(([value, label]) => `<option value="${value}">${label}</option>`).join('\n')}
+  </select>`;
+}
+
+const PRODUCT_SORT_OPTIONS = [
+  ['days-desc', 'Days since refresh: high to low'],
+  ['days-asc', 'Days since refresh: low to high'],
+  ['launch-desc', 'Launched: newest first'],
+  ['launch-asc', 'Launched: oldest first'],
+  ['name-asc', 'Name: A to Z'],
+  ['name-desc', 'Name: Z to A'],
+];
+
+const DISCONTINUED_SORT_OPTIONS = [
+  ['discontinued-desc', 'Discontinued: newest first'],
+  ['discontinued-asc', 'Discontinued: oldest first'],
+  ['lifespan-desc', 'Longest lived first'],
+  ['lifespan-asc', 'Shortest lived first'],
+  ['launch-asc', 'Launched: oldest first'],
+  ['name-asc', 'Name: A to Z'],
+  ['name-desc', 'Name: Z to A'],
+];
+
+const STATUS_VALUES = ['current', 'coming-soon', 'discontinued'];
+const STATUS_LABELS = ['Current', 'Coming soon', 'Discontinued'];
+
+function emptyState(what) {
+  return `<p class="page-intro">No ${what} yet. Add one in <a href="/admin/">/admin/</a>, every product needs at least one refresh date, or a Coming soon flag, to show up here.</p>`;
 }
 
 function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -128,7 +221,6 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
     <div class="hero-image">${primaryImage(featured.product) ? `<img src="${primaryImage(featured.product)}" alt="${escapeHtml(featured.product.name)}">` : categoryIcon(featured.product.category)}</div>
     <div class="hero-body">
       <p class="hero-eyebrow">Featured</p>
-      ${categoryPill(featured.product.category)}
       <p class="hero-name">${escapeHtml(featured.product.name)}</p>
       ${productBadge(featured.product, featured.status)}
     </div>
@@ -138,7 +230,7 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
   </div>
 </section>
 <p class="see-all"><a href="/products/">See all products &rarr;</a></p>`
-    : `<p class="page-intro">No products yet, or none with a refresh date set. Add one in <a href="/admin/">/admin/</a>, every product needs at least one refresh date, or a Coming soon flag, to show up here.</p>`;
+    : emptyState('products');
 
   const body = `
 <section class="intro-hero">
@@ -150,7 +242,7 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
 ${heroSection}`;
   return shell({
     title: 'Apple Refresher — time since every Apple product was last refreshed',
-    description: 'A quick look at how long it has been since every current Apple product was last updated.',
+    description: 'A quick look at how long it has been since every current Apple product was last updated, plus an archive of the ones Apple discontinued.',
     siteUrl,
     path: '/',
     bodyHtml: body,
@@ -160,34 +252,27 @@ ${heroSection}`;
 }
 
 function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const categories = [...new Set(items.map((i) => i.product.category))];
+  const categories = [...new Set(items.map((i) => i.product.category))].sort();
   const body = items.length
     ? `
 <h1>All products</h1>
+<p class="page-intro">Everything on the site, current and discontinued, in one searchable place.</p>
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
-  <select id="sort-select" class="sort-select" aria-label="Sort products">
-    <option value="" selected disabled>Sort by...</option>
-    <option value="days-desc">Days since refresh: high to low</option>
-    <option value="days-asc">Days since refresh: low to high</option>
-    <option value="name-asc">Name: A to Z</option>
-    <option value="name-desc">Name: Z to A</option>
-  </select>
+  ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
-<div class="filter-bar">
-  <button class="filter-btn active" data-filter="all">All</button>
-  ${categories.map((c) => `<button class="filter-btn" data-filter="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('\n')}
-</div>
+${filterBar('status', STATUS_VALUES, STATUS_LABELS)}
+${filterBar('category', categories)}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
-<div class="card-grid" id="grid">
+<div class="card-grid" id="grid" data-mode="all">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
 </div>`
     : `
 <h1>All products</h1>
-<p class="page-intro">No products yet, or none with a refresh date set. Add one in <a href="/admin/">/admin/</a>, every product needs at least one refresh date, or a Coming soon flag, to show up here.</p>`;
+${emptyState('products')}`;
   return shell({
     title: 'All products — Apple Refresher',
-    description: 'Every current Apple product and how long it has been since its last refresh.',
+    description: 'Every Apple product on the site, current and discontinued, searchable and sortable.',
     siteUrl,
     path: '/products/',
     bodyHtml: body,
@@ -197,15 +282,26 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
 }
 
 function discontinuedPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const body = `
+  const decades = [...new Set(items.map((p) => p.discontinued_date ? `${Math.floor(new Date(p.discontinued_date).getFullYear() / 10) * 10}s` : '').filter(Boolean))].sort();
+  const body = items.length
+    ? `
 <h1>Discontinued products</h1>
-<p class="page-intro">Products Apple no longer sells, newest first.</p>
-<div class="card-grid">
-  ${items.map((p) => discontinuedCardHtml(p)).join('\n')}
-</div>`;
+<p class="page-intro">The products Apple no longer sells, when they launched, when they went, and what took their place.</p>
+<div class="controls-row">
+  <input type="search" id="search-input" class="search-input" placeholder="Search discontinued products…" aria-label="Search discontinued products">
+  ${sortSelect(DISCONTINUED_SORT_OPTIONS)}
+</div>
+${filterBar('decade', decades)}
+<p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
+<div class="card-grid" id="grid" data-mode="discontinued">
+  ${items.map((p) => cardHtml(p, null)).join('\n')}
+</div>`
+    : `
+<h1>Discontinued products</h1>
+<p class="page-intro">Nothing here yet. Tick Discontinued on a product in <a href="/admin/">/admin/</a> and give it a discontinued date, and it'll appear here.</p>`;
   return shell({
     title: 'Discontinued Apple products — Apple Refresher',
-    description: 'Apple products that have been discontinued, listed by date.',
+    description: 'An archive of the Apple products that have been discontinued: when they launched, when they went, how long they lasted, and what replaced them.',
     siteUrl,
     path: '/discontinued/',
     bodyHtml: body,
@@ -214,21 +310,78 @@ function discontinuedPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   });
 }
 
-function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const timelineItems = history
+function categoriesIndexPage({ groups, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const tiles = groups.map(({ category, current, discontinued }) => `<a class="category-tile" href="/categories/${slugify(category)}/">
+  <div class="category-tile-icon">${categoryIcon(category)}</div>
+  <p class="category-tile-name">${escapeHtml(category)}</p>
+  <p class="category-tile-count">${current} current${discontinued ? ` &middot; ${discontinued} discontinued` : ''}</p>
+</a>`).join('\n');
+  const body = `
+<h1>Browse by category</h1>
+<p class="page-intro">Every product line on the site, current and discontinued.</p>
+<div class="category-grid">${tiles}</div>`;
+  return shell({
+    title: 'Categories — Apple Refresher',
+    description: 'Browse Apple products by category: iPhone, Mac, iPad, Apple Watch, AirPods, Vision Pro and more.',
+    siteUrl,
+    path: '/categories/',
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
+}
+
+function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const slug = slugify(category);
+  const currentCount = items.filter((i) => !i.product.discontinued).length;
+  const discontinuedCount = items.length - currentCount;
+  const body = `
+<h1>${escapeHtml(category)}</h1>
+<p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}.</p>
+<div class="controls-row">
+  <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)}…" aria-label="Search">
+  ${sortSelect(PRODUCT_SORT_OPTIONS)}
+</div>
+${filterBar('status', STATUS_VALUES, STATUS_LABELS)}
+<p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
+<div class="card-grid" id="grid" data-mode="category" data-category-name="${escapeHtml(category)}">
+  ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
+</div>`;
+  return shell({
+    title: `${category} — Apple Refresher`,
+    description: `Every ${category} product on Apple Refresher, current and discontinued, with time since refresh and full release history.`,
+    siteUrl,
+    path: `/categories/${slug}/`,
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
+}
+
+function specRow(label, valueHtml) {
+  return valueHtml ? `<div class="spec-row"><dt>${label}</dt><dd>${valueHtml}</dd></div>` : '';
+}
+
+function productPage({ product, status, history, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const sortedDates = history.slice().sort();
+  const launch = sortedDates[0] || null;
+  const latest = sortedDates[sortedDates.length - 1] || null;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const timelineItems = sortedDates
     .slice()
     .reverse()
     .map((d, i) => {
       const label = i === 0 ? product.name : `${product.name} (earlier)`;
       return `<div class="timeline-item">
         <p class="timeline-name">${escapeHtml(label)}</p>
-        <p class="timeline-date">${new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}</p>
+        <p class="timeline-date">${formatDate(d)}</p>
       </div>`;
     })
     .join('\n');
 
   const verdict =
-    !status || product.coming_soon
+    !status || product.coming_soon || product.discontinued
       ? null
       : status.status === 'fresh'
       ? { text: 'Good time to buy', cls: 'fresh' }
@@ -250,23 +403,35 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
     ? `<video class="product-video" src="${product.video_url}" controls></video>`
     : '';
 
-  const firstStat = product.coming_soon
-    ? `<div class="stat"><p class="stat-label">Expected</p><p class="stat-value">${
-        product.expected_date
-          ? new Date(product.expected_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
-          : 'Not yet announced'
-      }</p></div>`
-    : status
-    ? `<div class="stat"><p class="stat-label">Last refreshed</p><p class="stat-value">${new Date(status.lastRefresh).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}</p></div>`
+  const successor = product.replaced_by && productsBySlug ? productsBySlug[product.replaced_by] : null;
+  const replacedByHtml = successor
+    ? `<a href="/products/${successor.slug}/">${escapeHtml(successor.name)}</a>`
+    : product.replaced_by
+    ? escapeHtml(product.replaced_by)
     : '';
 
-  const releaseHistorySection = history.length
+  const specs = [
+    specRow('Category', categoryPill(product.category)),
+    specRow('Status', product.discontinued ? 'Discontinued' : product.coming_soon ? 'Coming soon' : 'Current'),
+    product.coming_soon
+      ? specRow('Expected', product.expected_date ? formatDate(product.expected_date) : 'Not yet announced')
+      : '',
+    launch ? specRow('Launched', formatDate(launch)) : '',
+    latest && sortedDates.length > 1 && !product.discontinued ? specRow('Last refreshed', formatDate(latest)) : '',
+    sortedDates.length > 1 ? specRow('Times refreshed', String(sortedDates.length - 1)) : '',
+    product.discontinued && product.discontinued_date ? specRow('Discontinued', formatDate(product.discontinued_date)) : '',
+    launch && product.discontinued && product.discontinued_date ? specRow('Lifespan', lifespanText(launch, product.discontinued_date)) : '',
+    launch && !product.discontinued && !product.coming_soon ? specRow('On sale for', lifespanText(launch, today)) : '',
+    specRow('Starting price', escapeHtml(product.price)),
+    specRow('Chip', escapeHtml(product.chip)),
+    specRow('Replaced by', replacedByHtml),
+    product.discontinued ? specRow('Why it went', escapeHtml(product.discontinued_reason)) : '',
+    product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(product.external_link.replace(/^https?:\/\//, '').replace(/\/.*$/, ''))} &#8599;</a>`) : '',
+  ].filter(Boolean).join('\n');
+
+  const releaseHistorySection = sortedDates.length
     ? `<h2>Release history</h2>
   <div class="timeline">${timelineItems}</div>`
-    : '';
-
-  const externalLinkBlock = product.external_link
-    ? `<p class="external-link"><a href="${product.external_link}" target="_blank" rel="noopener">More information &#8599;</a></p>`
     : '';
 
   const body = `
@@ -286,33 +451,33 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
   ${galleryRest}
   ${videoBlock}
 
-  <div class="stat-row">
-    ${firstStat}
-    ${product.price ? `<div class="stat"><p class="stat-label">Starting price</p><p class="stat-value">${escapeHtml(product.price)}</p></div>` : ''}
-    ${product.chip ? `<div class="stat"><p class="stat-label">Chip</p><p class="stat-value">${escapeHtml(product.chip)}</p></div>` : ''}
-  </div>
+  <dl class="spec-list">
+    ${specs}
+  </dl>
 
   ${releaseHistorySection}
 
   ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><p>${escapeHtml(product.rumor_note)}</p></div>` : ''}
-
-  ${externalLinkBlock}
 
   ${verdict ? `<div class="verdict-row">
     <span>Verdict</span>
     <span class="badge badge--${verdict.cls}">${verdict.text}</span>
   </div>` : ''}
 
-  <button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
+  ${product.discontinued ? '' : `<button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
     Waiting for a refresh?
-  </button>
+  </button>`}
 </article>`;
+
+  const description = product.discontinued
+    ? `${product.name} was discontinued${product.discontinued_date ? ` in ${formatDate(product.discontinued_date)}` : ''}${launch ? `, after launching in ${formatDate(launch)}` : ''}.${successor ? ` It was replaced by the ${successor.name}.` : ''}`
+    : status
+    ? `${product.name} was last refreshed ${status.daysSince} days ago. See the full release history and whether now is a good time to buy.`
+    : `${product.name} on Apple Refresher.`;
 
   return shell({
     title: `${product.name} — Apple Refresher`,
-    description: status
-      ? `${product.name} was last refreshed ${status.daysSince} days ago. See the full release history and whether now is a good time to buy.`
-      : `${product.name} on Apple Refresher.`,
+    description,
     siteUrl,
     path: `/products/${product.slug}/`,
     bodyHtml: body,
@@ -384,7 +549,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
 
       <div class="admin-subfield">
-        <span class="admin-subfield-label">Refresh history</span>
+        <span class="admin-subfield-label">Refresh history (the first date is treated as the launch date)</span>
         <ul id="refresh-history-list" class="refresh-history-list"></ul>
         <div class="refresh-history-add">
           <input type="date" id="new-refresh-date">
@@ -409,8 +574,15 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
       <label class="checkbox-label"><input type="checkbox" id="coming_soon"> Coming soon</label>
       <label>Expected date (if known)<input type="date" id="expected_date"></label>
+
       <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
       <label>Discontinued date<input type="date" id="discontinued_date"></label>
+      <label>Replaced by (pick a product, or leave blank)
+        <input type="text" id="replaced_by" list="product-options" placeholder="Start typing a product name">
+        <datalist id="product-options"></datalist>
+      </label>
+      <label>Why it went (short, e.g. "Replaced by the iPhone" or "Folded into the Pro line")<textarea id="discontinued_reason" rows="2"></textarea></label>
+
       <button type="submit" class="admin-btn">Save product</button>
     </form>
   </div>
@@ -442,4 +614,16 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   });
 }
 
-module.exports = { homePage, allProductsPage, discontinuedPage, productPage, aboutPage, adminPage, cardHtml, productBadge };
+module.exports = {
+  homePage,
+  allProductsPage,
+  discontinuedPage,
+  categoriesIndexPage,
+  categoryPage,
+  productPage,
+  aboutPage,
+  adminPage,
+  cardHtml,
+  productBadge,
+  slugify,
+};

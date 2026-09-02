@@ -1,5 +1,5 @@
 (function () {
-  // --- Shared helpers: a JS port of src/status.js and the card/badge
+  // --- Shared helpers: a JS port of src/status.js and the card/badge/spec
   // markup from src/templates.js, used to render live data client-side.
   // Keep these in sync with those files if the logic there changes.
 
@@ -32,8 +32,46 @@
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  function slugifyJS(str) {
+    return String(str || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '');
+  }
+
   function formatDateJS(d) {
     return new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+  }
+
+  function sortedHistoryJS(product) {
+    return (product.refresh_history || []).slice().sort();
+  }
+
+  function launchDateJS(product) {
+    var h = sortedHistoryJS(product);
+    return h.length ? h[0] : null;
+  }
+
+  function monthsBetweenJS(a, b) {
+    var start = new Date(a), end = new Date(b);
+    var months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    if (end.getDate() < start.getDate()) months -= 1;
+    return Math.max(0, months);
+  }
+
+  function lifespanTextJS(start, end) {
+    var months = monthsBetweenJS(start, end);
+    var years = Math.floor(months / 12), rem = months % 12, parts = [];
+    if (years) parts.push(years + ' year' + (years === 1 ? '' : 's'));
+    if (rem || !years) parts.push(rem + ' month' + (rem === 1 ? '' : 's'));
+    return parts.join(', ');
+  }
+
+  function daysBetweenJS(a, b) {
+    return Math.floor((new Date(b) - new Date(a)) / 86400000);
+  }
+
+  function statusKeyJS(product) {
+    if (product.discontinued) return 'discontinued';
+    if (product.coming_soon) return 'coming-soon';
+    return 'current';
   }
 
   var CATEGORY_ICON_SHAPES = {
@@ -56,31 +94,58 @@
     return product.image_url || null;
   }
 
+  function pillJS(category) {
+    return '<a class="pill" href="/categories/' + slugifyJS(category) + '/">' + escapeHtmlJS(category) + '</a>';
+  }
+
   function badgeHtmlJS(product, statusInfo) {
+    if (product.discontinued) {
+      var date = product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '';
+      return '<span class="badge badge--discontinued">Discontinued' + date + '</span>';
+    }
     if (product.coming_soon) return '<span class="badge badge--coming-soon">Coming soon</span>';
     if (!statusInfo) return '';
     return '<span class="badge badge--' + statusInfo.status + '">' + statusInfo.daysSince + ' days since refresh</span>';
   }
 
   function cardHtmlJS(product, statusInfo) {
+    var status = statusKeyJS(product);
+    var launch = launchDateJS(product);
     var img = primaryImageJS(product);
     var imageBlock = img
       ? '<img src="' + img + '" alt="' + escapeHtmlJS(product.name) + '">'
       : categoryIconJS(product.category);
-    var days = statusInfo && !product.coming_soon ? statusInfo.daysSince : '';
+    var days = statusInfo && status === 'current' ? statusInfo.daysSince : '';
+    var launchTs = launch ? new Date(launch).getTime() : '';
+    var discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
+    var lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetweenJS(launch, product.discontinued_date) : '';
+    var decade = product.discontinued && product.discontinued_date ? Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10 + 's' : '';
+    var meta = launch && product.discontinued && product.discontinued_date
+      ? '<p class="card-meta">Lived ' + lifespanTextJS(launch, product.discontinued_date) + '</p>'
+      : '';
     return (
-      '<article class="card" data-category="' + escapeHtmlJS(product.category) + '" data-days="' + days + '">' +
+      '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<a class="card-link" href="/products/' + product.slug + '/">' +
           '<div class="card-image">' + imageBlock + '</div>' +
-          '<span class="pill">' + escapeHtmlJS(product.category) + '</span>' +
           '<p class="card-name">' + escapeHtmlJS(product.name) + '</p>' +
           badgeHtmlJS(product, statusInfo) +
+          meta +
         '</a>' +
+        pillJS(product.category) +
       '</article>'
     );
   }
 
-  function productBodyHtmlJS(product, status) {
+  function specRowJS(label, valueHtml) {
+    return valueHtml ? '<div class="spec-row"><dt>' + label + '</dt><dd>' + valueHtml + '</dd></div>' : '';
+  }
+
+  function productBodyHtmlJS(product, status, productsBySlug) {
+    var sortedDates = sortedHistoryJS(product);
+    var launch = sortedDates[0] || null;
+    var latest = sortedDates[sortedDates.length - 1] || null;
+    var today = new Date().toISOString().slice(0, 10);
+
     var images = product.image_urls && product.image_urls.length ? product.image_urls : product.image_url ? [product.image_url] : [];
     var mainImage = images[0]
       ? '<img src="' + images[0] + '" alt="' + escapeHtmlJS(product.name) + '">'
@@ -92,27 +157,36 @@
       : '';
     var videoBlock = product.video_url ? '<video class="product-video" src="' + product.video_url + '" controls></video>' : '';
 
-    var firstStat = '';
-    if (product.coming_soon) {
-      firstStat = '<div class="stat"><p class="stat-label">Expected</p><p class="stat-value">' +
-        (product.expected_date ? formatDateJS(product.expected_date) : 'Not yet announced') + '</p></div>';
-    } else if (status) {
-      firstStat = '<div class="stat"><p class="stat-label">Last refreshed</p><p class="stat-value">' + formatDateJS(status.lastRefresh) + '</p></div>';
-    }
+    var successor = product.replaced_by && productsBySlug ? productsBySlug[product.replaced_by] : null;
+    var replacedByHtml = successor
+      ? '<a href="/products/' + successor.slug + '/">' + escapeHtmlJS(successor.name) + '</a>'
+      : product.replaced_by ? escapeHtmlJS(product.replaced_by) : '';
 
-    var history = product.refresh_history || [];
-    var timelineItems = history.slice().reverse().map(function (d, i) {
+    var specs = [
+      specRowJS('Category', pillJS(product.category)),
+      specRowJS('Status', product.discontinued ? 'Discontinued' : product.coming_soon ? 'Coming soon' : 'Current'),
+      product.coming_soon ? specRowJS('Expected', product.expected_date ? formatDateJS(product.expected_date) : 'Not yet announced') : '',
+      launch ? specRowJS('Launched', formatDateJS(launch)) : '',
+      latest && sortedDates.length > 1 && !product.discontinued ? specRowJS('Last refreshed', formatDateJS(latest)) : '',
+      sortedDates.length > 1 ? specRowJS('Times refreshed', String(sortedDates.length - 1)) : '',
+      product.discontinued && product.discontinued_date ? specRowJS('Discontinued', formatDateJS(product.discontinued_date)) : '',
+      launch && product.discontinued && product.discontinued_date ? specRowJS('Lifespan', lifespanTextJS(launch, product.discontinued_date)) : '',
+      launch && !product.discontinued && !product.coming_soon ? specRowJS('On sale for', lifespanTextJS(launch, today)) : '',
+      specRowJS('Starting price', escapeHtmlJS(product.price)),
+      specRowJS('Chip', escapeHtmlJS(product.chip)),
+      specRowJS('Replaced by', replacedByHtml),
+      product.discontinued ? specRowJS('Why it went', escapeHtmlJS(product.discontinued_reason)) : '',
+      product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(product.external_link.replace(/^https?:\/\//, '').replace(/\/.*$/, '')) + ' &#8599;</a>') : '',
+    ].filter(Boolean).join('');
+
+    var timelineItems = sortedDates.slice().reverse().map(function (d, i) {
       var label = i === 0 ? product.name : product.name + ' (earlier)';
       return '<div class="timeline-item"><p class="timeline-name">' + escapeHtmlJS(label) + '</p><p class="timeline-date">' + formatDateJS(d) + '</p></div>';
     }).join('');
-    var releaseHistorySection = history.length ? '<h2>Release history</h2><div class="timeline">' + timelineItems + '</div>' : '';
-
-    var externalLinkBlock = product.external_link
-      ? '<p class="external-link"><a href="' + product.external_link + '" target="_blank" rel="noopener">More information &#8599;</a></p>'
-      : '';
+    var releaseHistorySection = sortedDates.length ? '<h2>Release history</h2><div class="timeline">' + timelineItems + '</div>' : '';
 
     var verdict = null;
-    if (status && !product.coming_soon) {
+    if (status && !product.coming_soon && !product.discontinued) {
       if (status.status === 'fresh') verdict = { text: 'Good time to buy', cls: 'fresh' };
       else if (status.status === 'aging') verdict = { text: 'Fine to buy, refresh due within the year', cls: 'aging' };
       else verdict = { text: 'Wait, refresh is overdue', cls: 'overdue' };
@@ -120,10 +194,7 @@
 
     return (
       '<div class="product-header">' +
-        '<div>' +
-          '<span class="pill">' + escapeHtmlJS(product.category) + '</span>' +
-          '<h1>' + escapeHtmlJS(product.name) + '</h1>' +
-        '</div>' +
+        '<div>' + pillJS(product.category) + '<h1>' + escapeHtmlJS(product.name) + '</h1></div>' +
         '<div class="product-header-right">' +
           badgeHtmlJS(product, status) +
           '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
@@ -132,18 +203,11 @@
       '<div class="card-image product-image">' + mainImage + '</div>' +
       galleryRest +
       videoBlock +
-      '<div class="stat-row">' +
-        firstStat +
-        (product.price ? '<div class="stat"><p class="stat-label">Starting price</p><p class="stat-value">' + escapeHtmlJS(product.price) + '</p></div>' : '') +
-        (product.chip ? '<div class="stat"><p class="stat-label">Chip</p><p class="stat-value">' + escapeHtmlJS(product.chip) + '</p></div>' : '') +
-      '</div>' +
+      '<dl class="spec-list">' + specs + '</dl>' +
       releaseHistorySection +
       (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><p>' + escapeHtmlJS(product.rumor_note) + '</p></div>' : '') +
-      externalLinkBlock +
       (verdict ? '<div class="verdict-row"><span>Verdict</span><span class="badge badge--' + verdict.cls + '">' + verdict.text + '</span></div>' : '') +
-      '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">' +
-        'Waiting for a refresh?' +
-      '</button>'
+      (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Waiting for a refresh?</button>')
     );
   }
 
@@ -153,8 +217,7 @@
     }).then(function (res) { return res.json(); });
   }
 
-  // --- Waiting button: works the same whether the button was rendered
-  // at build time or injected live, call this on any new batch of them.
+  // --- Waiting button: works whether rendered at build time or injected live.
 
   function votedKey(slug) { return 'waited_' + slug; }
   function votedCountKey(slug) { return 'waited_count_' + slug; }
@@ -177,12 +240,10 @@
 
       btn.addEventListener('click', function () {
         if (localStorage.getItem(votedKey(slug))) return;
-
         var newCount = baseCount + 1;
         showVoted(newCount);
         localStorage.setItem(votedKey(slug), '1');
         localStorage.setItem(votedCountKey(slug), String(newCount));
-
         var productId = btn.getAttribute('data-product-id');
         if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
           fetch(window.SUPABASE_URL + '/rest/v1/rpc/increment_waiting', {
@@ -193,78 +254,88 @@
               Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY,
             },
             body: JSON.stringify({ product_id_input: productId }),
-          }).catch(function () {
-            // Fails quietly — the count still updated locally.
-          });
+          }).catch(function () {});
         }
       });
     });
   }
 
-  // --- Category filter + search (all-products page). Rebindable since
-  // the filter buttons themselves get regenerated on a live refresh.
+  // --- Filters. Each .filter-bar carries data-filter-key (category,
+  // status, decade); cards carry a matching data-* attribute. Any number
+  // of bars combine, and search runs on top.
 
   var searchInput = document.getElementById('search-input');
   var noResults = document.getElementById('no-results');
-  var currentCategory = 'all';
+  var activeFilters = {};
 
   function applyFilters() {
     var query = (searchInput ? searchInput.value : '').trim().toLowerCase();
     var visibleCount = 0;
-    document.querySelectorAll('.card[data-category]').forEach(function (card) {
-      var matchesCategory = currentCategory === 'all' || card.getAttribute('data-category') === currentCategory;
-      var nameEl = card.querySelector('.card-name');
-      var name = nameEl ? nameEl.textContent.toLowerCase() : '';
-      var matchesSearch = query === '' || name.indexOf(query) !== -1;
-      var show = matchesCategory && matchesSearch;
+    document.querySelectorAll('#grid .card').forEach(function (card) {
+      var show = true;
+      Object.keys(activeFilters).forEach(function (key) {
+        var want = activeFilters[key];
+        if (want !== 'all' && card.getAttribute('data-' + key) !== want) show = false;
+      });
+      if (show && query) {
+        var nameEl = card.querySelector('.card-name');
+        var name = nameEl ? nameEl.textContent.toLowerCase() : '';
+        if (name.indexOf(query) === -1) show = false;
+      }
       card.style.display = show ? '' : 'none';
       if (show) visibleCount++;
     });
     if (noResults) noResults.style.display = visibleCount === 0 ? '' : 'none';
   }
 
-  function wireFilterButtons() {
-    document.querySelectorAll('.filter-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        document.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        currentCategory = btn.getAttribute('data-filter');
-        applyFilters();
+  function wireFilterBars() {
+    document.querySelectorAll('.filter-bar[data-filter-key]').forEach(function (bar) {
+      var key = bar.getAttribute('data-filter-key');
+      if (!(key in activeFilters)) activeFilters[key] = 'all';
+      bar.querySelectorAll('.filter-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          activeFilters[key] = btn.getAttribute('data-filter-value');
+          applyFilters();
+        });
       });
     });
   }
 
-  wireFilterButtons();
+  wireFilterBars();
   if (searchInput) searchInput.addEventListener('input', applyFilters);
 
-  // --- Sort (all-products page). Coming soon / no-status cards have no
-  // day count, they always sort to the end regardless of direction.
+  // --- Sort. Option values are "<attr>-<dir>": name sorts on the card's
+  // name, anything else on a data-<attr> number. Cards missing that
+  // number sort to the end whichever direction you pick.
 
   var sortSelect = document.getElementById('sort-select');
 
   function applySort() {
     var grid = document.getElementById('grid');
-    if (!grid || !sortSelect) return;
-    var sortValue = sortSelect.value;
-    if (!sortValue) return; // "Sort by..." placeholder still showing, nothing chosen yet
+    if (!grid || !sortSelect || !sortSelect.value) return;
+    var parts = sortSelect.value.split('-');
+    var dir = parts.pop();
+    var attr = parts.join('-');
     var cards = Array.prototype.slice.call(grid.querySelectorAll('.card'));
 
     cards.sort(function (a, b) {
-      if (sortValue === 'name-asc' || sortValue === 'name-desc') {
+      if (attr === 'name') {
         var nameA = (a.querySelector('.card-name') || {}).textContent || '';
         var nameB = (b.querySelector('.card-name') || {}).textContent || '';
         var cmp = nameA.localeCompare(nameB);
-        return sortValue === 'name-asc' ? cmp : -cmp;
+        return dir === 'asc' ? cmp : -cmp;
       }
-      var rawA = a.getAttribute('data-days');
-      var rawB = b.getAttribute('data-days');
+      var rawA = a.getAttribute('data-' + attr);
+      var rawB = b.getAttribute('data-' + attr);
       var hasA = rawA !== null && rawA !== '';
       var hasB = rawB !== null && rawB !== '';
       if (!hasA && !hasB) return 0;
       if (!hasA) return 1;
       if (!hasB) return -1;
-      var diff = parseInt(rawA, 10) - parseInt(rawB, 10);
-      return sortValue === 'days-desc' ? -diff : diff;
+      var diff = parseFloat(rawA) - parseFloat(rawB);
+      return dir === 'desc' ? -diff : diff;
     });
 
     cards.forEach(function (card) { grid.appendChild(card); });
@@ -273,8 +344,7 @@
   if (sortSelect) sortSelect.addEventListener('change', applySort);
   applySort();
 
-  // --- Reveal the "Edit this product" link, but only to the logged-in
-  // admin. Callable again after a live refresh injects new ones.
+  // --- Reveal "Edit this product" to the logged-in admin only.
 
   function revealAdminEditLinks(links) {
     if (!links.length || !window.SUPABASE_URL || !window.SUPABASE_ANON_KEY || !window.supabase) return;
@@ -289,10 +359,7 @@
   revealAdminEditLinks(document.querySelectorAll('.admin-edit-link'));
   wireWaitButtons(document.querySelectorAll('.wait-btn'));
 
-  // --- Live refresh: homepage hero + grid. Patches the section that's
-  // already there from the last build, doesn't create it from nothing,
-  // so a homepage that built with zero products still needs one rebuild
-  // to get its first hero section, after that this takes over.
+  // --- Live refresh: homepage hero + grid.
 
   var heroSection = document.querySelector('.hero');
   if (heroSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
@@ -323,95 +390,100 @@
           '<div class="hero-image">' + heroImageBlock + '</div>' +
           '<div class="hero-body">' +
             '<p class="hero-eyebrow">Featured</p>' +
-            '<span class="pill">' + escapeHtmlJS(featured.product.category) + '</span>' +
             '<p class="hero-name">' + escapeHtmlJS(featured.product.name) + '</p>' +
             badgeHtmlJS(featured.product, featured.status) +
           '</div>' +
         '</a>' +
         '<div class="hero-grid">' + rest.map(function (r) { return cardHtmlJS(r.product, r.status); }).join('') + '</div>';
-
-      wireWaitButtons(heroSection.querySelectorAll('.wait-btn'));
-    }).catch(function () {
-      // Fails quietly — the homepage still shows what was there at the last build.
-    });
+    }).catch(function () {});
   }
 
-  // --- Live refresh: the /products/ grid + its category filters.
+  // --- Live refresh: any card grid (/products/, /discontinued/, a
+  // category page). The grid's data-mode says which products belong.
 
   var gridSection = document.getElementById('grid');
   if (gridSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     fetchAllProductsJS().then(function (products) {
-      var active = products.filter(function (p) { return !p.discontinued; });
-      var withStatus = active
-        .map(function (p) { return { product: p, status: computeStatusJS(p) }; })
-        .filter(function (i) { return i.status || i.product.coming_soon; });
+      var mode = gridSection.getAttribute('data-mode') || 'all';
+      var categoryName = gridSection.getAttribute('data-category-name');
 
-      gridSection.innerHTML = withStatus.map(function (i) { return cardHtmlJS(i.product, i.status); }).join('');
-      wireWaitButtons(gridSection.querySelectorAll('.wait-btn'));
+      var items = products
+        .map(function (p) { return { product: p, status: p.discontinued ? null : computeStatusJS(p) }; })
+        .filter(function (i) { return i.product.discontinued || i.status || i.product.coming_soon; });
 
-      var filterBar = document.querySelector('.filter-bar');
-      if (filterBar) {
-        var categories = [];
-        withStatus.forEach(function (i) {
-          if (categories.indexOf(i.product.category) === -1) categories.push(i.product.category);
-        });
-        filterBar.innerHTML = '<button class="filter-btn active" data-filter="all">All</button>' +
-          categories.map(function (c) {
-            return '<button class="filter-btn" data-filter="' + escapeHtmlJS(c) + '">' + escapeHtmlJS(c) + '</button>';
-          }).join('');
-        wireFilterButtons();
+      if (mode === 'discontinued') {
+        items = items.filter(function (i) { return i.product.discontinued; })
+          .sort(function (a, b) { return new Date(b.product.discontinued_date || 0) - new Date(a.product.discontinued_date || 0); });
+      } else if (mode === 'category') {
+        items = items.filter(function (i) { return i.product.category === categoryName; });
       }
-      currentCategory = 'all';
+
+      gridSection.innerHTML = items.map(function (i) { return cardHtmlJS(i.product, i.status); }).join('');
+
+      // Rebuild any filter bar whose values come from the data.
+      var categoryBar = document.querySelector('.filter-bar[data-filter-key="category"]');
+      if (categoryBar) {
+        var categories = [];
+        items.forEach(function (i) { if (categories.indexOf(i.product.category) === -1) categories.push(i.product.category); });
+        categories.sort();
+        categoryBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All</button>' +
+          categories.map(function (c) { return '<button class="filter-btn" data-filter-value="' + escapeHtmlJS(c) + '">' + escapeHtmlJS(c) + '</button>'; }).join('');
+      }
+      var decadeBar = document.querySelector('.filter-bar[data-filter-key="decade"]');
+      if (decadeBar) {
+        var decades = [];
+        items.forEach(function (i) {
+          if (i.product.discontinued_date) {
+            var d = Math.floor(new Date(i.product.discontinued_date).getFullYear() / 10) * 10 + 's';
+            if (decades.indexOf(d) === -1) decades.push(d);
+          }
+        });
+        decades.sort();
+        decadeBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All</button>' +
+          decades.map(function (d) { return '<button class="filter-btn" data-filter-value="' + d + '">' + d + '</button>'; }).join('');
+      }
+      activeFilters = {};
+      wireFilterBars();
       applySort();
       applyFilters();
-    }).catch(function () {
-      // Fails quietly — the grid still shows what was there at the last build.
-    });
+    }).catch(function () {});
   }
 
   // --- Live refresh: a single product page, matched by its URL slug.
+  // Fetches everything so "Replaced by" can link to the successor.
 
   var productPageEl = document.querySelector('.product-page');
   if (productPageEl && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     var pathParts = window.location.pathname.split('/').filter(Boolean);
     var slugFromUrl = pathParts[pathParts.length - 1];
-    fetch(window.SUPABASE_URL + '/rest/v1/products?slug=eq.' + encodeURIComponent(slugFromUrl) + '&select=*', {
-      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (rows) {
-        var product = rows && rows[0];
+    fetchAllProductsJS()
+      .then(function (products) {
+        var bySlug = {};
+        products.forEach(function (p) { bySlug[p.slug] = p; });
+        var product = bySlug[slugFromUrl];
         if (!product) return;
-        var status = computeStatusJS(product);
-        productPageEl.innerHTML = productBodyHtmlJS(product, status);
+        var status = product.discontinued ? null : computeStatusJS(product);
+        productPageEl.innerHTML = productBodyHtmlJS(product, status, bySlug);
         wireWaitButtons(productPageEl.querySelectorAll('.wait-btn'));
         revealAdminEditLinks(productPageEl.querySelectorAll('.admin-edit-link'));
         document.title = product.name + ' \u2014 Apple Refresher';
       })
-      .catch(function () {
-        // Fails quietly — the page still shows what was there at the last build.
-      });
+      .catch(function () {});
   }
 
-  // --- About page: fetch the latest content on load so admin edits show
-  // up immediately, without waiting for the site to rebuild.
+  // --- About page: fetch the latest content on load.
 
   var aboutSection = document.querySelector('.about-page');
   if (aboutSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     fetch(window.SUPABASE_URL + '/rest/v1/site_content?id=eq.about&select=*', {
-      headers: {
-        apikey: window.SUPABASE_ANON_KEY,
-        Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY,
-      },
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
     })
       .then(function (res) { return res.json(); })
       .then(function (rows) {
         var data = rows && rows[0];
         if (!data) return;
-
         var heading = aboutSection.querySelector('h1');
         if (heading && data.heading) heading.textContent = data.heading;
-
         var bodyEl = aboutSection.querySelector('.about-body');
         if (bodyEl && data.body) {
           bodyEl.innerHTML = '';
@@ -421,7 +493,6 @@
             bodyEl.appendChild(p);
           });
         }
-
         if (data.image_url) {
           var imageWrap = aboutSection.querySelector('.about-image');
           if (imageWrap) {
@@ -438,9 +509,6 @@
           }
         }
       })
-      .catch(function () {
-        // Fails quietly — the page still shows the content from the
-        // last build, which is a perfectly good fallback.
-      });
+      .catch(function () {});
   }
 })();
