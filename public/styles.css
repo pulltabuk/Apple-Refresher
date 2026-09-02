@@ -469,7 +469,7 @@ label.admin-btn { cursor: pointer; }
 
 .callout { background: #eef4fb; border-radius: 10px; padding: 1rem; margin-top: 1.5rem; }
 .callout-label { font-size: 13px; font-weight: 600; margin: 0 0 4px; color: #0c447c; }
-.callout-body { color: #0c447c; font-size: 13px; }
+.callout-body { color: #0c447c; font-size: 16px; line-height: 1.6; }
 .callout-body p { margin: 0 0 0.75rem; }
 .callout-body p:last-child { margin: 0; }
 .callout-body a { color: #0c447c; text-decoration: underline; }
