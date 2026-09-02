@@ -98,7 +98,8 @@ ${scriptTags}
 }
 
 function cardHtml(product, statusInfo) {
-  return `<article class="card" data-category="${escapeHtml(product.category)}">
+  const days = statusInfo && !product.coming_soon ? statusInfo.daysSince : '';
+  return `<article class="card" data-category="${escapeHtml(product.category)}" data-days="${days}">
   <a class="card-link" href="/products/${product.slug}/">
     <div class="card-image">${primaryImage(product) ? `<img src="${primaryImage(product)}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
     ${categoryPill(product.category)}
@@ -166,7 +167,15 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const body = items.length
     ? `
 <h1>All products</h1>
-<input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
+<div class="controls-row">
+  <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
+  <select id="sort-select" class="sort-select" aria-label="Sort products">
+    <option value="days-desc" selected>Days since refresh: high to low</option>
+    <option value="days-asc">Days since refresh: low to high</option>
+    <option value="name-asc">Name: A to Z</option>
+    <option value="name-desc">Name: Z to A</option>
+  </select>
+</div>
 <div class="filter-bar">
   <button class="filter-btn active" data-filter="all">All</button>
   ${categories.map((c) => `<button class="filter-btn" data-filter="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('\n')}

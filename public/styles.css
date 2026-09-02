@@ -198,9 +198,11 @@ a { color: inherit; text-decoration: none; }
   text-transform: uppercase;
 }
 
+.controls-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1rem; }
 .search-input {
   display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 200px;
   max-width: 360px;
   font-size: 14px;
   padding: 9px 12px;
@@ -208,7 +210,15 @@ a { color: inherit; text-decoration: none; }
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
-  margin-top: 1rem;
+  font-family: inherit;
+}
+.sort-select {
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
   font-family: inherit;
 }
 .badge {

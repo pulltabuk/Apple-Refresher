@@ -67,8 +67,9 @@
     var imageBlock = img
       ? '<img src="' + img + '" alt="' + escapeHtmlJS(product.name) + '">'
       : categoryIconJS(product.category);
+    var days = statusInfo && !product.coming_soon ? statusInfo.daysSince : '';
     return (
-      '<article class="card" data-category="' + escapeHtmlJS(product.category) + '">' +
+      '<article class="card" data-category="' + escapeHtmlJS(product.category) + '" data-days="' + days + '">' +
         '<a class="card-link" href="/products/' + product.slug + '/">' +
           '<div class="card-image">' + imageBlock + '</div>' +
           '<span class="pill">' + escapeHtmlJS(product.category) + '</span>' +
@@ -239,6 +240,41 @@
   wireFilterButtons();
   if (searchInput) searchInput.addEventListener('input', applyFilters);
 
+  // --- Sort (all-products page). Coming soon / no-status cards have no
+  // day count, they always sort to the end regardless of direction.
+
+  var sortSelect = document.getElementById('sort-select');
+
+  function applySort() {
+    var grid = document.getElementById('grid');
+    if (!grid || !sortSelect) return;
+    var sortValue = sortSelect.value;
+    var cards = Array.prototype.slice.call(grid.querySelectorAll('.card'));
+
+    cards.sort(function (a, b) {
+      if (sortValue === 'name-asc' || sortValue === 'name-desc') {
+        var nameA = (a.querySelector('.card-name') || {}).textContent || '';
+        var nameB = (b.querySelector('.card-name') || {}).textContent || '';
+        var cmp = nameA.localeCompare(nameB);
+        return sortValue === 'name-asc' ? cmp : -cmp;
+      }
+      var rawA = a.getAttribute('data-days');
+      var rawB = b.getAttribute('data-days');
+      var hasA = rawA !== null && rawA !== '';
+      var hasB = rawB !== null && rawB !== '';
+      if (!hasA && !hasB) return 0;
+      if (!hasA) return 1;
+      if (!hasB) return -1;
+      var diff = parseInt(rawA, 10) - parseInt(rawB, 10);
+      return sortValue === 'days-desc' ? -diff : diff;
+    });
+
+    cards.forEach(function (card) { grid.appendChild(card); });
+  }
+
+  if (sortSelect) sortSelect.addEventListener('change', applySort);
+  applySort();
+
   // --- Reveal the "Edit this product" link, but only to the logged-in
   // admin. Callable again after a live refresh injects new ones.
 
@@ -328,6 +364,7 @@
         wireFilterButtons();
       }
       currentCategory = 'all';
+      applySort();
       applyFilters();
     }).catch(function () {
       // Fails quietly — the grid still shows what was there at the last build.
