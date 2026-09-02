@@ -253,14 +253,38 @@
     document.execCommand('createLink', false, url);
   });
 
+  function extractParagraphs(root) {
+    const paragraphs = [];
+    let current = '';
+    const flush = () => {
+      const trimmed = current.trim();
+      if (trimmed) paragraphs.push(trimmed);
+      current = '';
+    };
+    root.childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        current += node.textContent;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        if (node.tagName === 'P' || node.tagName === 'DIV') {
+          flush();
+          const text = (node.textContent || '').trim();
+          if (text) paragraphs.push(text);
+        } else if (node.tagName === 'BR') {
+          flush();
+        } else {
+          current += node.textContent || '';
+        }
+      }
+    });
+    flush();
+    return paragraphs;
+  }
+
   document.getElementById('richtext-clear-all-btn').addEventListener('click', () => {
     if (!richTextEditor.textContent.trim()) return;
     if (!window.confirm('Remove all formatting from the notes? This keeps the text but clears bold, italic, and links.')) return;
     const escapeText = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const blocks = Array.from(richTextEditor.children).filter((el) => el.tagName === 'P' || el.tagName === 'DIV');
-    const paragraphs = (blocks.length ? blocks.map((el) => el.textContent || '') : [richTextEditor.textContent || ''])
-      .map((t) => t.trim())
-      .filter(Boolean);
+    const paragraphs = extractParagraphs(richTextEditor);
     richTextEditor.innerHTML = paragraphs.map((p) => '<p>' + escapeText(p) + '</p>').join('');
   });
 
