@@ -471,9 +471,14 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     launch ? specRow('Launched', formatDate(launch)) : '',
     latest && sortedDates.length > 1 && !product.discontinued ? specRow('Last refreshed', formatDate(latest)) : '',
     sortedDates.length > 1 ? specRow('Times refreshed', String(sortedDates.length - 1)) : '',
+    status && !product.discontinued ? specRow('Typical refresh cycle', `About every ${status.avgCycleDays} days`) : '',
+    status && sortedDates.length > 1 && !product.discontinued && !product.coming_soon
+      ? specRow('Next refresh expected around', new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }))
+      : '',
     product.discontinued && product.discontinued_date ? specRow('Discontinued', formatDate(product.discontinued_date)) : '',
     launch && product.discontinued && product.discontinued_date ? specRow('Lifespan', lifespanText(launch, product.discontinued_date)) : '',
     specRow('Starting price', escapeHtml(formatPrice(product.price))),
+    sortedDates.length ? specRow('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
     daysInfo ? specRow('Days counted from', `${product.days_basis === 'launch' ? 'Launch' : 'Refresh'}: ${daysInfo.days} days`) : '',
     specRow('Chip', escapeHtml(product.chip)),
     specRow('Previous model', previousModelHtml),
@@ -499,7 +504,6 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     <div class="product-info">
       <div class="product-header">
         <div>
-          ${categoryPill(product.category)}
           <h1>${escapeHtml(product.name)}</h1>
           ${heroStatHtml(product, status)}
         </div>
@@ -631,6 +635,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </div>
 
         <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
+
+        <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
 
         <div class="admin-subfield">
           <span class="admin-subfield-label">Badge shows</span>

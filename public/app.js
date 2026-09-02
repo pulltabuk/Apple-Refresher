@@ -223,9 +223,14 @@
       launch ? specRowJS('Launched', formatDateJS(launch)) : '',
       latest && sortedDates.length > 1 && !product.discontinued ? specRowJS('Last refreshed', formatDateJS(latest)) : '',
       sortedDates.length > 1 ? specRowJS('Times refreshed', String(sortedDates.length - 1)) : '',
+      status && !product.discontinued ? specRowJS('Typical refresh cycle', 'About every ' + status.avgCycleDays + ' days') : '',
+      status && sortedDates.length > 1 && !product.discontinued && !product.coming_soon
+        ? specRowJS('Next refresh expected around', new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }))
+        : '',
       product.discontinued && product.discontinued_date ? specRowJS('Discontinued', formatDateJS(product.discontinued_date)) : '',
       launch && product.discontinued && product.discontinued_date ? specRowJS('Lifespan', lifespanTextJS(launch, product.discontinued_date)) : '',
       specRowJS('Starting price', escapeHtmlJS(formatPriceJS(product.price))),
+      sortedDates.length ? specRowJS('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
       daysInfo ? specRowJS('Days counted from', (product.days_basis === 'launch' ? 'Launch' : 'Refresh') + ': ' + daysInfo.days + ' days') : '',
       specRowJS('Chip', escapeHtmlJS(product.chip)),
       specRowJS('Previous model', previousModelHtml),
@@ -250,7 +255,7 @@
         '</div>' +
         '<div class="product-info">' +
           '<div class="product-header">' +
-            '<div>' + pillJS(product.category) + '<h1>' + escapeHtmlJS(product.name) + '</h1>' + heroStatHtmlJS(product, status) + '</div>' +
+            '<div>' + '<h1>' + escapeHtmlJS(product.name) + '</h1>' + heroStatHtmlJS(product, status) + '</div>' +
             '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
           '</div>' +
           '<dl class="spec-list">' + specs + '</dl>' +

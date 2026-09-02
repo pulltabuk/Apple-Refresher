@@ -309,6 +309,7 @@
     document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
     document.getElementById('previous_model').value = p.previous_model || '';
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
+    document.getElementById('is_new_launch').checked = !!p.is_new_launch;
     currentRefreshHistory = (p.refresh_history || []).slice();
     currentImageUrls = (p.image_urls && p.image_urls.length ? p.image_urls : p.image_url ? [p.image_url] : []).slice();
     currentVideoUrl = p.video_url || null;
@@ -382,6 +383,7 @@
         rumor_note: document.getElementById('rumor_note').value.trim() || null,
         featured: document.getElementById('featured').checked,
         days_basis: document.querySelector('input[name="days_basis"]:checked').value,
+        is_new_launch: document.getElementById('is_new_launch').checked,
         previous_model: document.getElementById('previous_model').value.trim() || null,
         coming_soon: document.getElementById('coming_soon').checked,
         expected_date: expectedDateRaw || null,
