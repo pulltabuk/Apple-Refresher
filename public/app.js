@@ -53,7 +53,7 @@
     var baseCount = parseInt(btn.getAttribute('data-count'), 10) || 0;
 
     function showVoted(count) {
-      btn.textContent = count + ' people are waiting for this';
+      btn.textContent = count + ' people are waiting for a refresh';
       btn.classList.add('voted');
       btn.disabled = true;
     }

@@ -106,7 +106,7 @@ function cardHtml(product, statusInfo) {
     ${productBadge(product, statusInfo)}
   </a>
   <button class="wait-btn" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
-    Waiting for this?
+    Waiting for a refresh?
   </button>
 </article>`;
 }
@@ -290,7 +290,7 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
   </div>` : ''}
 
   <button class="wait-btn wait-btn--large" data-product-id="${product.id}" data-slug="${product.slug}" data-count="${product.waiting_count || 0}">
-    Waiting for this?
+    Waiting for a refresh?
   </button>
 </article>`;
 
