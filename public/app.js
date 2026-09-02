@@ -1,17 +1,37 @@
 (function () {
-  // Category filter (all-products page only)
+  // Search + category filter (all-products page only)
   var filterBtns = document.querySelectorAll('.filter-btn');
+  var searchInput = document.getElementById('search-input');
+  var noResults = document.getElementById('no-results');
+  var currentCategory = 'all';
+
+  function applyFilters() {
+    var query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+    var visibleCount = 0;
+    document.querySelectorAll('.card[data-category]').forEach(function (card) {
+      var matchesCategory = currentCategory === 'all' || card.getAttribute('data-category') === currentCategory;
+      var nameEl = card.querySelector('.card-name');
+      var name = nameEl ? nameEl.textContent.toLowerCase() : '';
+      var matchesSearch = query === '' || name.indexOf(query) !== -1;
+      var show = matchesCategory && matchesSearch;
+      card.style.display = show ? '' : 'none';
+      if (show) visibleCount++;
+    });
+    if (noResults) noResults.style.display = visibleCount === 0 ? '' : 'none';
+  }
+
   filterBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       filterBtns.forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
-      var filter = btn.getAttribute('data-filter');
-      document.querySelectorAll('.card[data-category]').forEach(function (card) {
-        var show = filter === 'all' || card.getAttribute('data-category') === filter;
-        card.style.display = show ? '' : 'none';
-      });
+      currentCategory = btn.getAttribute('data-filter');
+      applyFilters();
     });
   });
+
+  if (searchInput) {
+    searchInput.addEventListener('input', applyFilters);
+  }
 
   // Waiting button
   var supabase = null;

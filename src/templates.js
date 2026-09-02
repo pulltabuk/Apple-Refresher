@@ -29,6 +29,10 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
+function categoryPill(category) {
+  return `<span class="pill">${escapeHtml(category)}</span>`;
+}
+
 function badgeHtml(statusInfo) {
   if (!statusInfo) return '';
   const { status, daysSince } = statusInfo;
@@ -81,6 +85,7 @@ function cardHtml(product, statusInfo) {
   return `<article class="card" data-category="${escapeHtml(product.category)}">
   <a class="card-link" href="/products/${product.slug}/">
     <div class="card-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
+    ${categoryPill(product.category)}
     <p class="card-name">${escapeHtml(product.name)}</p>
     ${badgeHtml(statusInfo)}
   </a>
@@ -96,6 +101,7 @@ function discontinuedCardHtml(product) {
     : '';
   return `<article class="card card--discontinued">
   <div class="card-image">${product.image_url ? `<img src="${product.image_url}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
+  ${categoryPill(product.category)}
   <p class="card-name">${escapeHtml(product.name)}</p>
   <span class="badge badge--discontinued">Discontinued ${date}</span>
 </article>`;
@@ -104,11 +110,18 @@ function discontinuedCardHtml(product) {
 function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const featuredStatus = featured.status;
   const body = `
+<section class="intro-hero">
+  <p class="intro-eyebrow"><span class="eyebrow-dash"></span>Apple product refresh tracker</p>
+  <h1 class="intro-heading">Know when it's<br>time to buy.</h1>
+  <p class="intro-subtitle">Every current Apple product, and exactly how long it's been since its last refresh, so you're never guessing.</p>
+  <a class="intro-cta" href="/products/">Browse all products</a>
+</section>
 <section class="hero">
   <a class="hero-card" href="/products/${featured.product.slug}/">
     <div class="hero-image">${featured.product.image_url ? `<img src="${featured.product.image_url}" alt="${escapeHtml(featured.product.name)}">` : categoryIcon(featured.product.category)}</div>
     <div class="hero-body">
       <p class="hero-eyebrow">Featured</p>
+      ${categoryPill(featured.product.category)}
       <p class="hero-name">${escapeHtml(featured.product.name)}</p>
       ${badgeHtml(featuredStatus)}
     </div>
@@ -133,10 +146,12 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const categories = [...new Set(items.map((i) => i.product.category))];
   const body = `
 <h1>All products</h1>
+<input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
 <div class="filter-bar">
   <button class="filter-btn active" data-filter="all">All</button>
   ${categories.map((c) => `<button class="filter-btn" data-filter="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('\n')}
 </div>
+<p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
 </div>`;
@@ -193,7 +208,7 @@ function productPage({ product, status, history, siteUrl, supabaseUrl, supabaseA
 <article class="product-page">
   <div class="product-header">
     <div>
-      <p class="hero-eyebrow">${escapeHtml(product.category)}</p>
+      ${categoryPill(product.category)}
       <h1>${escapeHtml(product.name)}</h1>
     </div>
     ${badgeHtml(status)}

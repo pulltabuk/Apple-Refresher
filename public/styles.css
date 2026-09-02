@@ -118,6 +118,30 @@ a { color: inherit; text-decoration: none; }
 .admin-row-actions button:hover { border-color: var(--graphite); }
 
 /* Badges */
+.pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #f6f5f1;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.search-input {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  margin-top: 1rem;
+  font-family: inherit;
+}
 .badge {
   display: inline-block;
   font-size: 12px;
@@ -129,6 +153,23 @@ a { color: inherit; text-decoration: none; }
 .badge--aging { background: var(--aging-bg); color: var(--aging-text); }
 .badge--overdue { background: var(--overdue-bg); color: var(--overdue-text); }
 .badge--discontinued { background: var(--discontinued-bg); color: var(--discontinued-text); }
+
+/* Intro hero */
+.intro-hero { padding: 2rem 0 0.5rem; }
+.intro-eyebrow { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin: 0 0 1.25rem; }
+.eyebrow-dash { display: inline-block; width: 24px; height: 2px; background: var(--graphite); flex-shrink: 0; }
+.intro-heading { font-size: 40px; line-height: 1.15; font-weight: 600; margin: 0 0 1rem; }
+.intro-subtitle { font-size: 16px; color: var(--text-secondary); max-width: 480px; margin: 0 0 1.5rem; }
+.intro-cta {
+  display: inline-block;
+  background: var(--graphite);
+  color: #fff;
+  font-weight: 500;
+  font-size: 14px;
+  padding: 12px 22px;
+  border-radius: 8px;
+}
+.intro-cta:hover { background: var(--graphite-hover); }
 
 /* Hero */
 .hero { display: flex; gap: 16px; align-items: stretch; margin-top: 1rem; flex-wrap: wrap; }
@@ -237,5 +278,6 @@ a { color: inherit; text-decoration: none; }
 .page-intro { color: var(--text-secondary); font-size: 14px; }
 
 @media (max-width: 640px) {
+  .intro-heading { font-size: 30px; }
   .hero-grid { grid-template-columns: 1fr 1fr; }
 }
