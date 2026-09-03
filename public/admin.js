@@ -29,6 +29,68 @@
       .replace(/(^-+|-+$)/g, '');
   }
 
+  // --- Date precision picker: shared by Original launch date, Expected
+  // date, Discontinued date, and the "add a refresh date" row. Each one
+  // is a set of three radios (day/month/year) named "<prefix>_precision"
+  // plus three inputs "<prefix>_day" (date), "<prefix>_month" (month),
+  // "<prefix>_year" (number), only one of which shows at a time.
+
+  function updateDatePrecisionVisibility(prefix) {
+    const checked = document.querySelector('input[name="' + prefix + '_precision"]:checked');
+    const val = checked ? checked.value : 'day';
+    const dayInput = document.getElementById(prefix + '_day');
+    const monthInput = document.getElementById(prefix + '_month');
+    const yearInput = document.getElementById(prefix + '_year');
+    if (!dayInput || !monthInput || !yearInput) return;
+    dayInput.style.display = val === 'day' ? '' : 'none';
+    monthInput.style.display = val === 'month' ? '' : 'none';
+    yearInput.style.display = val === 'year' ? '' : 'none';
+  }
+
+  function wireDatePrecisionField(prefix) {
+    document.querySelectorAll('input[name="' + prefix + '_precision"]').forEach((radio) => {
+      radio.addEventListener('change', () => updateDatePrecisionVisibility(prefix));
+    });
+    updateDatePrecisionVisibility(prefix);
+  }
+
+  function getDatePrecisionValue(prefix) {
+    const checked = document.querySelector('input[name="' + prefix + '_precision"]:checked');
+    const val = checked ? checked.value : 'day';
+    if (val === 'day') return document.getElementById(prefix + '_day').value || null;
+    if (val === 'month') return document.getElementById(prefix + '_month').value || null;
+    const year = document.getElementById(prefix + '_year').value.trim();
+    return year || null;
+  }
+
+  function setDatePrecisionValue(prefix, value) {
+    const dayInput = document.getElementById(prefix + '_day');
+    const monthInput = document.getElementById(prefix + '_month');
+    const yearInput = document.getElementById(prefix + '_year');
+    dayInput.value = '';
+    monthInput.value = '';
+    yearInput.value = '';
+    let precision = 'day';
+    if (value) {
+      if (/^\d{4}$/.test(value)) {
+        precision = 'year';
+        yearInput.value = value;
+      } else if (/^\d{4}-\d{2}$/.test(value)) {
+        precision = 'month';
+        monthInput.value = value;
+      } else {
+        precision = 'day';
+        dayInput.value = value;
+      }
+    }
+    const radio = document.querySelector('input[name="' + prefix + '_precision"][value="' + precision + '"]');
+    if (radio) radio.checked = true;
+    updateDatePrecisionVisibility(prefix);
+  }
+
+  const DATE_FIELD_PREFIXES = ['original_launch_date', 'expected_date', 'discontinued_date', 'new_refresh_date'];
+  DATE_FIELD_PREFIXES.forEach(wireDatePrecisionField);
+
   // --- Tabs ---
 
   document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
@@ -115,8 +177,8 @@
       categoryOptions.appendChild(opt);
     });
 
-    // "Replaced by" picker: the value saved is the product's slug, the
-    // label shown is its name.
+    // "Replaced by" / "Previous model" pickers: the value saved is the
+    // product's slug, the label shown is its name.
     const productOptions = document.getElementById('product-options');
     productOptions.innerHTML = '';
     cachedProducts.forEach((p) => {
@@ -232,8 +294,6 @@
     });
   }
 
-  const DATE_PATTERN = /^\d{4}(-\d{2}(-\d{2})?)?$/;
-
   const richTextEditor = document.getElementById('rumor_note_editor');
   if (document.queryCommandSupported && document.queryCommandSupported('defaultParagraphSeparator')) {
     document.execCommand('defaultParagraphSeparator', false, 'p');
@@ -289,18 +349,13 @@
   });
 
   document.getElementById('add-refresh-date-btn').addEventListener('click', () => {
-    const input = document.getElementById('new-refresh-date');
-    const value = input.value.trim();
+    const value = getDatePrecisionValue('new_refresh_date');
     if (!value) return;
-    if (!DATE_PATTERN.test(value)) {
-      window.alert('Enter a date as YYYY-MM-DD, YYYY-MM, or just YYYY.');
-      return;
-    }
     if (currentRefreshHistory.indexOf(value) === -1) {
       currentRefreshHistory.push(value);
       currentRefreshHistory.sort();
     }
-    input.value = '';
+    setDatePrecisionValue('new_refresh_date', null);
     renderRefreshHistory();
   });
 
@@ -356,19 +411,20 @@
     document.getElementById('name').value = p.name || '';
     document.getElementById('category').value = p.category || '';
     document.getElementById('price').value = p.price || '';
-    document.getElementById('chip').value = p.chip || '';
     document.getElementById('external_link').value = p.external_link || '';
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
     document.getElementById('coming_soon').checked = !!p.coming_soon;
-    document.getElementById('expected_date').value = p.expected_date || '';
     document.getElementById('discontinued').checked = !!p.discontinued;
-    document.getElementById('discontinued_date').value = p.discontinued_date || '';
     document.getElementById('replaced_by').value = p.replaced_by || '';
     document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
     document.getElementById('previous_model').value = p.previous_model || '';
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     document.getElementById('is_new_launch').checked = !!p.is_new_launch;
+    setDatePrecisionValue('original_launch_date', p.original_launch_date || null);
+    setDatePrecisionValue('expected_date', p.expected_date || null);
+    setDatePrecisionValue('discontinued_date', p.discontinued_date || null);
+    setDatePrecisionValue('new_refresh_date', null);
     currentRefreshHistory = (p.refresh_history || []).slice();
     currentImageUrls = (p.image_urls && p.image_urls.length ? p.image_urls : p.image_url ? [p.image_url] : []).slice();
     currentVideoUrl = p.video_url || null;
@@ -386,6 +442,10 @@
     }
     productForm.reset();
     document.getElementById('rumor_note_editor').innerHTML = '';
+    setDatePrecisionValue('original_launch_date', null);
+    setDatePrecisionValue('expected_date', null);
+    setDatePrecisionValue('discontinued_date', null);
+    setDatePrecisionValue('new_refresh_date', null);
     currentRefreshHistory = [];
     currentImageUrls = [];
     currentVideoUrl = null;
@@ -421,27 +481,16 @@
       const name = document.getElementById('name').value.trim();
       const slug = editingId ? editingSlug : slugify(name);
 
-      const expectedDateRaw = document.getElementById('expected_date').value.trim();
-      const discontinuedDateRaw = document.getElementById('discontinued_date').value.trim();
-      if (expectedDateRaw && !DATE_PATTERN.test(expectedDateRaw)) {
-        window.alert('Expected date should be YYYY-MM-DD, YYYY-MM, or just YYYY.');
-        return;
-      }
-      if (discontinuedDateRaw && !DATE_PATTERN.test(discontinuedDateRaw)) {
-        window.alert('Discontinued date should be YYYY-MM-DD, YYYY-MM, or just YYYY.');
-        return;
-      }
-
       const payload = {
         slug,
         name,
         category: document.getElementById('category').value.trim() || 'Other',
         price: document.getElementById('price').value.trim() || null,
-        chip: document.getElementById('chip').value.trim() || null,
         external_link: document.getElementById('external_link').value.trim() || null,
         refresh_history: currentRefreshHistory,
+        original_launch_date: getDatePrecisionValue('original_launch_date'),
         rumor_note: (function () {
-          var html = document.getElementById('rumor_note_editor').innerHTML.trim();
+          const html = document.getElementById('rumor_note_editor').innerHTML.trim();
           return html && html !== '<br>' ? html : null;
         })(),
         featured: document.getElementById('featured').checked,
@@ -449,9 +498,9 @@
         is_new_launch: document.getElementById('is_new_launch').checked,
         previous_model: document.getElementById('previous_model').value.trim() || null,
         coming_soon: document.getElementById('coming_soon').checked,
-        expected_date: expectedDateRaw || null,
+        expected_date: getDatePrecisionValue('expected_date'),
         discontinued: document.getElementById('discontinued').checked,
-        discontinued_date: discontinuedDateRaw || null,
+        discontinued_date: getDatePrecisionValue('discontinued_date'),
         replaced_by: document.getElementById('replaced_by').value.trim() || null,
         discontinued_reason: document.getElementById('discontinued_reason').value.trim() || null,
         image_urls: currentImageUrls,
@@ -469,6 +518,10 @@
       }
       productForm.reset();
       document.getElementById('rumor_note_editor').innerHTML = '';
+      setDatePrecisionValue('original_launch_date', null);
+      setDatePrecisionValue('expected_date', null);
+      setDatePrecisionValue('discontinued_date', null);
+      setDatePrecisionValue('new_refresh_date', null);
       editingId = null;
       editingSlug = null;
       currentRefreshHistory = [];

@@ -71,11 +71,17 @@
   }
 
   function horizontalTimelineHtmlJS(product, sortedDates) {
-    if (!sortedDates.length) return '';
-    var points = sortedDates.map(function (d, i) {
-      var isLaunch = i === 0 && !!product.is_new_launch;
-      return { date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh' };
-    });
+    var points = [];
+    if (product.original_launch_date) {
+      points.push({ date: product.original_launch_date, label: 'Launch', type: 'launch' });
+      sortedDates.forEach(function (d) { points.push({ date: d, label: 'Refresh', type: 'refresh' }); });
+    } else {
+      sortedDates.forEach(function (d, i) {
+        var isLaunch = i === 0 && !!product.is_new_launch;
+        points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh' });
+      });
+    }
+    if (!points.length) return '';
     if (product.discontinued && product.discontinued_date) {
       points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued' });
     }
@@ -240,7 +246,7 @@
 
   function productBodyHtmlJS(product, status, productsBySlug) {
     var sortedDates = sortedHistoryJS(product);
-    var launch = sortedDates[0] || null;
+    var launch = product.original_launch_date || sortedDates[0] || null;
     var latest = sortedDates[sortedDates.length - 1] || null;
 
     var images = product.image_urls && product.image_urls.length ? product.image_urls : product.image_url ? [product.image_url] : [];
@@ -291,7 +297,7 @@
       product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people'),
     ].filter(Boolean).join('');
 
-    var releaseHistorySection = sortedDates.length ? '<h2>Release history</h2>' + horizontalTimelineHtmlJS(product, sortedDates) : '';
+    var releaseHistorySection = sortedDates.length || product.original_launch_date ? '<h2>Release history</h2>' + horizontalTimelineHtmlJS(product, sortedDates) : '';
 
     return (
       '<div class="product-top">' +

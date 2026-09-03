@@ -92,11 +92,17 @@ function monthsBetween(a, b) {
 }
 
 function horizontalTimelineHtml(product, sortedDates) {
-  if (!sortedDates.length) return '';
-  const points = sortedDates.map((d, i) => {
-    const isLaunch = i === 0 && !!product.is_new_launch;
-    return { date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh' };
-  });
+  const points = [];
+  if (product.original_launch_date) {
+    points.push({ date: product.original_launch_date, label: 'Launch', type: 'launch' });
+    sortedDates.forEach((d) => points.push({ date: d, label: 'Refresh', type: 'refresh' }));
+  } else {
+    sortedDates.forEach((d, i) => {
+      const isLaunch = i === 0 && !!product.is_new_launch;
+      points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh' });
+    });
+  }
+  if (!points.length) return '';
   if (product.discontinued && product.discontinued_date) {
     points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued' });
   }
@@ -469,7 +475,7 @@ function externalLinkLabel(product) {
 
 function productPage({ product, status, history, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const sortedDates = history.slice().sort();
-  const launch = sortedDates[0] || null;
+  const launch = product.original_launch_date || sortedDates[0] || null;
   const latest = sortedDates[sortedDates.length - 1] || null;
 
   const timelineHtml = horizontalTimelineHtml(product, sortedDates);
@@ -531,7 +537,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> people`),
   ].filter(Boolean).join('\n');
 
-  const releaseHistorySection = sortedDates.length
+  const releaseHistorySection = sortedDates.length || product.original_launch_date
     ? `<h2>Release history</h2>
   ${timelineHtml}`
     : '';
@@ -610,6 +616,21 @@ function aboutPage({ content, siteUrl, supabaseUrl, supabaseAnonKey }) {
   });
 }
 
+function datePrecisionFieldHtml(prefix, label, hint) {
+  return `<div class="admin-subfield">
+  <span class="admin-subfield-label">${label}</span>
+  <div class="date-precision-radios">
+    <label><input type="radio" name="${prefix}_precision" value="day" checked> Full date</label>
+    <label><input type="radio" name="${prefix}_precision" value="month"> Month &amp; year</label>
+    <label><input type="radio" name="${prefix}_precision" value="year"> Year only</label>
+  </div>
+  <input type="date" id="${prefix}_day" class="date-precision-input">
+  <input type="month" id="${prefix}_month" class="date-precision-input" style="display:none;">
+  <input type="number" id="${prefix}_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
+  ${hint ? `<p class="admin-hint">${hint}</p>` : ''}
+</div>`;
+}
+
 function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   const body = `
 <h1>Admin</h1>
@@ -642,24 +663,59 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <button type="button" id="back-to-list-btn" class="admin-back-link">&larr; Back to products</button>
       <h3 id="form-title">Add product</h3>
       <form id="product-form" class="admin-form">
+        <h3 class="admin-form-section">Product details</h3>
         <label>Name<input type="text" id="name" required></label>
         <label>Category
           <input type="text" id="category" list="category-options" placeholder="e.g. iPhone, Vision Pro">
           <datalist id="category-options"></datalist>
         </label>
         <label>Starting price<input type="text" id="price" placeholder="£799"></label>
-        <label>Chip<input type="text" id="chip"></label>
-        <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
+
+        <h3 class="admin-form-section">Timeline</h3>
+        ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'Leave blank if this isn\u2019t a good example, the refresh history below will be used instead.')}
 
         <div class="admin-subfield">
-          <span class="admin-subfield-label">Refresh history (the first date is treated as the launch date)</span>
+          <span class="admin-subfield-label">Refresh history</span>
           <ul id="refresh-history-list" class="refresh-history-list"></ul>
+          <div class="date-precision-radios">
+            <label><input type="radio" name="new_refresh_date_precision" value="day" checked> Full date</label>
+            <label><input type="radio" name="new_refresh_date_precision" value="month"> Month &amp; year</label>
+            <label><input type="radio" name="new_refresh_date_precision" value="year"> Year only</label>
+          </div>
           <div class="refresh-history-add">
-            <input type="text" id="new-refresh-date" placeholder="YYYY-MM-DD, YYYY-MM, or YYYY" class="date-precision-input">
+            <input type="date" id="new_refresh_date_day" class="date-precision-input">
+            <input type="month" id="new_refresh_date_month" class="date-precision-input" style="display:none;">
+            <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
             <button type="button" id="add-refresh-date-btn" class="admin-btn admin-btn--small">Add date</button>
           </div>
-          <p class="admin-hint">Use a full date when you know it. For older products, YYYY-MM or just YYYY is fine.</p>
+          <p class="admin-hint">Each date this specific model was refreshed. If Original launch date above is blank, the first one here is treated as the launch.</p>
         </div>
+
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Badge shows</span>
+          <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked> Days since refresh</label>
+          <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_launch" value="launch"> Days since launch</label>
+        </div>
+
+        <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
+
+        <h3 class="admin-form-section">Media</h3>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Photos (up to 6)</span>
+          <div id="image-thumbs" class="admin-thumbs"></div>
+          <label for="image-upload" class="admin-btn admin-btn--small admin-btn--primary">Add photos</label>
+          <input type="file" id="image-upload" accept="image/*" multiple class="admin-file-input">
+        </div>
+
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Video</span>
+          <div id="video-status" class="admin-video-status">No video uploaded.</div>
+          <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label>
+          <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
+        </div>
+
+        <h3 class="admin-form-section">More information</h3>
+        <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
 
         <div class="admin-subfield">
           <span class="admin-subfield-label">Notes</span>
@@ -675,42 +731,22 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
         </div>
 
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Photos (up to 6)</span>
-          <div id="image-thumbs" class="admin-thumbs"></div>
-          <label for="image-upload" class="admin-btn admin-btn--small">Add photos</label>
-          <input type="file" id="image-upload" accept="image/*" multiple class="admin-file-input">
-        </div>
-
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Video</span>
-          <div id="video-status" class="admin-video-status">No video uploaded.</div>
-          <label for="video-upload" class="admin-btn admin-btn--small">Add video</label>
-          <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
-        </div>
-
+        <h3 class="admin-form-section">Homepage</h3>
         <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
 
-        <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
-
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Badge shows</span>
-          <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked> Days since refresh</label>
-          <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_launch" value="launch"> Days since launch</label>
-        </div>
-
-        <label>Previous model (pick a product, or leave blank)
-          <input type="text" id="previous_model" list="product-options" placeholder="Start typing a product name">
-        </label>
-
+        <h3 class="admin-form-section">Coming soon</h3>
         <label class="checkbox-label"><input type="checkbox" id="coming_soon"> Coming soon</label>
-        <label>Expected date (if known)<input type="text" id="expected_date" placeholder="YYYY-MM-DD, YYYY-MM, or YYYY" class="date-precision-input"></label>
+        ${datePrecisionFieldHtml('expected_date', 'Expected date (if known)')}
 
+        <h3 class="admin-form-section">Discontinued</h3>
         <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
-        <label>Discontinued date<input type="text" id="discontinued_date" placeholder="YYYY-MM-DD, YYYY-MM, or YYYY" class="date-precision-input"></label>
+        ${datePrecisionFieldHtml('discontinued_date', 'Discontinued date')}
         <label>Replaced by (pick a product, or leave blank)
           <input type="text" id="replaced_by" list="product-options" placeholder="Start typing a product name">
           <datalist id="product-options"></datalist>
+        </label>
+        <label>Previous model (pick a product, or leave blank)
+          <input type="text" id="previous_model" list="product-options" placeholder="Start typing a product name">
         </label>
         <label>Why it went (short, e.g. "Replaced by the iPhone" or "Folded into the Pro line")<textarea id="discontinued_reason" rows="2"></textarea></label>
 
@@ -725,7 +761,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <label>Body text (leave a blank line between paragraphs)<textarea id="about_body" rows="6"></textarea></label>
       <div class="admin-subfield">
         <span class="admin-subfield-label">Image</span>
-        <label for="about-image-upload" class="admin-btn admin-btn--small">Choose image</label>
+        <label for="about-image-upload" class="admin-btn admin-btn--small admin-btn--primary">Choose image</label>
         <input type="file" id="about-image-upload" accept="image/*" class="admin-file-input">
       </div>
       <input type="hidden" id="about_image_url">
