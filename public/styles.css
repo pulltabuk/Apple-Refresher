@@ -343,20 +343,20 @@ label.admin-btn { cursor: pointer; }
   gap: 8px;
   height: 100%;
 }
+.card > .pill { margin-top: auto; }
 .card-link { display: flex; flex-direction: column; gap: 8px; }
 .card-name {
   font-size: 14px;
   font-weight: 600;
   margin: 0;
   line-height: 1.3;
-  min-height: 2.6em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .card--discontinued { opacity: 0.85; }
-.card-link .badge { margin-top: -10px; }
+
 
 /* Buttons */
 .wait-btn {
