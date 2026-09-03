@@ -243,7 +243,7 @@ label.admin-btn { cursor: pointer; }
   max-width: 360px;
   font-size: 14px;
   padding: 9px 12px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--accent-blue-dark);
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
@@ -252,7 +252,7 @@ label.admin-btn { cursor: pointer; }
 .sort-select {
   font-size: 14px;
   padding: 9px 12px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--accent-blue-dark);
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
@@ -356,6 +356,7 @@ label.admin-btn { cursor: pointer; }
   overflow: hidden;
 }
 .card--discontinued { opacity: 0.85; }
+.card-link .badge { margin-top: -10px; }
 
 /* Buttons */
 .wait-btn {
@@ -474,7 +475,7 @@ label.admin-btn { cursor: pointer; }
 .timeline-point-date { margin: 2px 0 0; font-size: 13px; font-weight: 500; }
 
 .callout { background: var(--accent-blue-bg); border-radius: 10px; padding: 1rem; margin-top: 1.5rem; }
-.callout-label { font-size: 13px; font-weight: 600; margin: 0 0 4px; color: var(--accent-blue-dark); }
+.callout-label { font-size: 26px; font-weight: 700; margin: 0 0 8px; color: var(--accent-blue-dark); }
 .callout-body { color: var(--accent-blue-dark); font-size: 16px; line-height: 1.6; }
 .callout-body p { margin: 0 0 0.75rem; }
 .callout-body p:last-child { margin: 0; }
