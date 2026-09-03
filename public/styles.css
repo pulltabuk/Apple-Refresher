@@ -220,7 +220,7 @@ a { color: inherit; text-decoration: none; }
   padding: 0;
 }
 .admin-back-link:hover { color: var(--text); }
-label.admin-btn { cursor: pointer; }
+label.admin-btn { cursor: pointer; color: #fff; }
 .admin-file-input {
   position: absolute;
   width: 1px;
