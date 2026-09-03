@@ -281,7 +281,7 @@
       product.discontinued ? specRowJS('Apple support status', appleSupportStatusJS(product)) : '',
       specRowJS('Starting price', escapeHtmlJS(formatPriceJS(product.price))),
       sortedDates.length ? specRowJS('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
-      daysInfo ? specRowJS('Days counted from', (product.days_basis === 'launch' ? 'Launch' : 'Refresh') + ': ' + daysInfo.days + ' days') : '',
+      daysInfo ? specRowJS('Days counted from', daysInfo.days + ' days (' + (product.days_basis === 'launch' ? 'Launch' : 'Refresh') + ')') : '',
       specRowJS('Chip', escapeHtmlJS(product.chip)),
       specRowJS('Previous model', previousModelHtml),
       specRowJS('Replaced by', replacedByHtml),

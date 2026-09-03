@@ -519,7 +519,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     product.discontinued ? specRow('Apple support status', appleSupportStatus(product)) : '',
     specRow('Starting price', escapeHtml(formatPrice(product.price))),
     sortedDates.length ? specRow('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
-    daysInfo ? specRow('Days counted from', `${product.days_basis === 'launch' ? 'Launch' : 'Refresh'}: ${daysInfo.days} days`) : '',
+    daysInfo ? specRow('Days counted from', `${daysInfo.days} days (${product.days_basis === 'launch' ? 'Launch' : 'Refresh'})`) : '',
     specRow('Chip', escapeHtml(product.chip)),
     specRow('Previous model', previousModelHtml),
     specRow('Replaced by', replacedByHtml),
