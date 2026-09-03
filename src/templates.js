@@ -201,24 +201,28 @@ ${noindex ? '<meta name="robots" content="noindex">' : ''}
 <link rel="icon" type="image/png" href="/favicon.png">
 </head>
 <body>
-<header class="site-header">
-  <a class="site-title" href="/"><img src="/logo.png" alt="" class="site-logo"><span>Apple Refresher</span></a>
-  <nav class="site-nav">
-    <a href="/products/">All products</a>
-    <a href="/categories/">Categories</a>
-    <a href="/discontinued/">Discontinued</a>
-    <a href="/about/">About</a>
-  </nav>
+<header class="site-header-bg">
+  <div class="site-header">
+    <a class="site-title" href="/"><img src="/logo.png" alt="" class="site-logo"><span>Apple Refresher</span></a>
+    <nav class="site-nav">
+      <a href="/products/">All products</a>
+      <a href="/categories/">Categories</a>
+      <a href="/discontinued/">Discontinued</a>
+      <a href="/about/">About</a>
+    </nav>
+  </div>
 </header>
 <main>
 ${bodyHtml}
 </main>
-<footer class="site-footer">
-  <nav class="footer-nav">
-    <a href="/about/">About us</a>
-    <a href="/admin/">Admin</a>
-  </nav>
-  <p>Apple Refresher is an independent tracker and is not affiliated with Apple Inc.</p>
+<footer class="site-footer-bg">
+  <div class="site-footer">
+    <nav class="footer-nav">
+      <a href="/about/">About us</a>
+      <a href="/admin/">Admin</a>
+    </nav>
+    <p>Apple Refresher is an independent tracker and is not affiliated with Apple Inc.</p>
+  </div>
 </footer>
 <script>
   window.SUPABASE_URL = ${JSON.stringify(supabaseUrl || '')};
