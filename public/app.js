@@ -73,7 +73,8 @@
   function horizontalTimelineHtmlJS(product, sortedDates) {
     if (!sortedDates.length) return '';
     var points = sortedDates.map(function (d, i) {
-      return { date: d, label: i === 0 ? 'Launch' : 'Refresh', type: i === 0 ? 'launch' : 'refresh' };
+      var isLaunch = i === 0 && !!product.is_new_launch;
+      return { date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh' };
     });
     if (product.discontinued && product.discontinued_date) {
       points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued' });
