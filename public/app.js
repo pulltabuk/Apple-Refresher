@@ -481,37 +481,67 @@
   revealAdminEditLinks(document.querySelectorAll('.admin-edit-link'));
   wireWaitButtons(document.querySelectorAll('.wait-btn'));
 
-  // --- Live refresh: homepage hero + grid.
+  // --- Live refresh: homepage hero (3 random cards, one featured) and
+  // the random gallery strip. Re-randomised on every page load.
 
-  var heroSection = document.querySelector('.hero');
-  if (heroSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+  function pickRandomJS(arr, n) {
+    var copy = arr.slice();
+    var picked = [];
+    while (picked.length < n && copy.length) {
+      var idx = Math.floor(Math.random() * copy.length);
+      picked.push(copy.splice(idx, 1)[0]);
+    }
+    return picked;
+  }
+
+  function featuredCardHtmlJS(product, statusInfo) {
+    var extra = [product.price ? formatPriceJS(product.price) : '', product.chip].filter(Boolean).join(' \u00b7 ');
+    return '<article class="card card--featured" data-category="' + escapeHtmlJS(product.category) + '">' +
+      '<a class="card-link" href="/products/' + product.slug + '/">' +
+        '<span class="card-featured-label">Featured</span>' +
+        '<div class="card-name-row">' + categoryIconJS(product.category, 20) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
+        badgeHtmlJS(product, statusInfo) +
+        (extra ? '<p class="card-featured-extra">' + escapeHtmlJS(extra) + '</p>' : '') +
+      '</a>' +
+      pillJS(product.category) +
+    '</article>';
+  }
+
+  var heroCardsSection = document.getElementById('hero-cards');
+  if (heroCardsSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     fetchAllProductsJS().then(function (products) {
       var active = products.filter(function (p) { return !p.discontinued; });
       var withStatus = active
         .map(function (p) { return { product: p, status: computeStatusJS(p) }; })
-        .filter(function (i) { return i.status || i.product.coming_soon; });
+        .filter(function (i) { return i.status; });
       if (!withStatus.length) return;
 
-      var rankable = withStatus.filter(function (i) { return i.status; });
-      var featured = withStatus.filter(function (i) { return i.product.featured; })[0];
-      if (!featured) {
-        featured = rankable.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0] || withStatus[0];
-      }
-      var rest = rankable
-        .filter(function (i) { return i.product.id !== featured.product.id; })
-        .sort(function (a, b) { return b.status.ratio - a.status.ratio; })
-        .slice(0, 4);
+      var heroPicks = pickRandomJS(withStatus, 3);
+      var heroFeatured = heroPicks.filter(function (i) { return i.product.featured; })[0]
+        || heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0];
+      var heroRest = heroPicks.filter(function (i) { return i !== heroFeatured; });
 
-      heroSection.innerHTML =
-        '<a class="hero-card" href="/products/' + featured.product.slug + '/">' +
-          '<div class="hero-body">' +
-            '<p class="hero-eyebrow">Featured</p>' +
-            '<p class="hero-name">' + escapeHtmlJS(featured.product.name) + '</p>' +
-            badgeHtmlJS(featured.product, featured.status) +
-          '</div>' +
-        '</a>' +
-        '<div class="hero-grid">' + rest.map(function (r) { return cardHtmlJS(r.product, r.status); }).join('') + '</div>';
+      heroCardsSection.innerHTML =
+        heroRest.map(function (r) { return cardHtmlJS(r.product, r.status); }).join('') +
+        featuredCardHtmlJS(heroFeatured.product, heroFeatured.status);
     }).catch(function () {});
+  }
+
+  var galleryStripSection = document.getElementById('gallery-strip');
+  if (galleryStripSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*', {
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (photos) {
+        if (!Array.isArray(photos) || !photos.length) return;
+        var picks = pickRandomJS(photos, 6);
+        galleryStripSection.innerHTML = picks.map(function (photo) {
+          var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
+          return '<a class="gallery-strip-item" href="/gallery/' + photo.id + '/">' + (photo.image_url ? '<img src="' + escapeHtmlJS(photo.image_url) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</a>';
+        }).join('');
+      })
+      .catch(function () {});
   }
 
   // --- Live refresh: any card grid (/products/, /discontinued/, a
@@ -542,8 +572,11 @@
         var categories = [];
         items.forEach(function (i) { if (categories.indexOf(i.product.category) === -1) categories.push(i.product.category); });
         categories.sort();
-        categoryBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All</button>' +
-          categories.map(function (c) { return '<button class="filter-btn" data-filter-value="' + escapeHtmlJS(c) + '">' + escapeHtmlJS(c) + '</button>'; }).join('');
+        categoryBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">' + items.length + '</span></button>' +
+          categories.map(function (c) {
+            var count = items.filter(function (i) { return i.product.category === c; }).length;
+            return '<button class="filter-btn" data-filter-value="' + escapeHtmlJS(c) + '">' + escapeHtmlJS(c) + ' <span class="filter-btn-count">' + count + '</span></button>';
+          }).join('');
       }
       var decadeBar = document.querySelector('.filter-bar[data-filter-key="decade"]');
       if (decadeBar) {
@@ -555,8 +588,11 @@
           }
         });
         decades.sort();
-        decadeBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All</button>' +
-          decades.map(function (d) { return '<button class="filter-btn" data-filter-value="' + d + '">' + d + '</button>'; }).join('');
+        decadeBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">' + items.length + '</span></button>' +
+          decades.map(function (d) {
+            var count = items.filter(function (i) { return i.product.discontinued_date && (Math.floor(new Date(i.product.discontinued_date).getFullYear() / 10) * 10 + 's') === d; }).length;
+            return '<button class="filter-btn" data-filter-value="' + d + '">' + d + ' <span class="filter-btn-count">' + count + '</span></button>';
+          }).join('');
       }
       activeFilters = {};
       wireFilterBars();
@@ -633,6 +669,7 @@
             '<div class="gallery-tags">' + tags.join('') + '</div>' +
             '<div class="gallery-photo-nav">' +
               (prevPhoto ? '<a href="/gallery/' + prevPhoto.id + '/" class="gallery-nav-link">&larr; Previous</a>' : '<span></span>') +
+              '<a href="/gallery/" class="gallery-nav-link">Full Gallery</a>' +
               (nextPhoto ? '<a href="/gallery/' + nextPhoto.id + '/" class="gallery-nav-link">Next &rarr;</a>' : '<span></span>') +
             '</div>' +
           '</div>';

@@ -74,6 +74,16 @@ async function loadGalleryPhotos() {
   return [];
 }
 
+function pickRandom(arr, n) {
+  const copy = arr.slice();
+  const picked = [];
+  while (picked.length < n && copy.length) {
+    const idx = Math.floor(Math.random() * copy.length);
+    picked.push(copy.splice(idx, 1)[0]);
+  }
+  return picked;
+}
+
 async function main() {
   const products = await loadProducts();
   const aboutContent = await loadSiteContent();
@@ -98,24 +108,44 @@ async function main() {
   // Everything with a page: current items plus discontinued ones.
   const allItems = withStatus.concat(discontinuedItems);
 
-  // Featured: an explicitly flagged product, or the most overdue one
-  // among products with real refresh data (Coming soon items have no
-  // ratio to rank by, so they only become featured if flagged directly).
+  // Homepage hero: 3 random current products, one marked featured (an
+  // explicit "Featured on homepage" flag wins if it's among the three,
+  // otherwise the most overdue of the three). Client-side JS re-randomises
+  // on every page load; this build-time pick is just the pre-JS fallback.
   const rankable = withStatus.filter((i) => i.status);
-  let featured = withStatus.find((i) => i.product.featured);
-  if (!featured) {
-    featured = [...rankable].sort((a, b) => b.status.ratio - a.status.ratio)[0] || withStatus[0] || null;
-  }
-  const rest = featured
-    ? rankable
-        .filter((i) => i.product.id !== featured.product.id)
-        .sort((a, b) => b.status.ratio - a.status.ratio)
-        .slice(0, 4)
-    : [];
+  const heroPicks = pickRandom(rankable, 3);
+  let heroFeatured = heroPicks.find((i) => i.product.featured)
+    || [...heroPicks].sort((a, b) => b.status.ratio - a.status.ratio)[0]
+    || null;
+  const heroRest = heroPicks.filter((i) => i !== heroFeatured);
+
+  // The two-row "waiting longest" section: whatever's most overdue,
+  // excluding whatever's already shown in the hero above.
+  const heroIds = new Set(heroPicks.map((i) => i.product.id));
+  const overdueItems = rankable
+    .filter((i) => !heroIds.has(i.product.id))
+    .sort((a, b) => b.status.ratio - a.status.ratio)
+    .slice(0, 8);
+
+  // Category quick-links, current + discontinued together.
+  const categoryTally = {};
+  products.forEach((p) => { categoryTally[p.category] = (categoryTally[p.category] || 0) + 1; });
+  const categoryLinks = Object.keys(categoryTally).sort().map((c) => ({ category: c, count: categoryTally[c] }));
+
+  // A handful of random gallery photos for the homepage strip.
+  const galleryPicks = pickRandom(galleryPhotos, 6);
 
   const opts = { siteUrl: SITE_URL, supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON_KEY };
 
-  write('index.html', homePage({ featured, rest, ...opts }));
+  write('index.html', homePage({
+    heroFeatured,
+    heroRest,
+    overdueItems,
+    categoryLinks,
+    totalCount: products.length,
+    galleryPicks,
+    ...opts,
+  }));
   write('products/index.html', allProductsPage({ items: allItems, ...opts }));
   write('discontinued/index.html', discontinuedPage({ items: discontinued, ...opts }));
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));

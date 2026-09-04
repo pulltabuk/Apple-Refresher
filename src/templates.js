@@ -284,10 +284,10 @@ function cardHtml(product, statusInfo) {
 </article>`;
 }
 
-function filterBar(key, values, labels) {
+function filterBar(key, values, labels, counts, totalCount) {
   return `<div class="filter-bar" data-filter-key="${key}">
-  <button class="filter-btn active" data-filter-value="all">All</button>
-  ${values.map((v, i) => `<button class="filter-btn" data-filter-value="${escapeHtml(v)}">${escapeHtml(labels ? labels[i] : v)}</button>`).join('\n')}
+  <button class="filter-btn active" data-filter-value="all">All${totalCount != null ? ` <span class="filter-btn-count">${totalCount}</span>` : ''}</button>
+  ${values.map((v, i) => `<button class="filter-btn" data-filter-value="${escapeHtml(v)}">${escapeHtml(labels ? labels[i] : v)}${counts ? ` <span class="filter-btn-count">${counts[i]}</span>` : ''}</button>`).join('\n')}
 </div>`;
 }
 
@@ -365,6 +365,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
     <div class="gallery-tags">${tagsHtml}</div>
     <div class="gallery-photo-nav">
       ${prevPhoto ? `<a href="/gallery/${prevPhoto.id}/" class="gallery-nav-link">&larr; Previous</a>` : '<span></span>'}
+      <a href="/gallery/" class="gallery-nav-link">Full Gallery</a>
       ${nextPhoto ? `<a href="/gallery/${nextPhoto.id}/" class="gallery-nav-link">Next &rarr;</a>` : '<span></span>'}
     </div>
   </div>
@@ -411,31 +412,71 @@ function emptyState(what) {
   return `<p class="page-intro">No ${what} yet. Add one in <a href="/admin/">/admin/</a>, every product needs at least one refresh date, or a Coming soon flag, to show up here.</p>`;
 }
 
-function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const heroSection = featured
-    ? `<section class="hero">
-  <a class="hero-card" href="/products/${featured.product.slug}/">
-        <div class="hero-body">
-      <p class="hero-eyebrow">Featured</p>
-      <p class="hero-name">${escapeHtml(featured.product.name)}</p>
-      ${productBadge(featured.product, featured.status)}
-    </div>
+function featuredCardHtml(product, statusInfo) {
+  const extra = [product.price ? formatPrice(product.price) : '', product.chip].filter(Boolean).join(' \u00b7 ');
+  return `<article class="card card--featured" data-category="${escapeHtml(product.category)}">
+  <a class="card-link" href="/products/${product.slug}/">
+    <span class="card-featured-label">Featured</span>
+    <div class="card-name-row">${categoryIcon(product.category, 20)}<p class="card-name">${escapeHtml(product.name)}</p></div>
+    ${productBadge(product, statusInfo)}
+    ${extra ? `<p class="card-featured-extra">${escapeHtml(extra)}</p>` : ''}
   </a>
-  <div class="hero-grid">
-    ${rest.map((r) => cardHtml(r.product, r.status)).join('\n')}
-  </div>
-</section>
-<p class="see-all"><a href="/products/">See all products &rarr;</a></p>`
+  ${categoryPill(product.category)}
+</article>`;
+}
+
+function galleryStripItemHtml(photo) {
+  const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
+  return `<a class="gallery-strip-item" href="/gallery/${photo.id}/">${photo.image_url ? `<img src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(displayName)}">` : ''}</a>`;
+}
+
+function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const heroCardsHtml = heroFeatured
+    ? `${heroRest.map((r) => cardHtml(r.product, r.status)).join('\n')}${featuredCardHtml(heroFeatured.product, heroFeatured.status)}`
     : emptyState('products');
+
+  const categoryLinksHtml = categoryLinks && categoryLinks.length
+    ? `<div class="filter-bar homepage-category-links">
+  <a class="filter-btn active" href="/products/">All <span class="filter-btn-count">${totalCount}</span></a>
+  ${categoryLinks.map((c) => `<a class="filter-btn" href="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} <span class="filter-btn-count">${c.count}</span></a>`).join('\n')}
+</div>`
+    : '';
+
+  const overdueSection = overdueItems && overdueItems.length
+    ? `<section class="homepage-section">
+  <h2>Waiting longest for a refresh</h2>
+  <div class="card-grid" id="overdue-grid">
+    ${overdueItems.map((i) => cardHtml(i.product, i.status)).join('\n')}
+  </div>
+</section>`
+    : '';
+
+  const gallerySection = galleryPicks && galleryPicks.length
+    ? `<section class="homepage-section">
+  <h2>From the gallery</h2>
+  <div class="gallery-strip" id="gallery-strip">
+    ${galleryPicks.map(galleryStripItemHtml).join('\n')}
+  </div>
+  <p class="see-all"><a href="/gallery/">Full gallery &rarr;</a></p>
+</section>`
+    : '';
 
   const body = `
 <section class="intro-hero">
-  <p class="intro-eyebrow"><span class="eyebrow-dash"></span>Apple product refresh tracker</p>
-  <h1 class="intro-heading">Know when it's<br>time to buy.</h1>
-  <p class="intro-subtitle">Every current Apple product, and exactly how long it's been since its last refresh, so you're never guessing.</p>
-  <a class="intro-cta" href="/products/">Browse all products</a>
+  <div class="intro-hero-layout">
+    <div class="intro-hero-text">
+      <h1 class="intro-heading">Apple product refresh tracker</h1>
+      <p class="intro-subtitle">Every current Apple product, and exactly how long it's been since its last refresh, so you're never guessing.</p>
+      <a class="intro-cta" href="/products/">Browse all products</a>
+    </div>
+    <div class="intro-hero-cards" id="hero-cards">
+      ${heroCardsHtml}
+    </div>
+  </div>
 </section>
-${heroSection}`;
+${categoryLinksHtml}
+${overdueSection}
+${gallerySection}`;
   return shell({
     title: 'Apple Refresher — time since every Apple product was last refreshed',
     description: 'A quick look at how long it has been since every current Apple product was last updated, plus an archive of the ones Apple discontinued.',
@@ -449,6 +490,11 @@ ${heroSection}`;
 
 function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const categories = [...new Set(items.map((i) => i.product.category))].sort();
+  const categoryCounts = categories.map((c) => items.filter((i) => i.product.category === c).length);
+  const statusCounts = STATUS_VALUES.map((v) => items.filter((i) => {
+    const s = i.product.discontinued ? 'discontinued' : i.product.coming_soon ? 'coming-soon' : 'current';
+    return s === v;
+  }).length);
   const body = items.length
     ? `
 <h1>All products</h1>
@@ -457,8 +503,8 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
-${filterBar('status', STATUS_VALUES, STATUS_LABELS)}
-${filterBar('category', categories)}
+${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
+${filterBar('category', categories, null, categoryCounts, items.length)}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="all">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
@@ -479,6 +525,7 @@ ${emptyState('products')}`;
 
 function discontinuedPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const decades = [...new Set(items.map((p) => p.discontinued_date ? `${Math.floor(new Date(p.discontinued_date).getFullYear() / 10) * 10}s` : '').filter(Boolean))].sort();
+  const decadeCounts = decades.map((d) => items.filter((p) => p.discontinued_date && `${Math.floor(new Date(p.discontinued_date).getFullYear() / 10) * 10}s` === d).length);
   const body = items.length
     ? `
 <h1>Discontinued products</h1>
@@ -487,7 +534,7 @@ function discontinuedPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   <input type="search" id="search-input" class="search-input" placeholder="Search discontinued products…" aria-label="Search discontinued products">
   ${sortSelect(DISCONTINUED_SORT_OPTIONS)}
 </div>
-${filterBar('decade', decades)}
+${filterBar('decade', decades, null, decadeCounts, items.length)}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="discontinued">
   ${items.map((p) => cardHtml(p, null)).join('\n')}
@@ -535,6 +582,10 @@ function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }
   const slug = slugify(category);
   const currentCount = items.filter((i) => !i.product.discontinued).length;
   const discontinuedCount = items.length - currentCount;
+  const statusCounts = STATUS_VALUES.map((v) => items.filter((i) => {
+    const s = i.product.discontinued ? 'discontinued' : i.product.coming_soon ? 'coming-soon' : 'current';
+    return s === v;
+  }).length);
   const body = `
 <h1>${escapeHtml(category)}</h1>
 <p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}.</p>
@@ -542,7 +593,7 @@ function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }
   <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)}…" aria-label="Search">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
-${filterBar('status', STATUS_VALUES, STATUS_LABELS)}
+${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="category" data-category-name="${escapeHtml(category)}">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
