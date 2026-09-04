@@ -248,9 +248,9 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .pill {
   display: inline-block;
   align-self: flex-start;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
   border-radius: 999px;
   background: transparent;
   color: var(--accent-blue);
@@ -372,6 +372,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 .card > .pill { margin-top: auto; }
 .card-link { display: flex; flex-direction: column; gap: 8px; }
+.card-name-row { display: flex; align-items: flex-start; gap: 6px; }
+.card-name-row .placeholder-icon { flex-shrink: 0; margin-top: 2px; color: var(--text-secondary); }
 .card-name {
   font-size: 14px;
   font-weight: 600;
@@ -456,7 +458,6 @@ label.admin-btn { cursor: pointer; color: #fff; }
 /* Small secondary line on cards, e.g. "Lived 5 years, 3 months" */
 .card-meta { font-size: 12px; color: var(--text-secondary); margin: 0; }
 .gallery-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
-.gallery-tags .pill { font-size: 10px; padding: 2px 8px; font-weight: 500; }
 
 .gallery-photo-page { max-width: 640px; margin: 1.5rem auto 0; }
 .gallery-photo-image { aspect-ratio: 4 / 3; border-radius: 12px; }
@@ -464,6 +465,16 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .gallery-photo-info h1 { font-size: 24px; margin: 0; }
 .gallery-photo-date { font-size: 14px; color: var(--text-secondary); margin: 6px 0 0; }
 .gallery-photo-info .gallery-tags { margin-top: 12px; }
+.gallery-photo-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.gallery-nav-link { font-size: 14px; font-weight: 600; color: var(--accent-blue); }
+.gallery-nav-link:hover { color: var(--accent-blue-dark); }
 
 /* Category index tiles */
 .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; margin-top: 1.5rem; }

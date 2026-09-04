@@ -120,8 +120,11 @@ async function main() {
   write('discontinued/index.html', discontinuedPage({ items: discontinued, ...opts }));
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, ...opts }));
-  for (const photo of galleryPhotos) {
-    write(`gallery/${photo.id}/index.html`, galleryPhotoPage({ photo, ...opts }));
+  for (let i = 0; i < galleryPhotos.length; i++) {
+    const photo = galleryPhotos[i];
+    const prevPhoto = i > 0 ? galleryPhotos[i - 1] : null;
+    const nextPhoto = i < galleryPhotos.length - 1 ? galleryPhotos[i + 1] : null;
+    write(`gallery/${photo.id}/index.html`, galleryPhotoPage({ photo, prevPhoto, nextPhoto, ...opts }));
   }
   write('admin/index.html', adminPage(opts));
 

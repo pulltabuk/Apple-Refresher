@@ -205,7 +205,7 @@
     return (
       '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<a class="card-link" href="/products/' + product.slug + '/">' +
-          '<p class="card-name">' + escapeHtmlJS(product.name) + '</p>' +
+          '<div class="card-name-row">' + categoryIconJS(product.category, 16) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
           badgeHtmlJS(product, statusInfo) +
           meta +
         '</a>' +
@@ -610,13 +610,17 @@
   if (galleryPhotoPageEl && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     var galleryPathParts = window.location.pathname.split('/').filter(Boolean);
     var idFromUrl = galleryPathParts[galleryPathParts.length - 1];
-    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?id=eq.' + idFromUrl + '&select=*', {
+    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*&order=created_at.desc', {
       headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
     })
       .then(function (res) { return res.json(); })
-      .then(function (rows) {
-        var photo = rows && rows[0];
+      .then(function (photos) {
+        if (!Array.isArray(photos)) return;
+        var index = photos.findIndex(function (p) { return p.id === idFromUrl; });
+        var photo = photos[index];
         if (!photo) return;
+        var prevPhoto = index > 0 ? photos[index - 1] : null;
+        var nextPhoto = index < photos.length - 1 ? photos[index + 1] : null;
         var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
         var tags = [];
         if (photo.location) tags.push('<span class="pill">' + escapeHtmlJS(photo.location) + '</span>');
@@ -627,6 +631,10 @@
             '<h1>' + escapeHtmlJS(displayName) + '</h1>' +
             (photo.date_taken ? '<p class="gallery-photo-date">' + formatDateJS(photo.date_taken) + '</p>' : '') +
             '<div class="gallery-tags">' + tags.join('') + '</div>' +
+            '<div class="gallery-photo-nav">' +
+              (prevPhoto ? '<a href="/gallery/' + prevPhoto.id + '/" class="gallery-nav-link">&larr; Previous</a>' : '<span></span>') +
+              (nextPhoto ? '<a href="/gallery/' + nextPhoto.id + '/" class="gallery-nav-link">Next &rarr;</a>' : '<span></span>') +
+            '</div>' +
           '</div>';
         document.title = displayName + ' \u2014 Apple Refresher Gallery';
       })

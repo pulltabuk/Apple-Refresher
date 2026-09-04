@@ -276,7 +276,7 @@ function cardHtml(product, statusInfo) {
     : '';
   return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <a class="card-link" href="/products/${product.slug}/">
-        <p class="card-name">${escapeHtml(product.name)}</p>
+        <div class="card-name-row">${categoryIcon(product.category, 16)}<p class="card-name">${escapeHtml(product.name)}</p></div>
     ${productBadge(product, statusInfo)}
     ${meta}
   </a>
@@ -350,7 +350,7 @@ function galleryPhotoCardHtml(photo) {
 </article>`;
 }
 
-function galleryPhotoPage({ photo, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const tagsHtml = [
     photo.location ? `<span class="pill">${escapeHtml(photo.location)}</span>` : '',
@@ -363,6 +363,10 @@ function galleryPhotoPage({ photo, siteUrl, supabaseUrl, supabaseAnonKey }) {
     <h1>${escapeHtml(displayName)}</h1>
     ${photo.date_taken ? `<p class="gallery-photo-date">${formatDate(photo.date_taken)}</p>` : ''}
     <div class="gallery-tags">${tagsHtml}</div>
+    <div class="gallery-photo-nav">
+      ${prevPhoto ? `<a href="/gallery/${prevPhoto.id}/" class="gallery-nav-link">&larr; Previous</a>` : '<span></span>'}
+      ${nextPhoto ? `<a href="/gallery/${nextPhoto.id}/" class="gallery-nav-link">Next &rarr;</a>` : '<span></span>'}
+    </div>
   </div>
 </article>`;
   return shell({
