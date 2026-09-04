@@ -166,11 +166,6 @@ function formatPrice(price) {
   return /^[£$€]/.test(trimmed) ? trimmed : `£${trimmed}`;
 }
 
-function primaryImage(product) {
-  if (product.image_urls && product.image_urls.length) return product.image_urls[0];
-  return product.image_url || null;
-}
-
 function categoryPill(category) {
   return `<a class="pill" href="/categories/${slugify(category)}/">${escapeHtml(category)}</a>`;
 }
@@ -273,7 +268,7 @@ function cardHtml(product, statusInfo) {
     : '';
   return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <a class="card-link" href="/products/${product.slug}/">
-    <div class="card-image">${primaryImage(product) ? `<img src="${primaryImage(product)}" alt="${escapeHtml(product.name)}">` : categoryIcon(product.category)}</div>
+    <div class="card-image">${categoryIcon(product.category)}</div>
     <p class="card-name">${escapeHtml(product.name)}</p>
     ${productBadge(product, statusInfo)}
     ${meta}
@@ -383,7 +378,7 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const heroSection = featured
     ? `<section class="hero">
   <a class="hero-card" href="/products/${featured.product.slug}/">
-    <div class="hero-image">${primaryImage(featured.product) ? `<img src="${primaryImage(featured.product)}" alt="${escapeHtml(featured.product.name)}">` : categoryIcon(featured.product.category)}</div>
+    <div class="hero-image">${categoryIcon(featured.product.category)}</div>
     <div class="hero-body">
       <p class="hero-eyebrow">Featured</p>
       <p class="hero-name">${escapeHtml(featured.product.name)}</p>
@@ -558,16 +553,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
   const timelinePoints = categoryTimelinePoints(product, allProducts);
   const timelineHtml = horizontalTimelineHtml(product, allProducts);
 
-  const images = product.image_urls && product.image_urls.length ? product.image_urls : product.image_url ? [product.image_url] : [];
-  const mainImage = images[0]
-    ? `<img src="${images[0]}" alt="${escapeHtml(product.name)}">`
-    : categoryIcon(product.category);
-  const galleryRest = images.length > 1
-    ? `<div class="product-gallery">${images
-        .slice(1)
-        .map((url) => `<div class="product-gallery-item"><img src="${url}" alt="${escapeHtml(product.name)}"></div>`)
-        .join('\n')}</div>`
-    : '';
+  const mainImage = categoryIcon(product.category);
   const videoBlock = product.video_url
     ? `<video class="product-video" src="${product.video_url}" controls></video>`
     : '';
@@ -625,7 +611,6 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
   <div class="product-top">
     <div class="product-media">
       <div class="card-image product-image">${mainImage}</div>
-      ${galleryRest}
       ${videoBlock}
     </div>
     <div class="product-info">
@@ -781,14 +766,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
 
-        <h3 class="admin-form-section">Media</h3>
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Photos (up to 6)</span>
-          <div id="image-thumbs" class="admin-thumbs"></div>
-          <label for="image-upload" class="admin-btn admin-btn--small admin-btn--primary">Add photos</label>
-          <input type="file" id="image-upload" accept="image/*" multiple class="admin-file-input">
-        </div>
-
+        <h3 class="admin-form-section">Video</h3>
         <div class="admin-subfield">
           <span class="admin-subfield-label">Video</span>
           <div id="video-status" class="admin-video-status">No video uploaded.</div>

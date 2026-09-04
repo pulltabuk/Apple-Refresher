@@ -10,15 +10,12 @@
   const productForm = document.getElementById('product-form');
   const aboutForm = document.getElementById('about-form');
   const refreshHistoryListEl = document.getElementById('refresh-history-list');
-  const imageThumbsEl = document.getElementById('image-thumbs');
   const videoStatusEl = document.getElementById('video-status');
 
-  const MAX_IMAGES = 6;
   let editingId = null;
   let editingSlug = null;
   let cachedProducts = [];
   let currentRefreshHistory = [];
-  let currentImageUrls = [];
   let currentVideoUrl = null;
 
   function slugify(name) {
@@ -230,17 +227,9 @@
 
       const photoTd = document.createElement('td');
       photoTd.className = 'admin-table-photo';
-      const thumbUrl = (p.image_urls && p.image_urls[0]) || p.image_url;
-      if (thumbUrl) {
-        const img = document.createElement('img');
-        img.src = thumbUrl;
-        img.alt = '';
-        photoTd.appendChild(img);
-      } else {
-        const placeholder = document.createElement('span');
-        placeholder.className = 'admin-table-photo-placeholder';
-        photoTd.appendChild(placeholder);
-      }
+      const placeholder = document.createElement('span');
+      placeholder.className = 'admin-table-photo-placeholder';
+      photoTd.appendChild(placeholder);
 
       const nameTd = document.createElement('td');
       const nameLink = document.createElement('a');
@@ -376,27 +365,6 @@
     document.getElementById(id).addEventListener('change', addRefreshDateFromWidget);
   });
 
-  function renderImageThumbs() {
-    imageThumbsEl.innerHTML = '';
-    currentImageUrls.forEach((url, i) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'admin-thumb';
-      const img = document.createElement('img');
-      img.src = url;
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.textContent = '\u00d7';
-      removeBtn.setAttribute('aria-label', 'Remove photo');
-      removeBtn.addEventListener('click', () => {
-        currentImageUrls.splice(i, 1);
-        renderImageThumbs();
-      });
-      wrap.appendChild(img);
-      wrap.appendChild(removeBtn);
-      imageThumbsEl.appendChild(wrap);
-    });
-  }
-
   function renderVideoStatus() {
     videoStatusEl.innerHTML = '';
     if (!currentVideoUrl) {
@@ -443,10 +411,8 @@
     setDatePrecisionValue('discontinued_date', p.discontinued_date || null);
     setDatePrecisionValue('new_refresh_date', null);
     currentRefreshHistory = (p.refresh_history || []).slice();
-    currentImageUrls = (p.image_urls && p.image_urls.length ? p.image_urls : p.image_url ? [p.image_url] : []).slice();
     currentVideoUrl = p.video_url || null;
     renderRefreshHistory();
-    renderImageThumbs();
     renderVideoStatus();
     showProductForm();
   }
@@ -464,10 +430,8 @@
     setDatePrecisionValue('discontinued_date', null);
     setDatePrecisionValue('new_refresh_date', null);
     currentRefreshHistory = [];
-    currentImageUrls = [];
     currentVideoUrl = null;
     renderRefreshHistory();
-    renderImageThumbs();
     renderVideoStatus();
     document.getElementById('form-title').textContent = 'Add product';
     showProductForm();
@@ -520,7 +484,6 @@
         discontinued_date: getDatePrecisionValue('discontinued_date'),
         replaced_by: document.getElementById('replaced_by').value.trim() || null,
         discontinued_reason: document.getElementById('discontinued_reason').value.trim() || null,
-        image_urls: currentImageUrls,
         video_url: currentVideoUrl,
       };
 
@@ -542,10 +505,8 @@
       editingId = null;
       editingSlug = null;
       currentRefreshHistory = [];
-      currentImageUrls = [];
       currentVideoUrl = null;
       renderRefreshHistory();
-      renderImageThumbs();
       renderVideoStatus();
       document.getElementById('form-title').textContent = 'Add product';
       await loadProducts();
@@ -800,31 +761,6 @@
     const { data } = client.storage.from('product-images').getPublicUrl(path);
     return data.publicUrl;
   }
-
-  document.getElementById('image-upload').addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    const remaining = MAX_IMAGES - currentImageUrls.length;
-    if (remaining <= 0) {
-      window.alert('You already have 6 photos, remove one first.');
-      e.target.value = '';
-      return;
-    }
-    const toUpload = files.slice(0, remaining);
-    if (files.length > remaining) {
-      window.alert('Only ' + remaining + ' more photo(s) can be added (6 max), the rest were skipped.');
-    }
-    for (const file of toUpload) {
-      try {
-        const url = await uploadFile(file);
-        currentImageUrls.push(url);
-        renderImageThumbs();
-      } catch (err) {
-        window.alert('Upload failed: ' + err.message + '. Check the browser console for details, and that the product-images bucket exists, is Public, and the storage upload policy has been run.');
-      }
-    }
-    e.target.value = '';
-  });
 
   document.getElementById('video-upload').addEventListener('change', async (e) => {
     const file = e.target.files[0];

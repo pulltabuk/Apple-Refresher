@@ -159,11 +159,6 @@
     return '<svg class="placeholder-icon" viewBox="0 0 40 40" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + shape + '</svg>';
   }
 
-  function primaryImageJS(product) {
-    if (product.image_urls && product.image_urls.length) return product.image_urls[0];
-    return product.image_url || null;
-  }
-
   function pillJS(category) {
     return '<a class="pill" href="/categories/' + slugifyJS(category) + '/">' + escapeHtmlJS(category) + '</a>';
   }
@@ -193,10 +188,7 @@
   function cardHtmlJS(product, statusInfo) {
     var status = statusKeyJS(product);
     var launch = launchDateJS(product);
-    var img = primaryImageJS(product);
-    var imageBlock = img
-      ? '<img src="' + img + '" alt="' + escapeHtmlJS(product.name) + '">'
-      : categoryIconJS(product.category);
+    var imageBlock = categoryIconJS(product.category);
     var days = statusInfo && status === 'current' ? statusInfo.daysSince : '';
     var launchTs = launch ? new Date(launch).getTime() : '';
     var discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
@@ -265,15 +257,7 @@
     var launch = product.original_launch_date || sortedDates[0] || null;
     var latest = sortedDates[sortedDates.length - 1] || null;
 
-    var images = product.image_urls && product.image_urls.length ? product.image_urls : product.image_url ? [product.image_url] : [];
-    var mainImage = images[0]
-      ? '<img src="' + images[0] + '" alt="' + escapeHtmlJS(product.name) + '">'
-      : categoryIconJS(product.category);
-    var galleryRest = images.length > 1
-      ? '<div class="product-gallery">' + images.slice(1).map(function (url) {
-          return '<div class="product-gallery-item"><img src="' + url + '" alt="' + escapeHtmlJS(product.name) + '"></div>';
-        }).join('') + '</div>'
-      : '';
+    var mainImage = categoryIconJS(product.category);
     var videoBlock = product.video_url ? '<video class="product-video" src="' + product.video_url + '" controls></video>' : '';
 
     var successor = product.replaced_by && productsBySlug ? productsBySlug[product.replaced_by] : null;
@@ -321,7 +305,6 @@
       '<div class="product-top">' +
         '<div class="product-media">' +
           '<div class="card-image product-image">' + mainImage + '</div>' +
-          galleryRest +
           videoBlock +
         '</div>' +
         '<div class="product-info">' +
@@ -514,10 +497,7 @@
         .sort(function (a, b) { return b.status.ratio - a.status.ratio; })
         .slice(0, 4);
 
-      var heroImg = primaryImageJS(featured.product);
-      var heroImageBlock = heroImg
-        ? '<img src="' + heroImg + '" alt="' + escapeHtmlJS(featured.product.name) + '">'
-        : categoryIconJS(featured.product.category);
+      var heroImageBlock = categoryIconJS(featured.product.category);
 
       heroSection.innerHTML =
         '<a class="hero-card" href="/products/' + featured.product.slug + '/">' +
