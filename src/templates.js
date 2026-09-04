@@ -91,21 +91,38 @@ function monthsBetween(a, b) {
   return Math.max(0, months);
 }
 
-function horizontalTimelineHtml(product, sortedDates) {
+function categoryTimelinePoints(product, allProducts) {
+  const sameCategory = (allProducts || []).filter((p) => p.category === product.category);
+  const launchCandidates = sameCategory.map((p) => p.original_launch_date).filter(Boolean);
+
   const points = [];
-  if (product.original_launch_date) {
-    points.push({ date: product.original_launch_date, label: 'Launch', type: 'launch' });
-    sortedDates.forEach((d) => points.push({ date: d, label: 'Refresh', type: 'refresh' }));
+  if (launchCandidates.length) {
+    // Once anyone in this category has set the line's true origin, every
+    // product in it shares that single launch point, plus every refresh
+    // date from every model in the line, merged and deduplicated.
+    const lineLaunch = launchCandidates.reduce((earliest, d) => (d < earliest ? d : earliest));
+    points.push({ date: lineLaunch, label: 'Launch', type: 'launch' });
+    const dateSet = new Set();
+    sameCategory.forEach((p) => (p.refresh_history || []).forEach((d) => {
+      if (d !== lineLaunch) dateSet.add(d);
+    }));
+    Array.from(dateSet).sort().forEach((d) => points.push({ date: d, label: 'Refresh', type: 'refresh' }));
   } else {
+    const sortedDates = (product.refresh_history || []).slice().sort();
     sortedDates.forEach((d, i) => {
       const isLaunch = i === 0 && !!product.is_new_launch;
       points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh' });
     });
   }
-  if (!points.length) return '';
   if (product.discontinued && product.discontinued_date) {
     points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued' });
   }
+  return points;
+}
+
+function horizontalTimelineHtml(product, allProducts) {
+  const points = categoryTimelinePoints(product, allProducts);
+  if (!points.length) return '';
   const items = points.map((pt) => `<div class="timeline-point timeline-point--${pt.type}">
     <span class="timeline-point-line"></span>
     <span class="timeline-dot"></span>
@@ -478,7 +495,9 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
   const launch = product.original_launch_date || sortedDates[0] || null;
   const latest = sortedDates[sortedDates.length - 1] || null;
 
-  const timelineHtml = horizontalTimelineHtml(product, sortedDates);
+  const allProducts = productsBySlug ? Object.values(productsBySlug) : [product];
+  const timelinePoints = categoryTimelinePoints(product, allProducts);
+  const timelineHtml = horizontalTimelineHtml(product, allProducts);
 
   const images = product.image_urls && product.image_urls.length ? product.image_urls : product.image_url ? [product.image_url] : [];
   const mainImage = images[0]
@@ -537,7 +556,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> people`),
   ].filter(Boolean).join('\n');
 
-  const releaseHistorySection = sortedDates.length || product.original_launch_date
+  const releaseHistorySection = timelinePoints.length
     ? `<h2>Release history</h2>
   ${timelineHtml}`
     : '';
@@ -791,6 +810,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
 module.exports = {
   sanitizeRichText,
+  categoryTimelinePoints,
   homePage,
   allProductsPage,
   discontinuedPage,

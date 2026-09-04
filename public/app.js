@@ -70,21 +70,37 @@
     return Math.max(0, months);
   }
 
-  function horizontalTimelineHtmlJS(product, sortedDates) {
+  function categoryTimelinePointsJS(product, allProducts) {
+    var sameCategory = (allProducts || []).filter(function (p) { return p.category === product.category; });
+    var launchCandidates = sameCategory.map(function (p) { return p.original_launch_date; }).filter(Boolean);
+
     var points = [];
-    if (product.original_launch_date) {
-      points.push({ date: product.original_launch_date, label: 'Launch', type: 'launch' });
-      sortedDates.forEach(function (d) { points.push({ date: d, label: 'Refresh', type: 'refresh' }); });
+    if (launchCandidates.length) {
+      var lineLaunch = launchCandidates.reduce(function (earliest, d) { return d < earliest ? d : earliest; });
+      points.push({ date: lineLaunch, label: 'Launch', type: 'launch' });
+      var dateSet = {};
+      sameCategory.forEach(function (p) {
+        (p.refresh_history || []).forEach(function (d) {
+          if (d !== lineLaunch) dateSet[d] = true;
+        });
+      });
+      Object.keys(dateSet).sort().forEach(function (d) { points.push({ date: d, label: 'Refresh', type: 'refresh' }); });
     } else {
+      var sortedDates = (product.refresh_history || []).slice().sort();
       sortedDates.forEach(function (d, i) {
         var isLaunch = i === 0 && !!product.is_new_launch;
         points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh' });
       });
     }
-    if (!points.length) return '';
     if (product.discontinued && product.discontinued_date) {
       points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued' });
     }
+    return points;
+  }
+
+  function horizontalTimelineHtmlJS(product, allProducts) {
+    var points = categoryTimelinePointsJS(product, allProducts);
+    if (!points.length) return '';
     var items = points.map(function (pt) {
       return '<div class="timeline-point timeline-point--' + pt.type + '">' +
         '<span class="timeline-point-line"></span>' +
@@ -297,7 +313,9 @@
       product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people'),
     ].filter(Boolean).join('');
 
-    var releaseHistorySection = sortedDates.length || product.original_launch_date ? '<h2>Release history</h2>' + horizontalTimelineHtmlJS(product, sortedDates) : '';
+    var allProducts = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
+    var timelinePoints = categoryTimelinePointsJS(product, allProducts);
+    var releaseHistorySection = timelinePoints.length ? '<h2>Release history</h2>' + horizontalTimelineHtmlJS(product, allProducts) : '';
 
     return (
       '<div class="product-top">' +
