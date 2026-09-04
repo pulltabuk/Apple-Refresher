@@ -315,7 +315,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .intro-cta:hover { background: var(--accent-blue-dark); }
 
 .intro-hero-layout { display: grid; grid-template-columns: 1fr 1.6fr; gap: 2.5rem; align-items: center; margin-top: 1rem; }
-.intro-hero-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.intro-hero-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
 
 .card-image {
   aspect-ratio: 4 / 3;
@@ -354,6 +354,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .homepage-category-links { margin-top: 2rem; }
 
 .homepage-section { margin-top: 2.5rem; }
+.homepage-section--divided { border-top: 1px solid var(--border); padding-top: 2rem; }
 .homepage-section h2 { font-size: 18px; margin: 0 0 1rem; }
 
 .gallery-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }

@@ -452,7 +452,7 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
     : '';
 
   const gallerySection = galleryPicks && galleryPicks.length
-    ? `<section class="homepage-section">
+    ? `<section class="homepage-section homepage-section--divided">
   <h2>From the gallery</h2>
   <div class="gallery-strip" id="gallery-strip">
     ${galleryPicks.map(galleryStripItemHtml).join('\n')}
