@@ -406,9 +406,15 @@
         if (want !== 'all' && card.getAttribute('data-' + key) !== want) show = false;
       });
       if (show && query) {
-        var nameEl = card.querySelector('.card-name');
-        var name = nameEl ? nameEl.textContent.toLowerCase() : '';
-        if (name.indexOf(query) === -1) show = false;
+        var searchAttr = card.getAttribute('data-search');
+        var haystack;
+        if (searchAttr !== null) {
+          haystack = searchAttr.toLowerCase();
+        } else {
+          var nameEl = card.querySelector('.card-name');
+          haystack = nameEl ? nameEl.textContent.toLowerCase() : '';
+        }
+        if (haystack.indexOf(query) === -1) show = false;
       }
       card.style.display = show ? '' : 'none';
       if (show) visibleCount++;
@@ -530,7 +536,7 @@
   // category page). The grid's data-mode says which products belong.
 
   var gridSection = document.getElementById('grid');
-  if (gridSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+  if (gridSection && gridSection.getAttribute('data-mode') !== 'gallery' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     fetchAllProductsJS().then(function (products) {
       var mode = gridSection.getAttribute('data-mode') || 'all';
       var categoryName = gridSection.getAttribute('data-category-name');
@@ -575,6 +581,45 @@
       applySort();
       applyFilters();
     }).catch(function () {});
+  }
+
+  // --- Live refresh: the gallery grid, a completely separate data
+  // source (gallery_photos, not products).
+
+  function dateToTimestampJS(str) {
+    if (!str) return '';
+    var ms = new Date(str).getTime();
+    return isNaN(ms) ? '' : ms;
+  }
+
+  function galleryPhotoCardHtmlJS(photo) {
+    var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
+    var searchText = [photo.caption, photo.location].concat(photo.tags || []).filter(Boolean).join(' ').toLowerCase();
+    var tags = [];
+    if (photo.location) tags.push('<span class="pill">' + escapeHtmlJS(photo.location) + '</span>');
+    (photo.tags || []).forEach(function (t) { tags.push('<span class="pill">' + escapeHtmlJS(t) + '</span>'); });
+    return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
+      '<a class="card-link" href="' + (photo.image_url ? escapeHtmlJS(photo.image_url) : '#') + '" target="_blank" rel="noopener">' +
+        '<div class="card-image">' + (photo.image_url ? '<img src="' + escapeHtmlJS(photo.image_url) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</div>' +
+        '<p class="card-name">' + escapeHtmlJS(displayName) + '</p>' +
+        (photo.date_taken ? '<p class="card-meta">' + formatDateJS(photo.date_taken) + '</p>' : '') +
+      '</a>' +
+      '<div class="gallery-tags">' + tags.join('') + '</div>' +
+    '</article>';
+  }
+
+  if (gridSection && gridSection.getAttribute('data-mode') === 'gallery' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*&order=created_at.desc', {
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (photos) {
+        if (!Array.isArray(photos)) return;
+        gridSection.innerHTML = photos.map(galleryPhotoCardHtmlJS).join('');
+        applySort();
+        applyFilters();
+      })
+      .catch(function () {});
   }
 
   // --- Live refresh: a single product page, matched by its URL slug.

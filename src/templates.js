@@ -230,6 +230,7 @@ ${noindex ? '<meta name="robots" content="noindex">' : ''}
       <a href="/products/">All products</a>
       <a href="/categories/">Categories</a>
       <a href="/discontinued/">Discontinued</a>
+      <a href="/gallery/">Gallery</a>
       <a href="/about/">About</a>
     </nav>
   </div>
@@ -240,6 +241,7 @@ ${bodyHtml}
 <footer class="site-footer-bg">
   <div class="site-footer">
     <nav class="footer-nav">
+      <a href="/gallery/">Gallery</a>
       <a href="/about/">About us</a>
       <a href="/admin/">Admin</a>
     </nav>
@@ -315,6 +317,63 @@ const DISCONTINUED_SORT_OPTIONS = [
 
 const STATUS_VALUES = ['current', 'coming-soon', 'discontinued'];
 const STATUS_LABELS = ['Current', 'Coming soon', 'Discontinued'];
+
+const GALLERY_SORT_OPTIONS = [
+  ['date-desc', 'Newest first'],
+  ['date-asc', 'Oldest first'],
+  ['name-asc', 'Name: A to Z'],
+  ['name-desc', 'Name: Z to A'],
+];
+
+function dateToTimestamp(str) {
+  if (!str) return '';
+  const ms = new Date(str).getTime();
+  return Number.isNaN(ms) ? '' : ms;
+}
+
+function galleryPhotoCardHtml(photo) {
+  const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
+  const searchText = [photo.caption, photo.location, ...(photo.tags || [])].filter(Boolean).join(' ');
+  const tagsHtml = [
+    photo.location ? `<span class="pill">${escapeHtml(photo.location)}</span>` : '',
+    ...(photo.tags || []).map((t) => `<span class="pill">${escapeHtml(t)}</span>`),
+  ].filter(Boolean).join('\n');
+  return `<article class="card" data-date="${dateToTimestamp(photo.date_taken)}" data-search="${escapeHtml(searchText.toLowerCase())}">
+  <a class="card-link" href="${photo.image_url ? escapeHtml(photo.image_url) : '#'}" target="_blank" rel="noopener">
+    <div class="card-image">${photo.image_url ? `<img src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(displayName)}">` : ''}</div>
+    <p class="card-name">${escapeHtml(displayName)}</p>
+    ${photo.date_taken ? `<p class="card-meta">${formatDate(photo.date_taken)}</p>` : ''}
+  </a>
+  <div class="gallery-tags">${tagsHtml}</div>
+</article>`;
+}
+
+function galleryPage({ photos, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const body = photos.length
+    ? `
+<h1>Gallery</h1>
+<p class="page-intro">Photos taken along the way, in Apple Stores and elsewhere.</p>
+<div class="controls-row">
+  <input type="search" id="search-input" class="search-input" placeholder="Search photos…" aria-label="Search photos">
+  ${sortSelect(GALLERY_SORT_OPTIONS)}
+</div>
+<p id="no-results" class="page-intro" style="display:none;">No photos match your search.</p>
+<div class="card-grid" id="grid" data-mode="gallery">
+  ${photos.map(galleryPhotoCardHtml).join('\n')}
+</div>`
+    : `
+<h1>Gallery</h1>
+<p class="page-intro">No photos yet. Add some in <a href="/admin/">/admin/</a>.</p>`;
+  return shell({
+    title: 'Gallery — Apple Refresher',
+    description: 'Photos taken along the way, in Apple Stores and elsewhere.',
+    siteUrl,
+    path: '/gallery/',
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
+}
 
 function emptyState(what) {
   return `<p class="page-intro">No ${what} yet. Add one in <a href="/admin/">/admin/</a>, every product needs at least one refresh date, or a Coming soon flag, to show up here.</p>`;
@@ -670,6 +729,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <div class="admin-topbar">
     <div class="admin-tabs">
       <button type="button" class="admin-tab-btn active" data-tab="products">Products</button>
+      <button type="button" class="admin-tab-btn" data-tab="gallery">Gallery</button>
       <button type="button" class="admin-tab-btn" data-tab="about">About page</button>
     </div>
     <button id="logout-btn" class="admin-btn">Log out</button>
@@ -777,6 +837,43 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     </div>
   </div>
 
+  <div id="tab-gallery" class="admin-tab-panel" style="display:none;">
+    <div id="gallery-list-view">
+      <button id="new-photo-btn" class="admin-btn admin-btn--primary">Add new photo</button>
+      <div id="gallery-list" class="admin-list"></div>
+    </div>
+
+    <div id="gallery-form-view" style="display:none;">
+      <button type="button" id="gallery-back-to-list-btn" class="admin-back-link">&larr; Back to gallery</button>
+      <h3 id="gallery-form-title">Add photo</h3>
+      <form id="gallery-form" class="admin-form">
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Photo</span>
+          <div id="gallery-image-thumb" class="admin-thumbs"></div>
+          <label for="gallery-image-upload" class="admin-btn admin-btn--small admin-btn--primary">Choose photo</label>
+          <input type="file" id="gallery-image-upload" accept="image/*" class="admin-file-input">
+        </div>
+
+        <label>Caption (optional)<input type="text" id="gallery-caption" placeholder="e.g. iPhone 17 Pro in Cosmic Orange"></label>
+
+        ${datePrecisionFieldHtml('gallery_date_taken', 'Date taken')}
+
+        <label>Location<input type="text" id="gallery-location" placeholder="e.g. Cardiff"></label>
+
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Tags</span>
+          <ul id="gallery-tags-list" class="refresh-history-list"></ul>
+          <div class="refresh-history-add">
+            <input type="text" id="new-gallery-tag" placeholder="e.g. iPhone 17, Space Grey">
+            <button type="button" id="add-gallery-tag-btn" class="admin-btn admin-btn--small">Add tag</button>
+          </div>
+        </div>
+
+        <button type="submit" class="admin-btn admin-btn--primary">Save photo</button>
+      </form>
+    </div>
+  </div>
+
   <div id="tab-about" class="admin-tab-panel" style="display:none;">
     <form id="about-form" class="admin-form">
       <label>Heading<input type="text" id="about_heading"></label>
@@ -811,6 +908,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 module.exports = {
   sanitizeRichText,
   categoryTimelinePoints,
+  galleryPage,
   homePage,
   allProductsPage,
   discontinuedPage,

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, slugify } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, slugify } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Refresher',
@@ -60,9 +60,24 @@ async function loadSiteContent() {
   return DEFAULT_ABOUT;
 }
 
+async function loadGalleryPhotos() {
+  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data, error } = await supabase.from('gallery_photos').select('*').order('created_at', { ascending: false });
+    if (error) {
+      console.log('Could not load gallery photos (the table may not exist yet), building an empty gallery.');
+      return [];
+    }
+    return data || [];
+  }
+  return [];
+}
+
 async function main() {
   const products = await loadProducts();
   const aboutContent = await loadSiteContent();
+  const galleryPhotos = await loadGalleryPhotos();
 
   const productsBySlug = {};
   products.forEach((p) => { productsBySlug[p.slug] = p; });
@@ -104,6 +119,7 @@ async function main() {
   write('products/index.html', allProductsPage({ items: allItems, ...opts }));
   write('discontinued/index.html', discontinuedPage({ items: discontinued, ...opts }));
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));
+  write('gallery/index.html', galleryPage({ photos: galleryPhotos, ...opts }));
   write('admin/index.html', adminPage(opts));
 
   // Category index + one page per category, current and discontinued together.
@@ -136,7 +152,7 @@ async function main() {
   }
 
   copyStatic();
-  console.log(`Built ${allItems.length} product pages (${discontinuedItems.length} discontinued), ${categoryNames.length} category pages, 1 home page.`);
+  console.log(`Built ${allItems.length} product pages (${discontinuedItems.length} discontinued), ${categoryNames.length} category pages, ${galleryPhotos.length} gallery photos, 1 home page.`);
 }
 
 main().catch((err) => {

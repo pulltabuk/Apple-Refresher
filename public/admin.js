@@ -88,7 +88,7 @@
     updateDatePrecisionVisibility(prefix);
   }
 
-  const DATE_FIELD_PREFIXES = ['original_launch_date', 'expected_date', 'discontinued_date', 'new_refresh_date'];
+  const DATE_FIELD_PREFIXES = ['original_launch_date', 'expected_date', 'discontinued_date', 'new_refresh_date', 'gallery_date_taken'];
   DATE_FIELD_PREFIXES.forEach(wireDatePrecisionField);
 
   document.querySelectorAll('.date-precision-clear').forEach((btn) => {
@@ -99,13 +99,19 @@
 
   // --- Tabs ---
 
+  let galleryLoaded = false;
   document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.admin-tab-btn').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       const tab = btn.getAttribute('data-tab');
       document.getElementById('tab-products').style.display = tab === 'products' ? 'block' : 'none';
+      document.getElementById('tab-gallery').style.display = tab === 'gallery' ? 'block' : 'none';
       document.getElementById('tab-about').style.display = tab === 'about' ? 'block' : 'none';
+      if (tab === 'gallery' && !galleryLoaded) {
+        galleryLoaded = true;
+        loadGalleryPhotos();
+      }
     });
   });
 
@@ -550,6 +556,234 @@
     } catch (err) {
       console.error('Unexpected error while saving:', err);
       window.alert('Something went wrong saving this product: ' + err.message + '. Check the browser console for the full error.');
+    }
+  });
+
+  // --- Gallery ---
+
+  let cachedGalleryPhotos = [];
+  let editingGalleryId = null;
+  let currentGalleryTags = [];
+  let currentGalleryImageUrl = null;
+
+  const galleryListView = document.getElementById('gallery-list-view');
+  const galleryFormView = document.getElementById('gallery-form-view');
+  const galleryListEl = document.getElementById('gallery-list');
+  const galleryForm = document.getElementById('gallery-form');
+  const galleryTagsListEl = document.getElementById('gallery-tags-list');
+  const galleryImageThumbEl = document.getElementById('gallery-image-thumb');
+
+  function showGalleryList() {
+    galleryListView.style.display = 'block';
+    galleryFormView.style.display = 'none';
+  }
+
+  function showGalleryForm() {
+    galleryListView.style.display = 'none';
+    galleryFormView.style.display = 'block';
+    window.scrollTo(0, 0);
+  }
+
+  async function loadGalleryPhotos() {
+    const { data, error } = await client.from('gallery_photos').select('*').order('created_at', { ascending: false });
+    galleryListEl.innerHTML = '';
+    if (error) {
+      galleryListEl.textContent = 'Could not load gallery photos: ' + error.message + ' (has supabase-schema-update-9.sql been run?)';
+      return;
+    }
+    cachedGalleryPhotos = data;
+    if (!data.length) {
+      galleryListEl.textContent = 'No photos yet, add your first one below.';
+      return;
+    }
+    const table = document.createElement('table');
+    table.className = 'admin-table';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th></th><th>Caption</th><th>Date taken</th><th>Location</th><th></th></tr>';
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    data.forEach((photo) => {
+      const tr = document.createElement('tr');
+
+      const photoTd = document.createElement('td');
+      photoTd.className = 'admin-table-photo';
+      if (photo.image_url) {
+        const img = document.createElement('img');
+        img.src = photo.image_url;
+        img.alt = '';
+        photoTd.appendChild(img);
+      } else {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'admin-table-photo-placeholder';
+        photoTd.appendChild(placeholder);
+      }
+
+      const captionTd = document.createElement('td');
+      captionTd.textContent = photo.caption || '\u2014';
+
+      const dateTd = document.createElement('td');
+      dateTd.textContent = photo.date_taken || '\u2014';
+
+      const locationTd = document.createElement('td');
+      locationTd.textContent = photo.location || '\u2014';
+
+      const actionsTd = document.createElement('td');
+      actionsTd.className = 'admin-row-actions';
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => editGalleryPhoto(photo.id));
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => deleteGalleryPhoto(photo.id));
+      actionsTd.appendChild(editBtn);
+      actionsTd.appendChild(deleteBtn);
+
+      tr.appendChild(photoTd);
+      tr.appendChild(captionTd);
+      tr.appendChild(dateTd);
+      tr.appendChild(locationTd);
+      tr.appendChild(actionsTd);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    galleryListEl.appendChild(table);
+  }
+
+  function renderGalleryTags() {
+    galleryTagsListEl.innerHTML = '';
+    currentGalleryTags.forEach((tag, i) => {
+      const li = document.createElement('li');
+      const span = document.createElement('span');
+      span.textContent = tag;
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', () => {
+        currentGalleryTags.splice(i, 1);
+        renderGalleryTags();
+      });
+      li.appendChild(span);
+      li.appendChild(removeBtn);
+      galleryTagsListEl.appendChild(li);
+    });
+  }
+
+  function renderGalleryImageThumb() {
+    galleryImageThumbEl.innerHTML = '';
+    if (!currentGalleryImageUrl) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-thumb';
+    const img = document.createElement('img');
+    img.src = currentGalleryImageUrl;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '\u00d7';
+    removeBtn.setAttribute('aria-label', 'Remove photo');
+    removeBtn.addEventListener('click', () => {
+      currentGalleryImageUrl = null;
+      renderGalleryImageThumb();
+    });
+    wrap.appendChild(img);
+    wrap.appendChild(removeBtn);
+    galleryImageThumbEl.appendChild(wrap);
+  }
+
+  document.getElementById('add-gallery-tag-btn').addEventListener('click', () => {
+    const input = document.getElementById('new-gallery-tag');
+    const value = input.value.trim();
+    if (!value) return;
+    if (currentGalleryTags.indexOf(value) === -1) currentGalleryTags.push(value);
+    input.value = '';
+    renderGalleryTags();
+  });
+
+  document.getElementById('gallery-image-upload').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      currentGalleryImageUrl = await uploadFile(file);
+      renderGalleryImageThumb();
+    } catch (err) {
+      window.alert('Upload failed: ' + err.message);
+    }
+    e.target.value = '';
+  });
+
+  function editGalleryPhoto(id) {
+    const photo = cachedGalleryPhotos.find((p) => p.id === id);
+    if (!photo) return;
+    editingGalleryId = id;
+    document.getElementById('gallery-form-title').textContent = 'Edit photo';
+    document.getElementById('gallery-caption').value = photo.caption || '';
+    document.getElementById('gallery-location').value = photo.location || '';
+    setDatePrecisionValue('gallery_date_taken', photo.date_taken || null);
+    currentGalleryTags = (photo.tags || []).slice();
+    currentGalleryImageUrl = photo.image_url || null;
+    renderGalleryTags();
+    renderGalleryImageThumb();
+    showGalleryForm();
+  }
+
+  function startNewGalleryPhoto() {
+    editingGalleryId = null;
+    galleryForm.reset();
+    setDatePrecisionValue('gallery_date_taken', null);
+    currentGalleryTags = [];
+    currentGalleryImageUrl = null;
+    renderGalleryTags();
+    renderGalleryImageThumb();
+    document.getElementById('gallery-form-title').textContent = 'Add photo';
+    showGalleryForm();
+  }
+
+  document.getElementById('new-photo-btn').addEventListener('click', startNewGalleryPhoto);
+
+  document.getElementById('gallery-back-to-list-btn').addEventListener('click', showGalleryList);
+
+  async function deleteGalleryPhoto(id) {
+    if (!window.confirm('Delete this photo? This cannot be undone.')) return;
+    const { error } = await client.from('gallery_photos').delete().eq('id', id);
+    if (error) {
+      window.alert('Delete failed: ' + error.message);
+      return;
+    }
+    loadGalleryPhotos();
+  }
+
+  galleryForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentGalleryImageUrl) {
+      window.alert('Add a photo first.');
+      return;
+    }
+    try {
+      const payload = {
+        image_url: currentGalleryImageUrl,
+        caption: document.getElementById('gallery-caption').value.trim() || null,
+        date_taken: getDatePrecisionValue('gallery_date_taken'),
+        location: document.getElementById('gallery-location').value.trim() || null,
+        tags: currentGalleryTags,
+      };
+      const result = editingGalleryId
+        ? await client.from('gallery_photos').update(payload).eq('id', editingGalleryId)
+        : await client.from('gallery_photos').insert(payload);
+      if (result.error) {
+        window.alert('Save failed: ' + result.error.message);
+        return;
+      }
+      galleryForm.reset();
+      setDatePrecisionValue('gallery_date_taken', null);
+      editingGalleryId = null;
+      currentGalleryTags = [];
+      currentGalleryImageUrl = null;
+      renderGalleryTags();
+      renderGalleryImageThumb();
+      await loadGalleryPhotos();
+      showGalleryList();
+    } catch (err) {
+      window.alert('Something went wrong saving this photo: ' + err.message);
     }
   });
 
