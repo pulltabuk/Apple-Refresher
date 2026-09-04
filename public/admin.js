@@ -397,6 +397,8 @@
     document.getElementById('category').value = p.category || '';
     document.getElementById('price').value = p.price || '';
     document.getElementById('external_link').value = p.external_link || '';
+    document.getElementById('apple_url').value = p.apple_url || '';
+    document.getElementById('apple_url_unavailable').checked = !!p.apple_url_unavailable;
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
     document.getElementById('coming_soon').checked = !!p.coming_soon;
@@ -468,6 +470,8 @@
         category: document.getElementById('category').value.trim() || 'Other',
         price: document.getElementById('price').value.trim() || null,
         external_link: document.getElementById('external_link').value.trim() || null,
+        apple_url: document.getElementById('apple_url').value.trim() || null,
+        apple_url_unavailable: document.getElementById('apple_url_unavailable').checked,
         refresh_history: currentRefreshHistory,
         original_launch_date: getDatePrecisionValue('original_launch_date'),
         rumor_note: (function () {

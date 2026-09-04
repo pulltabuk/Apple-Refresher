@@ -77,23 +77,24 @@
     var points = [];
     if (launchCandidates.length) {
       var lineLaunch = launchCandidates.reduce(function (earliest, d) { return d < earliest ? d : earliest; });
-      points.push({ date: lineLaunch, label: 'Launch', type: 'launch' });
-      var dateSet = {};
+      var launchOwner = sameCategory.filter(function (p) { return p.original_launch_date === lineLaunch; })[0];
+      points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwner ? launchOwner.name : product.name });
+      var dateOwners = {};
       sameCategory.forEach(function (p) {
         (p.refresh_history || []).forEach(function (d) {
-          if (d !== lineLaunch) dateSet[d] = true;
+          if (d !== lineLaunch && !dateOwners[d]) dateOwners[d] = p.name;
         });
       });
-      Object.keys(dateSet).sort().forEach(function (d) { points.push({ date: d, label: 'Refresh', type: 'refresh' }); });
+      Object.keys(dateOwners).sort().forEach(function (d) { points.push({ date: d, label: 'Refresh', type: 'refresh', productName: dateOwners[d] }); });
     } else {
       var sortedDates = (product.refresh_history || []).slice().sort();
       sortedDates.forEach(function (d, i) {
         var isLaunch = i === 0 && !!product.is_new_launch;
-        points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh' });
+        points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh', productName: product.name });
       });
     }
     if (product.discontinued && product.discontinued_date) {
-      points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued' });
+      points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: product.name });
     }
     return points;
   }
@@ -101,12 +102,16 @@
   function horizontalTimelineHtmlJS(product, allProducts) {
     var points = categoryTimelinePointsJS(product, allProducts);
     if (!points.length) return '';
-    var items = points.map(function (pt) {
-      return '<div class="timeline-point timeline-point--' + pt.type + '">' +
+    var items = points.map(function (pt, i) {
+      var side = i % 2 === 0 ? 'above' : 'below';
+      return '<div class="timeline-point timeline-point--' + pt.type + ' timeline-point--' + side + '">' +
         '<span class="timeline-point-line"></span>' +
         '<span class="timeline-dot"></span>' +
-        '<p class="timeline-point-label">' + pt.label + '</p>' +
-        '<p class="timeline-point-date">' + formatDateJS(pt.date) + '</p>' +
+        '<div class="timeline-point-content">' +
+          '<p class="timeline-point-name">' + escapeHtmlJS(pt.productName) + '</p>' +
+          '<p class="timeline-point-label">' + pt.label + '</p>' +
+          '<p class="timeline-point-date">' + formatDateJS(pt.date) + '</p>' +
+        '</div>' +
       '</div>';
     }).join('');
     return '<div class="timeline-horizontal">' + items + '</div>';
@@ -154,30 +159,10 @@
     Other: '<rect x="8" y="8" width="24" height="24" rx="4"/>',
   };
 
-  var CATEGORY_ACCENTS = {
-    iPhone: { color: '#0071e3', bg1: '#ffffff', bg2: '#e8f2fe' },
-    Mac: { color: '#5b6472', bg1: '#ffffff', bg2: '#eef0f2' },
-    iPad: { color: '#7c3aed', bg1: '#ffffff', bg2: '#f1e9fd' },
-    'Apple Watch': { color: '#e11d74', bg1: '#ffffff', bg2: '#fce8f1' },
-    AirPods: { color: '#0d9488', bg1: '#ffffff', bg2: '#e6f5f3' },
-    'Vision Pro': { color: '#ea580c', bg1: '#ffffff', bg2: '#fdece0' },
-    Other: { color: '#64748b', bg1: '#ffffff', bg2: '#eef1f4' },
-  };
-
-  function categoryAccentJS(category) {
-    return CATEGORY_ACCENTS[category] || CATEGORY_ACCENTS.Other;
-  }
-
   function categoryIconJS(category, size) {
     var shape = CATEGORY_ICON_SHAPES[category] || CATEGORY_ICON_SHAPES.Other;
     var s = size || 40;
     return '<svg class="placeholder-icon" viewBox="0 0 40 40" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + shape + '</svg>';
-  }
-
-  function categoryImagePanelJS(category, className, size) {
-    var accent = categoryAccentJS(category);
-    var style = 'background: radial-gradient(circle at 32% 28%, ' + accent.bg1 + ' 0%, ' + accent.bg2 + ' 70%); color: ' + accent.color + ';';
-    return '<div class="' + className + ' icon-panel" style="' + style + '">' + categoryIconJS(category, size) + '</div>';
   }
 
   function pillJS(category) {
@@ -209,7 +194,6 @@
   function cardHtmlJS(product, statusInfo) {
     var status = statusKeyJS(product);
     var launch = launchDateJS(product);
-    var imageBlock = categoryImagePanelJS(product.category, 'card-image');
     var days = statusInfo && status === 'current' ? statusInfo.daysSince : '';
     var launchTs = launch ? new Date(launch).getTime() : '';
     var discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
@@ -221,7 +205,6 @@
     return (
       '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<a class="card-link" href="/products/' + product.slug + '/">' +
-          imageBlock +
           '<p class="card-name">' + escapeHtmlJS(product.name) + '</p>' +
           badgeHtmlJS(product, statusInfo) +
           meta +
@@ -278,7 +261,6 @@
     var launch = product.original_launch_date || sortedDates[0] || null;
     var latest = sortedDates[sortedDates.length - 1] || null;
 
-    var mainImage = categoryImagePanelJS(product.category, 'card-image product-image', 140);
     var videoBlock = product.video_url ? '<video class="product-video" src="' + product.video_url + '" controls></video>' : '';
 
     var successor = product.replaced_by && productsBySlug ? productsBySlug[product.replaced_by] : null;
@@ -314,6 +296,11 @@
       specRowJS('Previous model', previousModelHtml),
       specRowJS('Replaced by', replacedByHtml),
       product.discontinued ? specRowJS('Why it went', escapeHtmlJS(product.discontinued_reason)) : '',
+      product.apple_url_unavailable
+        ? specRowJS('Official Apple page', 'No longer available on Apple\u2019s website')
+        : product.apple_url
+        ? specRowJS('Official Apple page', '<a href="' + product.apple_url + '" target="_blank" rel="noopener">apple.com &#8599;</a>')
+        : '',
       product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
       product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people'),
     ].filter(Boolean).join('');
@@ -323,11 +310,8 @@
     var releaseHistorySection = timelinePoints.length ? '<h2>Release history</h2>' + horizontalTimelineHtmlJS(product, allProducts) : '';
 
     return (
-      '<div class="product-top">' +
-        '<div class="product-media">' +
-          mainImage +
-          videoBlock +
-        '</div>' +
+      '<div class="product-top' + (product.video_url ? '' : ' product-top--no-media') + '">' +
+        (product.video_url ? '<div class="product-media">' + videoBlock + '</div>' : '') +
         '<div class="product-info">' +
           '<div class="product-header">' +
             '<div>' + '<h1>' + escapeHtmlJS(product.name) + '</h1>' + heroStatHtmlJS(product, status) + '</div>' +
@@ -518,11 +502,8 @@
         .sort(function (a, b) { return b.status.ratio - a.status.ratio; })
         .slice(0, 4);
 
-      var heroImageBlock = categoryImagePanelJS(featured.product.category, 'hero-image', 72);
-
       heroSection.innerHTML =
         '<a class="hero-card" href="/products/' + featured.product.slug + '/">' +
-          heroImageBlock +
           '<div class="hero-body">' +
             '<p class="hero-eyebrow">Featured</p>' +
             '<p class="hero-name">' + escapeHtmlJS(featured.product.name) + '</p>' +
@@ -600,7 +581,7 @@
     if (photo.location) tags.push('<span class="pill">' + escapeHtmlJS(photo.location) + '</span>');
     (photo.tags || []).forEach(function (t) { tags.push('<span class="pill">' + escapeHtmlJS(t) + '</span>'); });
     return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
-      '<a class="card-link" href="' + (photo.image_url ? escapeHtmlJS(photo.image_url) : '#') + '" target="_blank" rel="noopener">' +
+      '<a class="card-link" href="/gallery/' + photo.id + '/">' +
         '<div class="card-image">' + (photo.image_url ? '<img src="' + escapeHtmlJS(photo.image_url) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</div>' +
         '<p class="card-name">' + escapeHtmlJS(displayName) + '</p>' +
         (photo.date_taken ? '<p class="card-meta">' + formatDateJS(photo.date_taken) + '</p>' : '') +
@@ -619,6 +600,35 @@
         gridSection.innerHTML = photos.map(galleryPhotoCardHtmlJS).join('');
         applySort();
         applyFilters();
+      })
+      .catch(function () {});
+  }
+
+  // --- Live refresh: a single gallery photo page, matched by its URL id.
+
+  var galleryPhotoPageEl = document.querySelector('.gallery-photo-page');
+  if (galleryPhotoPageEl && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+    var galleryPathParts = window.location.pathname.split('/').filter(Boolean);
+    var idFromUrl = galleryPathParts[galleryPathParts.length - 1];
+    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?id=eq.' + idFromUrl + '&select=*', {
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (rows) {
+        var photo = rows && rows[0];
+        if (!photo) return;
+        var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
+        var tags = [];
+        if (photo.location) tags.push('<span class="pill">' + escapeHtmlJS(photo.location) + '</span>');
+        (photo.tags || []).forEach(function (t) { tags.push('<span class="pill">' + escapeHtmlJS(t) + '</span>'); });
+        galleryPhotoPageEl.innerHTML =
+          '<div class="card-image gallery-photo-image">' + (photo.image_url ? '<img src="' + escapeHtmlJS(photo.image_url) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</div>' +
+          '<div class="gallery-photo-info">' +
+            '<h1>' + escapeHtmlJS(displayName) + '</h1>' +
+            (photo.date_taken ? '<p class="gallery-photo-date">' + formatDateJS(photo.date_taken) + '</p>' : '') +
+            '<div class="gallery-tags">' + tags.join('') + '</div>' +
+          '</div>';
+        document.title = displayName + ' \u2014 Apple Refresher Gallery';
       })
       .catch(function () {});
   }

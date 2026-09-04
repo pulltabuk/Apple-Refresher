@@ -8,30 +8,10 @@ const CATEGORY_ICONS = {
   Other: `<rect x="8" y="8" width="24" height="24" rx="4"/>`,
 };
 
-const CATEGORY_ACCENTS = {
-  iPhone: { color: '#0071e3', bg1: '#ffffff', bg2: '#e8f2fe' },
-  Mac: { color: '#5b6472', bg1: '#ffffff', bg2: '#eef0f2' },
-  iPad: { color: '#7c3aed', bg1: '#ffffff', bg2: '#f1e9fd' },
-  'Apple Watch': { color: '#e11d74', bg1: '#ffffff', bg2: '#fce8f1' },
-  AirPods: { color: '#0d9488', bg1: '#ffffff', bg2: '#e6f5f3' },
-  'Vision Pro': { color: '#ea580c', bg1: '#ffffff', bg2: '#fdece0' },
-  Other: { color: '#64748b', bg1: '#ffffff', bg2: '#eef1f4' },
-};
-
-function categoryAccent(category) {
-  return CATEGORY_ACCENTS[category] || CATEGORY_ACCENTS.Other;
-}
-
 function categoryIcon(category, size) {
   const shape = CATEGORY_ICONS[category] || CATEGORY_ICONS.Other;
   const s = size || 40;
   return `<svg class="placeholder-icon" viewBox="0 0 40 40" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
-}
-
-function categoryImagePanel(category, className, size) {
-  const accent = categoryAccent(category);
-  const style = `background: radial-gradient(circle at 32% 28%, ${accent.bg1} 0%, ${accent.bg2} 70%); color: ${accent.color};`;
-  return `<div class="${className} icon-panel" style="${style}">${categoryIcon(category, size)}</div>`;
 }
 
 function sanitizeRichText(html) {
@@ -122,21 +102,22 @@ function categoryTimelinePoints(product, allProducts) {
     // product in it shares that single launch point, plus every refresh
     // date from every model in the line, merged and deduplicated.
     const lineLaunch = launchCandidates.reduce((earliest, d) => (d < earliest ? d : earliest));
-    points.push({ date: lineLaunch, label: 'Launch', type: 'launch' });
-    const dateSet = new Set();
+    const launchOwner = sameCategory.find((p) => p.original_launch_date === lineLaunch);
+    points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwner ? launchOwner.name : product.name });
+    const dateOwners = new Map();
     sameCategory.forEach((p) => (p.refresh_history || []).forEach((d) => {
-      if (d !== lineLaunch) dateSet.add(d);
+      if (d !== lineLaunch && !dateOwners.has(d)) dateOwners.set(d, p.name);
     }));
-    Array.from(dateSet).sort().forEach((d) => points.push({ date: d, label: 'Refresh', type: 'refresh' }));
+    Array.from(dateOwners.keys()).sort().forEach((d) => points.push({ date: d, label: 'Refresh', type: 'refresh', productName: dateOwners.get(d) }));
   } else {
     const sortedDates = (product.refresh_history || []).slice().sort();
     sortedDates.forEach((d, i) => {
       const isLaunch = i === 0 && !!product.is_new_launch;
-      points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh' });
+      points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh', productName: product.name });
     });
   }
   if (product.discontinued && product.discontinued_date) {
-    points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued' });
+    points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: product.name });
   }
   return points;
 }
@@ -144,12 +125,18 @@ function categoryTimelinePoints(product, allProducts) {
 function horizontalTimelineHtml(product, allProducts) {
   const points = categoryTimelinePoints(product, allProducts);
   if (!points.length) return '';
-  const items = points.map((pt) => `<div class="timeline-point timeline-point--${pt.type}">
+  const items = points.map((pt, i) => {
+    const side = i % 2 === 0 ? 'above' : 'below';
+    return `<div class="timeline-point timeline-point--${pt.type} timeline-point--${side}">
     <span class="timeline-point-line"></span>
     <span class="timeline-dot"></span>
-    <p class="timeline-point-label">${pt.label}</p>
-    <p class="timeline-point-date">${formatDate(pt.date)}</p>
-  </div>`).join('\n');
+    <div class="timeline-point-content">
+      <p class="timeline-point-name">${escapeHtml(pt.productName)}</p>
+      <p class="timeline-point-label">${pt.label}</p>
+      <p class="timeline-point-date">${formatDate(pt.date)}</p>
+    </div>
+  </div>`;
+  }).join('\n');
   return `<div class="timeline-horizontal">${items}</div>`;
 }
 
@@ -289,8 +276,7 @@ function cardHtml(product, statusInfo) {
     : '';
   return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <a class="card-link" href="/products/${product.slug}/">
-    ${categoryImagePanel(product.category, 'card-image')}
-    <p class="card-name">${escapeHtml(product.name)}</p>
+        <p class="card-name">${escapeHtml(product.name)}</p>
     ${productBadge(product, statusInfo)}
     ${meta}
   </a>
@@ -355,13 +341,39 @@ function galleryPhotoCardHtml(photo) {
     ...(photo.tags || []).map((t) => `<span class="pill">${escapeHtml(t)}</span>`),
   ].filter(Boolean).join('\n');
   return `<article class="card" data-date="${dateToTimestamp(photo.date_taken)}" data-search="${escapeHtml(searchText.toLowerCase())}">
-  <a class="card-link" href="${photo.image_url ? escapeHtml(photo.image_url) : '#'}" target="_blank" rel="noopener">
+  <a class="card-link" href="/gallery/${photo.id}/">
     <div class="card-image">${photo.image_url ? `<img src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(displayName)}">` : ''}</div>
     <p class="card-name">${escapeHtml(displayName)}</p>
     ${photo.date_taken ? `<p class="card-meta">${formatDate(photo.date_taken)}</p>` : ''}
   </a>
   <div class="gallery-tags">${tagsHtml}</div>
 </article>`;
+}
+
+function galleryPhotoPage({ photo, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
+  const tagsHtml = [
+    photo.location ? `<span class="pill">${escapeHtml(photo.location)}</span>` : '',
+    ...(photo.tags || []).map((t) => `<span class="pill">${escapeHtml(t)}</span>`),
+  ].filter(Boolean).join('\n');
+  const body = `
+<article class="gallery-photo-page">
+  <div class="card-image gallery-photo-image">${photo.image_url ? `<img src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(displayName)}">` : ''}</div>
+  <div class="gallery-photo-info">
+    <h1>${escapeHtml(displayName)}</h1>
+    ${photo.date_taken ? `<p class="gallery-photo-date">${formatDate(photo.date_taken)}</p>` : ''}
+    <div class="gallery-tags">${tagsHtml}</div>
+  </div>
+</article>`;
+  return shell({
+    title: `${escapeHtml(displayName)} — Apple Refresher Gallery`,
+    description: `A photo from the Apple Refresher gallery${photo.location ? `, taken in ${photo.location}` : ''}.`,
+    siteUrl,
+    path: `/gallery/${photo.id}/`,
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
 }
 
 function galleryPage({ photos, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -399,8 +411,7 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const heroSection = featured
     ? `<section class="hero">
   <a class="hero-card" href="/products/${featured.product.slug}/">
-    ${categoryImagePanel(featured.product.category, 'hero-image', 72)}
-    <div class="hero-body">
+        <div class="hero-body">
       <p class="hero-eyebrow">Featured</p>
       <p class="hero-name">${escapeHtml(featured.product.name)}</p>
       ${productBadge(featured.product, featured.status)}
@@ -574,7 +585,6 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
   const timelinePoints = categoryTimelinePoints(product, allProducts);
   const timelineHtml = horizontalTimelineHtml(product, allProducts);
 
-  const mainImage = categoryImagePanel(product.category, 'card-image product-image', 140);
   const videoBlock = product.video_url
     ? `<video class="product-video" src="${product.video_url}" controls></video>`
     : '';
@@ -618,6 +628,11 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     specRow('Previous model', previousModelHtml),
     specRow('Replaced by', replacedByHtml),
     product.discontinued ? specRow('Why it went', escapeHtml(product.discontinued_reason)) : '',
+    product.apple_url_unavailable
+      ? specRow('Official Apple page', 'No longer available on Apple\u2019s website')
+      : product.apple_url
+      ? specRow('Official Apple page', `<a href="${product.apple_url}" target="_blank" rel="noopener">apple.com &#8599;</a>`)
+      : '',
     product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(externalLinkLabel(product))} &#8599;</a>`) : '',
     product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> people`),
   ].filter(Boolean).join('\n');
@@ -629,11 +644,10 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
 
   const body = `
 <article class="product-page">
-  <div class="product-top">
-    <div class="product-media">
-      ${mainImage}
+  <div class="product-top${product.video_url ? '' : ' product-top--no-media'}">
+    ${product.video_url ? `<div class="product-media">
       ${videoBlock}
-    </div>
+    </div>` : ''}
     <div class="product-info">
       <div class="product-header">
         <div>
@@ -796,6 +810,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </div>
 
         <h3 class="admin-form-section">More information</h3>
+        <label>Official Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/uk/iphone-17-pro/"></label>
+        <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> No longer available on Apple's website</label>
         <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
 
         <div class="admin-subfield">
@@ -908,6 +924,7 @@ module.exports = {
   sanitizeRichText,
   categoryTimelinePoints,
   galleryPage,
+  galleryPhotoPage,
   homePage,
   allProductsPage,
   discontinuedPage,
