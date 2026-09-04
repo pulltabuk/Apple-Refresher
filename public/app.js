@@ -154,9 +154,30 @@
     Other: '<rect x="8" y="8" width="24" height="24" rx="4"/>',
   };
 
-  function categoryIconJS(category) {
+  var CATEGORY_ACCENTS = {
+    iPhone: { color: '#0071e3', bg1: '#ffffff', bg2: '#e8f2fe' },
+    Mac: { color: '#5b6472', bg1: '#ffffff', bg2: '#eef0f2' },
+    iPad: { color: '#7c3aed', bg1: '#ffffff', bg2: '#f1e9fd' },
+    'Apple Watch': { color: '#e11d74', bg1: '#ffffff', bg2: '#fce8f1' },
+    AirPods: { color: '#0d9488', bg1: '#ffffff', bg2: '#e6f5f3' },
+    'Vision Pro': { color: '#ea580c', bg1: '#ffffff', bg2: '#fdece0' },
+    Other: { color: '#64748b', bg1: '#ffffff', bg2: '#eef1f4' },
+  };
+
+  function categoryAccentJS(category) {
+    return CATEGORY_ACCENTS[category] || CATEGORY_ACCENTS.Other;
+  }
+
+  function categoryIconJS(category, size) {
     var shape = CATEGORY_ICON_SHAPES[category] || CATEGORY_ICON_SHAPES.Other;
-    return '<svg class="placeholder-icon" viewBox="0 0 40 40" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + shape + '</svg>';
+    var s = size || 40;
+    return '<svg class="placeholder-icon" viewBox="0 0 40 40" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + shape + '</svg>';
+  }
+
+  function categoryImagePanelJS(category, className, size) {
+    var accent = categoryAccentJS(category);
+    var style = 'background: radial-gradient(circle at 32% 28%, ' + accent.bg1 + ' 0%, ' + accent.bg2 + ' 70%); color: ' + accent.color + ';';
+    return '<div class="' + className + ' icon-panel" style="' + style + '">' + categoryIconJS(category, size) + '</div>';
   }
 
   function pillJS(category) {
@@ -188,7 +209,7 @@
   function cardHtmlJS(product, statusInfo) {
     var status = statusKeyJS(product);
     var launch = launchDateJS(product);
-    var imageBlock = categoryIconJS(product.category);
+    var imageBlock = categoryImagePanelJS(product.category, 'card-image');
     var days = statusInfo && status === 'current' ? statusInfo.daysSince : '';
     var launchTs = launch ? new Date(launch).getTime() : '';
     var discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
@@ -200,7 +221,7 @@
     return (
       '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<a class="card-link" href="/products/' + product.slug + '/">' +
-          '<div class="card-image">' + imageBlock + '</div>' +
+          imageBlock +
           '<p class="card-name">' + escapeHtmlJS(product.name) + '</p>' +
           badgeHtmlJS(product, statusInfo) +
           meta +
@@ -257,7 +278,7 @@
     var launch = product.original_launch_date || sortedDates[0] || null;
     var latest = sortedDates[sortedDates.length - 1] || null;
 
-    var mainImage = categoryIconJS(product.category);
+    var mainImage = categoryImagePanelJS(product.category, 'card-image product-image', 140);
     var videoBlock = product.video_url ? '<video class="product-video" src="' + product.video_url + '" controls></video>' : '';
 
     var successor = product.replaced_by && productsBySlug ? productsBySlug[product.replaced_by] : null;
@@ -304,7 +325,7 @@
     return (
       '<div class="product-top">' +
         '<div class="product-media">' +
-          '<div class="card-image product-image">' + mainImage + '</div>' +
+          mainImage +
           videoBlock +
         '</div>' +
         '<div class="product-info">' +
@@ -497,11 +518,11 @@
         .sort(function (a, b) { return b.status.ratio - a.status.ratio; })
         .slice(0, 4);
 
-      var heroImageBlock = categoryIconJS(featured.product.category);
+      var heroImageBlock = categoryImagePanelJS(featured.product.category, 'hero-image', 72);
 
       heroSection.innerHTML =
         '<a class="hero-card" href="/products/' + featured.product.slug + '/">' +
-          '<div class="hero-image">' + heroImageBlock + '</div>' +
+          heroImageBlock +
           '<div class="hero-body">' +
             '<p class="hero-eyebrow">Featured</p>' +
             '<p class="hero-name">' + escapeHtmlJS(featured.product.name) + '</p>' +

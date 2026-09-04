@@ -8,9 +8,30 @@ const CATEGORY_ICONS = {
   Other: `<rect x="8" y="8" width="24" height="24" rx="4"/>`,
 };
 
-function categoryIcon(category) {
+const CATEGORY_ACCENTS = {
+  iPhone: { color: '#0071e3', bg1: '#ffffff', bg2: '#e8f2fe' },
+  Mac: { color: '#5b6472', bg1: '#ffffff', bg2: '#eef0f2' },
+  iPad: { color: '#7c3aed', bg1: '#ffffff', bg2: '#f1e9fd' },
+  'Apple Watch': { color: '#e11d74', bg1: '#ffffff', bg2: '#fce8f1' },
+  AirPods: { color: '#0d9488', bg1: '#ffffff', bg2: '#e6f5f3' },
+  'Vision Pro': { color: '#ea580c', bg1: '#ffffff', bg2: '#fdece0' },
+  Other: { color: '#64748b', bg1: '#ffffff', bg2: '#eef1f4' },
+};
+
+function categoryAccent(category) {
+  return CATEGORY_ACCENTS[category] || CATEGORY_ACCENTS.Other;
+}
+
+function categoryIcon(category, size) {
   const shape = CATEGORY_ICONS[category] || CATEGORY_ICONS.Other;
-  return `<svg class="placeholder-icon" viewBox="0 0 40 40" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
+  const s = size || 40;
+  return `<svg class="placeholder-icon" viewBox="0 0 40 40" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
+}
+
+function categoryImagePanel(category, className, size) {
+  const accent = categoryAccent(category);
+  const style = `background: radial-gradient(circle at 32% 28%, ${accent.bg1} 0%, ${accent.bg2} 70%); color: ${accent.color};`;
+  return `<div class="${className} icon-panel" style="${style}">${categoryIcon(category, size)}</div>`;
 }
 
 function sanitizeRichText(html) {
@@ -268,7 +289,7 @@ function cardHtml(product, statusInfo) {
     : '';
   return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <a class="card-link" href="/products/${product.slug}/">
-    <div class="card-image">${categoryIcon(product.category)}</div>
+    ${categoryImagePanel(product.category, 'card-image')}
     <p class="card-name">${escapeHtml(product.name)}</p>
     ${productBadge(product, statusInfo)}
     ${meta}
@@ -378,7 +399,7 @@ function homePage({ featured, rest, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const heroSection = featured
     ? `<section class="hero">
   <a class="hero-card" href="/products/${featured.product.slug}/">
-    <div class="hero-image">${categoryIcon(featured.product.category)}</div>
+    ${categoryImagePanel(featured.product.category, 'hero-image', 72)}
     <div class="hero-body">
       <p class="hero-eyebrow">Featured</p>
       <p class="hero-name">${escapeHtml(featured.product.name)}</p>
@@ -553,7 +574,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
   const timelinePoints = categoryTimelinePoints(product, allProducts);
   const timelineHtml = horizontalTimelineHtml(product, allProducts);
 
-  const mainImage = categoryIcon(product.category);
+  const mainImage = categoryImagePanel(product.category, 'card-image product-image', 140);
   const videoBlock = product.video_url
     ? `<video class="product-video" src="${product.video_url}" controls></video>`
     : '';
@@ -610,7 +631,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
 <article class="product-page">
   <div class="product-top">
     <div class="product-media">
-      <div class="card-image product-image">${mainImage}</div>
+      ${mainImage}
       ${videoBlock}
     </div>
     <div class="product-info">
