@@ -91,6 +91,12 @@
   const DATE_FIELD_PREFIXES = ['original_launch_date', 'expected_date', 'discontinued_date', 'new_refresh_date'];
   DATE_FIELD_PREFIXES.forEach(wireDatePrecisionField);
 
+  document.querySelectorAll('.date-precision-clear').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setDatePrecisionValue(btn.getAttribute('data-prefix'), null);
+    });
+  });
+
   // --- Tabs ---
 
   document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
@@ -348,7 +354,7 @@
     richTextEditor.innerHTML = paragraphs.map((p) => '<p>' + escapeText(p) + '</p>').join('');
   });
 
-  document.getElementById('add-refresh-date-btn').addEventListener('click', () => {
+  function addRefreshDateFromWidget() {
     const value = getDatePrecisionValue('new_refresh_date');
     if (!value) return;
     if (currentRefreshHistory.indexOf(value) === -1) {
@@ -357,6 +363,11 @@
     }
     setDatePrecisionValue('new_refresh_date', null);
     renderRefreshHistory();
+  }
+
+  document.getElementById('add-refresh-date-btn').addEventListener('click', addRefreshDateFromWidget);
+  ['new_refresh_date_day', 'new_refresh_date_month', 'new_refresh_date_year'].forEach((id) => {
+    document.getElementById(id).addEventListener('change', addRefreshDateFromWidget);
   });
 
   function renderImageThumbs() {

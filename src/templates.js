@@ -624,9 +624,12 @@ function datePrecisionFieldHtml(prefix, label, hint) {
     <label><input type="radio" name="${prefix}_precision" value="month"> Month &amp; year</label>
     <label><input type="radio" name="${prefix}_precision" value="year"> Year only</label>
   </div>
-  <input type="date" id="${prefix}_day" class="date-precision-input">
-  <input type="month" id="${prefix}_month" class="date-precision-input" style="display:none;">
-  <input type="number" id="${prefix}_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
+  <div class="date-precision-row">
+    <input type="date" id="${prefix}_day" class="date-precision-input">
+    <input type="month" id="${prefix}_month" class="date-precision-input" style="display:none;">
+    <input type="number" id="${prefix}_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
+    <button type="button" class="date-precision-clear" data-prefix="${prefix}">Clear</button>
+  </div>
   ${hint ? `<p class="admin-hint">${hint}</p>` : ''}
 </div>`;
 }
@@ -688,7 +691,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
             <button type="button" id="add-refresh-date-btn" class="admin-btn admin-btn--small">Add date</button>
           </div>
-          <p class="admin-hint">Each date this specific model was refreshed. If Original launch date above is blank, the first one here is treated as the launch.</p>
+          <p class="admin-hint">Pick a date and it's added automatically. Each one is a time this specific model was refreshed, if Original launch date above is blank, the earliest one here is treated as the launch.</p>
         </div>
 
         <div class="admin-subfield">

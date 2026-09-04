@@ -103,6 +103,17 @@ a { color: inherit; text-decoration: none; }
 .admin-form-section:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 .date-precision-radios { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
 .date-precision-radios label { display: flex; flex-direction: row; align-items: center; gap: 5px; font-size: 13px; color: var(--text-secondary); }
+.date-precision-row { display: flex; gap: 8px; align-items: center; }
+.date-precision-clear {
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--overdue-text);
+  border-radius: 6px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.date-precision-clear:hover { border-color: var(--overdue-text); }
 .checkbox-label { flex-direction: row !important; align-items: center; gap: 8px !important; }
 .admin-btn {
   align-self: flex-start;
