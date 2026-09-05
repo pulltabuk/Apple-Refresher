@@ -86,6 +86,41 @@
   }
 
   const DATE_FIELD_PREFIXES = ['original_launch_date', 'expected_date', 'discontinued_date', 'new_refresh_date', 'gallery_date_taken'];
+
+  // --- Timeline group: New timeline (free text) or Join an existing
+  // product line (a dropdown of every value already in use, so picking
+  // one is a guaranteed exact match instead of retyping a name).
+
+  function updateTimelineModeVisibility() {
+    const mode = document.querySelector('input[name="timeline_mode"]:checked').value;
+    document.getElementById('timeline_name_new').style.display = mode === 'new' ? '' : 'none';
+    document.getElementById('timeline_name_existing').style.display = mode === 'existing' ? '' : 'none';
+  }
+
+  document.querySelectorAll('input[name="timeline_mode"]').forEach((radio) => {
+    radio.addEventListener('change', updateTimelineModeVisibility);
+  });
+  updateTimelineModeVisibility();
+
+  function getTimelineName() {
+    const mode = document.querySelector('input[name="timeline_mode"]:checked').value;
+    if (mode === 'existing') return document.getElementById('timeline_name_existing').value || null;
+    return document.getElementById('timeline_name_new').value.trim() || null;
+  }
+
+  function setTimelineName(value) {
+    document.getElementById('timeline_name_new').value = '';
+    document.getElementById('timeline_name_existing').value = '';
+    const existingOption = value && Array.from(document.getElementById('timeline_name_existing').options).some((o) => o.value === value);
+    if (existingOption) {
+      document.getElementById('timeline_mode_existing').checked = true;
+      document.getElementById('timeline_name_existing').value = value;
+    } else {
+      document.getElementById('timeline_mode_new').checked = true;
+      document.getElementById('timeline_name_new').value = value || '';
+    }
+    updateTimelineModeVisibility();
+  }
   DATE_FIELD_PREFIXES.forEach(wireDatePrecisionField);
 
   document.querySelectorAll('.date-precision-clear').forEach((btn) => {
@@ -198,18 +233,23 @@
       productOptions.appendChild(opt);
     });
 
-    // "Timeline group" picker: distinct existing values, so it's easy
-    // to join an existing group rather than accidentally creating a
-    // near-duplicate with a typo.
-    const timelineOptions = document.getElementById('timeline-options');
-    timelineOptions.innerHTML = '';
+    // "Timeline group" picker: every distinct value already in use,
+    // so joining one is a guaranteed exact match rather than retyping
+    // a name and risking a mismatch.
+    const timelineSelect = document.getElementById('timeline_name_existing');
+    const previousValue = timelineSelect.value;
+    timelineSelect.innerHTML = '<option value="">Choose a product line...</option>';
     const timelineNames = new Set();
     cachedProducts.forEach((p) => { if (p.timeline_name) timelineNames.add(p.timeline_name); });
-    timelineNames.forEach((t) => {
+    Array.from(timelineNames).sort().forEach((t) => {
       const opt = document.createElement('option');
       opt.value = t;
-      timelineOptions.appendChild(opt);
+      opt.textContent = t;
+      timelineSelect.appendChild(opt);
     });
+    if (Array.from(timelineSelect.options).some((o) => o.value === previousValue)) {
+      timelineSelect.value = previousValue;
+    }
   }
 
   async function loadProducts() {
@@ -408,7 +448,7 @@
     document.getElementById('form-title').textContent = 'Edit product';
     document.getElementById('name').value = p.name || '';
     document.getElementById('category').value = p.category || '';
-    document.getElementById('timeline_name').value = p.timeline_name || '';
+    setTimelineName(p.timeline_name || null);
     (function () {
       const raw = (p.price || '').trim();
       const symbolMatch = raw.match(/^[£$€]/);
@@ -447,6 +487,7 @@
       window.history.pushState({}, '', '/admin/?new=1');
     }
     productForm.reset();
+    setTimelineName(null);
     document.getElementById('rumor_note_editor').innerHTML = '';
     setDatePrecisionValue('original_launch_date', null);
     setDatePrecisionValue('expected_date', null);
@@ -489,7 +530,7 @@
         slug,
         name,
         category: document.getElementById('category').value.trim() || 'Other',
-        timeline_name: document.getElementById('timeline_name').value.trim() || null,
+        timeline_name: getTimelineName(),
         price: (function () {
           const raw = document.getElementById('price').value.trim();
           if (!raw) return null;
@@ -528,6 +569,7 @@
         return;
       }
       productForm.reset();
+      setTimelineName(null);
       document.getElementById('rumor_note_editor').innerHTML = '';
       setDatePrecisionValue('original_launch_date', null);
       setDatePrecisionValue('expected_date', null);

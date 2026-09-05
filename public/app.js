@@ -70,9 +70,13 @@
     return Math.max(0, months);
   }
 
+  function normaliseGroupKeyJS(value) {
+    return (value || '').trim().toLowerCase();
+  }
+
   function categoryTimelinePointsJS(product, allProducts) {
-    var groupKey = product.timeline_name || product.category;
-    var sameCategory = (allProducts || []).filter(function (p) { return (p.timeline_name || p.category) === groupKey; });
+    var groupKey = normaliseGroupKeyJS(product.timeline_name || product.category);
+    var sameCategory = (allProducts || []).filter(function (p) { return normaliseGroupKeyJS(p.timeline_name || p.category) === groupKey; });
     var launchCandidates = sameCategory.map(function (p) { return p.original_launch_date; }).filter(Boolean);
 
     var points = [];

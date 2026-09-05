@@ -92,9 +92,13 @@ function monthsBetween(a, b) {
   return Math.max(0, months);
 }
 
+function normaliseGroupKey(value) {
+  return (value || '').trim().toLowerCase();
+}
+
 function categoryTimelinePoints(product, allProducts) {
-  const groupKey = product.timeline_name || product.category;
-  const sameCategory = (allProducts || []).filter((p) => (p.timeline_name || p.category) === groupKey);
+  const groupKey = normaliseGroupKey(product.timeline_name || product.category);
+  const sameCategory = (allProducts || []).filter((p) => normaliseGroupKey(p.timeline_name || p.category) === groupKey);
   const launchCandidates = sameCategory.map((p) => p.original_launch_date).filter(Boolean);
 
   const points = [];
@@ -864,11 +868,14 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </div>
 
         <h3 class="admin-form-section">Timeline</h3>
-        <label>Timeline group (pick an existing one, or type a new name)
-          <input type="text" id="timeline_name" list="timeline-options" placeholder="e.g. iPhone">
-          <datalist id="timeline-options"></datalist>
-        </label>
-        <p class="admin-hint">Products sharing the same timeline group are shown together on each other's page, in order, regardless of what their Category is set to. Leave blank to fall back to grouping by Category instead.</p>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Timeline group</span>
+          <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_new" value="new" checked> New timeline</label>
+          <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_existing" value="existing"> Join an existing product line</label>
+          <input type="text" id="timeline_name_new" placeholder="e.g. iPhone">
+          <select id="timeline_name_existing" style="display:none;"></select>
+        </div>
+        <p class="admin-hint">Every product in a line needs this set to the same value, joining it here alone doesn't link anything else in. To connect a new model to a line that already exists, pick "Join an existing product line" and choose it from the list, that guarantees an exact match rather than retyping the name.</p>
         ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'Leave blank if this isn\u2019t a good example, the refresh history below will be used instead.')}
 
         <div class="admin-subfield">
