@@ -260,6 +260,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
   text-decoration: none;
 }
 .pill:hover { background: var(--accent-blue-dark); border-color: var(--accent-blue-dark); color: #fff; }
+.pill--location { background: var(--navy); border-color: var(--navy); color: #fff; }
+.pill--location:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
 
 .controls-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1rem; }
 .search-input {
@@ -485,10 +487,23 @@ label.admin-btn { cursor: pointer; color: #fff; }
 
 /* Small secondary line on cards, e.g. "Lived 5 years, 3 months" */
 .card-meta { font-size: 12px; color: var(--text-secondary); margin: 0; }
-.gallery-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
+.gallery-tags { display: flex; flex-direction: column; gap: 4px; margin-top: auto; }
+.gallery-tags-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.card-photo-count {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(20, 33, 61, 0.75);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
 
 .gallery-photo-page { max-width: 640px; margin: 1.5rem auto 0; }
-.gallery-photo-image { aspect-ratio: 4 / 3; border-radius: 12px; }
+.gallery-photo-images { display: flex; flex-direction: column; gap: 12px; }
+.gallery-photo-images img { display: block; width: 100%; height: auto; border-radius: 12px; }
 .gallery-photo-info { margin-top: 1.25rem; }
 .gallery-photo-info h1 { font-size: 24px; margin: 0; }
 .gallery-photo-date { font-size: 14px; color: var(--text-secondary); margin: 6px 0 0; }

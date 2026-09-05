@@ -333,36 +333,48 @@ function dateToTimestamp(str) {
   return Number.isNaN(ms) ? '' : ms;
 }
 
+function galleryPhotoImages(photo) {
+  if (photo.image_urls && photo.image_urls.length) return photo.image_urls;
+  return photo.image_url ? [photo.image_url] : [];
+}
+
+function galleryTagsHtml(photo) {
+  const sortedTags = (photo.tags || []).slice().sort((a, b) => a.localeCompare(b));
+  const rows = [
+    photo.location ? `<div class="gallery-tags-row"><span class="pill pill--location">${escapeHtml(photo.location)}</span></div>` : '',
+    sortedTags.length ? `<div class="gallery-tags-row">${sortedTags.map((t) => `<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>` : '',
+  ].filter(Boolean).join('\n');
+  return rows ? `<div class="gallery-tags">${rows}</div>` : '';
+}
+
 function galleryPhotoCardHtml(photo) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const searchText = [photo.caption, photo.location, ...(photo.tags || [])].filter(Boolean).join(' ');
-  const tagsHtml = [
-    photo.location ? `<span class="pill">${escapeHtml(photo.location)}</span>` : '',
-    ...(photo.tags || []).map((t) => `<span class="pill">${escapeHtml(t)}</span>`),
-  ].filter(Boolean).join('\n');
+  const images = galleryPhotoImages(photo);
   return `<article class="card" data-date="${dateToTimestamp(photo.date_taken)}" data-search="${escapeHtml(searchText.toLowerCase())}">
   <a class="card-link" href="/gallery/${photo.id}/">
-    <div class="card-image">${photo.image_url ? `<img src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(displayName)}">` : ''}</div>
+    <div class="card-image">
+      ${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}
+      ${images.length > 1 ? `<span class="card-photo-count">${images.length} photos</span>` : ''}
+    </div>
     <p class="card-name">${escapeHtml(displayName)}</p>
     ${photo.date_taken ? `<p class="card-meta">${formatDate(photo.date_taken)}</p>` : ''}
   </a>
-  <div class="gallery-tags">${tagsHtml}</div>
+  ${galleryTagsHtml(photo)}
 </article>`;
 }
 
 function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
-  const tagsHtml = [
-    photo.location ? `<span class="pill">${escapeHtml(photo.location)}</span>` : '',
-    ...(photo.tags || []).map((t) => `<span class="pill">${escapeHtml(t)}</span>`),
-  ].filter(Boolean).join('\n');
+  const images = galleryPhotoImages(photo);
+  const imagesHtml = images.map((url) => `<img src="${escapeHtml(url)}" alt="${escapeHtml(displayName)}">`).join('\n');
   const body = `
 <article class="gallery-photo-page">
-  <div class="card-image gallery-photo-image">${photo.image_url ? `<img src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(displayName)}">` : ''}</div>
+  <div class="gallery-photo-images">${imagesHtml}</div>
   <div class="gallery-photo-info">
     <h1>${escapeHtml(displayName)}</h1>
     ${photo.date_taken ? `<p class="gallery-photo-date">${formatDate(photo.date_taken)}</p>` : ''}
-    <div class="gallery-tags">${tagsHtml}</div>
+    ${galleryTagsHtml(photo)}
     <div class="gallery-photo-nav">
       ${prevPhoto ? `<a href="/gallery/${prevPhoto.id}/" class="gallery-nav-link">&larr; Previous</a>` : '<span></span>'}
       <a href="/gallery/" class="gallery-nav-link">Full Gallery</a>
@@ -427,7 +439,8 @@ function featuredCardHtml(product, statusInfo) {
 
 function galleryStripItemHtml(photo) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
-  return `<a class="gallery-strip-item" href="/gallery/${photo.id}/">${photo.image_url ? `<img src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(displayName)}">` : ''}</a>`;
+  const images = galleryPhotoImages(photo);
+  return `<a class="gallery-strip-item" href="/gallery/${photo.id}/">${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}</a>`;
 }
 
 function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -918,10 +931,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <h3 id="gallery-form-title">Add photo</h3>
       <form id="gallery-form" class="admin-form">
         <div class="admin-subfield">
-          <span class="admin-subfield-label">Photo</span>
-          <div id="gallery-image-thumb" class="admin-thumbs"></div>
-          <label for="gallery-image-upload" class="admin-btn admin-btn--small admin-btn--primary">Choose photo</label>
-          <input type="file" id="gallery-image-upload" accept="image/*" class="admin-file-input">
+          <span class="admin-subfield-label">Photos (up to 6, e.g. several angles taken at once)</span>
+          <div id="gallery-image-thumbs" class="admin-thumbs"></div>
+          <label for="gallery-image-upload" class="admin-btn admin-btn--small admin-btn--primary">Add photos</label>
+          <input type="file" id="gallery-image-upload" accept="image/*" multiple class="admin-file-input">
         </div>
 
         <label>Caption (optional)<input type="text" id="gallery-caption" placeholder="e.g. iPhone 17 Pro in Cosmic Orange"></label>
@@ -980,6 +993,7 @@ module.exports = {
   categoryTimelinePoints,
   galleryPage,
   galleryPhotoPage,
+  galleryPhotoCardHtml,
   homePage,
   allProductsPage,
   discontinuedPage,

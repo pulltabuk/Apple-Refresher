@@ -529,14 +529,15 @@
   let cachedGalleryPhotos = [];
   let editingGalleryId = null;
   let currentGalleryTags = [];
-  let currentGalleryImageUrl = null;
+  let currentGalleryImageUrls = [];
 
   const galleryListView = document.getElementById('gallery-list-view');
   const galleryFormView = document.getElementById('gallery-form-view');
   const galleryListEl = document.getElementById('gallery-list');
   const galleryForm = document.getElementById('gallery-form');
   const galleryTagsListEl = document.getElementById('gallery-tags-list');
-  const galleryImageThumbEl = document.getElementById('gallery-image-thumb');
+  const galleryImageThumbsEl = document.getElementById('gallery-image-thumbs');
+  const MAX_GALLERY_IMAGES = 6;
 
   function showGalleryList() {
     galleryListView.style.display = 'block';
@@ -572,9 +573,10 @@
 
       const photoTd = document.createElement('td');
       photoTd.className = 'admin-table-photo';
-      if (photo.image_url) {
+      const thumbUrl = (photo.image_urls && photo.image_urls[0]) || photo.image_url;
+      if (thumbUrl) {
         const img = document.createElement('img');
-        img.src = photo.image_url;
+        img.src = thumbUrl;
         img.alt = '';
         photoTd.appendChild(img);
       } else {
@@ -635,24 +637,25 @@
     });
   }
 
-  function renderGalleryImageThumb() {
-    galleryImageThumbEl.innerHTML = '';
-    if (!currentGalleryImageUrl) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'admin-thumb';
-    const img = document.createElement('img');
-    img.src = currentGalleryImageUrl;
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.textContent = '\u00d7';
-    removeBtn.setAttribute('aria-label', 'Remove photo');
-    removeBtn.addEventListener('click', () => {
-      currentGalleryImageUrl = null;
-      renderGalleryImageThumb();
+  function renderGalleryImageThumbs() {
+    galleryImageThumbsEl.innerHTML = '';
+    currentGalleryImageUrls.forEach((url, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'admin-thumb';
+      const img = document.createElement('img');
+      img.src = url;
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = '\u00d7';
+      removeBtn.setAttribute('aria-label', 'Remove photo');
+      removeBtn.addEventListener('click', () => {
+        currentGalleryImageUrls.splice(i, 1);
+        renderGalleryImageThumbs();
+      });
+      wrap.appendChild(img);
+      wrap.appendChild(removeBtn);
+      galleryImageThumbsEl.appendChild(wrap);
     });
-    wrap.appendChild(img);
-    wrap.appendChild(removeBtn);
-    galleryImageThumbEl.appendChild(wrap);
   }
 
   document.getElementById('add-gallery-tag-btn').addEventListener('click', () => {
@@ -665,13 +668,26 @@
   });
 
   document.getElementById('gallery-image-upload').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      currentGalleryImageUrl = await uploadFile(file);
-      renderGalleryImageThumb();
-    } catch (err) {
-      window.alert('Upload failed: ' + err.message);
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const remaining = MAX_GALLERY_IMAGES - currentGalleryImageUrls.length;
+    if (remaining <= 0) {
+      window.alert('You already have 6 photos, remove one first.');
+      e.target.value = '';
+      return;
+    }
+    const toUpload = files.slice(0, remaining);
+    if (files.length > remaining) {
+      window.alert('Only ' + remaining + ' more photo(s) can be added (6 max), the rest were skipped.');
+    }
+    for (const file of toUpload) {
+      try {
+        const url = await uploadFile(file);
+        currentGalleryImageUrls.push(url);
+        renderGalleryImageThumbs();
+      } catch (err) {
+        window.alert('Upload failed: ' + err.message);
+      }
     }
     e.target.value = '';
   });
@@ -685,9 +701,9 @@
     document.getElementById('gallery-location').value = photo.location || '';
     setDatePrecisionValue('gallery_date_taken', photo.date_taken || null);
     currentGalleryTags = (photo.tags || []).slice();
-    currentGalleryImageUrl = photo.image_url || null;
+    currentGalleryImageUrls = (photo.image_urls && photo.image_urls.length ? photo.image_urls : photo.image_url ? [photo.image_url] : []).slice();
     renderGalleryTags();
-    renderGalleryImageThumb();
+    renderGalleryImageThumbs();
     showGalleryForm();
   }
 
@@ -696,9 +712,9 @@
     galleryForm.reset();
     setDatePrecisionValue('gallery_date_taken', null);
     currentGalleryTags = [];
-    currentGalleryImageUrl = null;
+    currentGalleryImageUrls = [];
     renderGalleryTags();
-    renderGalleryImageThumb();
+    renderGalleryImageThumbs();
     document.getElementById('gallery-form-title').textContent = 'Add photo';
     showGalleryForm();
   }
@@ -719,13 +735,13 @@
 
   galleryForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!currentGalleryImageUrl) {
-      window.alert('Add a photo first.');
+    if (!currentGalleryImageUrls.length) {
+      window.alert('Add at least one photo first.');
       return;
     }
     try {
       const payload = {
-        image_url: currentGalleryImageUrl,
+        image_urls: currentGalleryImageUrls,
         caption: document.getElementById('gallery-caption').value.trim() || null,
         date_taken: getDatePrecisionValue('gallery_date_taken'),
         location: document.getElementById('gallery-location').value.trim() || null,
@@ -742,9 +758,9 @@
       setDatePrecisionValue('gallery_date_taken', null);
       editingGalleryId = null;
       currentGalleryTags = [];
-      currentGalleryImageUrl = null;
+      currentGalleryImageUrls = [];
       renderGalleryTags();
-      renderGalleryImageThumb();
+      renderGalleryImageThumbs();
       await loadGalleryPhotos();
       showGalleryList();
     } catch (err) {

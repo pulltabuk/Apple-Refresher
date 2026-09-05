@@ -538,7 +538,8 @@
         var picks = pickRandomJS(photos, 6);
         galleryStripSection.innerHTML = picks.map(function (photo) {
           var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
-          return '<a class="gallery-strip-item" href="/gallery/' + photo.id + '/">' + (photo.image_url ? '<img src="' + escapeHtmlJS(photo.image_url) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</a>';
+          var images = galleryPhotoImagesJS(photo);
+          return '<a class="gallery-strip-item" href="/gallery/' + photo.id + '/">' + (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</a>';
         }).join('');
       })
       .catch(function () {});
@@ -610,19 +611,33 @@
     return isNaN(ms) ? '' : ms;
   }
 
+  function galleryPhotoImagesJS(photo) {
+    if (photo.image_urls && photo.image_urls.length) return photo.image_urls;
+    return photo.image_url ? [photo.image_url] : [];
+  }
+
+  function galleryTagsHtmlJS(photo) {
+    var sortedTags = (photo.tags || []).slice().sort(function (a, b) { return a.localeCompare(b); });
+    var rows = [];
+    if (photo.location) rows.push('<div class="gallery-tags-row"><span class="pill pill--location">' + escapeHtmlJS(photo.location) + '</span></div>');
+    if (sortedTags.length) rows.push('<div class="gallery-tags-row">' + sortedTags.map(function (t) { return '<span class="pill">' + escapeHtmlJS(t) + '</span>'; }).join('') + '</div>');
+    return rows.length ? '<div class="gallery-tags">' + rows.join('') + '</div>' : '';
+  }
+
   function galleryPhotoCardHtmlJS(photo) {
     var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
     var searchText = [photo.caption, photo.location].concat(photo.tags || []).filter(Boolean).join(' ').toLowerCase();
-    var tags = [];
-    if (photo.location) tags.push('<span class="pill">' + escapeHtmlJS(photo.location) + '</span>');
-    (photo.tags || []).forEach(function (t) { tags.push('<span class="pill">' + escapeHtmlJS(t) + '</span>'); });
+    var images = galleryPhotoImagesJS(photo);
     return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
       '<a class="card-link" href="/gallery/' + photo.id + '/">' +
-        '<div class="card-image">' + (photo.image_url ? '<img src="' + escapeHtmlJS(photo.image_url) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</div>' +
+        '<div class="card-image">' +
+          (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') +
+          (images.length > 1 ? '<span class="card-photo-count">' + images.length + ' photos</span>' : '') +
+        '</div>' +
         '<p class="card-name">' + escapeHtmlJS(displayName) + '</p>' +
         (photo.date_taken ? '<p class="card-meta">' + formatDateJS(photo.date_taken) + '</p>' : '') +
       '</a>' +
-      '<div class="gallery-tags">' + tags.join('') + '</div>' +
+      galleryTagsHtmlJS(photo) +
     '</article>';
   }
 
@@ -658,15 +673,14 @@
         var prevPhoto = index > 0 ? photos[index - 1] : null;
         var nextPhoto = index < photos.length - 1 ? photos[index + 1] : null;
         var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
-        var tags = [];
-        if (photo.location) tags.push('<span class="pill">' + escapeHtmlJS(photo.location) + '</span>');
-        (photo.tags || []).forEach(function (t) { tags.push('<span class="pill">' + escapeHtmlJS(t) + '</span>'); });
+        var images = galleryPhotoImagesJS(photo);
+        var imagesHtml = images.map(function (url) { return '<img src="' + escapeHtmlJS(url) + '" alt="' + escapeHtmlJS(displayName) + '">'; }).join('');
         galleryPhotoPageEl.innerHTML =
-          '<div class="card-image gallery-photo-image">' + (photo.image_url ? '<img src="' + escapeHtmlJS(photo.image_url) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</div>' +
+          '<div class="gallery-photo-images">' + imagesHtml + '</div>' +
           '<div class="gallery-photo-info">' +
             '<h1>' + escapeHtmlJS(displayName) + '</h1>' +
             (photo.date_taken ? '<p class="gallery-photo-date">' + formatDateJS(photo.date_taken) + '</p>' : '') +
-            '<div class="gallery-tags">' + tags.join('') + '</div>' +
+            galleryTagsHtmlJS(photo) +
             '<div class="gallery-photo-nav">' +
               (prevPhoto ? '<a href="/gallery/' + prevPhoto.id + '/" class="gallery-nav-link">&larr; Previous</a>' : '<span></span>') +
               '<a href="/gallery/" class="gallery-nav-link">Full Gallery</a>' +
