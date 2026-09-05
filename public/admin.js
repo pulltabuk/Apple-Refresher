@@ -95,6 +95,11 @@
     const mode = document.querySelector('input[name="timeline_mode"]:checked').value;
     document.getElementById('timeline_name_new').style.display = mode === 'new' ? '' : 'none';
     document.getElementById('timeline_name_existing').style.display = mode === 'existing' ? '' : 'none';
+    const launchDateField = document.getElementById('original_launch_date_field');
+    if (launchDateField) {
+      launchDateField.style.display = mode === 'existing' ? 'none' : '';
+      if (mode === 'existing') setDatePrecisionValue('original_launch_date', null);
+    }
   }
 
   document.querySelectorAll('input[name="timeline_mode"]').forEach((radio) => {
@@ -541,7 +546,7 @@
         apple_url: document.getElementById('apple_url').value.trim() || null,
         apple_url_unavailable: document.getElementById('apple_url_unavailable').checked,
         refresh_history: currentRefreshHistory,
-        original_launch_date: getDatePrecisionValue('original_launch_date'),
+        original_launch_date: document.querySelector('input[name="timeline_mode"]:checked').value === 'existing' ? null : getDatePrecisionValue('original_launch_date'),
         rumor_note: (function () {
           const html = document.getElementById('rumor_note_editor').innerHTML.trim();
           return html && html !== '<br>' ? html : null;

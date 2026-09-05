@@ -802,7 +802,7 @@ function aboutPage({ content, siteUrl, supabaseUrl, supabaseAnonKey }) {
 }
 
 function datePrecisionFieldHtml(prefix, label, hint) {
-  return `<div class="admin-subfield">
+  return `<div class="admin-subfield" id="${prefix}_field">
   <span class="admin-subfield-label">${label}</span>
   <div class="date-precision-radios">
     <label><input type="radio" name="${prefix}_precision" value="day" checked> Full date</label>
@@ -876,7 +876,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <select id="timeline_name_existing" style="display:none;"></select>
         </div>
         <p class="admin-hint">Every product in a line needs this set to the same value, joining it here alone doesn't link anything else in. To connect a new model to a line that already exists, pick "Join an existing product line" and choose it from the list, that guarantees an exact match rather than retyping the name.</p>
-        ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'Leave blank if this isn\u2019t a good example, the refresh history below will be used instead.')}
+        ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'Only set this on the ONE product that\u2019s the true origin of the whole line. If you\u2019re joining an existing line above, leave this blank, just add this product\u2019s own date(s) in Refresh history below.')}
 
         <div class="admin-subfield">
           <span class="admin-subfield-label">Refresh history</span>
