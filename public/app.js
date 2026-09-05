@@ -385,6 +385,11 @@
   var noResults = document.getElementById('no-results');
   var activeFilters = {};
 
+  if (searchInput) {
+    var searchFromUrl = new URLSearchParams(window.location.search).get('search');
+    if (searchFromUrl) searchInput.value = searchFromUrl;
+  }
+
   function applyFilters() {
     var query = (searchInput ? searchInput.value : '').trim().toLowerCase();
     var visibleCount = 0;
@@ -428,6 +433,7 @@
 
   wireFilterBars();
   if (searchInput) searchInput.addEventListener('input', applyFilters);
+  if (searchFromUrl) applyFilters();
 
   // --- Sort. Option values are "<attr>-<dir>": name sorts on the card's
   // name, anything else on a data-<attr> number. Cards missing that
@@ -617,10 +623,14 @@
     return photo.image_url ? [photo.image_url] : [];
   }
 
+  function galleryTagLinkJS(value, extraClass) {
+    return '<a class="pill' + (extraClass ? ' ' + extraClass : '') + '" href="/gallery/?search=' + encodeURIComponent(value) + '">' + escapeHtmlJS(value) + '</a>';
+  }
+
   function galleryTagsHtmlJS(photo, singleRow) {
     var sortedTags = (photo.tags || []).slice().sort(function (a, b) { return a.localeCompare(b); });
-    var locationPill = photo.location ? '<span class="pill pill--location">' + escapeHtmlJS(photo.location) + '</span>' : '';
-    var tagPills = sortedTags.map(function (t) { return '<span class="pill">' + escapeHtmlJS(t) + '</span>'; }).join('');
+    var locationPill = photo.location ? galleryTagLinkJS(photo.location, 'pill--location') : '';
+    var tagPills = sortedTags.map(function (t) { return galleryTagLinkJS(t); }).join('');
     if (singleRow) {
       var all = locationPill + tagPills;
       return all ? '<div class="gallery-tags"><div class="gallery-tags-row">' + all + '</div></div>' : '';
@@ -649,7 +659,7 @@
   }
 
   if (gridSection && gridSection.getAttribute('data-mode') === 'gallery' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*&order=created_at.desc', {
+    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*&order=date_taken.desc.nullslast,created_at.desc', {
       headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
     })
       .then(function (res) { return res.json(); })
@@ -668,7 +678,7 @@
   if (galleryPhotoPageEl && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     var galleryPathParts = window.location.pathname.split('/').filter(Boolean);
     var idFromUrl = galleryPathParts[galleryPathParts.length - 1];
-    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*&order=created_at.desc', {
+    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*&order=date_taken.desc.nullslast,created_at.desc', {
       headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
     })
       .then(function (res) { return res.json(); })

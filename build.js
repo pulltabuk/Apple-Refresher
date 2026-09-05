@@ -64,7 +64,7 @@ async function loadGalleryPhotos() {
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     const { createClient } = require('@supabase/supabase-js');
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data, error } = await supabase.from('gallery_photos').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('gallery_photos').select('*').order('date_taken', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
     if (error) {
       console.log('Could not load gallery photos (the table may not exist yet), building an empty gallery.');
       return [];

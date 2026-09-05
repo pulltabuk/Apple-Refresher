@@ -339,10 +339,14 @@ function galleryPhotoImages(photo) {
   return photo.image_url ? [photo.image_url] : [];
 }
 
+function galleryTagLink(value, extraClass) {
+  return `<a class="pill${extraClass ? ` ${extraClass}` : ''}" href="/gallery/?search=${encodeURIComponent(value)}">${escapeHtml(value)}</a>`;
+}
+
 function galleryTagsHtml(photo, singleRow) {
   const sortedTags = (photo.tags || []).slice().sort((a, b) => a.localeCompare(b));
-  const locationPill = photo.location ? `<span class="pill pill--location">${escapeHtml(photo.location)}</span>` : '';
-  const tagPills = sortedTags.map((t) => `<span class="pill">${escapeHtml(t)}</span>`).join('');
+  const locationPill = photo.location ? galleryTagLink(photo.location, 'pill--location') : '';
+  const tagPills = sortedTags.map((t) => galleryTagLink(t)).join('');
   if (singleRow) {
     const all = locationPill + tagPills;
     return all ? `<div class="gallery-tags"><div class="gallery-tags-row">${all}</div></div>` : '';
