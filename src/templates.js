@@ -346,14 +346,17 @@ function galleryTagLink(value, extraClass) {
 
 function galleryTagsHtml(photo, singleRow) {
   const sortedTags = (photo.tags || []).slice().sort((a, b) => a.localeCompare(b));
-  const locationPill = photo.location ? galleryTagLink(photo.location, 'pill--location') : '';
+  const placePills = [
+    photo.location ? galleryTagLink(photo.location, 'pill--location') : '',
+    photo.country ? galleryTagLink(photo.country, 'pill--location') : '',
+  ].filter(Boolean).join('');
   const tagPills = sortedTags.map((t) => galleryTagLink(t)).join('');
   if (singleRow) {
-    const all = locationPill + tagPills;
+    const all = placePills + tagPills;
     return all ? `<div class="gallery-tags"><div class="gallery-tags-row">${all}</div></div>` : '';
   }
   const rows = [
-    locationPill ? `<div class="gallery-tags-row">${locationPill}</div>` : '',
+    placePills ? `<div class="gallery-tags-row">${placePills}</div>` : '',
     tagPills ? `<div class="gallery-tags-row">${tagPills}</div>` : '',
   ].filter(Boolean).join('\n');
   return rows ? `<div class="gallery-tags">${rows}</div>` : '';
@@ -361,7 +364,7 @@ function galleryTagsHtml(photo, singleRow) {
 
 function galleryPhotoCardHtml(photo) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
-  const searchText = [photo.caption, photo.location, ...(photo.tags || [])].filter(Boolean).join(' ');
+  const searchText = [photo.caption, photo.location, photo.country, ...(photo.tags || [])].filter(Boolean).join(' ');
   const images = galleryPhotoImages(photo);
   return `<article class="card" data-date="${dateToTimestamp(photo.date_taken)}" data-search="${escapeHtml(searchText.toLowerCase())}">
   <a class="card-link" href="/gallery/${photo.id}/">
@@ -966,6 +969,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         ${datePrecisionFieldHtml('gallery_date_taken', 'Date taken')}
 
         <label>Location<input type="text" id="gallery-location" placeholder="e.g. Cardiff"></label>
+
+        <label>Country<input type="text" id="gallery-country" placeholder="e.g. United Kingdom"></label>
 
         <div class="admin-subfield">
           <span class="admin-subfield-label">Tags</span>

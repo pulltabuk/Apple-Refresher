@@ -726,6 +726,7 @@
     document.getElementById('gallery-form-title').textContent = 'Edit photo';
     document.getElementById('gallery-caption').value = photo.caption || '';
     document.getElementById('gallery-location').value = photo.location || '';
+    document.getElementById('gallery-country').value = photo.country || '';
     setDatePrecisionValue('gallery_date_taken', photo.date_taken || null);
     currentGalleryTags = (photo.tags || []).slice();
     currentGalleryImageUrls = (photo.image_urls && photo.image_urls.length ? photo.image_urls : photo.image_url ? [photo.image_url] : []).slice();
@@ -772,6 +773,7 @@
         caption: document.getElementById('gallery-caption').value.trim() || null,
         date_taken: getDatePrecisionValue('gallery_date_taken'),
         location: document.getElementById('gallery-location').value.trim() || null,
+        country: document.getElementById('gallery-country').value.trim() || null,
         tags: currentGalleryTags,
       };
       const result = editingGalleryId

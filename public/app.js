@@ -630,21 +630,24 @@
 
   function galleryTagsHtmlJS(photo, singleRow) {
     var sortedTags = (photo.tags || []).slice().sort(function (a, b) { return a.localeCompare(b); });
-    var locationPill = photo.location ? galleryTagLinkJS(photo.location, 'pill--location') : '';
+    var placePills = [];
+    if (photo.location) placePills.push(galleryTagLinkJS(photo.location, 'pill--location'));
+    if (photo.country) placePills.push(galleryTagLinkJS(photo.country, 'pill--location'));
+    var placeHtml = placePills.join('');
     var tagPills = sortedTags.map(function (t) { return galleryTagLinkJS(t); }).join('');
     if (singleRow) {
-      var all = locationPill + tagPills;
+      var all = placeHtml + tagPills;
       return all ? '<div class="gallery-tags"><div class="gallery-tags-row">' + all + '</div></div>' : '';
     }
     var rows = [];
-    if (locationPill) rows.push('<div class="gallery-tags-row">' + locationPill + '</div>');
+    if (placeHtml) rows.push('<div class="gallery-tags-row">' + placeHtml + '</div>');
     if (tagPills) rows.push('<div class="gallery-tags-row">' + tagPills + '</div>');
     return rows.length ? '<div class="gallery-tags">' + rows.join('') + '</div>' : '';
   }
 
   function galleryPhotoCardHtmlJS(photo) {
     var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
-    var searchText = [photo.caption, photo.location].concat(photo.tags || []).filter(Boolean).join(' ').toLowerCase();
+    var searchText = [photo.caption, photo.location, photo.country].concat(photo.tags || []).filter(Boolean).join(' ').toLowerCase();
     var images = galleryPhotoImagesJS(photo);
     return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
       '<a class="card-link" href="/gallery/' + photo.id + '/">' +
