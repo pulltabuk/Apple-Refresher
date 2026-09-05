@@ -97,11 +97,13 @@ async function main() {
     .filter((p) => p.discontinued)
     .sort((a, b) => new Date(b.discontinued_date || 0) - new Date(a.discontinued_date || 0));
 
-  // Current products (with refresh data or a Coming soon flag) drive the
-  // homepage. Discontinued products get their own pages and grids too.
-  const withStatus = active
-    .map((product) => ({ product, status: computeStatus(product) }))
-    .filter((i) => i.status || i.product.coming_soon);
+  // Every current product gets a page and shows up in listings, even
+  // before it has a refresh date to compute a badge from, so nothing
+  // added in the admin silently disappears while it's still being
+  // filled in. Anything actually ranked by "days since refresh" (the
+  // homepage's overdue section, the hero pick) uses `rankable` below,
+  // which does filter to real status only.
+  const withStatus = active.map((product) => ({ product, status: computeStatus(product) }));
 
   const discontinuedItems = discontinued.map((product) => ({ product, status: null }));
 

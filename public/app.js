@@ -567,8 +567,7 @@
       var categoryName = gridSection.getAttribute('data-category-name');
 
       var items = products
-        .map(function (p) { return { product: p, status: p.discontinued ? null : computeStatusJS(p) }; })
-        .filter(function (i) { return i.product.discontinued || i.status || i.product.coming_soon; });
+        .map(function (p) { return { product: p, status: p.discontinued ? null : computeStatusJS(p) }; });
 
       if (mode === 'discontinued') {
         items = items.filter(function (i) { return i.product.discontinued; })
