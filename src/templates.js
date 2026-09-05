@@ -866,7 +866,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <select id="timeline_name_existing" style="display:none;"></select>
         </div>
         <p class="admin-hint">Every product in a line needs this set to the same value, joining it here alone doesn't link anything else in. To connect a new model to a line that already exists, pick "Join an existing product line" and choose it from the list, that guarantees an exact match rather than retyping the name.</p>
-        ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'Only set this on the ONE product that\u2019s the true origin of the whole line. If you\u2019re joining an existing line above, leave this blank, just add this product\u2019s own date(s) in Refresh history below.')}
+        ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'This does not replace Refresh history below, the day-count badge is calculated from Refresh history only, so add this product\u2019s own date(s) there regardless. Only fill in this field too if this is the ONE product that\u2019s the true origin of a whole line shared with other products. If you\u2019re joining an existing line above, leave this blank.')}
 
         <div class="admin-subfield">
           <span class="admin-subfield-label">Refresh history</span>

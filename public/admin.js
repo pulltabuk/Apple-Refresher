@@ -528,6 +528,11 @@
       const name = document.getElementById('name').value.trim();
       const slug = editingId ? editingSlug : slugify(name);
 
+      const effectiveOriginalLaunchDate = document.querySelector('input[name="timeline_mode"]:checked').value === 'existing' ? null : getDatePrecisionValue('original_launch_date');
+      const refreshHistoryWithLaunch = effectiveOriginalLaunchDate && !currentRefreshHistory.includes(effectiveOriginalLaunchDate)
+        ? [...currentRefreshHistory, effectiveOriginalLaunchDate].sort()
+        : currentRefreshHistory;
+
       const payload = {
         slug,
         name,
@@ -542,8 +547,8 @@
         external_link: document.getElementById('external_link').value.trim() || null,
         apple_url: document.getElementById('apple_url').value.trim() || null,
         apple_url_unavailable: document.getElementById('apple_url_unavailable').checked,
-        refresh_history: currentRefreshHistory,
-        original_launch_date: document.querySelector('input[name="timeline_mode"]:checked').value === 'existing' ? null : getDatePrecisionValue('original_launch_date'),
+        refresh_history: refreshHistoryWithLaunch,
+        original_launch_date: effectiveOriginalLaunchDate,
         rumor_note: (function () {
           const html = document.getElementById('rumor_note_editor').innerHTML.trim();
           return html && html !== '<br>' ? html : null;
