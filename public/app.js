@@ -96,6 +96,7 @@
     if (product.discontinued && product.discontinued_date) {
       points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: product.name });
     }
+    points.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
     return points;
   }
 
@@ -616,11 +617,17 @@
     return photo.image_url ? [photo.image_url] : [];
   }
 
-  function galleryTagsHtmlJS(photo) {
+  function galleryTagsHtmlJS(photo, singleRow) {
     var sortedTags = (photo.tags || []).slice().sort(function (a, b) { return a.localeCompare(b); });
+    var locationPill = photo.location ? '<span class="pill pill--location">' + escapeHtmlJS(photo.location) + '</span>' : '';
+    var tagPills = sortedTags.map(function (t) { return '<span class="pill">' + escapeHtmlJS(t) + '</span>'; }).join('');
+    if (singleRow) {
+      var all = locationPill + tagPills;
+      return all ? '<div class="gallery-tags"><div class="gallery-tags-row">' + all + '</div></div>' : '';
+    }
     var rows = [];
-    if (photo.location) rows.push('<div class="gallery-tags-row"><span class="pill pill--location">' + escapeHtmlJS(photo.location) + '</span></div>');
-    if (sortedTags.length) rows.push('<div class="gallery-tags-row">' + sortedTags.map(function (t) { return '<span class="pill">' + escapeHtmlJS(t) + '</span>'; }).join('') + '</div>');
+    if (locationPill) rows.push('<div class="gallery-tags-row">' + locationPill + '</div>');
+    if (tagPills) rows.push('<div class="gallery-tags-row">' + tagPills + '</div>');
     return rows.length ? '<div class="gallery-tags">' + rows.join('') + '</div>' : '';
   }
 
@@ -680,7 +687,7 @@
           '<div class="gallery-photo-info">' +
             '<h1>' + escapeHtmlJS(displayName) + '</h1>' +
             (photo.date_taken ? '<p class="gallery-photo-date">' + formatDateJS(photo.date_taken) + '</p>' : '') +
-            galleryTagsHtmlJS(photo) +
+            galleryTagsHtmlJS(photo, true) +
             '<div class="gallery-photo-nav">' +
               (prevPhoto ? '<a href="/gallery/' + prevPhoto.id + '/" class="gallery-nav-link">&larr; Previous</a>' : '<span></span>') +
               '<a href="/gallery/" class="gallery-nav-link">Full Gallery</a>' +

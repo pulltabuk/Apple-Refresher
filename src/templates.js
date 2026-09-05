@@ -119,6 +119,7 @@ function categoryTimelinePoints(product, allProducts) {
   if (product.discontinued && product.discontinued_date) {
     points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: product.name });
   }
+  points.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   return points;
 }
 
@@ -338,11 +339,17 @@ function galleryPhotoImages(photo) {
   return photo.image_url ? [photo.image_url] : [];
 }
 
-function galleryTagsHtml(photo) {
+function galleryTagsHtml(photo, singleRow) {
   const sortedTags = (photo.tags || []).slice().sort((a, b) => a.localeCompare(b));
+  const locationPill = photo.location ? `<span class="pill pill--location">${escapeHtml(photo.location)}</span>` : '';
+  const tagPills = sortedTags.map((t) => `<span class="pill">${escapeHtml(t)}</span>`).join('');
+  if (singleRow) {
+    const all = locationPill + tagPills;
+    return all ? `<div class="gallery-tags"><div class="gallery-tags-row">${all}</div></div>` : '';
+  }
   const rows = [
-    photo.location ? `<div class="gallery-tags-row"><span class="pill pill--location">${escapeHtml(photo.location)}</span></div>` : '',
-    sortedTags.length ? `<div class="gallery-tags-row">${sortedTags.map((t) => `<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>` : '',
+    locationPill ? `<div class="gallery-tags-row">${locationPill}</div>` : '',
+    tagPills ? `<div class="gallery-tags-row">${tagPills}</div>` : '',
   ].filter(Boolean).join('\n');
   return rows ? `<div class="gallery-tags">${rows}</div>` : '';
 }
@@ -374,7 +381,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   <div class="gallery-photo-info">
     <h1>${escapeHtml(displayName)}</h1>
     ${photo.date_taken ? `<p class="gallery-photo-date">${formatDate(photo.date_taken)}</p>` : ''}
-    ${galleryTagsHtml(photo)}
+    ${galleryTagsHtml(photo, true)}
     <div class="gallery-photo-nav">
       ${prevPhoto ? `<a href="/gallery/${prevPhoto.id}/" class="gallery-nav-link">&larr; Previous</a>` : '<span></span>'}
       <a href="/gallery/" class="gallery-nav-link">Full Gallery</a>

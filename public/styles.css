@@ -260,8 +260,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
   text-decoration: none;
 }
 .pill:hover { background: var(--accent-blue-dark); border-color: var(--accent-blue-dark); color: #fff; }
-.pill--location { background: var(--navy); border-color: var(--navy); color: #fff; }
-.pill--location:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
+.pill--location { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
+.pill--location:hover { background: var(--accent-blue-dark); border-color: var(--accent-blue-dark); color: #fff; }
 
 .controls-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1rem; }
 .search-input {
