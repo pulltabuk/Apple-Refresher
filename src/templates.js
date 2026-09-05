@@ -170,7 +170,6 @@ function daysBetween(a, b) {
 
 function productStatusKey(product) {
   if (product.discontinued) return 'discontinued';
-  if (product.coming_soon) return 'coming-soon';
   return 'current';
 }
 
@@ -205,9 +204,6 @@ function productBadge(product, statusInfo) {
   if (product.discontinued) {
     const date = product.discontinued_date ? ` ${formatDate(product.discontinued_date)}` : '';
     return `<span class="badge badge--discontinued">Discontinued${date}</span>`;
-  }
-  if (product.coming_soon) {
-    return `<span class="badge badge--coming-soon">Coming soon</span>`;
   }
   return badgeHtml(product, statusInfo);
 }
@@ -323,8 +319,8 @@ const DISCONTINUED_SORT_OPTIONS = [
   ['name-desc', 'Name: Z to A'],
 ];
 
-const STATUS_VALUES = ['current', 'coming-soon', 'discontinued'];
-const STATUS_LABELS = ['Current', 'Coming soon', 'Discontinued'];
+const STATUS_VALUES = ['current', 'discontinued'];
+const STATUS_LABELS = ['Current', 'Discontinued'];
 
 const GALLERY_SORT_OPTIONS = [
   ['date-desc', 'Newest first'],
@@ -440,7 +436,7 @@ function galleryPage({ photos, siteUrl, supabaseUrl, supabaseAnonKey }) {
 }
 
 function emptyState(what) {
-  return `<p class="page-intro">No ${what} yet. Add one in <a href="/admin/">/admin/</a>, every product needs at least one refresh date, or a Coming soon flag, to show up here.</p>`;
+  return `<p class="page-intro">No ${what} yet. Add one in <a href="/admin/">/admin/</a> to see it here.</p>`;
 }
 
 function featuredCardHtml(product, statusInfo) {
@@ -524,7 +520,7 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const categories = [...new Set(items.map((i) => i.product.category))].sort();
   const categoryCounts = categories.map((c) => items.filter((i) => i.product.category === c).length);
   const statusCounts = STATUS_VALUES.map((v) => items.filter((i) => {
-    const s = i.product.discontinued ? 'discontinued' : i.product.coming_soon ? 'coming-soon' : 'current';
+    const s = i.product.discontinued ? 'discontinued' : 'current';
     return s === v;
   }).length);
   const body = items.length
@@ -615,7 +611,7 @@ function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }
   const currentCount = items.filter((i) => !i.product.discontinued).length;
   const discontinuedCount = items.length - currentCount;
   const statusCounts = STATUS_VALUES.map((v) => items.filter((i) => {
-    const s = i.product.discontinued ? 'discontinued' : i.product.coming_soon ? 'coming-soon' : 'current';
+    const s = i.product.discontinued ? 'discontinued' : 'current';
     return s === v;
   }).length);
   const body = `
@@ -649,9 +645,6 @@ function heroStatHtml(product, statusInfo) {
   if (product.discontinued) {
     const date = product.discontinued_date ? ` ${formatDate(product.discontinued_date)}` : '';
     return `<p class="days-hero days-hero--discontinued">Discontinued${date}</p>`;
-  }
-  if (product.coming_soon) {
-    return `<p class="days-hero days-hero--coming-soon">Coming soon</p>`;
   }
   if (!statusInfo) return '';
   const info = badgeDaysInfo(product, statusInfo);
@@ -694,15 +687,12 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
 
   const specs = [
     specRow('Category', categoryPill(product.category)),
-    specRow('Status', product.discontinued ? 'Discontinued' : product.coming_soon ? 'Coming soon' : 'Current'),
-    product.coming_soon
-      ? specRow('Expected', product.expected_date ? formatDate(product.expected_date) : 'Not yet announced')
-      : '',
+    specRow('Status', product.discontinued ? 'Discontinued' : 'Current'),
     launch ? specRow('Launched', formatDate(launch)) : '',
     latest && sortedDates.length > 1 && !product.discontinued ? specRow('Last refreshed', formatDate(latest)) : '',
     sortedDates.length > 1 ? specRow('Times refreshed', String(sortedDates.length - 1)) : '',
     status && !product.discontinued ? specRow('Typical refresh cycle', `About every ${status.avgCycleDays} days`) : '',
-    status && sortedDates.length > 1 && !product.discontinued && !product.coming_soon
+    status && sortedDates.length > 1 && !product.discontinued
       ? specRow('Next refresh expected around', new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }))
       : '',
     product.discontinued && product.discontinued_date ? specRow('Discontinued', formatDate(product.discontinued_date)) : '',
@@ -932,10 +922,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         <h3 class="admin-form-section">Homepage</h3>
         <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
-
-        <h3 class="admin-form-section">Coming soon</h3>
-        <label class="checkbox-label"><input type="checkbox" id="coming_soon"> Coming soon</label>
-        ${datePrecisionFieldHtml('expected_date', 'Expected date (if known)')}
 
         <h3 class="admin-form-section">Discontinued</h3>
         <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>

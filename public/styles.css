@@ -301,7 +301,6 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .badge--aging { background: var(--aging-bg); color: var(--aging-text); }
 .badge--overdue { background: var(--overdue-bg); color: var(--overdue-text); }
 .badge--discontinued { background: var(--discontinued-bg); color: var(--discontinued-text); }
-.badge--coming-soon { background: var(--accent-blue-bg); color: var(--accent-blue-dark); }
 
 /* Intro hero */
 .intro-hero { padding: 2rem 0 0.5rem; }
@@ -596,7 +595,6 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .days-hero--aging { background: var(--aging-bg); color: var(--aging-text); }
 .days-hero--overdue { background: var(--overdue-bg); color: var(--overdue-text); }
 .days-hero--discontinued { background: var(--discontinued-bg); color: var(--discontinued-text); font-size: 15px; font-weight: 600; padding: 8px 18px; border-radius: 999px; }
-.days-hero--coming-soon { background: var(--accent-blue-bg); color: var(--accent-blue-dark); font-size: 15px; font-weight: 600; padding: 8px 18px; border-radius: 999px; }
 .spec-row dd .wait-count-value { font-weight: 700; }
 
 .admin-hint { font-size: 12px; color: var(--text-secondary); margin: 4px 0 0; }

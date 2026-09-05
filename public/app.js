@@ -151,7 +151,6 @@
 
   function statusKeyJS(product) {
     if (product.discontinued) return 'discontinued';
-    if (product.coming_soon) return 'coming-soon';
     return 'current';
   }
 
@@ -191,7 +190,6 @@
       var date = product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '';
       return '<span class="badge badge--discontinued">Discontinued' + date + '</span>';
     }
-    if (product.coming_soon) return '<span class="badge badge--coming-soon">Coming soon</span>';
     if (!statusInfo) return '';
     var info = badgeDaysInfoJS(product, statusInfo);
     return '<span class="badge badge--' + statusInfo.status + '">' + info.days + ' days ' + info.suffix + '</span>';
@@ -256,7 +254,6 @@
       var date = product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '';
       return '<p class="days-hero days-hero--discontinued">Discontinued' + date + '</p>';
     }
-    if (product.coming_soon) return '<p class="days-hero days-hero--coming-soon">Coming soon</p>';
     if (!statusInfo) return '';
     var info = badgeDaysInfoJS(product, statusInfo);
     return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> days ' + info.suffix + '</p>';
@@ -283,13 +280,12 @@
 
     var specs = [
       specRowJS('Category', pillJS(product.category)),
-      specRowJS('Status', product.discontinued ? 'Discontinued' : product.coming_soon ? 'Coming soon' : 'Current'),
-      product.coming_soon ? specRowJS('Expected', product.expected_date ? formatDateJS(product.expected_date) : 'Not yet announced') : '',
+      specRowJS('Status', product.discontinued ? 'Discontinued' : 'Current'),
       launch ? specRowJS('Launched', formatDateJS(launch)) : '',
       latest && sortedDates.length > 1 && !product.discontinued ? specRowJS('Last refreshed', formatDateJS(latest)) : '',
       sortedDates.length > 1 ? specRowJS('Times refreshed', String(sortedDates.length - 1)) : '',
       status && !product.discontinued ? specRowJS('Typical refresh cycle', 'About every ' + status.avgCycleDays + ' days') : '',
-      status && sortedDates.length > 1 && !product.discontinued && !product.coming_soon
+      status && sortedDates.length > 1 && !product.discontinued
         ? specRowJS('Next refresh expected around', new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }))
         : '',
       product.discontinued && product.discontinued_date ? specRowJS('Discontinued', formatDateJS(product.discontinued_date)) : '',

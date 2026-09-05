@@ -85,7 +85,7 @@
     updateDatePrecisionVisibility(prefix);
   }
 
-  const DATE_FIELD_PREFIXES = ['original_launch_date', 'expected_date', 'discontinued_date', 'new_refresh_date', 'gallery_date_taken'];
+  const DATE_FIELD_PREFIXES = ['original_launch_date', 'discontinued_date', 'new_refresh_date', 'gallery_date_taken'];
 
   // --- Timeline group: New timeline (free text) or Join an existing
   // product line (a dropdown of every value already in use, so picking
@@ -304,7 +304,7 @@
       priceTd.textContent = p.price ? (/^[£$€]/.test(p.price.trim()) ? p.price : '£' + p.price) : '\u2014';
 
       const statusTd = document.createElement('td');
-      statusTd.textContent = p.discontinued ? 'Discontinued' : p.coming_soon ? 'Coming soon' : 'Active';
+      statusTd.textContent = p.discontinued ? 'Discontinued' : 'Active';
 
       const actionsTd = document.createElement('td');
       actionsTd.className = 'admin-row-actions';
@@ -467,7 +467,6 @@
     document.getElementById('apple_url_unavailable').checked = !!p.apple_url_unavailable;
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
-    document.getElementById('coming_soon').checked = !!p.coming_soon;
     document.getElementById('discontinued').checked = !!p.discontinued;
     document.getElementById('replaced_by').value = p.replaced_by || '';
     document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
@@ -475,7 +474,6 @@
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     document.getElementById('is_new_launch').checked = !!p.is_new_launch;
     setDatePrecisionValue('original_launch_date', p.original_launch_date || null);
-    setDatePrecisionValue('expected_date', p.expected_date || null);
     setDatePrecisionValue('discontinued_date', p.discontinued_date || null);
     setDatePrecisionValue('new_refresh_date', null);
     currentRefreshHistory = (p.refresh_history || []).slice();
@@ -495,7 +493,6 @@
     setTimelineName(null);
     document.getElementById('rumor_note_editor').innerHTML = '';
     setDatePrecisionValue('original_launch_date', null);
-    setDatePrecisionValue('expected_date', null);
     setDatePrecisionValue('discontinued_date', null);
     setDatePrecisionValue('new_refresh_date', null);
     currentRefreshHistory = [];
@@ -555,8 +552,6 @@
         days_basis: document.querySelector('input[name="days_basis"]:checked').value,
         is_new_launch: document.getElementById('is_new_launch').checked,
         previous_model: document.getElementById('previous_model').value.trim() || null,
-        coming_soon: document.getElementById('coming_soon').checked,
-        expected_date: getDatePrecisionValue('expected_date'),
         discontinued: document.getElementById('discontinued').checked,
         discontinued_date: getDatePrecisionValue('discontinued_date'),
         replaced_by: document.getElementById('replaced_by').value.trim() || null,
@@ -577,8 +572,7 @@
       setTimelineName(null);
       document.getElementById('rumor_note_editor').innerHTML = '';
       setDatePrecisionValue('original_launch_date', null);
-      setDatePrecisionValue('expected_date', null);
-      setDatePrecisionValue('discontinued_date', null);
+        setDatePrecisionValue('discontinued_date', null);
       setDatePrecisionValue('new_refresh_date', null);
       editingId = null;
       editingSlug = null;
