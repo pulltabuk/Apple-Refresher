@@ -71,7 +71,8 @@
   }
 
   function categoryTimelinePointsJS(product, allProducts) {
-    var sameCategory = (allProducts || []).filter(function (p) { return p.category === product.category; });
+    var groupKey = product.timeline_name || product.category;
+    var sameCategory = (allProducts || []).filter(function (p) { return (p.timeline_name || p.category) === groupKey; });
     var launchCandidates = sameCategory.map(function (p) { return p.original_launch_date; }).filter(Boolean);
 
     var points = [];

@@ -12,7 +12,7 @@ No JavaScript rendering on the way in, so it's crawlable from day one.
    `supabase-schema-update-4.sql`, then `supabase-schema-update-5.sql`,
    then `supabase-schema-update-6.sql`, then `supabase-schema-update-7.sql`,
    then `supabase-schema-update-8.sql`, then `supabase-schema-update-9.sql`, then `supabase-schema-update-10.sql`,
-   then `supabase-schema-update-11.sql`, then `supabase-schema-update-12.sql`.
+   then `supabase-schema-update-11.sql`, then `supabase-schema-update-12.sql`, then `supabase-schema-update-13.sql`.
 3. Storage: create a bucket called exactly `product-images`, and make
    sure its **Public** toggle is on. Uploads will silently produce
    broken image links if this is off, even though the upload itself

@@ -197,6 +197,19 @@
       opt.textContent = p.name;
       productOptions.appendChild(opt);
     });
+
+    // "Timeline group" picker: distinct existing values, so it's easy
+    // to join an existing group rather than accidentally creating a
+    // near-duplicate with a typo.
+    const timelineOptions = document.getElementById('timeline-options');
+    timelineOptions.innerHTML = '';
+    const timelineNames = new Set();
+    cachedProducts.forEach((p) => { if (p.timeline_name) timelineNames.add(p.timeline_name); });
+    timelineNames.forEach((t) => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      timelineOptions.appendChild(opt);
+    });
   }
 
   async function loadProducts() {
@@ -395,7 +408,15 @@
     document.getElementById('form-title').textContent = 'Edit product';
     document.getElementById('name').value = p.name || '';
     document.getElementById('category').value = p.category || '';
-    document.getElementById('price').value = p.price || '';
+    document.getElementById('timeline_name').value = p.timeline_name || '';
+    (function () {
+      const raw = (p.price || '').trim();
+      const symbolMatch = raw.match(/^[£$€]/);
+      const symbol = symbolMatch ? symbolMatch[0] : '£';
+      const radio = document.querySelector('input[name="price_currency"][value="' + symbol + '"]') || document.querySelector('input[name="price_currency"][value="£"]');
+      radio.checked = true;
+      document.getElementById('price').value = symbolMatch ? raw.slice(1) : raw;
+    })();
     document.getElementById('external_link').value = p.external_link || '';
     document.getElementById('apple_url').value = p.apple_url || '';
     document.getElementById('apple_url_unavailable').checked = !!p.apple_url_unavailable;
@@ -468,7 +489,13 @@
         slug,
         name,
         category: document.getElementById('category').value.trim() || 'Other',
-        price: document.getElementById('price').value.trim() || null,
+        timeline_name: document.getElementById('timeline_name').value.trim() || null,
+        price: (function () {
+          const raw = document.getElementById('price').value.trim();
+          if (!raw) return null;
+          const symbol = document.querySelector('input[name="price_currency"]:checked').value;
+          return symbol + raw;
+        })(),
         external_link: document.getElementById('external_link').value.trim() || null,
         apple_url: document.getElementById('apple_url').value.trim() || null,
         apple_url_unavailable: document.getElementById('apple_url_unavailable').checked,

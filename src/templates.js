@@ -93,7 +93,8 @@ function monthsBetween(a, b) {
 }
 
 function categoryTimelinePoints(product, allProducts) {
-  const sameCategory = (allProducts || []).filter((p) => p.category === product.category);
+  const groupKey = product.timeline_name || product.category;
+  const sameCategory = (allProducts || []).filter((p) => (p.timeline_name || p.category) === groupKey);
   const launchCandidates = sameCategory.map((p) => p.original_launch_date).filter(Boolean);
 
   const points = [];
@@ -850,9 +851,21 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <input type="text" id="category" list="category-options" placeholder="e.g. iPhone, Vision Pro">
           <datalist id="category-options"></datalist>
         </label>
-        <label>Starting price<input type="text" id="price" placeholder="£799"></label>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Starting price</span>
+          <div class="price-currency-row">
+            <label class="checkbox-label"><input type="radio" name="price_currency" value="£" checked> £</label>
+            <label class="checkbox-label"><input type="radio" name="price_currency" value="$"> $</label>
+            <input type="text" id="price" placeholder="799">
+          </div>
+        </div>
 
         <h3 class="admin-form-section">Timeline</h3>
+        <label>Timeline group (pick an existing one, or type a new name)
+          <input type="text" id="timeline_name" list="timeline-options" placeholder="e.g. iPhone">
+          <datalist id="timeline-options"></datalist>
+        </label>
+        <p class="admin-hint">Products sharing the same timeline group are shown together on each other's page, in order, regardless of what their Category is set to. Leave blank to fall back to grouping by Category instead.</p>
         ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'Leave blank if this isn\u2019t a good example, the refresh history below will be used instead.')}
 
         <div class="admin-subfield">
@@ -924,7 +937,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <label>Previous model (pick a product, or leave blank)
           <input type="text" id="previous_model" list="product-options" placeholder="Start typing a product name">
         </label>
-        <label>Why it went (short, e.g. "Replaced by the iPhone" or "Folded into the Pro line")<textarea id="discontinued_reason" rows="2"></textarea></label>
+        <label>Why it went (only if there's more to it than "Replaced by" already says, e.g. a design flaw, price problem, or how it was received, leave blank otherwise)<textarea id="discontinued_reason" rows="2"></textarea></label>
 
         <button type="submit" class="admin-btn admin-btn--primary">Save product</button>
       </form>
