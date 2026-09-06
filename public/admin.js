@@ -522,6 +522,26 @@
     loadProducts();
   }
 
+  // When a product declares a "Previous model", that's a deliberate,
+  // one-to-one "this replaces that" relationship, unlike Timeline group
+  // (which can validly hold multiple simultaneously-current siblings,
+  // e.g. iPhone 17 and iPhone 17 Pro). So automatic discontinuation is
+  // driven off Previous model specifically, never off Timeline group.
+  async function autoDiscontinuePreviousModel(payload) {
+    if (!payload.previous_model) return;
+    const prev = cachedProducts.find((p) => p.slug === payload.previous_model);
+    if (!prev || prev.discontinued) return;
+    const newLaunchDate = payload.original_launch_date || (payload.refresh_history && payload.refresh_history[0]) || null;
+    const result = await client.from('products').update({
+      discontinued: true,
+      replaced_by: payload.slug,
+      discontinued_date: newLaunchDate,
+    }).eq('id', prev.id);
+    if (result.error) {
+      console.error('Failed to auto-discontinue the previous model:', result.error);
+    }
+  }
+
   productForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
@@ -573,6 +593,7 @@
         window.alert('Save failed: ' + result.error.message);
         return;
       }
+      await autoDiscontinuePreviousModel(payload);
       productForm.reset();
       setTimelineName(null);
       document.getElementById('rumor_note_editor').innerHTML = '';
