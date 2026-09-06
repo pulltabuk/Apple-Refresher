@@ -98,9 +98,11 @@
         points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh', productName: product.name });
       });
     }
-    if (product.discontinued && product.discontinued_date) {
-      points.push({ date: product.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: product.name });
-    }
+    sameCategory.forEach(function (p) {
+      if (p.discontinued && p.discontinued_date) {
+        points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name });
+      }
+    });
     points.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
     return points;
   }
