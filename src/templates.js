@@ -872,7 +872,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <input type="text" id="previous_model" list="product-options" placeholder="Start typing a product name">
         </label>
         <p class="admin-hint">If this product replaces one already on the site, picking it here automatically marks that one Discontinued and fills in its "Replaced by" for you.</p>
-        ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'This does not replace Refresh history below, the day-count badge is calculated from Refresh history only, so add this product\u2019s own date(s) there regardless. Only fill in this field too if this is the ONE product that\u2019s the true origin of a whole line shared with other products. If you\u2019re joining an existing line above, leave this blank.')}
+        ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'This does not replace Refresh history below, the day-count badge is calculated from Refresh history only, so add this product\u2019s own date(s) there regardless. Only fill this in if this is the ONE product that\u2019s the true origin of a whole line, leave it blank on every other product joining that line. If another product in the same line already has this set, saving will ask before changing anything.')}
 
         <div class="admin-subfield">
           <span class="admin-subfield-label">Refresh history</span>

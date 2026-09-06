@@ -95,11 +95,6 @@
     const mode = document.querySelector('input[name="timeline_mode"]:checked').value;
     document.getElementById('timeline_name_new').style.display = mode === 'new' ? '' : 'none';
     document.getElementById('timeline_name_existing').style.display = mode === 'existing' ? '' : 'none';
-    const launchDateField = document.getElementById('original_launch_date_field');
-    if (launchDateField) {
-      launchDateField.style.display = mode === 'existing' ? 'none' : '';
-      if (mode === 'existing') setDatePrecisionValue('original_launch_date', null);
-    }
   }
 
   document.querySelectorAll('input[name="timeline_mode"]').forEach((radio) => {
@@ -548,9 +543,33 @@
       const name = document.getElementById('name').value.trim();
       const slug = editingId ? editingSlug : slugify(name);
 
-      const effectiveOriginalLaunchDate = document.querySelector('input[name="timeline_mode"]:checked').value === 'existing' ? null : getDatePrecisionValue('original_launch_date');
-      const refreshHistoryWithLaunch = effectiveOriginalLaunchDate && !currentRefreshHistory.includes(effectiveOriginalLaunchDate)
-        ? [...currentRefreshHistory, effectiveOriginalLaunchDate].sort()
+      const originalLaunchDate = getDatePrecisionValue('original_launch_date');
+      const targetGroupKey = (getTimelineName() || document.getElementById('category').value.trim() || 'Other').trim().toLowerCase();
+
+      if (originalLaunchDate) {
+        const conflict = cachedProducts.find((p) => {
+          if (p.id === editingId) return false;
+          if (!p.original_launch_date) return false;
+          const pKey = (p.timeline_name || p.category || '').trim().toLowerCase();
+          return pKey === targetGroupKey;
+        });
+        if (conflict) {
+          const proceed = window.confirm(
+            '"' + conflict.name + '" already has an Original launch date set for this same timeline. ' +
+            'Only one product per timeline should hold this date, otherwise the shared timeline gets confused about which one is the true origin.\n\n' +
+            'Click OK to move it here (this will clear it from "' + conflict.name + '"), or Cancel to leave things as they are and stop this save.'
+          );
+          if (!proceed) return;
+          const clearResult = await client.from('products').update({ original_launch_date: null }).eq('id', conflict.id);
+          if (clearResult.error) {
+            window.alert('Failed to clear the Original launch date from "' + conflict.name + '": ' + clearResult.error.message);
+            return;
+          }
+        }
+      }
+
+      const refreshHistoryWithLaunch = originalLaunchDate && !currentRefreshHistory.includes(originalLaunchDate)
+        ? [...currentRefreshHistory, originalLaunchDate].sort()
         : currentRefreshHistory;
 
       const payload = {
@@ -568,7 +587,7 @@
         apple_url: document.getElementById('apple_url').value.trim() || null,
         apple_url_unavailable: document.getElementById('apple_url_unavailable').checked,
         refresh_history: refreshHistoryWithLaunch,
-        original_launch_date: effectiveOriginalLaunchDate,
+        original_launch_date: originalLaunchDate,
         rumor_note: (function () {
           const html = document.getElementById('rumor_note_editor').innerHTML.trim();
           return html && html !== '<br>' ? html : null;
