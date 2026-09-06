@@ -113,8 +113,9 @@
     if (!points.length) return '';
     var items = points.map(function (pt, i) {
       var side = i % 2 === 0 ? 'above' : 'below';
-      return '<div class="timeline-point timeline-point--' + pt.type + ' timeline-point--' + side + '">' +
-        '<span class="timeline-point-line"></span>' +
+      var paired = (i > 0 && points[i - 1].date === pt.date) || (i < points.length - 1 && points[i + 1].date === pt.date);
+      return '<div class="timeline-point timeline-point--' + pt.type + ' timeline-point--' + side + (paired ? ' timeline-point--paired' : '') + '">' +
+        '<span class="timeline-point-line' + (paired ? ' timeline-point-line--paired' : '') + '"></span>' +
         '<span class="timeline-dot"></span>' +
         '<div class="timeline-point-content">' +
           '<p class="timeline-point-name">' + escapeHtmlJS(pt.productName) + '</p>' +
@@ -707,8 +708,8 @@
           '</div>' +
           '<div class="gallery-photo-images">' + imagesHtml + '</div>' +
           '<div class="gallery-photo-copyright">' +
-            '<p>These photos are my own property. To use one, please email me at <a href="mailto:infoswiper@yahoo.com">infoswiper@yahoo.com</a>.</p>' +
-            '<a class="intro-cta" href="' + mailtoHref + '">Can I use this photo?</a>' +
+            '<p>These photos are my own property.</p>' +
+            '<a class="intro-cta" href="' + mailtoHref + '">Request to use photo</a>' +
           '</div>' +
           '<div class="gallery-photo-nav">' +
             (prevPhoto ? '<a href="/gallery/' + prevPhoto.id + '/" class="gallery-nav-link">&larr; Previous</a>' : '<span></span>') +
