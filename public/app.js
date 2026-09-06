@@ -113,9 +113,13 @@
     if (!points.length) return '';
     var items = points.map(function (pt, i) {
       var side = i % 2 === 0 ? 'above' : 'below';
-      var paired = (i > 0 && points[i - 1].date === pt.date) || (i < points.length - 1 && points[i + 1].date === pt.date);
+      var pairedWithPrev = i > 0 && points[i - 1].date === pt.date;
+      var pairedWithNext = i < points.length - 1 && points[i + 1].date === pt.date;
+      var paired = pairedWithPrev || pairedWithNext;
+      var leftLine = i > 0 ? '<span class="timeline-point-line-half timeline-point-line-half--left' + (pairedWithPrev ? ' timeline-point-line-half--paired' : '') + '"></span>' : '';
+      var rightLine = i < points.length - 1 ? '<span class="timeline-point-line-half timeline-point-line-half--right' + (pairedWithNext ? ' timeline-point-line-half--paired' : '') + '"></span>' : '';
       return '<div class="timeline-point timeline-point--' + pt.type + ' timeline-point--' + side + (paired ? ' timeline-point--paired' : '') + '">' +
-        '<span class="timeline-point-line' + (paired ? ' timeline-point-line--paired' : '') + '"></span>' +
+        leftLine + rightLine +
         '<span class="timeline-dot"></span>' +
         '<div class="timeline-point-content">' +
           '<p class="timeline-point-name">' + escapeHtmlJS(pt.productName) + '</p>' +
@@ -508,11 +512,15 @@
 
   function featuredCardHtmlJS(product, statusInfo) {
     var extra = [product.price ? formatPriceJS(product.price) : '', product.chip].filter(Boolean).join(' \u00b7 ');
+    var daysInfo = statusInfo ? badgeDaysInfoJS(product, statusInfo) : null;
+    var countHtml = daysInfo
+      ? '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span><span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>'
+      : badgeHtmlJS(product, statusInfo);
     return '<article class="card card--featured" data-category="' + escapeHtmlJS(product.category) + '">' +
       '<a class="card-link" href="/products/' + product.slug + '/">' +
         '<span class="card-featured-label">Featured</span>' +
         '<div class="card-name-row">' + categoryIconJS(product.category, 20) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
-        badgeHtmlJS(product, statusInfo) +
+        countHtml +
         (extra ? '<p class="card-featured-extra">' + escapeHtmlJS(extra) + '</p>' : '') +
       '</a>' +
       pillJS(product.category) +
@@ -534,8 +542,8 @@
       var heroRest = heroPicks.filter(function (i) { return i !== heroFeatured; });
 
       heroCardsSection.innerHTML =
-        heroRest.map(function (r) { return cardHtmlJS(r.product, r.status); }).join('') +
-        featuredCardHtmlJS(heroFeatured.product, heroFeatured.status);
+        featuredCardHtmlJS(heroFeatured.product, heroFeatured.status) +
+        heroRest.map(function (r) { return cardHtmlJS(r.product, r.status); }).join('');
     }).catch(function () {});
   }
 
@@ -702,7 +710,10 @@
         var mailtoHref = 'mailto:infoswiper@yahoo.com?subject=' + encodeURIComponent('Can I use this photo? \u2014 ' + displayName) + '&body=' + encodeURIComponent('Hi, I\'d like to ask about using this photo:\n' + window.location.href);
         galleryPhotoPageEl.innerHTML =
           '<div class="gallery-photo-header">' +
-            '<h1>' + escapeHtmlJS(displayName) + '</h1>' +
+            '<div class="page-header-row">' +
+              '<h1>' + escapeHtmlJS(displayName) + '</h1>' +
+              '<a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>' +
+            '</div>' +
             (photo.date_taken ? '<p class="gallery-photo-date">' + formatDateJS(photo.date_taken) + '</p>' : '') +
             galleryTagsHtmlJS(photo, true) +
           '</div>' +
@@ -717,6 +728,7 @@
             (nextPhoto ? '<a href="/gallery/' + nextPhoto.id + '/" class="gallery-nav-link">Next &rarr;</a>' : '<span></span>') +
           '</div>';
         document.title = displayName + ' \u2014 Apple Refresher Gallery';
+        revealAdminEditLinks(galleryPhotoPageEl.querySelectorAll('.admin-edit-link'));
       })
       .catch(function () {});
   }

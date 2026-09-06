@@ -522,6 +522,18 @@
   // (which can validly hold multiple simultaneously-current siblings,
   // e.g. iPhone 17 and iPhone 17 Pro). So automatic discontinuation is
   // driven off Previous model specifically, never off Timeline group.
+  // Only one product should be Featured at a time, so marking a new one
+  // un-features whichever other product currently holds it.
+  async function enforceFeaturedExclusivity(payload) {
+    if (!payload.featured) return;
+    const previouslyFeatured = cachedProducts.find((p) => p.featured && p.id !== editingId);
+    if (!previouslyFeatured) return;
+    const result = await client.from('products').update({ featured: false }).eq('id', previouslyFeatured.id);
+    if (result.error) {
+      console.error('Failed to un-feature the previous product:', result.error);
+    }
+  }
+
   async function autoDiscontinuePreviousModel(payload) {
     if (!payload.previous_model) return;
     const prev = cachedProducts.find((p) => p.slug === payload.previous_model);
@@ -613,6 +625,7 @@
         return;
       }
       await autoDiscontinuePreviousModel(payload);
+      await enforceFeaturedExclusivity(payload);
       productForm.reset();
       setTimelineName(null);
       document.getElementById('rumor_note_editor').innerHTML = '';

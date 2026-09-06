@@ -136,9 +136,14 @@ function horizontalTimelineHtml(product, allProducts) {
   if (!points.length) return '';
   const items = points.map((pt, i) => {
     const side = i % 2 === 0 ? 'above' : 'below';
-    const paired = (i > 0 && points[i - 1].date === pt.date) || (i < points.length - 1 && points[i + 1].date === pt.date);
+    const pairedWithPrev = i > 0 && points[i - 1].date === pt.date;
+    const pairedWithNext = i < points.length - 1 && points[i + 1].date === pt.date;
+    const paired = pairedWithPrev || pairedWithNext;
+    const leftLine = i > 0 ? `<span class="timeline-point-line-half timeline-point-line-half--left${pairedWithPrev ? ' timeline-point-line-half--paired' : ''}"></span>` : '';
+    const rightLine = i < points.length - 1 ? `<span class="timeline-point-line-half timeline-point-line-half--right${pairedWithNext ? ' timeline-point-line-half--paired' : ''}"></span>` : '';
     return `<div class="timeline-point timeline-point--${pt.type} timeline-point--${side}${paired ? ' timeline-point--paired' : ''}">
-    <span class="timeline-point-line${paired ? ' timeline-point-line--paired' : ''}"></span>
+    ${leftLine}
+    ${rightLine}
     <span class="timeline-dot"></span>
     <div class="timeline-point-content">
       <p class="timeline-point-name">${escapeHtml(pt.productName)}</p>
@@ -392,7 +397,10 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   const body = `
 <article class="gallery-photo-page">
   <div class="gallery-photo-header">
-    <h1>${escapeHtml(displayName)}</h1>
+    <div class="page-header-row">
+      <h1>${escapeHtml(displayName)}</h1>
+      <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+    </div>
     ${photo.date_taken ? `<p class="gallery-photo-date">${formatDate(photo.date_taken)}</p>` : ''}
     ${galleryTagsHtml(photo, true)}
   </div>
@@ -421,7 +429,10 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
 function galleryPage({ photos, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const body = photos.length
     ? `
-<h1>Gallery</h1>
+<div class="page-header-row">
+  <h1>Gallery</h1>
+  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+</div>
 <p class="page-intro">Photos taken along the way, in Apple Stores and elsewhere.</p>
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search photos…" aria-label="Search photos">
@@ -432,7 +443,10 @@ function galleryPage({ photos, siteUrl, supabaseUrl, supabaseAnonKey }) {
   ${photos.map(galleryPhotoCardHtml).join('\n')}
 </div>`
     : `
-<h1>Gallery</h1>
+<div class="page-header-row">
+  <h1>Gallery</h1>
+  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+</div>
 <p class="page-intro">No photos yet. Add some in <a href="/admin/">/admin/</a>.</p>`;
   return shell({
     title: 'Gallery — Apple Refresher',
@@ -451,11 +465,15 @@ function emptyState(what) {
 
 function featuredCardHtml(product, statusInfo) {
   const extra = [product.price ? formatPrice(product.price) : '', product.chip].filter(Boolean).join(' \u00b7 ');
+  const daysInfo = statusInfo ? badgeDaysInfo(product, statusInfo) : null;
+  const countHtml = daysInfo
+    ? `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span><span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`
+    : productBadge(product, statusInfo);
   return `<article class="card card--featured" data-category="${escapeHtml(product.category)}">
   <a class="card-link" href="/products/${product.slug}/">
     <span class="card-featured-label">Featured</span>
     <div class="card-name-row">${categoryIcon(product.category, 20)}<p class="card-name">${escapeHtml(product.name)}</p></div>
-    ${productBadge(product, statusInfo)}
+    ${countHtml}
     ${extra ? `<p class="card-featured-extra">${escapeHtml(extra)}</p>` : ''}
   </a>
   ${categoryPill(product.category)}
@@ -470,7 +488,7 @@ function galleryStripItemHtml(photo) {
 
 function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const heroCardsHtml = heroFeatured
-    ? `${heroRest.map((r) => cardHtml(r.product, r.status)).join('\n')}${featuredCardHtml(heroFeatured.product, heroFeatured.status)}`
+    ? `${featuredCardHtml(heroFeatured.product, heroFeatured.status)}${heroRest.map((r) => cardHtml(r.product, r.status)).join('\n')}`
     : emptyState('products');
 
   const categoryLinksHtml = categoryLinks && categoryLinks.length
@@ -867,23 +885,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
         </div>
 
-        <h3 class="admin-form-section">Timeline</h3>
+        <h3 class="admin-form-section">Refresh history</h3>
+        <p class="admin-hint">Every product needs at least one date here, this is what the day-count badge is actually calculated from.</p>
         <div class="admin-subfield">
-          <span class="admin-subfield-label">Timeline group</span>
-          <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_new" value="new" checked> New timeline</label>
-          <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_existing" value="existing"> Join an existing product line</label>
-          <input type="text" id="timeline_name_new" placeholder="e.g. iPhone">
-          <select id="timeline_name_existing" style="display:none;"></select>
-        </div>
-        <p class="admin-hint">Every product in a line needs this set to the same value, joining it here alone doesn't link anything else in. To connect a new model to a line that already exists, pick "Join an existing product line" and choose it from the list, that guarantees an exact match rather than retyping the name.</p>
-        <label>Previous model (pick a product, or leave blank)
-          <input type="text" id="previous_model" list="product-options" placeholder="Start typing a product name">
-        </label>
-        <p class="admin-hint">If this product replaces one already on the site, picking it here automatically marks that one Discontinued and fills in its "Replaced by" for you.</p>
-        ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'This does not replace Refresh history below, the day-count badge is calculated from Refresh history only, so add this product\u2019s own date(s) there regardless. Only fill this in if this is the ONE product that\u2019s the true origin of a whole line, leave it blank on every other product joining that line. If another product in the same line already has this set, saving will ask before changing anything.')}
-
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Refresh history</span>
+          <span class="admin-subfield-label">Dates</span>
           <ul id="refresh-history-list" class="refresh-history-list"></ul>
           <div class="date-precision-radios">
             <label><input type="radio" name="new_refresh_date_precision" value="day" checked> Full date</label>
@@ -896,7 +901,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
             <button type="button" id="add-refresh-date-btn" class="admin-btn admin-btn--small">Add date</button>
           </div>
-          <p class="admin-hint">Pick a date and it's added automatically. Each one is a time this specific model was refreshed, if Original launch date above is blank, the earliest one here is treated as the launch.</p>
+          <p class="admin-hint">Pick a date and it's added automatically. Each one is a time this specific model was refreshed.</p>
         </div>
 
         <div class="admin-subfield">
@@ -906,6 +911,22 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </div>
 
         <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
+
+        <h3 class="admin-form-section">Product line</h3>
+        <p class="admin-hint">Optional: only needed if this product is part of a series with others already on the site (e.g. every iPhone model). Skip this whole section for a one-off product.</p>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Timeline group</span>
+          <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_new" value="new" checked> New timeline</label>
+          <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_existing" value="existing"> Join an existing product line</label>
+          <input type="text" id="timeline_name_new" placeholder="e.g. iPhone">
+          <select id="timeline_name_existing" style="display:none;"></select>
+        </div>
+        <p class="admin-hint">Every product in a line needs this set to the same value, joining it here alone doesn't link anything else in. To connect a new model to a line that already exists, pick "Join an existing product line" and choose it from the list, that guarantees an exact match rather than retyping the name.</p>
+        <label>Previous model (pick a product, or leave blank)
+          <input type="text" id="previous_model" list="product-options" placeholder="Start typing a product name">
+        </label>
+        <p class="admin-hint">If this product replaces one already on the site, picking it here automatically marks that one Discontinued and fills in its "Replaced by" for you.</p>
+        ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'This does not replace Refresh history above, the day-count badge is calculated from Refresh history only, so add this product\u2019s own date(s) there regardless. Only fill this in if this is the ONE product that\u2019s the true origin of a whole line, leave it blank on every other product joining that line. If another product in the same line already has this set, saving will ask before changing anything.')}
 
         <h3 class="admin-form-section">Video</h3>
         <div class="admin-subfield">
@@ -936,6 +957,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         <h3 class="admin-form-section">Homepage</h3>
         <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
+        <p class="admin-hint">Only one product can be featured at a time, choosing this one will automatically un-feature whichever product currently holds it.</p>
 
         <h3 class="admin-form-section">Discontinued</h3>
         <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
