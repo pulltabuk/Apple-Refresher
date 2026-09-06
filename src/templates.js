@@ -866,6 +866,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <select id="timeline_name_existing" style="display:none;"></select>
         </div>
         <p class="admin-hint">Every product in a line needs this set to the same value, joining it here alone doesn't link anything else in. To connect a new model to a line that already exists, pick "Join an existing product line" and choose it from the list, that guarantees an exact match rather than retyping the name.</p>
+        <label>Previous model (pick a product, or leave blank)
+          <input type="text" id="previous_model" list="product-options" placeholder="Start typing a product name">
+        </label>
+        <p class="admin-hint">If this product replaces one already on the site, picking it here automatically marks that one Discontinued and fills in its "Replaced by" for you.</p>
         ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'This does not replace Refresh history below, the day-count badge is calculated from Refresh history only, so add this product\u2019s own date(s) there regardless. Only fill in this field too if this is the ONE product that\u2019s the true origin of a whole line shared with other products. If you\u2019re joining an existing line above, leave this blank.')}
 
         <div class="admin-subfield">
@@ -929,9 +933,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <label>Replaced by (pick a product, or leave blank)
           <input type="text" id="replaced_by" list="product-options" placeholder="Start typing a product name">
           <datalist id="product-options"></datalist>
-        </label>
-        <label>Previous model (pick a product, or leave blank)
-          <input type="text" id="previous_model" list="product-options" placeholder="Start typing a product name">
         </label>
         <label>Why it went (only if there's more to it than "Replaced by" already says, e.g. a design flaw, price problem, or how it was received, leave blank otherwise)<textarea id="discontinued_reason" rows="2"></textarea></label>
 
