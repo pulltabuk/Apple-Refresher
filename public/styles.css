@@ -351,6 +351,9 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 .card--featured .card-name { font-size: 20px; }
 .card-featured-extra { font-size: 13px; color: var(--text-secondary); margin: 4px 0 0; }
+.card-featured-details { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+.card-featured-detail { font-size: 13px; color: var(--text); }
+.card-featured-detail-label { color: var(--text-secondary); margin-right: 4px; }
 .card-featured-count { display: flex; flex-direction: column; align-items: flex-start; margin: 10px 0; }
 .card-featured-count-number { font-size: 56px; font-weight: 700; line-height: 1; }
 .card-featured-count-suffix { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
@@ -453,19 +456,19 @@ label.admin-btn { cursor: pointer; color: #fff; }
   font-size: 14px;
   font-weight: 500;
   background: transparent;
-  border: none;
-  color: var(--text);
+  border: 1px solid var(--accent-blue);
+  color: var(--accent-blue);
   border-radius: 999px;
   padding: 8px 16px;
   cursor: pointer;
   text-decoration: none;
 }
-.filter-btn:hover { background: var(--accent-blue-bg); color: var(--accent-blue-dark); }
-.filter-btn-count { color: var(--text-secondary); font-weight: 400; }
-.filter-btn:hover .filter-btn-count { color: var(--accent-blue-dark); }
-.filter-btn.active { background: var(--navy); color: #fff; }
-.filter-btn.active .filter-btn-count { color: rgba(255, 255, 255, 0.65); }
-.filter-btn.active:hover { background: var(--navy); color: #fff; }
+.filter-btn:hover { background: var(--accent-blue); color: #fff; }
+.filter-btn-count { color: var(--accent-blue); font-weight: 400; opacity: 0.75; }
+.filter-btn:hover .filter-btn-count { color: #fff; opacity: 0.85; }
+.filter-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
+.filter-btn.active .filter-btn-count { color: rgba(255, 255, 255, 0.75); }
+.filter-btn.active:hover { background: var(--accent-blue); color: #fff; }
 
 /* Product page */
 .product-top { display: flex; gap: 2.5rem; align-items: flex-start; margin-top: 1.5rem; }

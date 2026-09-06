@@ -463,18 +463,25 @@ function emptyState(what) {
   return `<p class="page-intro">No ${what} yet. Add one in <a href="/admin/">/admin/</a> to see it here.</p>`;
 }
 
-function featuredCardHtml(product, statusInfo) {
+function featuredCardHtml(product, statusInfo, productsBySlug) {
   const extra = [product.price ? formatPrice(product.price) : '', product.chip].filter(Boolean).join(' \u00b7 ');
   const daysInfo = statusInfo ? badgeDaysInfo(product, statusInfo) : null;
   const countHtml = daysInfo
     ? `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span><span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`
     : productBadge(product, statusInfo);
+  const launch = launchDate(product);
+  const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
+  const detailRows = [
+    launch ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launched</span> ${formatDate(launch)}</div>` : '',
+    predecessor ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ${escapeHtml(predecessor.name)}</div>` : '',
+  ].filter(Boolean).join('\n');
   return `<article class="card card--featured" data-category="${escapeHtml(product.category)}">
   <a class="card-link" href="/products/${product.slug}/">
     <span class="card-featured-label">Featured</span>
     <div class="card-name-row">${categoryIcon(product.category, 20)}<p class="card-name">${escapeHtml(product.name)}</p></div>
     ${countHtml}
     ${extra ? `<p class="card-featured-extra">${escapeHtml(extra)}</p>` : ''}
+    ${detailRows ? `<div class="card-featured-details">${detailRows}</div>` : ''}
   </a>
   ${categoryPill(product.category)}
 </article>`;
@@ -486,9 +493,9 @@ function galleryStripItemHtml(photo) {
   return `<a class="gallery-strip-item" href="/gallery/${photo.id}/">${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}</a>`;
 }
 
-function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const heroCardsHtml = heroFeatured
-    ? `${featuredCardHtml(heroFeatured.product, heroFeatured.status)}${heroRest.map((r) => cardHtml(r.product, r.status)).join('\n')}`
+    ? `${featuredCardHtml(heroFeatured.product, heroFeatured.status, productsBySlug)}${heroRest.map((r) => cardHtml(r.product, r.status)).join('\n')}`
     : emptyState('products');
 
   const categoryLinksHtml = categoryLinks && categoryLinks.length

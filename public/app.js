@@ -510,18 +510,24 @@
     return picked;
   }
 
-  function featuredCardHtmlJS(product, statusInfo) {
+  function featuredCardHtmlJS(product, statusInfo, allProducts) {
     var extra = [product.price ? formatPriceJS(product.price) : '', product.chip].filter(Boolean).join(' \u00b7 ');
     var daysInfo = statusInfo ? badgeDaysInfoJS(product, statusInfo) : null;
     var countHtml = daysInfo
       ? '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span><span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>'
       : badgeHtmlJS(product, statusInfo);
+    var launch = launchDateJS(product);
+    var predecessor = product.previous_model && allProducts ? allProducts.filter(function (p) { return p.slug === product.previous_model; })[0] : null;
+    var detailRows = [];
+    if (launch) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launched</span> ' + formatDateJS(launch) + '</div>');
+    if (predecessor) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ' + escapeHtmlJS(predecessor.name) + '</div>');
     return '<article class="card card--featured" data-category="' + escapeHtmlJS(product.category) + '">' +
       '<a class="card-link" href="/products/' + product.slug + '/">' +
         '<span class="card-featured-label">Featured</span>' +
         '<div class="card-name-row">' + categoryIconJS(product.category, 20) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
         countHtml +
         (extra ? '<p class="card-featured-extra">' + escapeHtmlJS(extra) + '</p>' : '') +
+        (detailRows.length ? '<div class="card-featured-details">' + detailRows.join('') + '</div>' : '') +
       '</a>' +
       pillJS(product.category) +
     '</article>';
@@ -542,7 +548,7 @@
       var heroRest = heroPicks.filter(function (i) { return i !== heroFeatured; });
 
       heroCardsSection.innerHTML =
-        featuredCardHtmlJS(heroFeatured.product, heroFeatured.status) +
+        featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) +
         heroRest.map(function (r) { return cardHtmlJS(r.product, r.status); }).join('');
     }).catch(function () {});
   }
