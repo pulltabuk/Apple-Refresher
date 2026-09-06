@@ -578,6 +578,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .timeline-point-line-half { position: absolute; top: 50%; height: 2px; background: var(--border); transform: translateY(-1px); }
 .timeline-point-line-half--left { left: 0; right: 50%; }
 .timeline-point-line-half--right { left: 50%; right: 0; }
+.timeline-point:first-child .timeline-point-line-half--right { left: 0; }
+.timeline-point:last-child .timeline-point-line-half--left { right: 0; }
 .timeline-point-line-half--paired { background: var(--accent-blue); height: 3px; }
 .timeline-dot {
   position: relative;
