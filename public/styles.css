@@ -509,12 +509,14 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 
 .gallery-photo-page { max-width: 640px; margin: 1.5rem auto 0; }
+.gallery-photo-header { padding-bottom: 1.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+.gallery-photo-header h1 { font-size: 24px; margin: 0; }
+.gallery-photo-date { font-size: 14px; color: var(--text-secondary); margin: 6px 0 0; }
+.gallery-photo-header .gallery-tags { margin-top: 12px; }
 .gallery-photo-images { display: flex; flex-direction: column; gap: 12px; }
 .gallery-photo-images img { display: block; width: 100%; height: auto; border-radius: 12px; }
-.gallery-photo-info { margin-top: 1.25rem; }
-.gallery-photo-info h1 { font-size: 24px; margin: 0; }
-.gallery-photo-date { font-size: 14px; color: var(--text-secondary); margin: 6px 0 0; }
-.gallery-photo-info .gallery-tags { margin-top: 12px; }
+.gallery-photo-copyright { margin-top: 1.5rem; padding: 1.25rem 0; border-top: 1px solid var(--border); text-align: center; }
+.gallery-photo-copyright p { font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; }
 .gallery-photo-nav {
   display: flex;
   justify-content: space-between;

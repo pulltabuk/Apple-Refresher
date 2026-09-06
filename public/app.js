@@ -103,7 +103,8 @@
         points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name });
       }
     });
-    points.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    var typePriority = { discontinued: 0, launch: 1, refresh: 1 };
+    points.sort(function (a, b) { return a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]; });
     return points;
   }
 
@@ -697,17 +698,22 @@
         var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
         var images = galleryPhotoImagesJS(photo);
         var imagesHtml = images.map(function (url) { return '<img src="' + escapeHtmlJS(url) + '" alt="' + escapeHtmlJS(displayName) + '">'; }).join('');
+        var mailtoHref = 'mailto:infoswiper@yahoo.com?subject=' + encodeURIComponent('Can I use this photo? \u2014 ' + displayName) + '&body=' + encodeURIComponent('Hi, I\'d like to ask about using this photo:\n' + window.location.href);
         galleryPhotoPageEl.innerHTML =
-          '<div class="gallery-photo-images">' + imagesHtml + '</div>' +
-          '<div class="gallery-photo-info">' +
+          '<div class="gallery-photo-header">' +
             '<h1>' + escapeHtmlJS(displayName) + '</h1>' +
             (photo.date_taken ? '<p class="gallery-photo-date">' + formatDateJS(photo.date_taken) + '</p>' : '') +
             galleryTagsHtmlJS(photo, true) +
-            '<div class="gallery-photo-nav">' +
-              (prevPhoto ? '<a href="/gallery/' + prevPhoto.id + '/" class="gallery-nav-link">&larr; Previous</a>' : '<span></span>') +
-              '<a href="/gallery/" class="gallery-nav-link">Full Gallery</a>' +
-              (nextPhoto ? '<a href="/gallery/' + nextPhoto.id + '/" class="gallery-nav-link">Next &rarr;</a>' : '<span></span>') +
-            '</div>' +
+          '</div>' +
+          '<div class="gallery-photo-images">' + imagesHtml + '</div>' +
+          '<div class="gallery-photo-copyright">' +
+            '<p>These photos are my own property. To use one, please email me at <a href="mailto:infoswiper@yahoo.com">infoswiper@yahoo.com</a>.</p>' +
+            '<a class="intro-cta" href="' + mailtoHref + '">Can I use this photo?</a>' +
+          '</div>' +
+          '<div class="gallery-photo-nav">' +
+            (prevPhoto ? '<a href="/gallery/' + prevPhoto.id + '/" class="gallery-nav-link">&larr; Previous</a>' : '<span></span>') +
+            '<a href="/gallery/" class="gallery-nav-link">Full Gallery</a>' +
+            (nextPhoto ? '<a href="/gallery/' + nextPhoto.id + '/" class="gallery-nav-link">Next &rarr;</a>' : '<span></span>') +
           '</div>';
         document.title = displayName + ' \u2014 Apple Refresher Gallery';
       })

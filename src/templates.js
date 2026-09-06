@@ -126,7 +126,8 @@ function categoryTimelinePoints(product, allProducts) {
       points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name });
     }
   });
-  points.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  const typePriority = { discontinued: 0, launch: 1, refresh: 1 };
+  points.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]));
   return points;
 }
 
@@ -385,18 +386,24 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const images = galleryPhotoImages(photo);
   const imagesHtml = images.map((url) => `<img src="${escapeHtml(url)}" alt="${escapeHtml(displayName)}">`).join('\n');
+  const pageUrl = `${siteUrl}/gallery/${photo.id}/`;
+  const mailtoHref = `mailto:infoswiper@yahoo.com?subject=${encodeURIComponent(`Can I use this photo? — ${displayName}`)}&body=${encodeURIComponent(`Hi, I'd like to ask about using this photo:\n${pageUrl}`)}`;
   const body = `
 <article class="gallery-photo-page">
-  <div class="gallery-photo-images">${imagesHtml}</div>
-  <div class="gallery-photo-info">
+  <div class="gallery-photo-header">
     <h1>${escapeHtml(displayName)}</h1>
     ${photo.date_taken ? `<p class="gallery-photo-date">${formatDate(photo.date_taken)}</p>` : ''}
     ${galleryTagsHtml(photo, true)}
-    <div class="gallery-photo-nav">
-      ${prevPhoto ? `<a href="/gallery/${prevPhoto.id}/" class="gallery-nav-link">&larr; Previous</a>` : '<span></span>'}
-      <a href="/gallery/" class="gallery-nav-link">Full Gallery</a>
-      ${nextPhoto ? `<a href="/gallery/${nextPhoto.id}/" class="gallery-nav-link">Next &rarr;</a>` : '<span></span>'}
-    </div>
+  </div>
+  <div class="gallery-photo-images">${imagesHtml}</div>
+  <div class="gallery-photo-copyright">
+    <p>These photos are my own property. To use one, please email me at <a href="mailto:infoswiper@yahoo.com">infoswiper@yahoo.com</a>.</p>
+    <a class="intro-cta" href="${mailtoHref}">Can I use this photo?</a>
+  </div>
+  <div class="gallery-photo-nav">
+    ${prevPhoto ? `<a href="/gallery/${prevPhoto.id}/" class="gallery-nav-link">&larr; Previous</a>` : '<span></span>'}
+    <a href="/gallery/" class="gallery-nav-link">Full Gallery</a>
+    ${nextPhoto ? `<a href="/gallery/${nextPhoto.id}/" class="gallery-nav-link">Next &rarr;</a>` : '<span></span>'}
   </div>
 </article>`;
   return shell({
