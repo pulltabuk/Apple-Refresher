@@ -442,6 +442,7 @@
           bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
           btn.classList.add('active');
           activeFilters[key] = btn.getAttribute('data-filter-value');
+          if (searchInput) searchInput.value = '';
           applyFilters();
         });
       });
