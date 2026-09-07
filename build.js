@@ -121,14 +121,11 @@ async function main() {
     || null;
   const heroRest = heroPicks.filter((i) => i !== heroFeatured);
 
-  // The two-row "waiting longest" section: whatever's most overdue,
-  // excluding whatever's already shown in the hero above. If the
-  // catalogue is small enough that everything ranked ends up in the
-  // hero, fall back to showing the full ranked list instead of hiding
-  // this section, since an empty section reads as broken.
-  const heroIds = new Set(heroPicks.map((i) => i.product.id));
-  const overdueCandidates = rankable.filter((i) => !heroIds.has(i.product.id));
-  const overdueItems = (overdueCandidates.length ? overdueCandidates : rankable)
+  // The two-row "waiting longest" section: the true most-overdue list,
+  // regardless of what's also shown in the hero above (the hero picks
+  // randomly and changes on every load, so some overlap here is
+  // expected, not a bug, and keeps this section's ranking honest).
+  const overdueItems = rankable
     .slice()
     .sort((a, b) => b.status.ratio - a.status.ratio)
     .slice(0, 8);
