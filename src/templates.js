@@ -288,7 +288,7 @@ function cardHtml(product, statusInfo) {
   const lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetween(launch, product.discontinued_date) : '';
   const decade = product.discontinued && product.discontinued_date ? `${Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10}s` : '';
   const meta = launch && product.discontinued && product.discontinued_date
-    ? `<p class="card-meta">Lived ${lifespanText(launch, product.discontinued_date)}</p>`
+    ? `<p class="card-meta card-meta--lifespan">Lived ${lifespanText(launch, product.discontinued_date)}</p>`
     : '';
   return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <a class="card-link" href="/products/${product.slug}/">

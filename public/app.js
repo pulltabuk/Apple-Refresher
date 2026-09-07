@@ -217,7 +217,7 @@
     var lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetweenJS(launch, product.discontinued_date) : '';
     var decade = product.discontinued && product.discontinued_date ? Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10 + 's' : '';
     var meta = launch && product.discontinued && product.discontinued_date
-      ? '<p class="card-meta">Lived ' + lifespanTextJS(launch, product.discontinued_date) + '</p>'
+      ? '<p class="card-meta card-meta--lifespan">Lived ' + lifespanTextJS(launch, product.discontinued_date) + '</p>'
       : '';
     return (
       '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
@@ -409,11 +409,9 @@
     var visibleCount = 0;
     document.querySelectorAll('#grid .card').forEach(function (card) {
       var show = true;
-      Object.keys(activeFilters).forEach(function (key) {
-        var want = activeFilters[key];
-        if (want !== 'all' && card.getAttribute('data-' + key) !== want) show = false;
-      });
-      if (show && query) {
+      if (query) {
+        // A search term searches everything, regardless of which
+        // category/status filter happens to be selected right now.
         var searchAttr = card.getAttribute('data-search');
         var haystack;
         if (searchAttr !== null) {
@@ -423,6 +421,11 @@
           haystack = nameEl ? nameEl.textContent.toLowerCase() : '';
         }
         if (haystack.indexOf(query) === -1) show = false;
+      } else {
+        Object.keys(activeFilters).forEach(function (key) {
+          var want = activeFilters[key];
+          if (want !== 'all' && card.getAttribute('data-' + key) !== want) show = false;
+        });
       }
       card.style.display = show ? '' : 'none';
       if (show) visibleCount++;
