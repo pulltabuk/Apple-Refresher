@@ -267,6 +267,11 @@
       return;
     }
 
+    const sortedForDisplay = data.slice().sort((a, b) => {
+      if (!!a.featured !== !!b.featured) return a.featured ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
     const table = document.createElement('table');
     table.className = 'admin-table';
 
@@ -275,7 +280,7 @@
     table.appendChild(thead);
 
     const tbody = document.createElement('tbody');
-    data.forEach((p) => {
+    sortedForDisplay.forEach((p) => {
       const tr = document.createElement('tr');
 
       const photoTd = document.createElement('td');
@@ -309,12 +314,21 @@
       editBtn.textContent = 'Edit';
       editBtn.addEventListener('click', () => editProduct(p.id));
 
+      let featureBtn = null;
+      if (!p.featured) {
+        featureBtn = document.createElement('button');
+        featureBtn.type = 'button';
+        featureBtn.textContent = 'Make Featured';
+        featureBtn.addEventListener('click', () => makeFeatured(p));
+      }
+
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
       deleteBtn.textContent = 'Delete';
       deleteBtn.addEventListener('click', () => deleteProduct(p.id));
 
       actionsTd.appendChild(editBtn);
+      if (featureBtn) actionsTd.appendChild(featureBtn);
       actionsTd.appendChild(deleteBtn);
 
       tr.appendChild(photoTd);
@@ -506,6 +520,23 @@
     }
     showProductList();
   });
+
+  async function makeFeatured(product) {
+    const previouslyFeatured = cachedProducts.find((p) => p.featured && p.id !== product.id);
+    if (previouslyFeatured) {
+      const clearResult = await client.from('products').update({ featured: false }).eq('id', previouslyFeatured.id);
+      if (clearResult.error) {
+        window.alert('Failed to un-feature "' + previouslyFeatured.name + '": ' + clearResult.error.message);
+        return;
+      }
+    }
+    const result = await client.from('products').update({ featured: true }).eq('id', product.id);
+    if (result.error) {
+      window.alert('Failed to feature "' + product.name + '": ' + result.error.message);
+      return;
+    }
+    loadProducts();
+  }
 
   async function deleteProduct(id) {
     if (!window.confirm('Delete this product? This cannot be undone.')) return;

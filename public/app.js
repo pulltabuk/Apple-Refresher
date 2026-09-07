@@ -115,9 +115,13 @@
       var side = i % 2 === 0 ? 'above' : 'below';
       var pairedWithPrev = i > 0 && points[i - 1].date === pt.date;
       var pairedWithNext = i < points.length - 1 && points[i + 1].date === pt.date;
+      var lifespanWithPrev = i > 0 && !pairedWithPrev && points[i - 1].productName === pt.productName;
+      var lifespanWithNext = i < points.length - 1 && !pairedWithNext && points[i + 1].productName === pt.productName;
       var paired = pairedWithPrev || pairedWithNext;
-      var leftLine = i > 0 ? '<span class="timeline-point-line-half timeline-point-line-half--left' + (pairedWithPrev ? ' timeline-point-line-half--paired' : '') + '"></span>' : '';
-      var rightLine = i < points.length - 1 ? '<span class="timeline-point-line-half timeline-point-line-half--right' + (pairedWithNext ? ' timeline-point-line-half--paired' : '') + '"></span>' : '';
+      var leftMod = pairedWithPrev ? ' timeline-point-line-half--paired' : lifespanWithPrev ? ' timeline-point-line-half--lifespan' : '';
+      var rightMod = pairedWithNext ? ' timeline-point-line-half--paired' : lifespanWithNext ? ' timeline-point-line-half--lifespan' : '';
+      var leftLine = i > 0 ? '<span class="timeline-point-line-half timeline-point-line-half--left' + leftMod + '"></span>' : '';
+      var rightLine = i < points.length - 1 ? '<span class="timeline-point-line-half timeline-point-line-half--right' + rightMod + '"></span>' : '';
       return '<div class="timeline-point timeline-point--' + pt.type + ' timeline-point--' + side + (paired ? ' timeline-point--paired' : '') + '">' +
         leftLine + rightLine +
         '<span class="timeline-dot"></span>' +
@@ -598,10 +602,10 @@
         var categories = [];
         items.forEach(function (i) { if (categories.indexOf(i.product.category) === -1) categories.push(i.product.category); });
         categories.sort();
-        categoryBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">' + items.length + '</span></button>' +
+        categoryBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">(' + items.length + ')</span></button>' +
           categories.map(function (c) {
             var count = items.filter(function (i) { return i.product.category === c; }).length;
-            return '<button class="filter-btn" data-filter-value="' + escapeHtmlJS(c) + '">' + escapeHtmlJS(c) + ' <span class="filter-btn-count">' + count + '</span></button>';
+            return '<button class="filter-btn" data-filter-value="' + escapeHtmlJS(c) + '">' + escapeHtmlJS(c) + ' <span class="filter-btn-count">(' + count + ')</span></button>';
           }).join('');
       }
       var decadeBar = document.querySelector('.filter-bar[data-filter-key="decade"]');
@@ -614,10 +618,10 @@
           }
         });
         decades.sort();
-        decadeBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">' + items.length + '</span></button>' +
+        decadeBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">(' + items.length + ')</span></button>' +
           decades.map(function (d) {
             var count = items.filter(function (i) { return i.product.discontinued_date && (Math.floor(new Date(i.product.discontinued_date).getFullYear() / 10) * 10 + 's') === d; }).length;
-            return '<button class="filter-btn" data-filter-value="' + d + '">' + d + ' <span class="filter-btn-count">' + count + '</span></button>';
+            return '<button class="filter-btn" data-filter-value="' + d + '">' + d + ' <span class="filter-btn-count">(' + count + ')</span></button>';
           }).join('');
       }
       activeFilters = {};

@@ -138,9 +138,13 @@ function horizontalTimelineHtml(product, allProducts) {
     const side = i % 2 === 0 ? 'above' : 'below';
     const pairedWithPrev = i > 0 && points[i - 1].date === pt.date;
     const pairedWithNext = i < points.length - 1 && points[i + 1].date === pt.date;
+    const lifespanWithPrev = i > 0 && !pairedWithPrev && points[i - 1].productName === pt.productName;
+    const lifespanWithNext = i < points.length - 1 && !pairedWithNext && points[i + 1].productName === pt.productName;
     const paired = pairedWithPrev || pairedWithNext;
-    const leftLine = i > 0 ? `<span class="timeline-point-line-half timeline-point-line-half--left${pairedWithPrev ? ' timeline-point-line-half--paired' : ''}"></span>` : '';
-    const rightLine = i < points.length - 1 ? `<span class="timeline-point-line-half timeline-point-line-half--right${pairedWithNext ? ' timeline-point-line-half--paired' : ''}"></span>` : '';
+    const leftMod = pairedWithPrev ? ' timeline-point-line-half--paired' : lifespanWithPrev ? ' timeline-point-line-half--lifespan' : '';
+    const rightMod = pairedWithNext ? ' timeline-point-line-half--paired' : lifespanWithNext ? ' timeline-point-line-half--lifespan' : '';
+    const leftLine = i > 0 ? `<span class="timeline-point-line-half timeline-point-line-half--left${leftMod}"></span>` : '';
+    const rightLine = i < points.length - 1 ? `<span class="timeline-point-line-half timeline-point-line-half--right${rightMod}"></span>` : '';
     return `<div class="timeline-point timeline-point--${pt.type} timeline-point--${side}${paired ? ' timeline-point--paired' : ''}">
     ${leftLine}
     ${rightLine}
@@ -297,8 +301,8 @@ function cardHtml(product, statusInfo) {
 
 function filterBar(key, values, labels, counts, totalCount) {
   return `<div class="filter-bar" data-filter-key="${key}">
-  <button class="filter-btn active" data-filter-value="all">All${totalCount != null ? ` <span class="filter-btn-count">${totalCount}</span>` : ''}</button>
-  ${values.map((v, i) => `<button class="filter-btn" data-filter-value="${escapeHtml(v)}">${escapeHtml(labels ? labels[i] : v)}${counts ? ` <span class="filter-btn-count">${counts[i]}</span>` : ''}</button>`).join('\n')}
+  <button class="filter-btn active" data-filter-value="all">All${totalCount != null ? ` <span class="filter-btn-count">(${totalCount})</span>` : ''}</button>
+  ${values.map((v, i) => `<button class="filter-btn" data-filter-value="${escapeHtml(v)}">${escapeHtml(labels ? labels[i] : v)}${counts ? ` <span class="filter-btn-count">(${counts[i]})</span>` : ''}</button>`).join('\n')}
 </div>`;
 }
 
@@ -500,8 +504,8 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
 
   const categoryLinksHtml = categoryLinks && categoryLinks.length
     ? `<div class="filter-bar homepage-category-links">
-  <a class="filter-btn active" href="/products/">All <span class="filter-btn-count">${totalCount}</span></a>
-  ${categoryLinks.map((c) => `<a class="filter-btn" href="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} <span class="filter-btn-count">${c.count}</span></a>`).join('\n')}
+  <a class="filter-btn active" href="/products/">All <span class="filter-btn-count">(${totalCount})</span></a>
+  ${categoryLinks.map((c) => `<a class="filter-btn" href="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} <span class="filter-btn-count">(${c.count})</span></a>`).join('\n')}
 </div>`
     : '';
 
@@ -520,7 +524,7 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
   <div class="gallery-strip" id="gallery-strip">
     ${galleryPicks.map(galleryStripItemHtml).join('\n')}
   </div>
-  <p class="see-all"><a href="/gallery/">Full gallery &rarr;</a></p>
+  <p class="see-all"><a href="/gallery/" class="intro-cta">Full gallery &rarr;</a></p>
 </section>`
     : '';
 
