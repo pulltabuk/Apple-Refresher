@@ -138,8 +138,9 @@ function horizontalTimelineHtml(product, allProducts) {
     const side = i % 2 === 0 ? 'above' : 'below';
     const pairedWithPrev = i > 0 && points[i - 1].date === pt.date;
     const pairedWithNext = i < points.length - 1 && points[i + 1].date === pt.date;
-    const lifespanWithPrev = i > 0 && !pairedWithPrev && points[i - 1].productName === pt.productName;
-    const lifespanWithNext = i < points.length - 1 && !pairedWithNext && points[i + 1].productName === pt.productName;
+    const isLaunchDiscontinuedPair = (a, b) => (a.type === 'launch' && b.type === 'discontinued') || (a.type === 'discontinued' && b.type === 'launch');
+    const lifespanWithPrev = i > 0 && !pairedWithPrev && points[i - 1].productName === pt.productName && isLaunchDiscontinuedPair(points[i - 1], pt);
+    const lifespanWithNext = i < points.length - 1 && !pairedWithNext && points[i + 1].productName === pt.productName && isLaunchDiscontinuedPair(pt, points[i + 1]);
     const paired = pairedWithPrev || pairedWithNext;
     const leftMod = pairedWithPrev ? ' timeline-point-line-half--paired' : lifespanWithPrev ? ' timeline-point-line-half--lifespan' : '';
     const rightMod = pairedWithNext ? ' timeline-point-line-half--paired' : lifespanWithNext ? ' timeline-point-line-half--lifespan' : '';
@@ -874,6 +875,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <div id="tab-products" class="admin-tab-panel">
     <div id="product-list-view">
       <button id="new-product-btn" class="admin-btn admin-btn--primary">Add new product</button>
+      <input type="search" id="product-search-input" class="admin-search-input" placeholder="Search products by name…" aria-label="Search products">
       <div id="product-list" class="admin-list"></div>
     </div>
 

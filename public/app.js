@@ -115,8 +115,9 @@
       var side = i % 2 === 0 ? 'above' : 'below';
       var pairedWithPrev = i > 0 && points[i - 1].date === pt.date;
       var pairedWithNext = i < points.length - 1 && points[i + 1].date === pt.date;
-      var lifespanWithPrev = i > 0 && !pairedWithPrev && points[i - 1].productName === pt.productName;
-      var lifespanWithNext = i < points.length - 1 && !pairedWithNext && points[i + 1].productName === pt.productName;
+      var isLaunchDiscontinuedPair = function (a, b) { return (a.type === 'launch' && b.type === 'discontinued') || (a.type === 'discontinued' && b.type === 'launch'); };
+      var lifespanWithPrev = i > 0 && !pairedWithPrev && points[i - 1].productName === pt.productName && isLaunchDiscontinuedPair(points[i - 1], pt);
+      var lifespanWithNext = i < points.length - 1 && !pairedWithNext && points[i + 1].productName === pt.productName && isLaunchDiscontinuedPair(pt, points[i + 1]);
       var paired = pairedWithPrev || pairedWithNext;
       var leftMod = pairedWithPrev ? ' timeline-point-line-half--paired' : lifespanWithPrev ? ' timeline-point-line-half--lifespan' : '';
       var rightMod = pairedWithNext ? ' timeline-point-line-half--paired' : lifespanWithNext ? ' timeline-point-line-half--lifespan' : '';

@@ -254,20 +254,33 @@
 
   async function loadProducts() {
     const { data, error } = await client.from('products').select('*').order('name');
-    productListEl.innerHTML = '';
     if (error) {
+      productListEl.innerHTML = '';
       productListEl.textContent = 'Could not load products: ' + error.message;
       return;
     }
     cachedProducts = data;
     updateCategoryOptions();
+    renderProductList();
+  }
 
-    if (!data.length) {
+  function renderProductList() {
+    productListEl.innerHTML = '';
+
+    if (!cachedProducts.length) {
       productListEl.textContent = 'No products yet, add your first one below.';
       return;
     }
 
-    const sortedForDisplay = data.slice().sort((a, b) => {
+    const query = productSearchInputEl ? productSearchInputEl.value.trim().toLowerCase() : '';
+    const filtered = query ? cachedProducts.filter((p) => p.name.toLowerCase().includes(query)) : cachedProducts;
+
+    if (!filtered.length) {
+      productListEl.textContent = 'No products match your search.';
+      return;
+    }
+
+    const sortedForDisplay = filtered.slice().sort((a, b) => {
       if (!!a.featured !== !!b.featured) return a.featured ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
@@ -282,6 +295,7 @@
     const tbody = document.createElement('tbody');
     sortedForDisplay.forEach((p) => {
       const tr = document.createElement('tr');
+      if (p.featured) tr.className = 'admin-table-row--featured';
 
       const photoTd = document.createElement('td');
       photoTd.className = 'admin-table-photo';
@@ -342,6 +356,9 @@
     table.appendChild(tbody);
     productListEl.appendChild(table);
   }
+
+  const productSearchInputEl = document.getElementById('product-search-input');
+  if (productSearchInputEl) productSearchInputEl.addEventListener('input', renderProductList);
 
   function renderRefreshHistory() {
     refreshHistoryListEl.innerHTML = '';
