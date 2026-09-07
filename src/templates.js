@@ -898,8 +898,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
         </div>
 
-        <h3 class="admin-form-section">Refresh history</h3>
-        <p class="admin-hint">Every product needs at least one date here, this is what the day-count badge is actually calculated from.</p>
+        <h3 class="admin-form-section">Release &amp; refresh dates</h3>
+        <p class="admin-hint">This is the one place every product needs a date. Adding a brand new product or generation (like a 2nd-gen model)? Just add its release date here, that single date is both its "release" and its first entry, there's nothing else to fill in for it. If this exact model gets refreshed again later, add that date here too. This is also what the day-count badge is calculated from.</p>
         <div class="admin-subfield">
           <span class="admin-subfield-label">Dates</span>
           <ul id="refresh-history-list" class="refresh-history-list"></ul>
