@@ -134,26 +134,50 @@ function categoryTimelinePoints(product, allProducts) {
 function horizontalTimelineHtml(product, allProducts) {
   const points = categoryTimelinePoints(product, allProducts);
   if (!points.length) return '';
-  const items = points.map((pt, i) => {
+
+  // Merge adjacent same-date points into one shared position, so a
+  // discontinued model and whatever replaced it sit together at a
+  // single spot on the timeline rather than as two separate dots.
+  const groups = [];
+  let gi = 0;
+  while (gi < points.length) {
+    if (gi + 1 < points.length && points[gi].date === points[gi + 1].date) {
+      groups.push([points[gi], points[gi + 1]]);
+      gi += 2;
+    } else {
+      groups.push([points[gi]]);
+      gi += 1;
+    }
+  }
+
+  const entryHtml = (pt) => `<p class="timeline-point-name">${escapeHtml(pt.productName)}</p>
+      <p class="timeline-point-label">${pt.label}</p>
+      <p class="timeline-point-date">${formatDate(pt.date)}</p>`;
+
+  const items = groups.map((group, i) => {
+    const leftLine = i > 0 ? `<span class="timeline-point-line-half timeline-point-line-half--left"></span>` : '';
+    const rightLine = i < groups.length - 1 ? `<span class="timeline-point-line-half timeline-point-line-half--right"></span>` : '';
+    if (group.length === 2) {
+      return `<div class="timeline-point timeline-point--merged">
+    ${leftLine}
+    ${rightLine}
+    <span class="timeline-dot"></span>
+    <div class="timeline-point-content timeline-point-content--above">
+      ${entryHtml(group[0])}
+    </div>
+    <div class="timeline-point-content timeline-point-content--below">
+      ${entryHtml(group[1])}
+    </div>
+  </div>`;
+    }
+    const pt = group[0];
     const side = i % 2 === 0 ? 'above' : 'below';
-    const pairedWithPrev = i > 0 && points[i - 1].date === pt.date;
-    const pairedWithNext = i < points.length - 1 && points[i + 1].date === pt.date;
-    const isLaunchDiscontinuedPair = (a, b) => (a.type === 'launch' && b.type === 'discontinued') || (a.type === 'discontinued' && b.type === 'launch');
-    const lifespanWithPrev = i > 0 && !pairedWithPrev && points[i - 1].productName === pt.productName && isLaunchDiscontinuedPair(points[i - 1], pt);
-    const lifespanWithNext = i < points.length - 1 && !pairedWithNext && points[i + 1].productName === pt.productName && isLaunchDiscontinuedPair(pt, points[i + 1]);
-    const paired = pairedWithPrev || pairedWithNext;
-    const leftMod = pairedWithPrev ? ' timeline-point-line-half--paired' : lifespanWithPrev ? ' timeline-point-line-half--lifespan' : '';
-    const rightMod = pairedWithNext ? ' timeline-point-line-half--paired' : lifespanWithNext ? ' timeline-point-line-half--lifespan' : '';
-    const leftLine = i > 0 ? `<span class="timeline-point-line-half timeline-point-line-half--left${leftMod}"></span>` : '';
-    const rightLine = i < points.length - 1 ? `<span class="timeline-point-line-half timeline-point-line-half--right${rightMod}"></span>` : '';
-    return `<div class="timeline-point timeline-point--${pt.type} timeline-point--${side}${paired ? ' timeline-point--paired' : ''}">
+    return `<div class="timeline-point timeline-point--${pt.type} timeline-point--${side}">
     ${leftLine}
     ${rightLine}
     <span class="timeline-dot"></span>
     <div class="timeline-point-content">
-      <p class="timeline-point-name">${escapeHtml(pt.productName)}</p>
-      <p class="timeline-point-label">${pt.label}</p>
-      <p class="timeline-point-date">${formatDate(pt.date)}</p>
+      ${entryHtml(pt)}
     </div>
   </div>`;
   }).join('\n');

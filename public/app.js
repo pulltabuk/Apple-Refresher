@@ -111,26 +111,42 @@
   function horizontalTimelineHtmlJS(product, allProducts) {
     var points = categoryTimelinePointsJS(product, allProducts);
     if (!points.length) return '';
-    var items = points.map(function (pt, i) {
+
+    var groups = [];
+    var gi = 0;
+    while (gi < points.length) {
+      if (gi + 1 < points.length && points[gi].date === points[gi + 1].date) {
+        groups.push([points[gi], points[gi + 1]]);
+        gi += 2;
+      } else {
+        groups.push([points[gi]]);
+        gi += 1;
+      }
+    }
+
+    var entryHtmlJS = function (pt) {
+      return '<p class="timeline-point-name">' + escapeHtmlJS(pt.productName) + '</p>' +
+        '<p class="timeline-point-label">' + pt.label + '</p>' +
+        '<p class="timeline-point-date">' + formatDateJS(pt.date) + '</p>';
+    };
+
+    var items = groups.map(function (group, i) {
+      var leftLine = i > 0 ? '<span class="timeline-point-line-half timeline-point-line-half--left"></span>' : '';
+      var rightLine = i < groups.length - 1 ? '<span class="timeline-point-line-half timeline-point-line-half--right"></span>' : '';
+      if (group.length === 2) {
+        return '<div class="timeline-point timeline-point--merged">' +
+          leftLine + rightLine +
+          '<span class="timeline-dot"></span>' +
+          '<div class="timeline-point-content timeline-point-content--above">' + entryHtmlJS(group[0]) + '</div>' +
+          '<div class="timeline-point-content timeline-point-content--below">' + entryHtmlJS(group[1]) + '</div>' +
+        '</div>';
+      }
+      var pt = group[0];
       var side = i % 2 === 0 ? 'above' : 'below';
-      var pairedWithPrev = i > 0 && points[i - 1].date === pt.date;
-      var pairedWithNext = i < points.length - 1 && points[i + 1].date === pt.date;
-      var isLaunchDiscontinuedPair = function (a, b) { return (a.type === 'launch' && b.type === 'discontinued') || (a.type === 'discontinued' && b.type === 'launch'); };
-      var lifespanWithPrev = i > 0 && !pairedWithPrev && points[i - 1].productName === pt.productName && isLaunchDiscontinuedPair(points[i - 1], pt);
-      var lifespanWithNext = i < points.length - 1 && !pairedWithNext && points[i + 1].productName === pt.productName && isLaunchDiscontinuedPair(pt, points[i + 1]);
-      var paired = pairedWithPrev || pairedWithNext;
-      var leftMod = pairedWithPrev ? ' timeline-point-line-half--paired' : lifespanWithPrev ? ' timeline-point-line-half--lifespan' : '';
-      var rightMod = pairedWithNext ? ' timeline-point-line-half--paired' : lifespanWithNext ? ' timeline-point-line-half--lifespan' : '';
-      var leftLine = i > 0 ? '<span class="timeline-point-line-half timeline-point-line-half--left' + leftMod + '"></span>' : '';
-      var rightLine = i < points.length - 1 ? '<span class="timeline-point-line-half timeline-point-line-half--right' + rightMod + '"></span>' : '';
-      return '<div class="timeline-point timeline-point--' + pt.type + ' timeline-point--' + side + (paired ? ' timeline-point--paired' : '') + '">' +
+      return '<div class="timeline-point timeline-point--' + pt.type + ' timeline-point--' + side + '">' +
         leftLine + rightLine +
         '<span class="timeline-dot"></span>' +
-        '<div class="timeline-point-content">' +
-          '<p class="timeline-point-name">' + escapeHtmlJS(pt.productName) + '</p>' +
-          '<p class="timeline-point-label">' + pt.label + '</p>' +
-          '<p class="timeline-point-date">' + formatDateJS(pt.date) + '</p>' +
-        '</div>' +
+        '<div class="timeline-point-content">' + entryHtmlJS(pt) + '</div>' +
       '</div>';
     }).join('');
     return '<div class="timeline-horizontal">' + items + '</div>';
