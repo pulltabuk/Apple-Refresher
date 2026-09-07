@@ -587,7 +587,6 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .timeline-point:first-child { justify-content: flex-start; }
 .timeline-point:last-child { justify-content: flex-end; }
 .timeline-point:only-child { flex: 0 0 auto; justify-content: flex-start; }
-.timeline-point--paired { flex: 0 0 56px; min-width: 56px; }
 .timeline-point-line-half { position: absolute; top: 50%; height: 2px; background: var(--border); transform: translateY(-1px); }
 .timeline-point-line-half--left { left: 0; right: 50%; }
 .timeline-point-line-half--right { left: 50%; right: 0; }
