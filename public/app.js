@@ -222,7 +222,7 @@
     return (
       '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<a class="card-link" href="/products/' + product.slug + '/">' +
-          '<div class="card-name-row">' + categoryIconJS(product.category, 16) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
+          '<div class="card-name-row">' + categoryIconJS(product.category, 24) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
           badgeHtmlJS(product, statusInfo) +
           meta +
         '</a>' +
@@ -533,7 +533,7 @@
     return '<article class="card card--featured" data-category="' + escapeHtmlJS(product.category) + '">' +
       '<a class="card-link" href="/products/' + product.slug + '/">' +
         '<span class="card-featured-label">Featured</span>' +
-        '<div class="card-name-row">' + categoryIconJS(product.category, 20) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
+        '<div class="card-name-row">' + categoryIconJS(product.category, 28) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
         countHtml +
         (extra ? '<p class="card-featured-extra">' + escapeHtmlJS(extra) + '</p>' : '') +
         (detailRows.length ? '<div class="card-featured-details">' + detailRows.join('') + '</div>' : '') +
