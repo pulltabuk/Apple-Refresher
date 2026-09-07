@@ -493,15 +493,23 @@ function emptyState(what) {
 }
 
 function featuredCardHtml(product, statusInfo, productsBySlug) {
-  const extra = [product.price ? formatPrice(product.price) : '', product.chip].filter(Boolean).join(' \u00b7 ');
   const daysInfo = statusInfo ? badgeDaysInfo(product, statusInfo) : null;
   const countHtml = daysInfo
     ? `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span><span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`
     : productBadge(product, statusInfo);
   const launch = launchDate(product);
   const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
+  const nextExpected = statusInfo && !product.discontinued
+    ? new Date(new Date(statusInfo.lastRefresh).getTime() + statusInfo.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
+    : null;
   const detailRows = [
-    launch ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launched</span> ${formatDate(launch)}</div>` : '',
+    product.price ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price</span> ${escapeHtml(formatPrice(product.price))}</div>` : '',
+    launch ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ${formatDate(launch)}</div>` : '',
+    product.discontinued && product.discontinued_date
+      ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ${formatDate(product.discontinued_date)}</div>`
+      : nextExpected
+      ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Next refresh expected</span> ${nextExpected}</div>`
+      : '',
     predecessor ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ${escapeHtml(predecessor.name)}</div>` : '',
   ].filter(Boolean).join('\n');
   return `<article class="card card--featured" data-category="${escapeHtml(product.category)}">
@@ -509,7 +517,6 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
     <span class="card-featured-label">Featured</span>
     <div class="card-name-row">${categoryIcon(product.category, 28)}<p class="card-name">${escapeHtml(product.name)}</p></div>
     ${countHtml}
-    ${extra ? `<p class="card-featured-extra">${escapeHtml(extra)}</p>` : ''}
     ${detailRows ? `<div class="card-featured-details">${detailRows}</div>` : ''}
   </a>
   ${categoryPill(product.category)}

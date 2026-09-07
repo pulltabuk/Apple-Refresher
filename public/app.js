@@ -536,22 +536,29 @@
   }
 
   function featuredCardHtmlJS(product, statusInfo, allProducts) {
-    var extra = [product.price ? formatPriceJS(product.price) : '', product.chip].filter(Boolean).join(' \u00b7 ');
     var daysInfo = statusInfo ? badgeDaysInfoJS(product, statusInfo) : null;
     var countHtml = daysInfo
       ? '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span><span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>'
       : badgeHtmlJS(product, statusInfo);
     var launch = launchDateJS(product);
     var predecessor = product.previous_model && allProducts ? allProducts.filter(function (p) { return p.slug === product.previous_model; })[0] : null;
+    var nextExpected = statusInfo && !product.discontinued
+      ? new Date(new Date(statusInfo.lastRefresh).getTime() + statusInfo.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
+      : null;
     var detailRows = [];
-    if (launch) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launched</span> ' + formatDateJS(launch) + '</div>');
+    if (product.price) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price</span> ' + escapeHtmlJS(formatPriceJS(product.price)) + '</div>');
+    if (launch) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ' + formatDateJS(launch) + '</div>');
+    if (product.discontinued && product.discontinued_date) {
+      detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ' + formatDateJS(product.discontinued_date) + '</div>');
+    } else if (nextExpected) {
+      detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Next refresh expected</span> ' + nextExpected + '</div>');
+    }
     if (predecessor) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ' + escapeHtmlJS(predecessor.name) + '</div>');
     return '<article class="card card--featured" data-category="' + escapeHtmlJS(product.category) + '">' +
       '<a class="card-link" href="/products/' + product.slug + '/">' +
         '<span class="card-featured-label">Featured</span>' +
         '<div class="card-name-row">' + categoryIconJS(product.category, 28) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
         countHtml +
-        (extra ? '<p class="card-featured-extra">' + escapeHtmlJS(extra) + '</p>' : '') +
         (detailRows.length ? '<div class="card-featured-details">' + detailRows.join('') + '</div>' : '') +
       '</a>' +
       pillJS(product.category) +

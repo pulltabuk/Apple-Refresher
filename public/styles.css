@@ -362,7 +362,6 @@ label.admin-btn { cursor: pointer; color: #fff; }
   border-radius: 999px;
 }
 .card--featured .card-name { font-size: 24px; }
-.card-featured-extra { font-size: 13px; color: var(--text-secondary); margin: 4px 0 0; }
 .card-featured-details { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
 .card-featured-detail { font-size: 13px; color: var(--text); }
 .card-featured-detail-label { color: var(--text-secondary); margin-right: 4px; }
