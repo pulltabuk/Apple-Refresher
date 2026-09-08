@@ -190,8 +190,8 @@
     'Apple Watch': '<rect x="12" y="10" width="16" height="20" rx="5"/><rect x="27.5" y="17" width="3" height="6" rx="1"/>',
     AirPods: '<path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/>',
     'Vision Pro': '<path d="M6 18c0-4 3-6 14-6s14 2 14 6-3 6-14 6S6 22 6 18z"/><circle cx="15" cy="18" r="2.5"/><circle cx="25" cy="18" r="2.5"/>',
-    'Apple TV': '<rect x="5" y="11" width="30" height="19" rx="3"/><text x="20" y="24.5" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">TV</text>',
-    AirTag: '<circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="6.5"/>',
+    'Apple TV': '<rect x="9" y="9" width="22" height="22" rx="4"/><text x="20" y="24" font-size="9" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">TV</text>',
+    AirTag: '<circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="10.5"/>',
     Other: '<rect x="8" y="8" width="24" height="24" rx="4"/>',
   };
 
@@ -452,14 +452,29 @@
   }
 
   function wireFilterBars() {
-    document.querySelectorAll('.filter-bar[data-filter-key]').forEach(function (bar) {
+    var allBars = document.querySelectorAll('.filter-bar[data-filter-key]');
+    allBars.forEach(function (bar) {
       var key = bar.getAttribute('data-filter-key');
       if (!(key in activeFilters)) activeFilters[key] = 'all';
       bar.querySelectorAll('.filter-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
-          btn.classList.add('active');
-          activeFilters[key] = btn.getAttribute('data-filter-value');
+          var value = btn.getAttribute('data-filter-value');
+          if (value === 'all') {
+            allBars.forEach(function (otherBar) {
+              var otherKey = otherBar.getAttribute('data-filter-key');
+              activeFilters[otherKey] = 'all';
+              otherBar.querySelectorAll('.filter-btn').forEach(function (b) {
+                b.classList.toggle('active', b.getAttribute('data-filter-value') === 'all');
+              });
+            });
+          } else if (btn.classList.contains('active')) {
+            activeFilters[key] = 'all';
+            bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+          } else {
+            bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            activeFilters[key] = value;
+          }
           if (searchInput) searchInput.value = '';
           applyFilters();
         });
@@ -660,8 +675,7 @@
         var categories = [];
         items.forEach(function (i) { if (categories.indexOf(i.product.category) === -1) categories.push(i.product.category); });
         categories.sort();
-        categoryBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">(' + items.length + ')</span></button>' +
-          categories.map(function (c) {
+        categoryBar.innerHTML = categories.map(function (c) {
             var count = items.filter(function (i) { return i.product.category === c; }).length;
             return '<button class="filter-btn" data-filter-value="' + escapeHtmlJS(c) + '">' + escapeHtmlJS(c) + ' <span class="filter-btn-count">(' + count + ')</span></button>';
           }).join('');

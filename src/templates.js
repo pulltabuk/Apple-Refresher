@@ -5,8 +5,8 @@ const CATEGORY_ICONS = {
   'Apple Watch': `<rect x="12" y="10" width="16" height="20" rx="5"/><rect x="27.5" y="17" width="3" height="6" rx="1"/>`,
   AirPods: `<path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/>`,
   'Vision Pro': `<path d="M6 18c0-4 3-6 14-6s14 2 14 6-3 6-14 6S6 22 6 18z"/><circle cx="15" cy="18" r="2.5"/><circle cx="25" cy="18" r="2.5"/>`,
-  'Apple TV': `<rect x="5" y="11" width="30" height="19" rx="3"/><text x="20" y="24.5" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">TV</text>`,
-  AirTag: `<circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="6.5"/>`,
+  'Apple TV': `<rect x="9" y="9" width="22" height="22" rx="4"/><text x="20" y="24" font-size="9" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">TV</text>`,
+  AirTag: `<circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="10.5"/>`,
   Other: `<rect x="8" y="8" width="24" height="24" rx="4"/>`,
 };
 
@@ -275,9 +275,8 @@ ${noindex ? '<meta name="robots" content="noindex">' : ''}
       <a href="/products/">All products</a>
       <a href="/categories/">Categories</a>
       <a href="/discontinued/">Discontinued</a>
-      <a href="/gallery/">Gallery</a>
+      <a href="/gallery/">Photo Gallery</a>
       <a href="/events/">Apple Events</a>
-      <a href="/about/">About</a>
     </nav>
   </div>
 </header>
@@ -328,9 +327,9 @@ function cardHtml(product, statusInfo) {
 </article>`;
 }
 
-function filterBar(key, values, labels, counts, totalCount) {
+function filterBar(key, values, labels, counts, totalCount, showAll = true) {
   return `<div class="filter-bar" data-filter-key="${key}">
-  <button class="filter-btn active" data-filter-value="all">All${totalCount != null ? ` <span class="filter-btn-count">(${totalCount})</span>` : ''}</button>
+  ${showAll ? `<button class="filter-btn active" data-filter-value="all">All${totalCount != null ? ` <span class="filter-btn-count">(${totalCount})</span>` : ''}</button>` : ''}
   ${values.map((v, i) => `<button class="filter-btn" data-filter-value="${escapeHtml(v)}">${escapeHtml(labels ? labels[i] : v)}${counts ? ` <span class="filter-btn-count">(${counts[i]})</span>` : ''}</button>`).join('\n')}
 </div>`;
 }
@@ -660,7 +659,7 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
 ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
-${filterBar('category', categories, null, categoryCounts, items.length)}
+${filterBar('category', categories, null, categoryCounts, items.length, false)}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="all">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
