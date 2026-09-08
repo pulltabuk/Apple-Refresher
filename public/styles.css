@@ -374,7 +374,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card-featured-count--aging .card-featured-count-number { color: var(--aging-text); }
 .card-featured-count--overdue .card-featured-count-number { color: var(--overdue-text); }
 
-.card--event { justify-content: flex-start; }
+.card--event { justify-content: flex-start; border-color: var(--fresh-text); box-shadow: 0 0 0 1px var(--fresh-text); }
 .card-event-image { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; display: block; }
 .card-event-title { font-size: 20px; font-weight: 600; margin: 14px 0 0; }
 .card-event-date { font-size: 14px; color: var(--text-secondary); margin: 6px 0 0; }
@@ -422,6 +422,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
   transition: border-color 0.15s ease;
 }
 .card:hover { border-color: var(--accent-blue); }
+.card--event:hover { border-color: var(--fresh-text); }
 .card > .pill { margin-top: auto; }
 .card-link { display: flex; flex-direction: column; gap: 8px; }
 .card-name-row { display: flex; align-items: flex-start; gap: 6px; }

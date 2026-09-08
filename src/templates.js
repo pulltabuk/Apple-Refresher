@@ -560,22 +560,16 @@ function eventArchiveCardHtml(event) {
 }
 
 function eventsPage({ events, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const body = events.length
-    ? `
+  const body = `
 <div class="page-header-row">
   <h1>Apple Events</h1>
   <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
 </div>
 <p class="page-intro">A running record of every Apple Event announced here, and what was revealed at each one.</p>
-<div class="card-grid" data-mode="events">
+<p id="no-events" class="page-intro" style="display:${events.length ? 'none' : ''};">No events yet. Add one in <a href="/admin/">/admin/</a>.</p>
+<div class="card-grid" id="grid" data-mode="events">
   ${events.map(eventArchiveCardHtml).join('\n')}
-</div>`
-    : `
-<div class="page-header-row">
-  <h1>Apple Events</h1>
-  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
-</div>
-<p class="page-intro">No events yet. Add one in <a href="/admin/">/admin/</a>.</p>`;
+</div>`;
   return shell({
     title: 'Apple Events — Apple Refresher',
     description: 'A running archive of every Apple Event announced, and what was revealed at each one.',

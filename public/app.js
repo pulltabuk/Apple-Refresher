@@ -637,7 +637,7 @@
   // category page). The grid's data-mode says which products belong.
 
   var gridSection = document.getElementById('grid');
-  if (gridSection && gridSection.getAttribute('data-mode') !== 'gallery' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+  if (gridSection && gridSection.getAttribute('data-mode') !== 'gallery' && gridSection.getAttribute('data-mode') !== 'events' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     fetchAllProductsJS().then(function (products) {
       var mode = gridSection.getAttribute('data-mode') || 'all';
       var categoryName = gridSection.getAttribute('data-category-name');
@@ -739,6 +739,32 @@
       '</a>' +
       galleryTagsHtmlJS(photo) +
     '</article>';
+  }
+
+  function eventArchiveCardHtmlJS(event) {
+    var dateText = [formatDateJS(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
+    var tags = (event.announced_products || []).map(function (t) { return '<span class="pill">' + escapeHtmlJS(t) + '</span>'; }).join('');
+    var inner = '<div class="card-image">' + (event.image_url ? '<img src="' + escapeHtmlJS(event.image_url) + '" alt="' + escapeHtmlJS(event.heading) + '">' : '') + '</div>' +
+      '<p class="card-name">' + escapeHtmlJS(event.heading) + '</p>' +
+      (dateText ? '<p class="card-meta">' + escapeHtmlJS(dateText) + '</p>' : '');
+    var link = event.event_url
+      ? '<a class="card-link" href="' + escapeHtmlJS(event.event_url) + '" target="_blank" rel="noopener">' + inner + '</a>'
+      : '<div class="card-link">' + inner + '</div>';
+    return '<article class="card">' + link + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
+  }
+
+  if (gridSection && gridSection.getAttribute('data-mode') === 'events' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+    fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=*&order=event_date.desc', {
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (events) {
+        if (!Array.isArray(events)) return;
+        gridSection.innerHTML = events.map(eventArchiveCardHtmlJS).join('');
+        var noEvents = document.getElementById('no-events');
+        if (noEvents) noEvents.style.display = events.length ? 'none' : '';
+      })
+      .catch(function () {});
   }
 
   if (gridSection && gridSection.getAttribute('data-mode') === 'gallery' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
