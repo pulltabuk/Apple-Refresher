@@ -380,7 +380,6 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card-event-title { font-size: 20px; font-weight: 600; margin: 14px 0 0; }
 .card-event-date { font-size: 14px; color: var(--text-secondary); margin: 6px 0 0; }
 
-.homepage-category-links { margin-top: 3.5rem; }
 
 .homepage-section { margin-top: 2.5rem; }
 .homepage-section--divided { border-top: 1px solid var(--border); padding-top: 2rem; }
@@ -483,8 +482,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
   cursor: pointer;
   text-decoration: none;
 }
-.homepage-category-links.filter-bar { margin-top: 0; }
-.homepage-category-links .filter-btn { font-size: 14px; padding: 8px 16px; gap: 5px; }
+.homepage-category-links.filter-bar { margin-top: 5.5rem; }
+.homepage-category-links .filter-btn { font-size: 10.5px; padding: 6px 12px; gap: 4px; }
 .filter-btn:hover { background: var(--accent-blue); color: #fff; }
 .filter-btn-count { color: var(--accent-blue); font-weight: 400; opacity: 0.75; }
 .filter-btn:hover .filter-btn-count { color: #fff; opacity: 0.85; }
