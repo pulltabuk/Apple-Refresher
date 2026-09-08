@@ -5,6 +5,8 @@ const CATEGORY_ICONS = {
   'Apple Watch': `<rect x="12" y="10" width="16" height="20" rx="5"/><rect x="27.5" y="17" width="3" height="6" rx="1"/>`,
   AirPods: `<path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/>`,
   'Vision Pro': `<path d="M6 18c0-4 3-6 14-6s14 2 14 6-3 6-14 6S6 22 6 18z"/><circle cx="15" cy="18" r="2.5"/><circle cx="25" cy="18" r="2.5"/>`,
+  'Apple TV': `<rect x="5" y="11" width="30" height="19" rx="3"/><text x="20" y="24.5" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">TV</text>`,
+  AirTag: `<circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="6.5"/>`,
   Other: `<rect x="8" y="8" width="24" height="24" rx="4"/>`,
 };
 
@@ -316,7 +318,7 @@ function cardHtml(product, statusInfo) {
     : '';
   return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <a class="card-link" href="/products/${product.slug}/">
-        <div class="card-name-row">${categoryIcon(product.category, 24)}<p class="card-name">${escapeHtml(product.name)}</p></div>
+        <div class="card-name-row">${categoryIcon(product.category, 36)}<p class="card-name">${escapeHtml(product.name)}</p></div>
     ${productBadge(product, statusInfo)}
     ${meta}
   </a>
@@ -515,7 +517,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
   return `<article class="card card--featured" data-category="${escapeHtml(product.category)}">
   <a class="card-link" href="/products/${product.slug}/">
     <span class="card-featured-label">Featured</span>
-    <div class="card-name-row">${categoryIcon(product.category, 28)}<p class="card-name">${escapeHtml(product.name)}</p></div>
+    <div class="card-name-row">${categoryIcon(product.category, 42)}<p class="card-name">${escapeHtml(product.name)}</p></div>
     ${countHtml}
     ${detailRows ? `<div class="card-featured-details">${detailRows}</div>` : ''}
   </a>
@@ -923,8 +925,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <div class="admin-subfield">
           <span class="admin-subfield-label">Starting price</span>
           <div class="price-currency-row">
-            <label class="checkbox-label"><input type="radio" name="price_currency" value="£" checked> £</label>
-            <label class="checkbox-label"><input type="radio" name="price_currency" value="$"> $</label>
+            <label class="checkbox-label"><input type="radio" name="price_currency" value="£"> £</label>
+            <label class="checkbox-label"><input type="radio" name="price_currency" value="$" checked> $</label>
             <input type="text" id="price" placeholder="799">
           </div>
         </div>

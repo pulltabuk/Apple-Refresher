@@ -208,14 +208,14 @@
 
   // --- Products ---
 
-  const DEFAULT_CATEGORIES = ['iPhone', 'Mac', 'iPad', 'Apple Watch', 'AirPods', 'Vision Pro', 'Other'];
+  const DEFAULT_CATEGORIES = ['iPhone', 'Mac', 'iPad', 'Apple Watch', 'AirPods', 'Vision Pro', 'Apple TV', 'AirTag', 'Other'];
 
   function updateCategoryOptions() {
     const categoryOptions = document.getElementById('category-options');
     const categories = new Set(DEFAULT_CATEGORIES);
     cachedProducts.forEach((p) => { if (p.category) categories.add(p.category); });
     categoryOptions.innerHTML = '';
-    categories.forEach((c) => {
+    Array.from(categories).sort((a, b) => a.localeCompare(b)).forEach((c) => {
       const opt = document.createElement('option');
       opt.value = c;
       categoryOptions.appendChild(opt);
