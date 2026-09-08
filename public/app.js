@@ -196,7 +196,8 @@
   };
 
   function categoryIconJS(category, size) {
-    var shape = CATEGORY_ICON_SHAPES[category] || CATEGORY_ICON_SHAPES.Other;
+    var key = Object.keys(CATEGORY_ICON_SHAPES).find(function (k) { return k.toLowerCase() === String(category || '').toLowerCase(); });
+    var shape = (key && CATEGORY_ICON_SHAPES[key]) || CATEGORY_ICON_SHAPES.Other;
     var s = size || 40;
     return '<svg class="placeholder-icon" viewBox="0 0 40 40" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + shape + '</svg>';
   }
@@ -638,7 +639,7 @@
       .then(function (res) { return res.json(); })
       .then(function (photos) {
         if (!Array.isArray(photos) || !photos.length) return;
-        var picks = pickRandomJS(photos, 6);
+        var picks = pickRandomJS(photos, 12);
         galleryStripSection.innerHTML = picks.map(function (photo) {
           var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
           var images = galleryPhotoImagesJS(photo);

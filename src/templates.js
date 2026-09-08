@@ -11,7 +11,8 @@ const CATEGORY_ICONS = {
 };
 
 function categoryIcon(category, size) {
-  const shape = CATEGORY_ICONS[category] || CATEGORY_ICONS.Other;
+  const key = Object.keys(CATEGORY_ICONS).find((k) => k.toLowerCase() === String(category || '').toLowerCase());
+  const shape = (key && CATEGORY_ICONS[key]) || CATEGORY_ICONS.Other;
   const s = size || 40;
   return `<svg class="placeholder-icon" viewBox="0 0 40 40" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
 }
@@ -629,6 +630,7 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
     </div>
   </div>
 </section>
+<hr class="hero-divider">
 ${categoryLinksHtml}
 ${overdueSection}
 ${gallerySection}`;

@@ -154,7 +154,7 @@ async function main() {
   const categoryLinks = Object.keys(categoryTally).sort().map((c) => ({ category: c, count: categoryTally[c] }));
 
   // A handful of random gallery photos for the homepage strip.
-  const galleryPicks = pickRandom(galleryPhotos, 6);
+  const galleryPicks = pickRandom(galleryPhotos, 12);
 
   const opts = { siteUrl: SITE_URL, supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON_KEY };
 
