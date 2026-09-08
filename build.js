@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, slugify } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, launchDate, slugify } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Refresher',
@@ -126,7 +126,14 @@ async function main() {
   const discontinuedItems = discontinued.map((product) => ({ product, status: null }));
 
   // Everything with a page: current items plus discontinued ones.
-  const allItems = withStatus.concat(discontinuedItems);
+  const allItems = withStatus.concat(discontinuedItems).sort((a, b) => {
+    const dateA = launchDate(a.product);
+    const dateB = launchDate(b.product);
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
+  });
 
   // Homepage hero: 3 random current products, one marked featured (an
   // explicit "Featured on homepage" flag wins if it's among the three,

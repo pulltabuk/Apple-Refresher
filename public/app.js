@@ -665,7 +665,24 @@
         items = items.filter(function (i) { return i.product.discontinued; })
           .sort(function (a, b) { return new Date(b.product.discontinued_date || 0) - new Date(a.product.discontinued_date || 0); });
       } else if (mode === 'category') {
-        items = items.filter(function (i) { return i.product.category === categoryName; });
+        items = items.filter(function (i) { return i.product.category === categoryName; })
+          .sort(function (a, b) {
+            var dateA = launchDateJS(a.product);
+            var dateB = launchDateJS(b.product);
+            if (!dateA && !dateB) return 0;
+            if (!dateA) return 1;
+            if (!dateB) return -1;
+            return new Date(dateB) - new Date(dateA);
+          });
+      } else {
+        items = items.sort(function (a, b) {
+          var dateA = launchDateJS(a.product);
+          var dateB = launchDateJS(b.product);
+          if (!dateA && !dateB) return 0;
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return new Date(dateB) - new Date(dateA);
+        });
       }
 
       gridSection.innerHTML = items.map(function (i) { return cardHtmlJS(i.product, i.status); }).join('');

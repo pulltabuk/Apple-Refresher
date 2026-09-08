@@ -1185,6 +1185,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 module.exports = {
   sanitizeRichText,
   categoryTimelinePoints,
+  launchDate,
   galleryPage,
   galleryPhotoPage,
   galleryPhotoCardHtml,
