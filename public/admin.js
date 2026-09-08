@@ -132,6 +132,7 @@
   // --- Tabs ---
 
   let galleryLoaded = false;
+  let eventLoaded = false;
   document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.admin-tab-btn').forEach((b) => b.classList.remove('active'));
@@ -139,10 +140,15 @@
       const tab = btn.getAttribute('data-tab');
       document.getElementById('tab-products').style.display = tab === 'products' ? 'block' : 'none';
       document.getElementById('tab-gallery').style.display = tab === 'gallery' ? 'block' : 'none';
+      document.getElementById('tab-event').style.display = tab === 'event' ? 'block' : 'none';
       document.getElementById('tab-about').style.display = tab === 'about' ? 'block' : 'none';
       if (tab === 'gallery' && !galleryLoaded) {
         galleryLoaded = true;
         loadGalleryPhotos();
+      }
+      if (tab === 'event' && !eventLoaded) {
+        eventLoaded = true;
+        loadEvent();
       }
     });
   });
@@ -978,6 +984,99 @@
     } catch (err) {
       window.alert('Upload failed: ' + err.message);
     }
+  });
+
+  // --- Apple Event ---
+
+  function renderEventImageThumb() {
+    const thumbEl = document.getElementById('event-image-thumb');
+    const url = document.getElementById('event_image_url').value;
+    thumbEl.innerHTML = '';
+    if (!url) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-thumb';
+    const img = document.createElement('img');
+    img.src = url;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '\u00d7';
+    removeBtn.setAttribute('aria-label', 'Remove image');
+    removeBtn.addEventListener('click', () => {
+      document.getElementById('event_image_url').value = '';
+      renderEventImageThumb();
+    });
+    wrap.appendChild(img);
+    wrap.appendChild(removeBtn);
+    thumbEl.appendChild(wrap);
+  }
+
+  document.getElementById('event-image-upload').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      document.getElementById('event_image_url').value = await uploadFile(file);
+      renderEventImageThumb();
+    } catch (err) {
+      window.alert('Upload failed: ' + err.message);
+    }
+    e.target.value = '';
+  });
+
+  function renderEventStatus(data) {
+    const statusEl = document.getElementById('event-status');
+    if (!data || !data.event_date) {
+      statusEl.textContent = 'No event set, the homepage is showing a regular featured product.';
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    if (data.event_date >= today) {
+      statusEl.textContent = 'Active on the homepage until ' + data.event_date + '.';
+    } else {
+      statusEl.textContent = 'This event\u2019s date (' + data.event_date + ') has passed, the homepage has already gone back to showing a regular featured product. Saving a new date will bring it back.';
+    }
+  }
+
+  async function loadEvent() {
+    const { data } = await client.from('site_content').select('*').eq('id', 'event').maybeSingle();
+    document.getElementById('event_heading').value = (data && data.heading) || '';
+    document.getElementById('event_image_url').value = (data && data.image_url) || '';
+    document.getElementById('event_date').value = (data && data.event_date) || '';
+    document.getElementById('event_time').value = (data && data.event_time) || '';
+    renderEventImageThumb();
+    renderEventStatus(data);
+  }
+
+  document.getElementById('event-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      id: 'event',
+      heading: document.getElementById('event_heading').value.trim(),
+      image_url: document.getElementById('event_image_url').value.trim() || null,
+      event_date: document.getElementById('event_date').value || null,
+      event_time: document.getElementById('event_time').value.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+    if (!payload.heading || !payload.image_url || !payload.event_date) {
+      window.alert('Title, image, and event date are all needed for the event to show up on the homepage.');
+      return;
+    }
+    const { error } = await client.from('site_content').upsert(payload);
+    if (error) {
+      window.alert('Save failed: ' + error.message);
+      return;
+    }
+    renderEventStatus(payload);
+    window.alert('Event saved.');
+  });
+
+  document.getElementById('event-remove-btn').addEventListener('click', async () => {
+    if (!window.confirm('Remove the event? The homepage will go back to showing a regular featured product.')) return;
+    const { error } = await client.from('site_content').update({ event_date: null }).eq('id', 'event');
+    if (error) {
+      window.alert('Failed to remove: ' + error.message);
+      return;
+    }
+    loadEvent();
   });
 
   // --- About page ---

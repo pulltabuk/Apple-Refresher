@@ -60,6 +60,19 @@ async function loadSiteContent() {
   return DEFAULT_ABOUT;
 }
 
+async function loadActiveEvent() {
+  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data, error } = await supabase.from('site_content').select('*').eq('id', 'event').maybeSingle();
+    if (error || !data || !data.event_date || !data.image_url || !data.heading) return null;
+    // Active through the end of its own date, not just up to midnight.
+    const today = new Date().toISOString().slice(0, 10);
+    return data.event_date >= today ? data : null;
+  }
+  return null;
+}
+
 async function loadGalleryPhotos() {
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     const { createClient } = require('@supabase/supabase-js');
@@ -87,6 +100,7 @@ function pickRandom(arr, n) {
 async function main() {
   const products = await loadProducts();
   const aboutContent = await loadSiteContent();
+  const activeEvent = await loadActiveEvent();
   const galleryPhotos = await loadGalleryPhotos();
 
   const productsBySlug = {};
@@ -148,6 +162,7 @@ async function main() {
     totalCount: products.length,
     galleryPicks,
     productsBySlug,
+    activeEvent,
     ...opts,
   }));
   write('products/index.html', allProductsPage({ items: allItems, ...opts }));

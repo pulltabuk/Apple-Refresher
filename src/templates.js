@@ -531,9 +531,24 @@ function galleryStripItemHtml(photo) {
   return `<a class="gallery-strip-item" href="/gallery/${photo.id}/">${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}</a>`;
 }
 
-function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const heroCardsHtml = heroFeatured
-    ? `${featuredCardHtml(heroFeatured.product, heroFeatured.status, productsBySlug)}${heroRest.map((r) => cardHtml(r.product, r.status)).join('\n')}`
+function eventCardHtml(event) {
+  const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
+  return `<article class="card card--featured card--event">
+  <span class="card-featured-label">Apple Event</span>
+  ${event.image_url ? `<img class="card-event-image" src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}
+  <p class="card-event-title">${escapeHtml(event.heading)}</p>
+  ${dateText ? `<p class="card-event-date">${escapeHtml(dateText)}</p>` : ''}
+</article>`;
+}
+
+function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const featuredSlotHtml = activeEvent
+    ? eventCardHtml(activeEvent)
+    : heroFeatured
+    ? featuredCardHtml(heroFeatured.product, heroFeatured.status, productsBySlug)
+    : '';
+  const heroCardsHtml = heroFeatured || activeEvent
+    ? `${featuredSlotHtml}${heroRest.map((r) => cardHtml(r.product, r.status)).join('\n')}`
     : emptyState('products');
 
   const categoryLinksHtml = categoryLinks && categoryLinks.length
@@ -900,6 +915,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     <div class="admin-tabs">
       <button type="button" class="admin-tab-btn active" data-tab="products">Products</button>
       <button type="button" class="admin-tab-btn" data-tab="gallery">Gallery</button>
+      <button type="button" class="admin-tab-btn" data-tab="event">Apple Event</button>
       <button type="button" class="admin-tab-btn" data-tab="about">About page</button>
     </div>
     <button id="logout-btn" class="admin-btn">Log out</button>
@@ -1056,6 +1072,27 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <button type="submit" class="admin-btn admin-btn--primary">Save photo</button>
       </form>
     </div>
+  </div>
+
+  <div id="tab-event" class="admin-tab-panel" style="display:none;">
+    <p class="admin-hint">When set, this replaces the regular featured product on the homepage until the event date passes, then the site automatically goes back to showing a featured product on its own, no need to remove anything manually.</p>
+    <p id="event-status" class="admin-hint"></p>
+    <form id="event-form" class="admin-form">
+      <label>Title<input type="text" id="event_heading" placeholder="e.g. Apple Event: It's Glowtime"></label>
+      <div class="admin-subfield">
+        <span class="admin-subfield-label">Image</span>
+        <div id="event-image-thumb" class="admin-thumbs"></div>
+        <label for="event-image-upload" class="admin-btn admin-btn--small admin-btn--primary">Choose image</label>
+        <input type="file" id="event-image-upload" accept="image/*" class="admin-file-input">
+      </div>
+      <input type="hidden" id="event_image_url">
+      <label>Event date<input type="date" id="event_date"></label>
+      <label>Event time (optional, your own wording, e.g. "10am PT")<input type="text" id="event_time" placeholder="10am PT"></label>
+      <div class="admin-form-buttons">
+        <button type="submit" class="admin-btn admin-btn--primary">Save event</button>
+        <button type="button" id="event-remove-btn" class="admin-btn">Remove event</button>
+      </div>
+    </form>
   </div>
 
   <div id="tab-about" class="admin-tab-panel" style="display:none;">

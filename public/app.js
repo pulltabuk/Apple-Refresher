@@ -567,22 +567,49 @@
     '</article>';
   }
 
+  function eventCardHtmlJS(event) {
+    var dateText = [formatDateJS(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
+    return '<article class="card card--featured card--event">' +
+      '<span class="card-featured-label">Apple Event</span>' +
+      (event.image_url ? '<img class="card-event-image" src="' + escapeHtmlJS(event.image_url) + '" alt="' + escapeHtmlJS(event.heading) + '">' : '') +
+      '<p class="card-event-title">' + escapeHtmlJS(event.heading) + '</p>' +
+      (dateText ? '<p class="card-event-date">' + escapeHtmlJS(dateText) + '</p>' : '') +
+    '</article>';
+  }
+
+  function fetchActiveEventJS() {
+    return fetch(window.SUPABASE_URL + '/rest/v1/site_content?id=eq.event&select=*', {
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (rows) {
+        var event = rows && rows[0];
+        if (!event || !event.event_date || !event.image_url || !event.heading) return null;
+        var today = new Date().toISOString().slice(0, 10);
+        return event.event_date >= today ? event : null;
+      })
+      .catch(function () { return null; });
+  }
+
   var heroCardsSection = document.getElementById('hero-cards');
   if (heroCardsSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-    fetchAllProductsJS().then(function (products) {
+    Promise.all([fetchAllProductsJS(), fetchActiveEventJS()]).then(function (results) {
+      var products = results[0];
+      var activeEvent = results[1];
       var active = products.filter(function (p) { return !p.discontinued; });
       var withStatus = active
         .map(function (p) { return { product: p, status: computeStatusJS(p) }; })
         .filter(function (i) { return i.status; });
-      if (!withStatus.length) return;
+      if (!withStatus.length && !activeEvent) return;
 
-      var heroPicks = pickRandomJS(withStatus, 3);
-      var heroFeatured = heroPicks.filter(function (i) { return i.product.featured; })[0]
-        || heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0];
-      var heroRest = heroPicks.filter(function (i) { return i !== heroFeatured; });
+      var heroPicks = pickRandomJS(withStatus, activeEvent ? 2 : 3);
+      var heroFeatured = activeEvent ? null : (heroPicks.filter(function (i) { return i.product.featured; })[0]
+        || heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0]);
+      var heroRest = activeEvent ? heroPicks : heroPicks.filter(function (i) { return i !== heroFeatured; });
 
+      var featuredSlotHtml = activeEvent ? eventCardHtmlJS(activeEvent) : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');
       heroCardsSection.innerHTML =
-        featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) +
+        featuredSlotHtml +
         heroRest.map(function (r) { return cardHtmlJS(r.product, r.status); }).join('');
     }).catch(function () {});
   }
