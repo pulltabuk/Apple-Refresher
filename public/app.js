@@ -569,24 +569,25 @@
 
   function eventCardHtmlJS(event) {
     var dateText = [formatDateJS(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
-    return '<article class="card card--featured card--event">' +
-      '<span class="card-featured-label">Apple Event</span>' +
-      (event.image_url ? '<img class="card-event-image" src="' + escapeHtmlJS(event.image_url) + '" alt="' + escapeHtmlJS(event.heading) + '">' : '') +
+    var inner = (event.image_url ? '<img class="card-event-image" src="' + escapeHtmlJS(event.image_url) + '" alt="' + escapeHtmlJS(event.heading) + '">' : '') +
       '<p class="card-event-title">' + escapeHtmlJS(event.heading) + '</p>' +
       (dateText ? '<p class="card-event-date">' + escapeHtmlJS(dateText) + '</p>' : '') +
-    '</article>';
+      '<span class="card-featured-label card-featured-label--bottom">Apple Event</span>';
+    return event.event_url
+      ? '<a class="card card--featured card--event" href="' + escapeHtmlJS(event.event_url) + '" target="_blank" rel="noopener">' + inner + '</a>'
+      : '<article class="card card--featured card--event">' + inner + '</article>';
   }
 
   function fetchActiveEventJS() {
-    return fetch(window.SUPABASE_URL + '/rest/v1/site_content?id=eq.event&select=*', {
+    return fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=*&order=event_date.asc', {
       headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
     })
       .then(function (res) { return res.json(); })
       .then(function (rows) {
-        var event = rows && rows[0];
-        if (!event || !event.event_date || !event.image_url || !event.heading) return null;
+        if (!Array.isArray(rows)) return null;
         var today = new Date().toISOString().slice(0, 10);
-        return event.event_date >= today ? event : null;
+        var upcoming = rows.filter(function (e) { return e.event_date >= today; });
+        return upcoming[0] || null;
       })
       .catch(function () { return null; });
   }

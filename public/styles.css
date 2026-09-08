@@ -362,6 +362,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
   padding: 3px 9px;
   border-radius: 999px;
 }
+.card-featured-label--bottom { top: auto; bottom: 10px; right: 10px; }
 .card--featured .card-name { font-size: 24px; }
 .card-featured-details { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
 .card-featured-detail { font-size: 13px; color: var(--text); }

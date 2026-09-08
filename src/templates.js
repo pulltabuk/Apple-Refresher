@@ -276,6 +276,7 @@ ${noindex ? '<meta name="robots" content="noindex">' : ''}
       <a href="/categories/">Categories</a>
       <a href="/discontinued/">Discontinued</a>
       <a href="/gallery/">Gallery</a>
+      <a href="/events/">Apple Events</a>
       <a href="/about/">About</a>
     </nav>
   </div>
@@ -287,6 +288,7 @@ ${bodyHtml}
   <div class="site-footer">
     <nav class="footer-nav">
       <a href="/gallery/">Gallery</a>
+      <a href="/events/">Apple Events</a>
       <a href="/about/">About us</a>
       <a href="/admin/">Admin</a>
     </nav>
@@ -533,12 +535,56 @@ function galleryStripItemHtml(photo) {
 
 function eventCardHtml(event) {
   const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
-  return `<article class="card card--featured card--event">
-  <span class="card-featured-label">Apple Event</span>
-  ${event.image_url ? `<img class="card-event-image" src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}
+  const inner = `${event.image_url ? `<img class="card-event-image" src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}
   <p class="card-event-title">${escapeHtml(event.heading)}</p>
   ${dateText ? `<p class="card-event-date">${escapeHtml(dateText)}</p>` : ''}
+  <span class="card-featured-label card-featured-label--bottom">Apple Event</span>`;
+  return event.event_url
+    ? `<a class="card card--featured card--event" href="${escapeHtml(event.event_url)}" target="_blank" rel="noopener">${inner}</a>`
+    : `<article class="card card--featured card--event">${inner}</article>`;
+}
+
+function eventArchiveCardHtml(event) {
+  const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
+  const tags = (event.announced_products || []).map((t) => `<span class="pill">${escapeHtml(t)}</span>`).join('');
+  const inner = `<div class="card-image">${event.image_url ? `<img src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}</div>
+    <p class="card-name">${escapeHtml(event.heading)}</p>
+    ${dateText ? `<p class="card-meta">${escapeHtml(dateText)}</p>` : ''}`;
+  const link = event.event_url
+    ? `<a class="card-link" href="${escapeHtml(event.event_url)}" target="_blank" rel="noopener">${inner}</a>`
+    : `<div class="card-link">${inner}</div>`;
+  return `<article class="card">
+  ${link}
+  ${tags ? `<div class="gallery-tags"><div class="gallery-tags-row">${tags}</div></div>` : ''}
 </article>`;
+}
+
+function eventsPage({ events, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const body = events.length
+    ? `
+<div class="page-header-row">
+  <h1>Apple Events</h1>
+  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+</div>
+<p class="page-intro">A running record of every Apple Event announced here, and what was revealed at each one.</p>
+<div class="card-grid" data-mode="events">
+  ${events.map(eventArchiveCardHtml).join('\n')}
+</div>`
+    : `
+<div class="page-header-row">
+  <h1>Apple Events</h1>
+  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+</div>
+<p class="page-intro">No events yet. Add one in <a href="/admin/">/admin/</a>.</p>`;
+  return shell({
+    title: 'Apple Events — Apple Refresher',
+    description: 'A running archive of every Apple Event announced, and what was revealed at each one.',
+    siteUrl,
+    path: '/events/',
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
 }
 
 function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -1075,25 +1121,40 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   </div>
 
   <div id="tab-event" class="admin-tab-panel" style="display:none;">
-    <p class="admin-hint">When set, this replaces the regular featured product on the homepage until the event date passes, then the site automatically goes back to showing a featured product on its own, no need to remove anything manually.</p>
-    <p id="event-status" class="admin-hint"></p>
-    <form id="event-form" class="admin-form">
-      <label>Title<input type="text" id="event_heading" placeholder="e.g. Apple Event: It's Glowtime"></label>
-      <div class="admin-subfield">
-        <span class="admin-subfield-label">Image</span>
-        <div id="event-image-thumb" class="admin-thumbs"></div>
-        <label for="event-image-upload" class="admin-btn admin-btn--small admin-btn--primary">Choose image</label>
-        <input type="file" id="event-image-upload" accept="image/*" class="admin-file-input">
-      </div>
-      <input type="hidden" id="event_image_url">
-      <label>Event date<input type="date" id="event_date"></label>
-      <label>Event time (optional, your own wording, e.g. "10am PT")<input type="text" id="event_time" placeholder="10am PT"></label>
-      <div class="admin-form-buttons">
+    <p class="admin-hint">Whichever event has the soonest upcoming date automatically replaces the regular featured product on the homepage until that date passes, then it becomes part of this permanent archive and the site goes back to showing a featured product on its own, no need to remove anything manually.</p>
+    <div id="event-list-view">
+      <button id="new-event-btn" class="admin-btn admin-btn--primary">Add new event</button>
+      <div id="event-list" class="admin-list"></div>
+    </div>
+
+    <div id="event-form-view" style="display:none;">
+      <button type="button" id="event-back-to-list-btn" class="admin-back-link">&larr; Back to events</button>
+      <h3 id="event-form-title">Add event</h3>
+      <form id="event-form" class="admin-form">
+        <label>Title<input type="text" id="event_heading" placeholder="e.g. Apple Event: It's Glowtime"></label>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Image</span>
+          <div id="event-image-thumb" class="admin-thumbs"></div>
+          <label for="event-image-upload" class="admin-btn admin-btn--small admin-btn--primary">Choose image</label>
+          <input type="file" id="event-image-upload" accept="image/*" class="admin-file-input">
+        </div>
+        <input type="hidden" id="event_image_url">
+        <label>Event date<input type="date" id="event_date"></label>
+        <label>Event time (optional, your own wording, e.g. "10am PT")<input type="text" id="event_time" placeholder="10am PT"></label>
+        <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/"></label>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Announced products (optional, add once you know what was revealed)</span>
+          <ul id="event-products-list" class="refresh-history-list"></ul>
+          <div class="refresh-history-add">
+            <input type="text" id="new-event-product" placeholder="e.g. iPhone 17, Apple Watch Series 11">
+            <button type="button" id="add-event-product-btn" class="admin-btn admin-btn--small">Add</button>
+          </div>
+        </div>
         <button type="submit" class="admin-btn admin-btn--primary">Save event</button>
-        <button type="button" id="event-remove-btn" class="admin-btn">Remove event</button>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
+
 
   <div id="tab-about" class="admin-tab-panel" style="display:none;">
     <form id="about-form" class="admin-form">
@@ -1132,6 +1193,7 @@ module.exports = {
   galleryPage,
   galleryPhotoPage,
   galleryPhotoCardHtml,
+  eventsPage,
   homePage,
   allProductsPage,
   discontinuedPage,

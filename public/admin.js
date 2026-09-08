@@ -148,7 +148,7 @@
       }
       if (tab === 'event' && !eventLoaded) {
         eventLoaded = true;
-        loadEvent();
+        loadEvents();
       }
     });
   });
@@ -988,6 +988,123 @@
 
   // --- Apple Event ---
 
+  let cachedEvents = [];
+  let editingEventId = null;
+  let currentEventProducts = [];
+
+  const eventListView = document.getElementById('event-list-view');
+  const eventFormView = document.getElementById('event-form-view');
+  const eventListEl = document.getElementById('event-list');
+  const eventForm = document.getElementById('event-form');
+  const eventProductsListEl = document.getElementById('event-products-list');
+
+  function showEventList() {
+    eventListView.style.display = 'block';
+    eventFormView.style.display = 'none';
+  }
+
+  function showEventForm() {
+    eventListView.style.display = 'none';
+    eventFormView.style.display = 'block';
+    window.scrollTo(0, 0);
+  }
+
+  async function loadEvents() {
+    const { data, error } = await client.from('apple_events').select('*').order('event_date', { ascending: false });
+    eventListEl.innerHTML = '';
+    if (error) {
+      eventListEl.textContent = 'Could not load events: ' + error.message + ' (has supabase-schema-update-16.sql been run?)';
+      return;
+    }
+    cachedEvents = data;
+    if (!data.length) {
+      eventListEl.textContent = 'No events yet, add your first one below.';
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const table = document.createElement('table');
+    table.className = 'admin-table';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th></th><th>Title</th><th>Date</th><th>Status</th><th></th></tr>';
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    data.forEach((event) => {
+      const tr = document.createElement('tr');
+
+      const photoTd = document.createElement('td');
+      photoTd.className = 'admin-table-photo';
+      if (event.image_url) {
+        const img = document.createElement('img');
+        img.src = event.image_url;
+        img.alt = '';
+        photoTd.appendChild(img);
+      } else {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'admin-table-photo-placeholder';
+        photoTd.appendChild(placeholder);
+      }
+
+      const titleTd = document.createElement('td');
+      titleTd.textContent = event.heading || '\u2014';
+
+      const dateTd = document.createElement('td');
+      dateTd.textContent = event.event_date || '\u2014';
+
+      const statusTd = document.createElement('td');
+      statusTd.textContent = event.event_date && event.event_date >= today ? 'Upcoming' : 'Past';
+
+      const actionsTd = document.createElement('td');
+      actionsTd.className = 'admin-row-actions';
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => editEvent(event.id));
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => deleteEvent(event.id));
+      actionsTd.appendChild(editBtn);
+      actionsTd.appendChild(deleteBtn);
+
+      tr.appendChild(photoTd);
+      tr.appendChild(titleTd);
+      tr.appendChild(dateTd);
+      tr.appendChild(statusTd);
+      tr.appendChild(actionsTd);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    eventListEl.appendChild(table);
+  }
+
+  function renderEventProducts() {
+    eventProductsListEl.innerHTML = '';
+    currentEventProducts.forEach((product, i) => {
+      const li = document.createElement('li');
+      const span = document.createElement('span');
+      span.textContent = product;
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', () => {
+        currentEventProducts.splice(i, 1);
+        renderEventProducts();
+      });
+      li.appendChild(span);
+      li.appendChild(removeBtn);
+      eventProductsListEl.appendChild(li);
+    });
+  }
+
+  document.getElementById('add-event-product-btn').addEventListener('click', () => {
+    const input = document.getElementById('new-event-product');
+    const value = input.value.trim();
+    if (!value) return;
+    if (currentEventProducts.indexOf(value) === -1) currentEventProducts.push(value);
+    input.value = '';
+    renderEventProducts();
+  });
+
   function renderEventImageThumb() {
     const thumbEl = document.getElementById('event-image-thumb');
     const url = document.getElementById('event_image_url').value;
@@ -1022,61 +1139,79 @@
     e.target.value = '';
   });
 
-  function renderEventStatus(data) {
-    const statusEl = document.getElementById('event-status');
-    if (!data || !data.event_date) {
-      statusEl.textContent = 'No event set, the homepage is showing a regular featured product.';
+  function editEvent(id) {
+    const event = cachedEvents.find((ev) => ev.id === id);
+    if (!event) return;
+    editingEventId = id;
+    document.getElementById('event-form-title').textContent = 'Edit event';
+    document.getElementById('event_heading').value = event.heading || '';
+    document.getElementById('event_image_url').value = event.image_url || '';
+    document.getElementById('event_date').value = event.event_date || '';
+    document.getElementById('event_time').value = event.event_time || '';
+    document.getElementById('event_url').value = event.event_url || '';
+    currentEventProducts = (event.announced_products || []).slice();
+    renderEventImageThumb();
+    renderEventProducts();
+    showEventForm();
+  }
+
+  function startNewEvent() {
+    editingEventId = null;
+    eventForm.reset();
+    document.getElementById('event_image_url').value = '';
+    currentEventProducts = [];
+    renderEventImageThumb();
+    renderEventProducts();
+    document.getElementById('event-form-title').textContent = 'Add event';
+    showEventForm();
+  }
+
+  document.getElementById('new-event-btn').addEventListener('click', startNewEvent);
+
+  document.getElementById('event-back-to-list-btn').addEventListener('click', showEventList);
+
+  async function deleteEvent(id) {
+    if (!window.confirm('Delete this event? This cannot be undone.')) return;
+    const { error } = await client.from('apple_events').delete().eq('id', id);
+    if (error) {
+      window.alert('Delete failed: ' + error.message);
       return;
     }
-    const today = new Date().toISOString().slice(0, 10);
-    if (data.event_date >= today) {
-      statusEl.textContent = 'Active on the homepage until ' + data.event_date + '.';
-    } else {
-      statusEl.textContent = 'This event\u2019s date (' + data.event_date + ') has passed, the homepage has already gone back to showing a regular featured product. Saving a new date will bring it back.';
-    }
+    loadEvents();
   }
 
-  async function loadEvent() {
-    const { data } = await client.from('site_content').select('*').eq('id', 'event').maybeSingle();
-    document.getElementById('event_heading').value = (data && data.heading) || '';
-    document.getElementById('event_image_url').value = (data && data.image_url) || '';
-    document.getElementById('event_date').value = (data && data.event_date) || '';
-    document.getElementById('event_time').value = (data && data.event_time) || '';
-    renderEventImageThumb();
-    renderEventStatus(data);
-  }
-
-  document.getElementById('event-form').addEventListener('submit', async (e) => {
+  eventForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
-      id: 'event',
       heading: document.getElementById('event_heading').value.trim(),
       image_url: document.getElementById('event_image_url').value.trim() || null,
       event_date: document.getElementById('event_date').value || null,
       event_time: document.getElementById('event_time').value.trim() || null,
-      updated_at: new Date().toISOString(),
+      event_url: document.getElementById('event_url').value.trim() || null,
+      announced_products: currentEventProducts,
     };
     if (!payload.heading || !payload.image_url || !payload.event_date) {
-      window.alert('Title, image, and event date are all needed for the event to show up on the homepage.');
+      window.alert('Title, image, and event date are all needed.');
       return;
     }
-    const { error } = await client.from('site_content').upsert(payload);
-    if (error) {
-      window.alert('Save failed: ' + error.message);
-      return;
+    try {
+      const result = editingEventId
+        ? await client.from('apple_events').update(payload).eq('id', editingEventId)
+        : await client.from('apple_events').insert(payload);
+      if (result.error) {
+        window.alert('Save failed: ' + result.error.message);
+        return;
+      }
+      eventForm.reset();
+      editingEventId = null;
+      currentEventProducts = [];
+      renderEventImageThumb();
+      renderEventProducts();
+      await loadEvents();
+      showEventList();
+    } catch (err) {
+      window.alert('Something went wrong saving this event: ' + err.message);
     }
-    renderEventStatus(payload);
-    window.alert('Event saved.');
-  });
-
-  document.getElementById('event-remove-btn').addEventListener('click', async () => {
-    if (!window.confirm('Remove the event? The homepage will go back to showing a regular featured product.')) return;
-    const { error } = await client.from('site_content').update({ event_date: null }).eq('id', 'event');
-    if (error) {
-      window.alert('Failed to remove: ' + error.message);
-      return;
-    }
-    loadEvent();
   });
 
   // --- About page ---
