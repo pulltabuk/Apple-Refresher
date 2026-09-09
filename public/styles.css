@@ -453,10 +453,14 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card-name-row { display: flex; align-items: center; gap: 6px; }
 .card-name-row .placeholder-icon { flex-shrink: 0; color: var(--text-secondary); }
 .card-name {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
   margin: 0;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .card--discontinued { opacity: 0.85; }
 

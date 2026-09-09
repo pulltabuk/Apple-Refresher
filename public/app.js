@@ -497,6 +497,7 @@
       bar.querySelectorAll('.filter-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var value = btn.getAttribute('data-filter-value');
+          if (value !== 'all' && btn.classList.contains('active')) return;
           if (value === 'all') {
             allBars.forEach(function (otherBar) {
               var otherKey = otherBar.getAttribute('data-filter-key');
@@ -505,9 +506,6 @@
                 b.classList.toggle('active', b.getAttribute('data-filter-value') === 'all');
               });
             });
-          } else if (btn.classList.contains('active')) {
-            activeFilters[key] = 'all';
-            bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
           } else {
             bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
             btn.classList.add('active');
