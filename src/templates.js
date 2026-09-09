@@ -667,9 +667,13 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
-<button type="button" id="everything-btn" class="everything-btn">Everything</button>
-${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
-${filterBar('category', categories, null, categoryCounts, items.length, true, 'All Products')}
+<div class="filters-with-everything">
+  <button type="button" id="everything-btn" class="everything-btn">Everything</button>
+  <div class="filter-bars-stack">
+    ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
+    ${filterBar('category', categories, null, categoryCounts, items.length, true, 'All Products')}
+  </div>
+</div>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="all">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}

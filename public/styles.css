@@ -491,20 +491,23 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 
 /* Filter bar */
+.filters-with-everything { display: flex; align-items: center; gap: 16px; margin-top: 1.25rem; }
+.filter-bars-stack { display: flex; flex-direction: column; gap: 0.85rem; }
+.filter-bars-stack .filter-bar { margin-top: 0; }
 .everything-btn {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   font-size: 16px;
   font-weight: 700;
-  background: #1a7a3c;
-  border: 1px solid #1a7a3c;
-  color: #fff;
+  background: var(--fresh-bg);
+  border: 1px solid var(--fresh-bg);
+  color: var(--fresh-text);
   border-radius: 999px;
   padding: 12px 28px;
   cursor: pointer;
-  margin-top: 1.25rem;
 }
-.everything-btn:hover { background: #146530; border-color: #146530; }
+.everything-btn:hover { background: #dcecc9; border-color: #dcecc9; }
 
 .pagination { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; justify-content: center; margin-top: 2rem; }
 .page-btn {
