@@ -404,6 +404,30 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 
 /* Cards */
+.league-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+.league-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  padding: 0 10px 10px;
+  border-bottom: 1px solid #c7c4b8;
+}
+.league-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.league-table tbody tr:last-child td { border-bottom: none; }
+.league-table tbody tr:hover { background: var(--accent-blue-bg); }
+.league-rank { width: 36px; font-size: 14px; font-weight: 700; color: var(--text-secondary); text-align: center; }
+.league-name-link { display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; }
+.league-name-link:hover { color: var(--accent-blue); }
+.league-name-link .placeholder-icon { flex-shrink: 0; color: var(--text-secondary); }
+.league-name-link span { font-weight: 600; font-size: 15px; }
+.league-launch, .league-price { color: var(--text-secondary); font-size: 14px; white-space: nowrap; }
+@media (max-width: 640px) {
+  .league-launch, th.league-launch { display: none; }
+}
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -433,10 +457,6 @@ label.admin-btn { cursor: pointer; color: #fff; }
   font-weight: 600;
   margin: 0;
   line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 .card--discontinued { opacity: 0.85; }
 

@@ -17,9 +17,11 @@ function categoryIcon(category, size) {
   return `<svg class="placeholder-icon" viewBox="0 0 40 40" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
 }
 
-function sanitizeRichText(html) {
+function sanitizeRichText(html, siteUrl) {
   if (!html) return '';
   const allowed = new Set(['p', 'b', 'strong', 'i', 'em', 'u', 'br', 'a']);
+  let siteHost = '';
+  try { siteHost = siteUrl ? new URL(siteUrl).host : ''; } catch (e) { siteHost = ''; }
   let out = String(html);
   out = out.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
   out = out.replace(/<div([^>]*)>/gi, '<p>').replace(/<\/div>/gi, '</p>');
@@ -31,8 +33,13 @@ function sanitizeRichText(html) {
       if (isClosing) return '</a>';
       const hrefMatch = attrs.match(/href\s*=\s*"([^"]*)"/i) || attrs.match(/href\s*=\s*'([^']*)'/i);
       const href = hrefMatch ? hrefMatch[1] : '';
-      const safeHref = /^https?:\/\//i.test(href) ? href.replace(/"/g, '&quot;') : '#';
-      return `<a href="${safeHref}" target="_blank" rel="noopener">`;
+      const isHttp = /^https?:\/\//i.test(href);
+      const safeHref = isHttp ? href.replace(/"/g, '&quot;') : '#';
+      let isInternal = false;
+      if (isHttp && siteHost) {
+        try { isInternal = new URL(href).host === siteHost; } catch (e) { isInternal = false; }
+      }
+      return isInternal ? `<a href="${safeHref}">` : `<a href="${safeHref}" target="_blank" rel="noopener">`;
     }
     return isClosing ? `</${lower}>` : `<${lower}>`;
   });
@@ -646,7 +653,7 @@ ${gallerySection}`;
 }
 
 function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const categories = [...new Set(items.map((i) => i.product.category))].sort();
+  const categories = [...new Set(items.map((i) => i.product.category))].sort((a, b) => a.localeCompare(b));
   const categoryCounts = categories.map((c) => items.filter((i) => i.product.category === c).length);
   const statusCounts = STATUS_VALUES.map((v) => items.filter((i) => {
     const s = i.product.discontinued ? 'discontinued' : 'current';
@@ -735,6 +742,40 @@ function categoriesIndexPage({ groups, siteUrl, supabaseUrl, supabaseAnonKey }) 
   });
 }
 
+function leagueRowHtml(product, statusInfo, rank) {
+  const status = productStatusKey(product);
+  const launch = launchDate(product);
+  const days = statusInfo && status === 'current' ? statusInfo.daysSince : '';
+  const launchTs = launch ? new Date(launch).getTime() : '';
+  const discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
+  const lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetween(launch, product.discontinued_date) : '';
+  const decade = product.discontinued && product.discontinued_date ? `${Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10}s` : '';
+  return `<tr class="league-row${status === 'discontinued' ? ' league-row--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
+  <td class="league-rank">${rank}</td>
+  <td class="league-name"><a href="/products/${product.slug}/" class="league-name-link">${categoryIcon(product.category, 24)}<span>${escapeHtml(product.name)}</span></a></td>
+  <td class="league-status">${productBadge(product, statusInfo)}</td>
+  <td class="league-launch">${launch ? formatDate(launch) : '\u2014'}</td>
+  <td class="league-price">${product.price ? escapeHtml(formatPrice(product.price)) : '\u2014'}</td>
+</tr>`;
+}
+
+function leagueTableHtml(items, category) {
+  return `<table class="league-table" id="grid" data-mode="category" data-category-name="${escapeHtml(category)}">
+  <thead>
+    <tr>
+      <th class="league-rank">#</th>
+      <th class="league-name">Product</th>
+      <th class="league-status">Status</th>
+      <th class="league-launch">Launched</th>
+      <th class="league-price">Price</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${items.map((i, idx) => leagueRowHtml(i.product, i.status, idx + 1)).join('\n')}
+  </tbody>
+</table>`;
+}
+
 function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const slug = slugify(category);
   const currentCount = items.filter((i) => !i.product.discontinued).length;
@@ -745,16 +786,14 @@ function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }
   }).length);
   const body = `
 <h1>${escapeHtml(category)}</h1>
-<p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}.</p>
+<p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}. Newest first.</p>
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)}…" aria-label="Search">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
 ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
-<div class="card-grid" id="grid" data-mode="category" data-category-name="${escapeHtml(category)}">
-  ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
-</div>`;
+${leagueTableHtml(items, category)}`;
   return shell({
     title: `${category} — Apple Refresher`,
     description: `Every ${category} product on Apple Refresher, current and discontinued, with time since refresh and full release history.`,
@@ -875,7 +914,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
 
   ${releaseHistorySection}
 
-  ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note)}</div></div>` : ''}
+  ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note, siteUrl)}</div></div>` : ''}
 </article>`;
 
   const description = product.discontinued
@@ -1026,7 +1065,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </div>
         <p class="admin-hint">Every product in a line needs this set to the same value, joining it here alone doesn't link anything else in. To connect a new model to a line that already exists, pick "Join an existing product line" and choose it from the list, that guarantees an exact match rather than retyping the name.</p>
         <label>Previous model (pick a product, or leave blank)
-          <input type="text" id="previous_model" list="product-options" placeholder="Start typing a product name">
+          <input type="text" id="previous_model" list="product-options-by-category" placeholder="Start typing a product name">
         </label>
         <p class="admin-hint">If this product replaces one already on the site, picking it here automatically marks that one Discontinued and fills in its "Replaced by" for you.</p>
         ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'This does not replace Refresh history above, the day-count badge is calculated from Refresh history only, so add this product\u2019s own date(s) there regardless. Only fill this in if this is the ONE product that\u2019s the true origin of a whole line, leave it blank on every other product joining that line. If another product in the same line already has this set, saving will ask before changing anything.')}
@@ -1066,8 +1105,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
         ${datePrecisionFieldHtml('discontinued_date', 'Discontinued date')}
         <label>Replaced by (pick a product, or leave blank)
-          <input type="text" id="replaced_by" list="product-options" placeholder="Start typing a product name">
-          <datalist id="product-options"></datalist>
+          <input type="text" id="replaced_by" list="product-options-by-category" placeholder="Start typing a product name">
+          <datalist id="product-options-by-category"></datalist>
         </label>
         <label>Why it went (only if there's more to it than "Replaced by" already says, e.g. a design flaw, price problem, or how it was received, leave blank otherwise)<textarea id="discontinued_reason" rows="2"></textarea></label>
 

@@ -249,6 +249,25 @@
     );
   }
 
+  function leagueRowHtmlJS(product, statusInfo, rank) {
+    var status = statusKeyJS(product);
+    var launch = launchDateJS(product);
+    var days = statusInfo && status === 'current' ? statusInfo.daysSince : '';
+    var launchTs = launch ? new Date(launch).getTime() : '';
+    var discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
+    var lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetweenJS(launch, product.discontinued_date) : '';
+    var decade = product.discontinued && product.discontinued_date ? Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10 + 's' : '';
+    return (
+      '<tr class="league-row' + (status === 'discontinued' ? ' league-row--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
+        '<td class="league-rank">' + rank + '</td>' +
+        '<td class="league-name"><a href="/products/' + product.slug + '/" class="league-name-link">' + categoryIconJS(product.category, 24) + '<span>' + escapeHtmlJS(product.name) + '</span></a></td>' +
+        '<td class="league-status">' + badgeHtmlJS(product, statusInfo) + '</td>' +
+        '<td class="league-launch">' + (launch ? formatDateJS(launch) : '\u2014') + '</td>' +
+        '<td class="league-price">' + (product.price ? escapeHtmlJS(formatPriceJS(product.price)) : '\u2014') + '</td>' +
+      '</tr>'
+    );
+  }
+
   function specRowJS(label, valueHtml) {
     return valueHtml ? '<div class="spec-row"><dt>' + label + '</dt><dd>' + valueHtml + '</dd></div>' : '';
   }
@@ -256,6 +275,7 @@
   function sanitizeRichTextJS(html) {
     if (!html) return '';
     var allowed = { p: 1, b: 1, strong: 1, i: 1, em: 1, u: 1, br: 1, a: 1 };
+    var siteHost = window.location.host;
     var out = String(html);
     out = out.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
     out = out.replace(/<div([^>]*)>/gi, '<p>').replace(/<\/div>/gi, '</p>');
@@ -267,8 +287,13 @@
         if (isClosing) return '</a>';
         var hrefMatch = attrs.match(/href\s*=\s*"([^"]*)"/i) || attrs.match(/href\s*=\s*'([^']*)'/i);
         var href = hrefMatch ? hrefMatch[1] : '';
-        var safeHref = /^https?:\/\//i.test(href) ? href.replace(/"/g, '&quot;') : '#';
-        return '<a href="' + safeHref + '" target="_blank" rel="noopener">';
+        var isHttp = /^https?:\/\//i.test(href);
+        var safeHref = isHttp ? href.replace(/"/g, '&quot;') : '#';
+        var isInternal = false;
+        if (isHttp) {
+          try { isInternal = new URL(href).host === siteHost; } catch (e) { isInternal = false; }
+        }
+        return isInternal ? '<a href="' + safeHref + '">' : '<a href="' + safeHref + '" target="_blank" rel="noopener">';
       }
       return isClosing ? '</' + lower + '>' : '<' + lower + '>';
     });
@@ -422,10 +447,22 @@
     if (searchFromUrl) searchInput.value = searchFromUrl;
   }
 
+  function renumberLeagueRanks() {
+    var table = document.querySelector('#grid.league-table');
+    if (!table) return;
+    var rank = 0;
+    table.querySelectorAll('.league-row').forEach(function (row) {
+      if (row.style.display === 'none') return;
+      rank++;
+      var rankCell = row.querySelector('.league-rank');
+      if (rankCell) rankCell.textContent = rank;
+    });
+  }
+
   function applyFilters() {
     var query = (searchInput ? searchInput.value : '').trim().toLowerCase();
     var visibleCount = 0;
-    document.querySelectorAll('#grid .card').forEach(function (card) {
+    document.querySelectorAll('#grid .card, #grid .league-row').forEach(function (card) {
       var show = true;
       if (query) {
         // A search term searches everything, regardless of which
@@ -435,7 +472,7 @@
         if (searchAttr !== null) {
           haystack = searchAttr.toLowerCase();
         } else {
-          var nameEl = card.querySelector('.card-name');
+          var nameEl = card.querySelector('.card-name, .league-name-link span');
           haystack = nameEl ? nameEl.textContent.toLowerCase() : '';
         }
         if (haystack.indexOf(query) === -1) show = false;
@@ -449,6 +486,7 @@
       if (show) visibleCount++;
     });
     if (noResults) noResults.style.display = visibleCount === 0 ? '' : 'none';
+    renumberLeagueRanks();
   }
 
   function wireFilterBars() {
@@ -498,12 +536,14 @@
     var parts = sortSelect.value.split('-');
     var dir = parts.pop();
     var attr = parts.join('-');
-    var cards = Array.prototype.slice.call(grid.querySelectorAll('.card'));
+    var items = Array.prototype.slice.call(grid.querySelectorAll('.card, .league-row'));
+    if (!items.length) return;
+    var parent = items[0].parentElement;
 
-    cards.sort(function (a, b) {
+    items.sort(function (a, b) {
       if (attr === 'name') {
-        var nameA = (a.querySelector('.card-name') || {}).textContent || '';
-        var nameB = (b.querySelector('.card-name') || {}).textContent || '';
+        var nameA = (a.querySelector('.card-name, .league-name-link span') || {}).textContent || '';
+        var nameB = (b.querySelector('.card-name, .league-name-link span') || {}).textContent || '';
         var cmp = nameA.localeCompare(nameB);
         return dir === 'asc' ? cmp : -cmp;
       }
@@ -518,7 +558,8 @@
       return dir === 'desc' ? -diff : diff;
     });
 
-    cards.forEach(function (card) { grid.appendChild(card); });
+    items.forEach(function (item) { parent.appendChild(item); });
+    renumberLeagueRanks();
   }
 
   if (sortSelect) sortSelect.addEventListener('change', applySort);
@@ -684,14 +725,19 @@
         });
       }
 
-      gridSection.innerHTML = items.map(function (i) { return cardHtmlJS(i.product, i.status); }).join('');
+      if (mode === 'category') {
+        var tbodyEl = gridSection.querySelector('tbody') || gridSection;
+        tbodyEl.innerHTML = items.map(function (i, idx) { return leagueRowHtmlJS(i.product, i.status, idx + 1); }).join('');
+      } else {
+        gridSection.innerHTML = items.map(function (i) { return cardHtmlJS(i.product, i.status); }).join('');
+      }
 
       // Rebuild any filter bar whose values come from the data.
       var categoryBar = document.querySelector('.filter-bar[data-filter-key="category"]');
       if (categoryBar) {
         var categories = [];
         items.forEach(function (i) { if (categories.indexOf(i.product.category) === -1) categories.push(i.product.category); });
-        categories.sort();
+        categories.sort(function (a, b) { return a.localeCompare(b); });
         categoryBar.innerHTML = categories.map(function (c) {
             var count = items.filter(function (i) { return i.product.category === c; }).length;
             return '<button class="filter-btn" data-filter-value="' + escapeHtmlJS(c) + '">' + escapeHtmlJS(c) + ' <span class="filter-btn-count">(' + count + ')</span></button>';

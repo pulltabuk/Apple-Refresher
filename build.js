@@ -158,7 +158,7 @@ async function main() {
   // Category quick-links, current + discontinued together.
   const categoryTally = {};
   products.forEach((p) => { categoryTally[p.category] = (categoryTally[p.category] || 0) + 1; });
-  const categoryLinks = Object.keys(categoryTally).sort().map((c) => ({ category: c, count: categoryTally[c] }));
+  const categoryLinks = Object.keys(categoryTally).sort((a, b) => a.localeCompare(b)).map((c) => ({ category: c, count: categoryTally[c] }));
 
   // A handful of random gallery photos for the homepage strip.
   const galleryPicks = pickRandom(galleryPhotos, 12);
@@ -190,7 +190,7 @@ async function main() {
   write('admin/index.html', adminPage(opts));
 
   // Category index + one page per category, current and discontinued together.
-  const categoryNames = [...new Set(allItems.map((i) => i.product.category))].sort();
+  const categoryNames = [...new Set(allItems.map((i) => i.product.category))].sort((a, b) => a.localeCompare(b));
   const groups = categoryNames.map((category) => {
     const inCategory = allItems.filter((i) => i.product.category === category);
     return {

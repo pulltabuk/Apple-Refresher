@@ -216,6 +216,31 @@
 
   const DEFAULT_CATEGORIES = ['iPhone', 'Mac', 'iPad', 'Apple Watch', 'AirPods', 'Vision Pro', 'Apple TV', 'AirTag', 'Other'];
 
+  // "Replaced by" / "Previous model" pickers: filtered to the same
+  // category as whatever's currently in the Category field, since a
+  // product can only sensibly be replaced by / follow on from another
+  // product in its own line. The value saved is the product's slug,
+  // the label shown is its name. The field itself still accepts free
+  // typing beyond these suggestions. Called both on user typing and
+  // whenever the category field is set programmatically (editing an
+  // existing product, or resetting for a new one), since setting
+  // .value in JS doesn't fire an input event on its own.
+  function updateProductOptionsByCategory() {
+    const categoryFieldEl = document.getElementById('category');
+    const productOptionsByCategory = document.getElementById('product-options-by-category');
+    const currentCategory = (categoryFieldEl.value || '').trim().toLowerCase();
+    productOptionsByCategory.innerHTML = '';
+    cachedProducts
+      .filter((p) => (p.category || '').trim().toLowerCase() === currentCategory)
+      .forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = p.slug;
+        opt.label = p.name;
+        opt.textContent = p.name;
+        productOptionsByCategory.appendChild(opt);
+      });
+  }
+
   function updateCategoryOptions() {
     const categoryOptions = document.getElementById('category-options');
     const categories = new Set(DEFAULT_CATEGORIES);
@@ -227,17 +252,12 @@
       categoryOptions.appendChild(opt);
     });
 
-    // "Replaced by" / "Previous model" pickers: the value saved is the
-    // product's slug, the label shown is its name.
-    const productOptions = document.getElementById('product-options');
-    productOptions.innerHTML = '';
-    cachedProducts.forEach((p) => {
-      const opt = document.createElement('option');
-      opt.value = p.slug;
-      opt.label = p.name;
-      opt.textContent = p.name;
-      productOptions.appendChild(opt);
-    });
+    updateProductOptionsByCategory();
+    const categoryFieldEl = document.getElementById('category');
+    if (!categoryFieldEl.dataset.wiredProductOptions) {
+      categoryFieldEl.addEventListener('input', updateProductOptionsByCategory);
+      categoryFieldEl.dataset.wiredProductOptions = 'true';
+    }
 
     // "Timeline group" picker: every distinct value already in use,
     // so joining one is a guaranteed exact match rather than retyping
@@ -485,6 +505,7 @@
     document.getElementById('form-title').textContent = 'Edit product';
     document.getElementById('name').value = p.name || '';
     document.getElementById('category').value = p.category || '';
+    updateProductOptionsByCategory();
     setTimelineName(p.timeline_name || null);
     (function () {
       const raw = (p.price || '').trim();
@@ -522,6 +543,7 @@
       window.history.pushState({}, '', '/admin/?new=1');
     }
     productForm.reset();
+    updateProductOptionsByCategory();
     setTimelineName(null);
     document.getElementById('rumor_note_editor').innerHTML = '';
     setDatePrecisionValue('original_launch_date', null);
