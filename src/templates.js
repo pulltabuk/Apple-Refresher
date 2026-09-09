@@ -335,9 +335,9 @@ function cardHtml(product, statusInfo) {
 </article>`;
 }
 
-function filterBar(key, values, labels, counts, totalCount, showAll = true) {
+function filterBar(key, values, labels, counts, totalCount, showAll = true, allLabel = 'All') {
   return `<div class="filter-bar" data-filter-key="${key}">
-  ${showAll ? `<button class="filter-btn active" data-filter-value="all">All${totalCount != null ? ` <span class="filter-btn-count">(${totalCount})</span>` : ''}</button>` : ''}
+  ${showAll ? `<button class="filter-btn active" data-filter-value="all">${allLabel}${totalCount != null ? ` <span class="filter-btn-count">(${totalCount})</span>` : ''}</button>` : ''}
   ${values.map((v, i) => `<button class="filter-btn" data-filter-value="${escapeHtml(v)}">${escapeHtml(labels ? labels[i] : v)}${counts ? ` <span class="filter-btn-count">(${counts[i]})</span>` : ''}</button>`).join('\n')}
 </div>`;
 }
@@ -668,7 +668,7 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
 ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
-${filterBar('category', categories, null, categoryCounts, items.length, false)}
+${filterBar('category', categories, null, categoryCounts, items.length, true, 'All Products')}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="all">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}

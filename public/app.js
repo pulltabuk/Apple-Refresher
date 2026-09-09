@@ -490,27 +490,15 @@
   }
 
   function wireFilterBars() {
-    var allBars = document.querySelectorAll('.filter-bar[data-filter-key]');
-    allBars.forEach(function (bar) {
+    document.querySelectorAll('.filter-bar[data-filter-key]').forEach(function (bar) {
       var key = bar.getAttribute('data-filter-key');
       if (!(key in activeFilters)) activeFilters[key] = 'all';
       bar.querySelectorAll('.filter-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          var value = btn.getAttribute('data-filter-value');
-          if (value !== 'all' && btn.classList.contains('active')) return;
-          if (value === 'all') {
-            allBars.forEach(function (otherBar) {
-              var otherKey = otherBar.getAttribute('data-filter-key');
-              activeFilters[otherKey] = 'all';
-              otherBar.querySelectorAll('.filter-btn').forEach(function (b) {
-                b.classList.toggle('active', b.getAttribute('data-filter-value') === 'all');
-              });
-            });
-          } else {
-            bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
-            btn.classList.add('active');
-            activeFilters[key] = value;
-          }
+          if (btn.classList.contains('active')) return;
+          bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          activeFilters[key] = btn.getAttribute('data-filter-value');
           if (searchInput) searchInput.value = '';
           applyFilters();
         });
@@ -736,7 +724,8 @@
         var categories = [];
         items.forEach(function (i) { if (categories.indexOf(i.product.category) === -1) categories.push(i.product.category); });
         categories.sort(function (a, b) { return a.localeCompare(b); });
-        categoryBar.innerHTML = categories.map(function (c) {
+        categoryBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All Products <span class="filter-btn-count">(' + items.length + ')</span></button>' +
+          categories.map(function (c) {
             var count = items.filter(function (i) { return i.product.category === c; }).length;
             return '<button class="filter-btn" data-filter-value="' + escapeHtmlJS(c) + '">' + escapeHtmlJS(c) + ' <span class="filter-btn-count">(' + count + ')</span></button>';
           }).join('');
