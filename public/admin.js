@@ -214,7 +214,7 @@
 
   // --- Products ---
 
-  const DEFAULT_CATEGORIES = ['iPhone', 'Mac', 'iPad', 'Apple Watch', 'AirPods', 'Vision Pro', 'Apple TV', 'AirTag', 'Other'];
+  const DEFAULT_CATEGORIES = ['iPhone', 'Mac', 'iPad', 'Apple Watch', 'AirPods', 'Vision Pro', 'Apple TV', 'AirTag', 'Apple Pencil', 'Other'];
 
   // "Replaced by" / "Previous model" pickers: filtered to the same
   // category as whatever's currently in the Category field, since a

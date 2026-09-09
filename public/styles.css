@@ -749,6 +749,9 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .richtext-editor p { margin: 0 0 0.75rem; }
 .richtext-editor p:last-child { margin: 0; }
 
+.category-page-heading { display: flex; align-items: center; gap: 12px; }
+.category-page-heading h1 { margin: 0; }
+.category-page-heading .placeholder-icon { flex-shrink: 0; color: var(--text-secondary); }
 .page-intro { color: var(--text-secondary); font-size: 14px; }
 
 @media (max-width: 640px) {
