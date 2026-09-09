@@ -102,28 +102,28 @@ function normaliseGroupKey(value) {
 function categoryTimelinePoints(product, allProducts) {
   const groupKey = normaliseGroupKey(product.timeline_name || product.category);
   const sameCategory = (allProducts || []).filter((p) => normaliseGroupKey(p.timeline_name || p.category) === groupKey);
+
+  // Collect every date-owning entry across every product in the group,
+  // regardless of whether anyone has set original_launch_date. That
+  // field only breaks ties on which date is "the" launch when it's
+  // ambiguous; it was never meant to be the only way other products'
+  // own refresh dates make it onto a shared timeline.
+  const dateOwners = new Map();
+  sameCategory.forEach((p) => (p.refresh_history || []).forEach((d) => {
+    if (!dateOwners.has(d)) dateOwners.set(d, p.name);
+  }));
+
   const launchCandidates = sameCategory.map((p) => p.original_launch_date).filter(Boolean);
+  const lineLaunch = launchCandidates.length
+    ? launchCandidates.reduce((earliest, d) => (d < earliest ? d : earliest))
+    : (dateOwners.size ? Array.from(dateOwners.keys()).sort()[0] : null);
+  const launchOwnerFromField = sameCategory.find((p) => p.original_launch_date === lineLaunch);
+  const launchOwnerName = launchOwnerFromField ? launchOwnerFromField.name : (lineLaunch ? dateOwners.get(lineLaunch) : null);
 
   const points = [];
-  if (launchCandidates.length) {
-    // Once anyone in this category has set the line's true origin, every
-    // product in it shares that single launch point, plus every refresh
-    // date from every model in the line, merged and deduplicated.
-    const lineLaunch = launchCandidates.reduce((earliest, d) => (d < earliest ? d : earliest));
-    const launchOwner = sameCategory.find((p) => p.original_launch_date === lineLaunch);
-    points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwner ? launchOwner.name : product.name });
-    const dateOwners = new Map();
-    sameCategory.forEach((p) => (p.refresh_history || []).forEach((d) => {
-      if (d !== lineLaunch && !dateOwners.has(d)) dateOwners.set(d, p.name);
-    }));
-    Array.from(dateOwners.keys()).sort().forEach((d) => points.push({ date: d, label: 'Refresh', type: 'refresh', productName: dateOwners.get(d) }));
-  } else {
-    const sortedDates = (product.refresh_history || []).slice().sort();
-    sortedDates.forEach((d, i) => {
-      const isLaunch = i === 0 && !!product.is_new_launch;
-      points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh', productName: product.name });
-    });
-  }
+  if (lineLaunch) points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwnerName || product.name });
+  Array.from(dateOwners.keys()).filter((d) => d !== lineLaunch).sort().forEach((d) => points.push({ date: d, label: 'Refresh', type: 'refresh', productName: dateOwners.get(d) }));
+
   sameCategory.forEach((p) => {
     if (p.discontinued && p.discontinued_date) {
       points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name });

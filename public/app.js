@@ -77,27 +77,26 @@
   function categoryTimelinePointsJS(product, allProducts) {
     var groupKey = normaliseGroupKeyJS(product.timeline_name || product.category);
     var sameCategory = (allProducts || []).filter(function (p) { return normaliseGroupKeyJS(p.timeline_name || p.category) === groupKey; });
+
+    var dateOwners = {};
+    sameCategory.forEach(function (p) {
+      (p.refresh_history || []).forEach(function (d) {
+        if (!dateOwners[d]) dateOwners[d] = p.name;
+      });
+    });
+
     var launchCandidates = sameCategory.map(function (p) { return p.original_launch_date; }).filter(Boolean);
+    var dateKeys = Object.keys(dateOwners).sort();
+    var lineLaunch = launchCandidates.length
+      ? launchCandidates.reduce(function (earliest, d) { return d < earliest ? d : earliest; })
+      : (dateKeys.length ? dateKeys[0] : null);
+    var launchOwnerFromField = sameCategory.filter(function (p) { return p.original_launch_date === lineLaunch; })[0];
+    var launchOwnerName = launchOwnerFromField ? launchOwnerFromField.name : (lineLaunch ? dateOwners[lineLaunch] : null);
 
     var points = [];
-    if (launchCandidates.length) {
-      var lineLaunch = launchCandidates.reduce(function (earliest, d) { return d < earliest ? d : earliest; });
-      var launchOwner = sameCategory.filter(function (p) { return p.original_launch_date === lineLaunch; })[0];
-      points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwner ? launchOwner.name : product.name });
-      var dateOwners = {};
-      sameCategory.forEach(function (p) {
-        (p.refresh_history || []).forEach(function (d) {
-          if (d !== lineLaunch && !dateOwners[d]) dateOwners[d] = p.name;
-        });
-      });
-      Object.keys(dateOwners).sort().forEach(function (d) { points.push({ date: d, label: 'Refresh', type: 'refresh', productName: dateOwners[d] }); });
-    } else {
-      var sortedDates = (product.refresh_history || []).slice().sort();
-      sortedDates.forEach(function (d, i) {
-        var isLaunch = i === 0 && !!product.is_new_launch;
-        points.push({ date: d, label: isLaunch ? 'Launch' : 'Refresh', type: isLaunch ? 'launch' : 'refresh', productName: product.name });
-      });
-    }
+    if (lineLaunch) points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwnerName || product.name });
+    dateKeys.filter(function (d) { return d !== lineLaunch; }).forEach(function (d) { points.push({ date: d, label: 'Refresh', type: 'refresh', productName: dateOwners[d] }); });
+
     sameCategory.forEach(function (p) {
       if (p.discontinued && p.discontinued_date) {
         points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name });
