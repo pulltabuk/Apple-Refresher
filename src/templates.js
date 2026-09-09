@@ -667,12 +667,14 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
+<button type="button" id="everything-btn" class="everything-btn">Everything</button>
 ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
 ${filterBar('category', categories, null, categoryCounts, items.length, true, 'All Products')}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="all">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
-</div>`
+</div>
+<div id="pagination" class="pagination"></div>`
     : `
 <h1>All products</h1>
 ${emptyState('products')}`;
@@ -750,7 +752,7 @@ function leagueRowHtml(product, statusInfo, rank) {
   const discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
   const lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetween(launch, product.discontinued_date) : '';
   const decade = product.discontinued && product.discontinued_date ? `${Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10}s` : '';
-  return `<tr class="league-row${status === 'discontinued' ? ' league-row--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
+  return `<tr class="league-row${status === 'discontinued' ? ' league-row--discontinued' : ''}" data-href="/products/${product.slug}/" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <td class="league-rank">${rank}</td>
   <td class="league-name"><a href="/products/${product.slug}/" class="league-name-link">${categoryIcon(product.category, 24)}<span>${escapeHtml(product.name)}</span></a></td>
   <td class="league-status">${productBadge(product, statusInfo)}</td>

@@ -135,6 +135,25 @@ async function main() {
     return new Date(dateB).getTime() - new Date(dateA).getTime();
   });
 
+  // The /products/ page gets its own default order: current products
+  // with the longest wait for a refresh first, discontinued products
+  // pushed to the very end (most recently discontinued first within
+  // that group). Category pages keep allItems' own newest-launched
+  // order untouched.
+  const productsPageItems = allItems.slice().sort((a, b) => {
+    const aDisc = !!a.product.discontinued;
+    const bDisc = !!b.product.discontinued;
+    if (aDisc !== bDisc) return aDisc ? 1 : -1;
+    if (!aDisc) {
+      const daysA = a.status ? a.status.daysSince : -Infinity;
+      const daysB = b.status ? b.status.daysSince : -Infinity;
+      return daysB - daysA;
+    }
+    const discA = a.product.discontinued_date ? new Date(a.product.discontinued_date).getTime() : 0;
+    const discB = b.product.discontinued_date ? new Date(b.product.discontinued_date).getTime() : 0;
+    return discB - discA;
+  });
+
   // Homepage hero: 3 random current products, one marked featured (an
   // explicit "Featured on homepage" flag wins if it's among the three,
   // otherwise the most overdue of the three). Client-side JS re-randomises
@@ -176,7 +195,7 @@ async function main() {
     activeEvent,
     ...opts,
   }));
-  write('products/index.html', allProductsPage({ items: allItems, ...opts }));
+  write('products/index.html', allProductsPage({ items: productsPageItems, ...opts }));
   write('discontinued/index.html', discontinuedPage({ items: discontinued, ...opts }));
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, ...opts }));

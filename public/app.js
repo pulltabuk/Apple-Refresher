@@ -258,7 +258,7 @@
     var lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetweenJS(launch, product.discontinued_date) : '';
     var decade = product.discontinued && product.discontinued_date ? Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10 + 's' : '';
     return (
-      '<tr class="league-row' + (status === 'discontinued' ? ' league-row--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
+      '<tr class="league-row' + (status === 'discontinued' ? ' league-row--discontinued' : '') + '" data-href="/products/' + product.slug + '/" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<td class="league-rank">' + rank + '</td>' +
         '<td class="league-name"><a href="/products/' + product.slug + '/" class="league-name-link">' + categoryIconJS(product.category, 24) + '<span>' + escapeHtmlJS(product.name) + '</span></a></td>' +
         '<td class="league-status">' + badgeHtmlJS(product, statusInfo) + '</td>' +
@@ -459,9 +459,18 @@
     });
   }
 
+  var currentPage = 1;
+  var PAGE_SIZE = 25;
+
+  function isPaginatedGrid() {
+    var grid = document.getElementById('grid');
+    return !!(grid && grid.getAttribute('data-mode') === 'all' && document.getElementById('pagination'));
+  }
+
   function applyFilters() {
     var query = (searchInput ? searchInput.value : '').trim().toLowerCase();
     var visibleCount = 0;
+    var paginated = isPaginatedGrid();
     document.querySelectorAll('#grid .card, #grid .league-row').forEach(function (card) {
       var show = true;
       if (query) {
@@ -482,12 +491,84 @@
           if (want !== 'all' && card.getAttribute('data-' + key) !== want) show = false;
         });
       }
-      card.style.display = show ? '' : 'none';
+      if (paginated) {
+        card.setAttribute('data-matches-filter', show ? 'true' : 'false');
+      } else {
+        card.style.display = show ? '' : 'none';
+      }
       if (show) visibleCount++;
     });
     if (noResults) noResults.style.display = visibleCount === 0 ? '' : 'none';
-    renumberLeagueRanks();
+    if (paginated) {
+      currentPage = 1;
+      applyPagination();
+    } else {
+      renumberLeagueRanks();
+    }
   }
+
+  function applyPagination() {
+    if (!isPaginatedGrid()) return;
+    var grid = document.getElementById('grid');
+    var paginationEl = document.getElementById('pagination');
+    var matching = Array.prototype.slice.call(grid.querySelectorAll('.card[data-matches-filter="true"]'));
+    var nonMatching = Array.prototype.slice.call(grid.querySelectorAll('.card[data-matches-filter="false"]'));
+    nonMatching.forEach(function (card) { card.style.display = 'none'; });
+
+    var totalPages = Math.max(1, Math.ceil(matching.length / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    matching.forEach(function (card, i) {
+      var page = Math.floor(i / PAGE_SIZE) + 1;
+      card.style.display = page === currentPage ? '' : 'none';
+    });
+
+    if (totalPages <= 1) {
+      paginationEl.innerHTML = '';
+      return;
+    }
+
+    var html = '';
+    html += '<button type="button" class="page-btn page-btn--arrow" data-page="prev"' + (currentPage === 1 ? ' disabled' : '') + '>\u2190 Previous</button>';
+    var start = Math.max(1, currentPage - 2);
+    var end = Math.min(totalPages, start + 4);
+    start = Math.max(1, end - 4);
+    if (start > 1) {
+      html += '<button type="button" class="page-btn" data-page="1">1</button>';
+      if (start > 2) html += '<span class="page-ellipsis">\u2026</span>';
+    }
+    for (var p = start; p <= end; p++) {
+      html += '<button type="button" class="page-btn' + (p === currentPage ? ' active' : '') + '" data-page="' + p + '">' + p + '</button>';
+    }
+    if (end < totalPages) {
+      if (end < totalPages - 1) html += '<span class="page-ellipsis">\u2026</span>';
+      html += '<button type="button" class="page-btn" data-page="' + totalPages + '">' + totalPages + '</button>';
+    }
+    html += '<button type="button" class="page-btn page-btn--arrow" data-page="next"' + (currentPage === totalPages ? ' disabled' : '') + '>Next \u2192</button>';
+    paginationEl.innerHTML = html;
+    paginationEl.querySelectorAll('.page-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var val = btn.getAttribute('data-page');
+        if (val === 'prev') currentPage--;
+        else if (val === 'next') currentPage++;
+        else currentPage = parseInt(val, 10);
+        applyPagination();
+        var gridEl = document.getElementById('grid');
+        if (gridEl) window.scrollTo({ top: Math.max(0, gridEl.getBoundingClientRect().top + window.scrollY - 100), behavior: 'smooth' });
+      });
+    });
+  }
+
+  // Whole league-table rows are clickable (not just the product name),
+  // delegated on the document so it keeps working after live-refresh
+  // replaces the rows. A direct click on a real link inside the row
+  // (the product name) is left to navigate normally.
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('a')) return;
+    var row = e.target.closest('.league-row[data-href]');
+    if (row) window.location.href = row.getAttribute('data-href');
+  });
 
   function wireFilterBars() {
     document.querySelectorAll('.filter-bar[data-filter-key]').forEach(function (bar) {
@@ -507,8 +588,22 @@
   }
 
   wireFilterBars();
+  var everythingBtn = document.getElementById('everything-btn');
+  if (everythingBtn) {
+    everythingBtn.addEventListener('click', function () {
+      document.querySelectorAll('.filter-bar[data-filter-key]').forEach(function (bar) {
+        var key = bar.getAttribute('data-filter-key');
+        activeFilters[key] = 'all';
+        bar.querySelectorAll('.filter-btn').forEach(function (b) {
+          b.classList.toggle('active', b.getAttribute('data-filter-value') === 'all');
+        });
+      });
+      if (searchInput) searchInput.value = '';
+      applyFilters();
+    });
+  }
   if (searchInput) searchInput.addEventListener('input', applyFilters);
-  if (searchFromUrl) applyFilters();
+  if (searchFromUrl || isPaginatedGrid()) applyFilters();
 
   // --- Sort. Option values are "<attr>-<dir>": name sorts on the card's
   // name, anything else on a data-<attr> number. Cards missing that
@@ -545,7 +640,12 @@
     });
 
     items.forEach(function (item) { parent.appendChild(item); });
-    renumberLeagueRanks();
+    if (isPaginatedGrid()) {
+      currentPage = 1;
+      applyPagination();
+    } else {
+      renumberLeagueRanks();
+    }
   }
 
   if (sortSelect) sortSelect.addEventListener('change', applySort);
@@ -702,12 +802,17 @@
           });
       } else {
         items = items.sort(function (a, b) {
-          var dateA = launchDateJS(a.product);
-          var dateB = launchDateJS(b.product);
-          if (!dateA && !dateB) return 0;
-          if (!dateA) return 1;
-          if (!dateB) return -1;
-          return new Date(dateB) - new Date(dateA);
+          var aDisc = !!a.product.discontinued;
+          var bDisc = !!b.product.discontinued;
+          if (aDisc !== bDisc) return aDisc ? 1 : -1;
+          if (!aDisc) {
+            var daysA = a.status ? a.status.daysSince : -Infinity;
+            var daysB = b.status ? b.status.daysSince : -Infinity;
+            return daysB - daysA;
+          }
+          var discA = a.product.discontinued_date ? new Date(a.product.discontinued_date).getTime() : 0;
+          var discB = b.product.discontinued_date ? new Date(b.product.discontinued_date).getTime() : 0;
+          return discB - discA;
         });
       }
 

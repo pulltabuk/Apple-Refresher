@@ -417,7 +417,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 .league-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .league-table tbody tr:last-child td { border-bottom: none; }
-.league-table tbody tr:hover { background: var(--accent-blue-bg); }
+.league-table tbody tr:hover { background: var(--accent-blue-bg); cursor: pointer; }
 .league-rank { width: 36px; font-size: 14px; font-weight: 700; color: var(--text-secondary); text-align: center; }
 .league-name-link { display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; }
 .league-name-link:hover { color: var(--accent-blue); }
@@ -491,6 +491,43 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 
 /* Filter bar */
+.everything-btn {
+  display: inline-flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  background: #1a7a3c;
+  border: 1px solid #1a7a3c;
+  color: #fff;
+  border-radius: 999px;
+  padding: 12px 28px;
+  cursor: pointer;
+  margin-top: 1.25rem;
+}
+.everything-btn:hover { background: #146530; border-color: #146530; }
+
+.pagination { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; justify-content: center; margin-top: 2rem; }
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid var(--accent-blue);
+  color: var(--accent-blue);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.page-btn:hover:not(:disabled) { background: var(--accent-blue); color: #fff; }
+.page-btn.active { background: var(--accent-blue); color: #fff; }
+.page-btn:disabled { opacity: 0.4; cursor: default; }
+.page-btn--arrow { padding: 0 14px; width: auto; }
+.page-ellipsis { color: var(--text-secondary); padding: 0 4px; }
+
 .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 1.25rem; align-items: center; }
 .filter-bar + .filter-bar { margin-top: 0.85rem; }
 .filter-btn {
