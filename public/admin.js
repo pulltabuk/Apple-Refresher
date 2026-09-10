@@ -118,6 +118,7 @@
 
   let galleryLoaded = false;
   let eventLoaded = false;
+  let factsLoaded = false;
   document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.admin-tab-btn').forEach((b) => b.classList.remove('active'));
@@ -126,6 +127,7 @@
       document.getElementById('tab-products').style.display = tab === 'products' ? 'block' : 'none';
       document.getElementById('tab-gallery').style.display = tab === 'gallery' ? 'block' : 'none';
       document.getElementById('tab-event').style.display = tab === 'event' ? 'block' : 'none';
+      document.getElementById('tab-facts').style.display = tab === 'facts' ? 'block' : 'none';
       document.getElementById('tab-about').style.display = tab === 'about' ? 'block' : 'none';
       if (tab === 'gallery' && !galleryLoaded) {
         galleryLoaded = true;
@@ -134,6 +136,10 @@
       if (tab === 'event' && !eventLoaded) {
         eventLoaded = true;
         loadEvents();
+      }
+      if (tab === 'facts' && !factsLoaded) {
+        factsLoaded = true;
+        loadPublishedFacts();
       }
     });
   });
@@ -1229,6 +1235,175 @@
       window.alert('Something went wrong saving this event: ' + err.message);
     }
   });
+
+  // --- Facts ---
+
+  function generateFactCandidates() {
+    const facts = [];
+    const allDates = [];
+    cachedProducts.forEach((p) => (p.refresh_history || []).forEach((d) => allDates.push(d)));
+
+    // Month-of-release pattern, only surfaced with a real sample behind it.
+    if (allDates.length >= 5) {
+      const monthCounts = {};
+      allDates.forEach((d) => {
+        const month = new Date(d).toLocaleDateString('en-GB', { month: 'long' });
+        monthCounts[month] = (monthCounts[month] || 0) + 1;
+      });
+      const topMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0];
+      if (topMonth && topMonth[1] / allDates.length >= 0.3) {
+        const pct = Math.round((topMonth[1] / allDates.length) * 100);
+        facts.push(pct + '% of the ' + allDates.length + ' product releases tracked on this site have happened in ' + topMonth[0] + ' (' + topMonth[1] + ' of ' + allDates.length + ').');
+      }
+    }
+
+    // Day-of-week pattern.
+    if (allDates.length >= 5) {
+      const dayCounts = {};
+      allDates.forEach((d) => {
+        const day = new Date(d).toLocaleDateString('en-GB', { weekday: 'long' });
+        dayCounts[day] = (dayCounts[day] || 0) + 1;
+      });
+      const topDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0];
+      if (topDay && topDay[1] / allDates.length >= 0.3) {
+        const pct = Math.round((topDay[1] / allDates.length) * 100);
+        facts.push(pct + '% of the ' + allDates.length + ' product releases tracked here have landed on a ' + topDay[0] + ' (' + topDay[1] + ' of ' + allDates.length + ').');
+      }
+    }
+
+    // Average refresh cycle per category.
+    const categoryCycles = {};
+    cachedProducts.forEach((p) => {
+      const hist = (p.refresh_history || []).slice().sort();
+      if (hist.length < 2) return;
+      for (let i = 1; i < hist.length; i++) {
+        const days = Math.round((new Date(hist[i]) - new Date(hist[i - 1])) / 86400000);
+        if (days <= 0) continue;
+        if (!categoryCycles[p.category]) categoryCycles[p.category] = [];
+        categoryCycles[p.category].push(days);
+      }
+    });
+    Object.keys(categoryCycles).forEach((cat) => {
+      const cycles = categoryCycles[cat];
+      if (cycles.length >= 2) {
+        const avg = Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length);
+        facts.push(cat + ' products have refreshed roughly every ' + avg + ' days on average, based on ' + cycles.length + ' refresh' + (cycles.length === 1 ? '' : 'es') + ' tracked here.');
+      }
+    });
+
+    // Longest and shortest-lived discontinued products.
+    const lifespans = cachedProducts
+      .filter((p) => p.discontinued && p.discontinued_date)
+      .map((p) => {
+        const launch = p.original_launch_date || (p.refresh_history || []).slice().sort()[0];
+        if (!launch) return null;
+        const days = Math.round((new Date(p.discontinued_date) - new Date(launch)) / 86400000);
+        return days > 0 ? { name: p.name, days: days } : null;
+      })
+      .filter(Boolean);
+    if (lifespans.length >= 2) {
+      const longest = lifespans.slice().sort((a, b) => b.days - a.days)[0];
+      const longYears = Math.floor(longest.days / 365);
+      const longText = longYears >= 1 ? 'about ' + longYears + ' year' + (longYears === 1 ? '' : 's') : longest.days + ' days';
+      facts.push('The ' + longest.name + ' had the longest run of any discontinued product tracked on this site, lasting ' + longText + ' before being replaced.');
+
+      const shortest = lifespans.slice().sort((a, b) => a.days - b.days)[0];
+      if (shortest.name !== longest.name) {
+        const shortYears = Math.floor(shortest.days / 365);
+        const shortText = shortYears >= 1 ? 'about ' + shortYears + ' year' + (shortYears === 1 ? '' : 's') : 'just ' + shortest.days + ' days';
+        facts.push('The ' + shortest.name + ' had the shortest run of any discontinued product tracked here, lasting ' + shortText + '.');
+      }
+    }
+
+    // Always-available overall stats.
+    const categoryCount = new Set(cachedProducts.map((p) => p.category)).size;
+    facts.push('This site is currently tracking ' + cachedProducts.length + ' Apple products across ' + categoryCount + ' categories.');
+
+    return facts;
+  }
+
+  function renderFactCandidates() {
+    const listEl = document.getElementById('fact-candidates');
+    const candidates = generateFactCandidates();
+    listEl.innerHTML = '';
+    if (!candidates.length) {
+      listEl.textContent = 'No strong patterns yet, add more products with release dates to unlock these.';
+      return;
+    }
+    candidates.forEach((text) => {
+      const row = document.createElement('div');
+      row.className = 'admin-fact-row';
+      const p = document.createElement('p');
+      p.textContent = text;
+      const publishBtn = document.createElement('button');
+      publishBtn.type = 'button';
+      publishBtn.className = 'admin-btn admin-btn--small admin-btn--primary';
+      publishBtn.textContent = 'Publish';
+      publishBtn.addEventListener('click', async () => {
+        const { error } = await client.from('facts').insert({ text });
+        if (error) {
+          window.alert('Failed to publish: ' + error.message);
+          return;
+        }
+        loadPublishedFacts();
+      });
+      row.appendChild(p);
+      row.appendChild(publishBtn);
+      listEl.appendChild(row);
+    });
+  }
+
+  document.getElementById('generate-facts-btn').addEventListener('click', renderFactCandidates);
+
+  async function loadPublishedFacts() {
+    const listEl = document.getElementById('published-facts');
+    const { data, error } = await client.from('facts').select('*').order('created_at', { ascending: false });
+    listEl.innerHTML = '';
+    if (error) {
+      listEl.textContent = 'Could not load facts: ' + error.message + ' (has supabase-schema-update-17.sql been run?)';
+      return;
+    }
+    if (!data.length) {
+      listEl.textContent = 'Nothing published yet.';
+      return;
+    }
+    data.forEach((fact) => {
+      const row = document.createElement('div');
+      row.className = 'admin-fact-row';
+      const p = document.createElement('p');
+      p.textContent = fact.text;
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'admin-btn admin-btn--small';
+      copyBtn.textContent = 'Copy for Twitter';
+      copyBtn.addEventListener('click', () => {
+        const tweetText = fact.text + '\n\n' + window.location.host;
+        navigator.clipboard.writeText(tweetText).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy for Twitter'; }, 1500);
+        }).catch(() => {
+          window.alert('Could not copy automatically, here is the text:\n\n' + tweetText);
+        });
+      });
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'admin-btn admin-btn--small';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', async () => {
+        if (!window.confirm('Delete this fact?')) return;
+        const { error: delError } = await client.from('facts').delete().eq('id', fact.id);
+        if (delError) {
+          window.alert('Delete failed: ' + delError.message);
+          return;
+        }
+        loadPublishedFacts();
+      });
+      row.appendChild(p);
+      row.appendChild(copyBtn);
+      row.appendChild(deleteBtn);
+      listEl.appendChild(row);
+    });
+  }
 
   // --- About page ---
 

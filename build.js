@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, launchDate, slugify } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, launchDate, slugify } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Refresher',
@@ -74,6 +74,20 @@ async function loadEvents() {
   return [];
 }
 
+async function loadFacts() {
+  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data, error } = await supabase.from('facts').select('*').order('created_at', { ascending: false });
+    if (error) {
+      console.log('Could not load Facts (the table may not exist yet), building without any.');
+      return [];
+    }
+    return data || [];
+  }
+  return [];
+}
+
 async function loadGalleryPhotos() {
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     const { createClient } = require('@supabase/supabase-js');
@@ -102,6 +116,8 @@ async function main() {
   const products = await loadProducts();
   const aboutContent = await loadSiteContent();
   const events = await loadEvents();
+  const facts = await loadFacts();
+  const latestFact = facts[0] || null;
   const today = new Date().toISOString().slice(0, 10);
   const upcomingEvents = events.filter((e) => e.event_date >= today).sort((a, b) => (a.event_date < b.event_date ? -1 : 1));
   const activeEvent = upcomingEvents[0] || null;
@@ -197,6 +213,7 @@ async function main() {
     galleryPicks,
     productsBySlug,
     activeEvent,
+    latestFact,
     ...opts,
   }));
   write('products/index.html', allProductsPage({ items: productsPageItems, ...opts }));
@@ -204,6 +221,7 @@ async function main() {
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, ...opts }));
   write('events/index.html', eventsPage({ events, ...opts }));
+  write('facts/index.html', factsPage({ facts, ...opts }));
   for (const event of events) {
     write(`events/${event.id}/index.html`, eventDetailPage({ event, productsBySlug, ...opts }));
   }

@@ -819,6 +819,28 @@
     }).catch(function () {});
   }
 
+  var factBoxSection = document.getElementById('fact-box');
+  var factSectionWrapper = document.getElementById('fact-section');
+  if (factBoxSection && factSectionWrapper && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+    fetch(window.SUPABASE_URL + '/rest/v1/facts?select=*&order=created_at.desc&limit=1', {
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (rows) {
+        var latest = Array.isArray(rows) ? rows[0] : null;
+        if (!latest) {
+          factSectionWrapper.style.display = 'none';
+          return;
+        }
+        factSectionWrapper.style.display = '';
+        factBoxSection.innerHTML =
+          '<p class="fact-label">Did you know?</p>' +
+          '<p class="fact-text">' + escapeHtmlJS(latest.text) + '</p>' +
+          '<a href="/facts/" class="fact-more-link">More facts &rarr;</a>';
+      })
+      .catch(function () {});
+  }
+
   var galleryStripSection = document.getElementById('gallery-strip');
   if (galleryStripSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*', {
@@ -1002,6 +1024,23 @@
         gridSection.innerHTML = events.map(eventArchiveCardHtmlJS).join('');
         var noEvents = document.getElementById('no-events');
         if (noEvents) noEvents.style.display = events.length ? 'none' : '';
+      })
+      .catch(function () {});
+  }
+
+  var factsListSection = document.getElementById('facts-list');
+  if (factsListSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+    fetch(window.SUPABASE_URL + '/rest/v1/facts?select=*&order=created_at.desc', {
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (facts) {
+        if (!Array.isArray(facts)) return;
+        factsListSection.innerHTML = facts.map(function (fact) {
+          return '<div class="fact-card"><p class="fact-text">' + escapeHtmlJS(fact.text) + '</p><p class="fact-date">' + formatDateJS(fact.created_at.slice(0, 10)) + '</p></div>';
+        }).join('');
+        var noFacts = document.getElementById('no-facts');
+        if (noFacts) noFacts.style.display = facts.length ? 'none' : '';
       })
       .catch(function () {});
   }

@@ -330,6 +330,7 @@ ${bodyHtml}
     <nav class="footer-nav">
       <a href="/gallery/">Gallery</a>
       <a href="/events/">Apple Events</a>
+      <a href="/facts/">Facts</a>
       <a href="/about/">About us</a>
       <a href="/admin/">Admin</a>
     </nav>
@@ -664,7 +665,42 @@ function eventsPage({ events, siteUrl, supabaseUrl, supabaseAnonKey }) {
   });
 }
 
-function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function factCardHtml(fact) {
+  return `<div class="fact-card">
+  <p class="fact-text">${escapeHtml(fact.text)}</p>
+  <p class="fact-date">${formatDate(fact.created_at.slice(0, 10))}</p>
+</div>`;
+}
+
+function factsPage({ facts, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const body = `
+<div class="page-header-row">
+  <h1>Facts</h1>
+  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+</div>
+<p class="page-intro">Interesting patterns spotted across every product tracked on this site.</p>
+<p id="no-facts" class="page-intro" style="display:${facts.length ? 'none' : ''};">Nothing published yet.</p>
+<div id="facts-list" class="facts-list" data-mode="facts">
+  ${facts.map(factCardHtml).join('\n')}
+</div>`;
+  return shell({
+    title: 'Facts — Apple Refresher',
+    description: 'Interesting patterns spotted across every Apple product tracked on this site.',
+    siteUrl,
+    path: '/facts/',
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
+}
+
+function factBoxInnerHtml(fact) {
+  return `<p class="fact-label">Did you know?</p>
+    <p class="fact-text">${escapeHtml(fact.text)}</p>
+    <a href="/facts/" class="fact-more-link">More facts &rarr;</a>`;
+}
+
+function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const featuredSlotHtml = activeEvent
     ? eventCardHtml(activeEvent)
     : heroFeatured
@@ -700,6 +736,12 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
 </section>`
     : '';
 
+  const factSection = `<section class="homepage-section homepage-section--divided" id="fact-section" style="display:${latestFact ? '' : 'none'};">
+  <div class="fact-box" id="fact-box">
+    ${latestFact ? factBoxInnerHtml(latestFact) : ''}
+  </div>
+</section>`;
+
   const body = `
 <section class="intro-hero">
   <div class="intro-hero-layout">
@@ -716,6 +758,7 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
 <hr class="hero-divider">
 ${categoryLinksHtml}
 ${overdueSection}
+${factSection}
 ${gallerySection}`;
   return shell({
     title: 'Apple Refresher — time since every Apple product was last refreshed',
@@ -1078,6 +1121,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <button type="button" class="admin-tab-btn active" data-tab="products">Products</button>
       <button type="button" class="admin-tab-btn" data-tab="gallery">Gallery</button>
       <button type="button" class="admin-tab-btn" data-tab="event">Apple Event</button>
+      <button type="button" class="admin-tab-btn" data-tab="facts">Facts</button>
       <button type="button" class="admin-tab-btn" data-tab="about">About page</button>
     </div>
     <button id="logout-btn" class="admin-btn">Log out</button>
@@ -1274,6 +1318,15 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   </div>
 
 
+  <div id="tab-facts" class="admin-tab-panel" style="display:none;">
+    <p class="admin-hint">Computed from your current product data (release dates, categories, refresh cycles). Only patterns with a reasonable sample size behind them are shown, small datasets won't produce a fact until there's enough to say something real. Regenerate any time you've added more products.</p>
+    <button type="button" id="generate-facts-btn" class="admin-btn admin-btn--primary">Generate facts</button>
+    <div id="fact-candidates" class="admin-fact-list"></div>
+
+    <h3 class="admin-form-section">Published facts</h3>
+    <div id="published-facts" class="admin-fact-list"></div>
+  </div>
+
   <div id="tab-about" class="admin-tab-panel" style="display:none;">
     <form id="about-form" class="admin-form">
       <label>Heading<input type="text" id="about_heading"></label>
@@ -1314,6 +1367,7 @@ module.exports = {
   galleryPhotoCardHtml,
   eventsPage,
   eventDetailPage,
+  factsPage,
   homePage,
   allProductsPage,
   discontinuedPage,
