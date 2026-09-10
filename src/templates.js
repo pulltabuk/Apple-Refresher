@@ -165,11 +165,22 @@ function horizontalTimelineHtml(product, allProducts) {
       <p class="timeline-point-label">${pt.label}</p>
       <p class="timeline-point-date">${formatDate(pt.date)}</p>`;
 
-  const items = groups.map((group, i) => {
-    const leftLine = i > 0 ? `<span class="timeline-point-line-half timeline-point-line-half--left"></span>` : '';
-    const rightLine = i < groups.length - 1 ? `<span class="timeline-point-line-half timeline-point-line-half--right"></span>` : '';
-    if (group.length === 2) {
-      return `<div class="timeline-point timeline-point--merged">
+  // A single row gets cramped fast as a line grows year over year, so
+  // once there are more than this many points, wrap onto additional
+  // rows instead, each with full breathing room. A short connector
+  // between rows shows the line carries on rather than restarting.
+  const POINTS_PER_ROW = 4;
+  const rows = [];
+  for (let i = 0; i < groups.length; i += POINTS_PER_ROW) {
+    rows.push(groups.slice(i, i + POINTS_PER_ROW));
+  }
+
+  const rowsHtml = rows.map((row, rowIndex) => {
+    const items = row.map((group, i) => {
+      const leftLine = i > 0 ? `<span class="timeline-point-line-half timeline-point-line-half--left"></span>` : '';
+      const rightLine = i < row.length - 1 ? `<span class="timeline-point-line-half timeline-point-line-half--right"></span>` : '';
+      if (group.length === 2) {
+        return `<div class="timeline-point timeline-point--merged">
     ${leftLine}
     ${rightLine}
     <span class="timeline-dot"></span>
@@ -180,10 +191,10 @@ function horizontalTimelineHtml(product, allProducts) {
       ${entryHtml(group[1])}
     </div>
   </div>`;
-    }
-    const pt = group[0];
-    const side = i % 2 === 0 ? 'above' : 'below';
-    return `<div class="timeline-point timeline-point--${pt.type} timeline-point--${side}">
+      }
+      const pt = group[0];
+      const side = i % 2 === 0 ? 'above' : 'below';
+      return `<div class="timeline-point timeline-point--${pt.type} timeline-point--${side}">
     ${leftLine}
     ${rightLine}
     <span class="timeline-dot"></span>
@@ -191,8 +202,12 @@ function horizontalTimelineHtml(product, allProducts) {
       ${entryHtml(pt)}
     </div>
   </div>`;
+    }).join('\n');
+    const continues = rowIndex < rows.length - 1 ? ' timeline-horizontal--continues' : '';
+    return `<div class="timeline-horizontal${continues}">${items}</div>`;
   }).join('\n');
-  return `<div class="timeline-horizontal">${items}</div>`;
+
+  return rows.length > 1 ? `<div class="timeline-rows">${rowsHtml}</div>` : rowsHtml;
 }
 
 function appleSupportStatus(product) {
@@ -1093,69 +1108,73 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <p class="admin-hint">Pick a date and it's added automatically. Each one is a time this specific model was refreshed.</p>
         </div>
 
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Badge shows</span>
-          <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked> Days since refresh</label>
-          <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_launch" value="launch"> Days since launch</label>
-        </div>
-
         <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
 
-        <h3 class="admin-form-section">Product line</h3>
-        <p class="admin-hint">Optional: only needed if this product is part of a series with others already on the site (e.g. every iPhone model). Skip this whole section for a one-off product.</p>
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Timeline group</span>
-          <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_new" value="new" checked> New timeline</label>
-          <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_existing" value="existing"> Join an existing product line</label>
-          <input type="text" id="timeline_name_new" placeholder="e.g. iPhone">
-          <select id="timeline_name_existing" style="display:none;"></select>
-        </div>
-        <p class="admin-hint">Every product in a line needs this set to the same value, joining it here alone doesn't link anything else in. To connect a new model to a line that already exists, pick "Join an existing product line" and choose it from the list, that guarantees an exact match rather than retyping the name.</p>
-        <label>Previous model (pick a product, or leave blank)
-          <input type="text" id="previous_model" list="product-options-by-category" placeholder="Start typing a product name">
-        </label>
-        <p class="admin-hint">If this product replaces one already on the site, picking it here automatically marks that one Discontinued and fills in its "Replaced by" for you.</p>
-        ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'This does not replace Refresh history above, the day-count badge is calculated from Refresh history only, so add this product\u2019s own date(s) there regardless. Only fill this in if this is the ONE product that\u2019s the true origin of a whole line, leave it blank on every other product joining that line. If another product in the same line already has this set, saving will ask before changing anything.')}
+        <details class="admin-advanced">
+          <summary>More options (product line, video, links, notes, featured, discontinued)</summary>
 
-        <h3 class="admin-form-section">Video</h3>
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Video</span>
-          <div id="video-status" class="admin-video-status">No video uploaded.</div>
-          <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label>
-          <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
-        </div>
-
-        <h3 class="admin-form-section">More information</h3>
-        <label>Official Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/uk/iphone-17-pro/"></label>
-        <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> No longer available on Apple's website</label>
-        <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
-
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Notes</span>
-          <div class="richtext-toolbar">
-            <button type="button" data-cmd="bold"><b>B</b></button>
-            <button type="button" data-cmd="italic"><i>I</i></button>
-            <button type="button" data-cmd="underline"><u>U</u></button>
-            <button type="button" data-cmd="insertParagraph">&para;</button>
-            <button type="button" id="richtext-link-btn">&#128279;</button>
-            <button type="button" data-cmd="removeFormat" class="richtext-clear">&times;</button>
-            <button type="button" id="richtext-clear-all-btn" class="richtext-clear-all">Clear all formatting</button>
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Badge shows</span>
+            <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked> Days since refresh</label>
+            <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_launch" value="launch"> Days since launch</label>
           </div>
-          <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
-        </div>
 
-        <h3 class="admin-form-section">Homepage</h3>
-        <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
-        <p class="admin-hint">Only one product can be featured at a time, choosing this one will automatically un-feature whichever product currently holds it.</p>
+          <h3 class="admin-form-section">Product line</h3>
+          <p class="admin-hint">Optional: only needed if this product is part of a series with others already on the site (e.g. every iPhone model). Skip this whole section for a one-off product.</p>
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Timeline group</span>
+            <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_new" value="new" checked> New timeline</label>
+            <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_existing" value="existing"> Join an existing product line</label>
+            <input type="text" id="timeline_name_new" placeholder="e.g. iPhone">
+            <select id="timeline_name_existing" style="display:none;"></select>
+          </div>
+          <p class="admin-hint">Every product in a line needs this set to the same value, joining it here alone doesn't link anything else in. To connect a new model to a line that already exists, pick "Join an existing product line" and choose it from the list, that guarantees an exact match rather than retyping the name.</p>
+          <label>Previous model (pick a product, or leave blank)
+            <input type="text" id="previous_model" list="product-options-by-category" placeholder="Start typing a product name">
+          </label>
+          <p class="admin-hint">If this product replaces one already on the site, picking it here automatically marks that one Discontinued and fills in its "Replaced by" for you.</p>
+          ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'This does not replace Refresh history above, the day-count badge is calculated from Refresh history only, so add this product\u2019s own date(s) there regardless. Only fill this in if this is the ONE product that\u2019s the true origin of a whole line, leave it blank on every other product joining that line. If another product in the same line already has this set, saving will ask before changing anything.')}
 
-        <h3 class="admin-form-section">Discontinued</h3>
-        <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
-        ${datePrecisionFieldHtml('discontinued_date', 'Discontinued date')}
-        <label>Replaced by (pick a product, or leave blank)
-          <input type="text" id="replaced_by" list="product-options-by-category" placeholder="Start typing a product name">
-          <datalist id="product-options-by-category"></datalist>
-        </label>
-        <label>Why it went (only if there's more to it than "Replaced by" already says, e.g. a design flaw, price problem, or how it was received, leave blank otherwise)<textarea id="discontinued_reason" rows="2"></textarea></label>
+          <h3 class="admin-form-section">Video</h3>
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Video</span>
+            <div id="video-status" class="admin-video-status">No video uploaded.</div>
+            <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label>
+            <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
+          </div>
+
+          <h3 class="admin-form-section">More information</h3>
+          <label>Official Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/uk/iphone-17-pro/"></label>
+          <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> No longer available on Apple's website</label>
+          <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
+
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Notes</span>
+            <div class="richtext-toolbar">
+              <button type="button" data-cmd="bold"><b>B</b></button>
+              <button type="button" data-cmd="italic"><i>I</i></button>
+              <button type="button" data-cmd="underline"><u>U</u></button>
+              <button type="button" data-cmd="insertParagraph">&para;</button>
+              <button type="button" id="richtext-link-btn">&#128279;</button>
+              <button type="button" data-cmd="removeFormat" class="richtext-clear">&times;</button>
+              <button type="button" id="richtext-clear-all-btn" class="richtext-clear-all">Clear all formatting</button>
+            </div>
+            <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
+          </div>
+
+          <h3 class="admin-form-section">Homepage</h3>
+          <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
+          <p class="admin-hint">Only one product can be featured at a time, choosing this one will automatically un-feature whichever product currently holds it.</p>
+
+          <h3 class="admin-form-section">Discontinued</h3>
+          <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
+          ${datePrecisionFieldHtml('discontinued_date', 'Discontinued date')}
+          <label>Replaced by (pick a product, or leave blank)
+            <input type="text" id="replaced_by" list="product-options-by-category" placeholder="Start typing a product name">
+            <datalist id="product-options-by-category"></datalist>
+          </label>
+          <label>Why it went (only if there's more to it than "Replaced by" already says, e.g. a design flaw, price problem, or how it was received, leave blank otherwise)<textarea id="discontinued_reason" rows="2"></textarea></label>
+        </details>
 
         <button type="submit" class="admin-btn admin-btn--primary">Save product</button>
       </form>

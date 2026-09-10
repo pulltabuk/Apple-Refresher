@@ -499,6 +499,8 @@
     if (!p) return;
     editingId = id;
     editingSlug = p.slug;
+    const advancedSection = document.querySelector('.admin-advanced');
+    if (advancedSection) advancedSection.open = true;
     if (window.history && window.history.pushState) {
       window.history.pushState({}, '', '/admin/?edit=' + id);
     }
@@ -539,6 +541,8 @@
   function startNewProduct() {
     editingId = null;
     editingSlug = null;
+    const advancedSectionNew = document.querySelector('.admin-advanced');
+    if (advancedSectionNew) advancedSectionNew.open = false;
     if (window.history && window.history.pushState) {
       window.history.pushState({}, '', '/admin/?new=1');
     }

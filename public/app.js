@@ -129,26 +129,36 @@
         '<p class="timeline-point-date">' + formatDateJS(pt.date) + '</p>';
     };
 
-    var items = groups.map(function (group, i) {
-      var leftLine = i > 0 ? '<span class="timeline-point-line-half timeline-point-line-half--left"></span>' : '';
-      var rightLine = i < groups.length - 1 ? '<span class="timeline-point-line-half timeline-point-line-half--right"></span>' : '';
-      if (group.length === 2) {
-        return '<div class="timeline-point timeline-point--merged">' +
+    var POINTS_PER_ROW = 4;
+    var rows = [];
+    for (var ri = 0; ri < groups.length; ri += POINTS_PER_ROW) {
+      rows.push(groups.slice(ri, ri + POINTS_PER_ROW));
+    }
+
+    var rowsHtml = rows.map(function (row, rowIndex) {
+      var items = row.map(function (group, i) {
+        var leftLine = i > 0 ? '<span class="timeline-point-line-half timeline-point-line-half--left"></span>' : '';
+        var rightLine = i < row.length - 1 ? '<span class="timeline-point-line-half timeline-point-line-half--right"></span>' : '';
+        if (group.length === 2) {
+          return '<div class="timeline-point timeline-point--merged">' +
+            leftLine + rightLine +
+            '<span class="timeline-dot"></span>' +
+            '<div class="timeline-point-content timeline-point-content--above">' + entryHtmlJS(group[0]) + '</div>' +
+            '<div class="timeline-point-content timeline-point-content--below">' + entryHtmlJS(group[1]) + '</div>' +
+          '</div>';
+        }
+        var pt = group[0];
+        var side = i % 2 === 0 ? 'above' : 'below';
+        return '<div class="timeline-point timeline-point--' + pt.type + ' timeline-point--' + side + '">' +
           leftLine + rightLine +
           '<span class="timeline-dot"></span>' +
-          '<div class="timeline-point-content timeline-point-content--above">' + entryHtmlJS(group[0]) + '</div>' +
-          '<div class="timeline-point-content timeline-point-content--below">' + entryHtmlJS(group[1]) + '</div>' +
+          '<div class="timeline-point-content">' + entryHtmlJS(pt) + '</div>' +
         '</div>';
-      }
-      var pt = group[0];
-      var side = i % 2 === 0 ? 'above' : 'below';
-      return '<div class="timeline-point timeline-point--' + pt.type + ' timeline-point--' + side + '">' +
-        leftLine + rightLine +
-        '<span class="timeline-dot"></span>' +
-        '<div class="timeline-point-content">' + entryHtmlJS(pt) + '</div>' +
-      '</div>';
+      }).join('');
+      var continues = rowIndex < rows.length - 1 ? ' timeline-horizontal--continues' : '';
+      return '<div class="timeline-horizontal' + continues + '">' + items + '</div>';
     }).join('');
-    return '<div class="timeline-horizontal">' + items + '</div>';
+    return rows.length > 1 ? '<div class="timeline-rows">' + rowsHtml + '</div>' : rowsHtml;
   }
 
   function appleSupportStatusJS(product) {
