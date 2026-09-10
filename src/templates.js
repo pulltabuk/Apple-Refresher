@@ -160,24 +160,25 @@ function horizontalTimelineHtml(product, allProducts) {
   const points = categoryTimelinePoints(product, allProducts);
   if (!points.length) return '';
 
-  // Merge adjacent same-date points into one shared position, so a
-  // discontinued model and whatever replaced it sit together at a
-  // single spot on the timeline rather than as two separate dots.
+  // Merge ALL consecutive same-date points into one shared position,
+  // regardless of how many share that date, so e.g. a base model, its
+  // Pro sibling, and Pro Max all launching together sit at one spot
+  // on the timeline rather than some of them being left stranded as
+  // separate dots (a pairs-only merge would only catch the first two).
   const groups = [];
   let gi = 0;
   while (gi < points.length) {
-    if (gi + 1 < points.length && points[gi].date === points[gi + 1].date) {
-      groups.push([points[gi], points[gi + 1]]);
-      gi += 2;
-    } else {
-      groups.push([points[gi]]);
-      gi += 1;
-    }
+    let gj = gi + 1;
+    while (gj < points.length && points[gj].date === points[gi].date) gj++;
+    groups.push(points.slice(gi, gj));
+    gi = gj;
   }
 
-  const entryHtml = (pt) => `<p class="timeline-point-name">${escapeHtml(pt.productName)}</p>
+  const entryHtml = (pt) => `<div class="timeline-point-entry">
+      <p class="timeline-point-name">${escapeHtml(pt.productName)}</p>
       <p class="timeline-point-label">${pt.label}</p>
-      <p class="timeline-point-date">${formatDate(pt.date)}</p>`;
+      <p class="timeline-point-date">${formatDate(pt.date)}</p>
+    </div>`;
 
   // A single row gets cramped fast as a line grows year over year, so
   // once there are more than this many points, wrap onto additional
@@ -193,16 +194,19 @@ function horizontalTimelineHtml(product, allProducts) {
     const items = row.map((group, i) => {
       const leftLine = i > 0 ? `<span class="timeline-point-line-half timeline-point-line-half--left"></span>` : '';
       const rightLine = i < row.length - 1 ? `<span class="timeline-point-line-half timeline-point-line-half--right"></span>` : '';
-      if (group.length === 2) {
+      if (group.length >= 2) {
+        const aboveCount = Math.ceil(group.length / 2);
+        const aboveEntries = group.slice(0, aboveCount);
+        const belowEntries = group.slice(aboveCount);
         return `<div class="timeline-point timeline-point--merged">
     ${leftLine}
     ${rightLine}
     <span class="timeline-dot"></span>
     <div class="timeline-point-content timeline-point-content--above">
-      ${entryHtml(group[0])}
+      ${aboveEntries.map(entryHtml).join('\n')}
     </div>
     <div class="timeline-point-content timeline-point-content--below">
-      ${entryHtml(group[1])}
+      ${belowEntries.map(entryHtml).join('\n')}
     </div>
   </div>`;
       }
@@ -742,8 +746,8 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
 <div class="filters-with-everything">
   <button type="button" id="everything-btn" class="everything-btn">Everything</button>
   <div class="filter-bars-stack">
-    <div id="status-bar-wrapper" style="display:none;">${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}</div>
     ${filterBar('category', categories, null, categoryCounts, items.length, true, 'All Products')}
+    <div id="status-bar-wrapper" style="display:none;">${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}</div>
   </div>
 </div>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>

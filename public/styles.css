@@ -677,7 +677,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .category-tile-count { font-size: 26px; font-weight: 700; color: var(--accent-blue); margin: 6px 0 0; }
 .category-tile-caption { font-size: 11px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; margin: 0; }
 
-.timeline-horizontal { position: relative; display: flex; align-items: center; overflow-x: auto; overflow-y: visible; padding: 110px 56px; margin: 0.75rem -56px 0; gap: 0; }
+.timeline-horizontal { position: relative; display: flex; align-items: center; overflow-x: auto; overflow-y: visible; padding: 160px 56px; margin: 0.75rem -56px 0; gap: 0; }
 .timeline-rows { display: flex; flex-direction: column; }
 .timeline-rows .timeline-horizontal { margin-top: 0; }
 .timeline-horizontal--continues::after {
@@ -722,6 +722,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .timeline-point--below .timeline-point-content { top: 18px; }
 .timeline-point-content--above { bottom: 18px; }
 .timeline-point-content--below { top: 18px; }
+.timeline-point-entry + .timeline-point-entry { margin-top: 14px; }
 .timeline-point-name { margin: 0; font-size: 12px; font-weight: 600; line-height: 1.3; }
 .timeline-point-label { margin: 2px 0 0; font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); }
 .timeline-point-date { margin: 1px 0 0; font-size: 11px; color: var(--text-secondary); }

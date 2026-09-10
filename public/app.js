@@ -126,19 +126,18 @@
     var groups = [];
     var gi = 0;
     while (gi < points.length) {
-      if (gi + 1 < points.length && points[gi].date === points[gi + 1].date) {
-        groups.push([points[gi], points[gi + 1]]);
-        gi += 2;
-      } else {
-        groups.push([points[gi]]);
-        gi += 1;
-      }
+      var gj = gi + 1;
+      while (gj < points.length && points[gj].date === points[gi].date) gj++;
+      groups.push(points.slice(gi, gj));
+      gi = gj;
     }
 
     var entryHtmlJS = function (pt) {
-      return '<p class="timeline-point-name">' + escapeHtmlJS(pt.productName) + '</p>' +
+      return '<div class="timeline-point-entry">' +
+        '<p class="timeline-point-name">' + escapeHtmlJS(pt.productName) + '</p>' +
         '<p class="timeline-point-label">' + pt.label + '</p>' +
-        '<p class="timeline-point-date">' + formatDateJS(pt.date) + '</p>';
+        '<p class="timeline-point-date">' + formatDateJS(pt.date) + '</p>' +
+      '</div>';
     };
 
     var POINTS_PER_ROW = 4;
@@ -151,12 +150,15 @@
       var items = row.map(function (group, i) {
         var leftLine = i > 0 ? '<span class="timeline-point-line-half timeline-point-line-half--left"></span>' : '';
         var rightLine = i < row.length - 1 ? '<span class="timeline-point-line-half timeline-point-line-half--right"></span>' : '';
-        if (group.length === 2) {
+        if (group.length >= 2) {
+          var aboveCount = Math.ceil(group.length / 2);
+          var aboveEntries = group.slice(0, aboveCount);
+          var belowEntries = group.slice(aboveCount);
           return '<div class="timeline-point timeline-point--merged">' +
             leftLine + rightLine +
             '<span class="timeline-dot"></span>' +
-            '<div class="timeline-point-content timeline-point-content--above">' + entryHtmlJS(group[0]) + '</div>' +
-            '<div class="timeline-point-content timeline-point-content--below">' + entryHtmlJS(group[1]) + '</div>' +
+            '<div class="timeline-point-content timeline-point-content--above">' + aboveEntries.map(entryHtmlJS).join('') + '</div>' +
+            '<div class="timeline-point-content timeline-point-content--below">' + belowEntries.map(entryHtmlJS).join('') + '</div>' +
           '</div>';
         }
         var pt = group[0];
