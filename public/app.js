@@ -913,14 +913,14 @@
 
   function eventArchiveCardHtmlJS(event) {
     var dateText = [formatDateJS(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
-    var tags = (event.announced_products || []).map(function (t) { return '<span class="pill">' + escapeHtmlJS(t) + '</span>'; }).join('');
+    var sortedProducts = (event.announced_products || []).slice().sort(function (a, b) { return a.localeCompare(b); });
+    var shown = sortedProducts.slice(0, 3);
+    var remaining = sortedProducts.length - shown.length;
+    var tags = shown.map(function (t) { return '<span class="pill">' + escapeHtmlJS(t) + '</span>'; }).join('') + (remaining > 0 ? '<span class="pill pill--muted">+' + remaining + ' more</span>' : '');
     var inner = '<div class="card-image">' + (event.image_url ? '<img src="' + escapeHtmlJS(event.image_url) + '" alt="' + escapeHtmlJS(event.heading) + '">' : '') + '</div>' +
       '<p class="card-name">' + escapeHtmlJS(event.heading) + '</p>' +
       (dateText ? '<p class="card-meta">' + escapeHtmlJS(dateText) + '</p>' : '');
-    var link = event.event_url
-      ? '<a class="card-link" href="' + escapeHtmlJS(event.event_url) + '" target="_blank" rel="noopener">' + inner + '</a>'
-      : '<div class="card-link">' + inner + '</div>';
-    return '<article class="card">' + link + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
+    return '<article class="card"><a class="card-link" href="/events/' + event.id + '/">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
   }
 
   if (gridSection && gridSection.getAttribute('data-mode') === 'events' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {

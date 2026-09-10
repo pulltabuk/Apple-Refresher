@@ -274,6 +274,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
   text-decoration: none;
 }
 .pill:hover { background: var(--accent-blue-dark); border-color: var(--accent-blue-dark); color: #fff; }
+.pill--muted { color: var(--text-secondary); border-color: var(--border); }
+.pill--muted:hover { background: transparent; border-color: var(--border); color: var(--text-secondary); }
 .pill--location { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
 .pill--location:hover { background: var(--accent-blue-dark); border-color: var(--accent-blue-dark); color: #fff; }
 
@@ -619,6 +621,12 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 
 .gallery-photo-page { max-width: 640px; margin: 1.5rem auto 0; }
+.event-detail-page { max-width: 640px; margin: 1.5rem auto 0; }
+.event-detail-image { width: 100%; border-radius: 12px; display: block; margin: 1rem 0; }
+.event-products-list { list-style: none; margin: 0.75rem 0 1.5rem; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.event-products-list li { font-size: 15px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; }
+.event-products-list a { color: var(--accent-blue); text-decoration: none; font-weight: 500; }
+.event-products-list a:hover { text-decoration: underline; }
 .gallery-photo-header { padding-bottom: 1.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
 .gallery-photo-header h1 { font-size: 24px; margin: 0; }
 .gallery-photo-date { font-size: 14px; color: var(--text-secondary); margin: 6px 0 0; }

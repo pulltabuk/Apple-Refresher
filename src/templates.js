@@ -554,17 +554,51 @@ function eventCardHtml(event) {
 
 function eventArchiveCardHtml(event) {
   const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
-  const tags = (event.announced_products || []).map((t) => `<span class="pill">${escapeHtml(t)}</span>`).join('');
+  const sortedProducts = (event.announced_products || []).slice().sort((a, b) => a.localeCompare(b));
+  const shown = sortedProducts.slice(0, 3);
+  const remaining = sortedProducts.length - shown.length;
+  const tags = shown.map((t) => `<span class="pill">${escapeHtml(t)}</span>`).join('') + (remaining > 0 ? `<span class="pill pill--muted">+${remaining} more</span>` : '');
   const inner = `<div class="card-image">${event.image_url ? `<img src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}</div>
     <p class="card-name">${escapeHtml(event.heading)}</p>
     ${dateText ? `<p class="card-meta">${escapeHtml(dateText)}</p>` : ''}`;
-  const link = event.event_url
-    ? `<a class="card-link" href="${escapeHtml(event.event_url)}" target="_blank" rel="noopener">${inner}</a>`
-    : `<div class="card-link">${inner}</div>`;
   return `<article class="card">
-  ${link}
+  <a class="card-link" href="/events/${event.id}/">${inner}</a>
   ${tags ? `<div class="gallery-tags"><div class="gallery-tags-row">${tags}</div></div>` : ''}
 </article>`;
+}
+
+function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
+  const sortedProducts = (event.announced_products || []).slice().sort((a, b) => a.localeCompare(b));
+  const productsList = sortedProducts.length
+    ? `<ul class="event-products-list">
+    ${sortedProducts.map((name) => {
+      const match = Object.values(productsBySlug || {}).find((p) => p.name.toLowerCase() === name.toLowerCase());
+      return `<li>${match ? `<a href="/products/${match.slug}/">${escapeHtml(name)}</a>` : escapeHtml(name)}</li>`;
+    }).join('\n')}
+  </ul>`
+    : '';
+  const body = `
+<article class="event-detail-page">
+  <div class="page-header-row">
+    <h1>${escapeHtml(event.heading)}</h1>
+    <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+  </div>
+  ${dateText ? `<p class="page-intro">${escapeHtml(dateText)}</p>` : ''}
+  ${event.image_url ? `<img class="event-detail-image" src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}
+  ${productsList ? `<h2>What was announced</h2>${productsList}` : ''}
+  ${event.event_url ? `<p><a class="intro-cta" href="${escapeHtml(event.event_url)}" target="_blank" rel="noopener">Watch on Apple's site</a></p>` : ''}
+  <p><a href="/events/" class="gallery-nav-link">&larr; All Apple Events</a></p>
+</article>`;
+  return shell({
+    title: `${event.heading} — Apple Refresher`,
+    description: `${event.heading}${dateText ? `, ${dateText}` : ''}. ${sortedProducts.length ? 'Announced: ' + sortedProducts.join(', ') + '.' : ''}`,
+    siteUrl,
+    path: `/events/${event.id}/`,
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
 }
 
 function eventsPage({ events, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -1236,6 +1270,7 @@ module.exports = {
   galleryPhotoPage,
   galleryPhotoCardHtml,
   eventsPage,
+  eventDetailPage,
   homePage,
   allProductsPage,
   discontinuedPage,

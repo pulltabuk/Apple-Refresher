@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, launchDate, slugify } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, launchDate, slugify } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Refresher',
@@ -200,6 +200,9 @@ async function main() {
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, ...opts }));
   write('events/index.html', eventsPage({ events, ...opts }));
+  for (const event of events) {
+    write(`events/${event.id}/index.html`, eventDetailPage({ event, productsBySlug, ...opts }));
+  }
   for (let i = 0; i < galleryPhotos.length; i++) {
     const photo = galleryPhotos[i];
     const prevPhoto = i > 0 ? galleryPhotos[i - 1] : null;
