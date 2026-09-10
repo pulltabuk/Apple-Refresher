@@ -87,39 +87,24 @@
 
   const DATE_FIELD_PREFIXES = ['original_launch_date', 'discontinued_date', 'new_refresh_date', 'gallery_date_taken'];
 
-  // --- Timeline group: New timeline (free text) or Join an existing
-  // product line (a dropdown of every value already in use, so picking
-  // one is a guaranteed exact match instead of retyping a name).
-
-  function updateTimelineModeVisibility() {
-    const mode = document.querySelector('input[name="timeline_mode"]:checked').value;
-    document.getElementById('timeline_name_new').style.display = mode === 'new' ? '' : 'none';
-    document.getElementById('timeline_name_existing').style.display = mode === 'existing' ? '' : 'none';
-  }
-
-  document.querySelectorAll('input[name="timeline_mode"]').forEach((radio) => {
-    radio.addEventListener('change', updateTimelineModeVisibility);
-  });
-  updateTimelineModeVisibility();
+  // --- Timeline group: one field, matching Category's pattern. Typing
+  // an existing name (case/whitespace-insensitive) joins that group,
+  // typing anything else starts a new one. getTimelineName normalizes
+  // near-matches to the exact existing casing so a small typo or case
+  // difference can never silently create a second, disconnected group.
 
   function getTimelineName() {
-    const mode = document.querySelector('input[name="timeline_mode"]:checked').value;
-    if (mode === 'existing') return document.getElementById('timeline_name_existing').value || null;
-    return document.getElementById('timeline_name_new').value.trim() || null;
+    const typed = document.getElementById('timeline_name').value.trim();
+    if (!typed) return null;
+    const typedKey = typed.toLowerCase();
+    const existingNames = new Set();
+    cachedProducts.forEach((p) => { if (p.timeline_name) existingNames.add(p.timeline_name); });
+    const match = Array.from(existingNames).find((n) => n.trim().toLowerCase() === typedKey);
+    return match || typed;
   }
 
   function setTimelineName(value) {
-    document.getElementById('timeline_name_new').value = '';
-    document.getElementById('timeline_name_existing').value = '';
-    const existingOption = value && Array.from(document.getElementById('timeline_name_existing').options).some((o) => o.value === value);
-    if (existingOption) {
-      document.getElementById('timeline_mode_existing').checked = true;
-      document.getElementById('timeline_name_existing').value = value;
-    } else {
-      document.getElementById('timeline_mode_new').checked = true;
-      document.getElementById('timeline_name_new').value = value || '';
-    }
-    updateTimelineModeVisibility();
+    document.getElementById('timeline_name').value = value || '';
   }
   DATE_FIELD_PREFIXES.forEach(wireDatePrecisionField);
 
@@ -259,23 +244,18 @@
       categoryFieldEl.dataset.wiredProductOptions = 'true';
     }
 
-    // "Timeline group" picker: every distinct value already in use,
-    // so joining one is a guaranteed exact match rather than retyping
-    // a name and risking a mismatch.
-    const timelineSelect = document.getElementById('timeline_name_existing');
-    const previousValue = timelineSelect.value;
-    timelineSelect.innerHTML = '<option value="">Choose a product line...</option>';
+    // "Timeline group" datalist: every distinct value already in use,
+    // shown as suggestions while typing so joining an existing line
+    // means picking it rather than retyping and risking a mismatch.
+    const timelineOptionsEl = document.getElementById('timeline-name-options');
+    timelineOptionsEl.innerHTML = '';
     const timelineNames = new Set();
     cachedProducts.forEach((p) => { if (p.timeline_name) timelineNames.add(p.timeline_name); });
-    Array.from(timelineNames).sort().forEach((t) => {
+    Array.from(timelineNames).sort((a, b) => a.localeCompare(b)).forEach((t) => {
       const opt = document.createElement('option');
       opt.value = t;
-      opt.textContent = t;
-      timelineSelect.appendChild(opt);
+      timelineOptionsEl.appendChild(opt);
     });
-    if (Array.from(timelineSelect.options).some((o) => o.value === previousValue)) {
-      timelineSelect.value = previousValue;
-    }
   }
 
   async function loadProducts() {

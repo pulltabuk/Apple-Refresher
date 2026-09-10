@@ -111,26 +111,40 @@ function categoryTimelinePoints(product, allProducts) {
   const groupKey = normaliseGroupKey(product.timeline_name || product.category);
   const sameCategory = (allProducts || []).filter((p) => normaliseGroupKey(p.timeline_name || p.category) === groupKey);
 
-  // Collect every date-owning entry across every product in the group,
-  // regardless of whether anyone has set original_launch_date. That
-  // field only breaks ties on which date is "the" launch when it's
-  // ambiguous; it was never meant to be the only way other products'
-  // own refresh dates make it onto a shared timeline.
-  const dateOwners = new Map();
+  // Collect every date a product in the group was refreshed. Keyed by
+  // (date, product) so two different products sharing the exact same
+  // date (e.g. a base model and its Pro sibling launching together)
+  // both keep their own point here — the "merge" step in
+  // horizontalTimelineHtml is what visually pairs same-date points,
+  // this step must never drop one first just because a date repeats.
+  const seenKeys = new Set();
+  const dateEntries = [];
   sameCategory.forEach((p) => (p.refresh_history || []).forEach((d) => {
-    if (!dateOwners.has(d)) dateOwners.set(d, p.name);
+    const key = d + '|' + p.name;
+    if (seenKeys.has(key)) return;
+    seenKeys.add(key);
+    dateEntries.push({ date: d, productName: p.name });
   }));
+  const sortedEntries = dateEntries.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
   const launchCandidates = sameCategory.map((p) => p.original_launch_date).filter(Boolean);
   const lineLaunch = launchCandidates.length
     ? launchCandidates.reduce((earliest, d) => (d < earliest ? d : earliest))
-    : (dateOwners.size ? Array.from(dateOwners.keys()).sort()[0] : null);
+    : (sortedEntries.length ? sortedEntries[0].date : null);
   const launchOwnerFromField = sameCategory.find((p) => p.original_launch_date === lineLaunch);
-  const launchOwnerName = launchOwnerFromField ? launchOwnerFromField.name : (lineLaunch ? dateOwners.get(lineLaunch) : null);
+  const launchEntry = sortedEntries.find((e) => e.date === lineLaunch);
+  const launchOwnerName = launchOwnerFromField ? launchOwnerFromField.name : (launchEntry ? launchEntry.productName : null);
 
   const points = [];
   if (lineLaunch) points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwnerName || product.name });
-  Array.from(dateOwners.keys()).filter((d) => d !== lineLaunch).sort().forEach((d) => points.push({ date: d, label: 'Refresh', type: 'refresh', productName: dateOwners.get(d) }));
+  let launchConsumed = false;
+  sortedEntries.forEach((e) => {
+    if (!launchConsumed && e.date === lineLaunch && e.productName === (launchOwnerName || product.name)) {
+      launchConsumed = true;
+      return;
+    }
+    points.push({ date: e.date, label: 'Refresh', type: 'refresh', productName: e.productName });
+  });
 
   sameCategory.forEach((p) => {
     if (p.discontinued && p.discontinued_date) {
@@ -431,16 +445,22 @@ function galleryPhotoCardHtml(photo) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const searchText = [photo.caption, photo.location, photo.country, ...(photo.tags || [])].filter(Boolean).join(' ');
   const images = galleryPhotoImages(photo);
+  const photoCountPill = images.length > 1 ? `<span class="pill pill--count">${images.length} photos</span>` : '';
+  const tagsHtml = galleryTagsHtml(photo);
+  const combinedTags = photoCountPill
+    ? (tagsHtml
+        ? tagsHtml.replace('<div class="gallery-tags-row">', `<div class="gallery-tags-row">${photoCountPill}`)
+        : `<div class="gallery-tags"><div class="gallery-tags-row">${photoCountPill}</div></div>`)
+    : tagsHtml;
   return `<article class="card" data-date="${dateToTimestamp(photo.date_taken)}" data-search="${escapeHtml(searchText.toLowerCase())}">
   <a class="card-link" href="/gallery/${photo.id}/">
     <div class="card-image">
       ${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}
-      ${images.length > 1 ? `<span class="card-photo-count">${images.length} photos</span>` : ''}
     </div>
     <p class="card-name">${escapeHtml(displayName)}</p>
     ${photo.date_taken ? `<p class="card-meta">${formatDate(photo.date_taken)}</p>` : ''}
   </a>
-  ${galleryTagsHtml(photo)}
+  ${combinedTags}
 </article>`;
 }
 
@@ -1123,12 +1143,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <p class="admin-hint">Optional: only needed if this product is part of a series with others already on the site (e.g. every iPhone model). Skip this whole section for a one-off product.</p>
           <div class="admin-subfield">
             <span class="admin-subfield-label">Timeline group</span>
-            <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_new" value="new" checked> New timeline</label>
-            <label class="checkbox-label"><input type="radio" name="timeline_mode" id="timeline_mode_existing" value="existing"> Join an existing product line</label>
-            <input type="text" id="timeline_name_new" placeholder="e.g. iPhone">
-            <select id="timeline_name_existing" style="display:none;"></select>
+            <input type="text" id="timeline_name" list="timeline-name-options" placeholder="e.g. iPhone">
+            <datalist id="timeline-name-options"></datalist>
           </div>
-          <p class="admin-hint">Every product in a line needs this set to the same value, joining it here alone doesn't link anything else in. To connect a new model to a line that already exists, pick "Join an existing product line" and choose it from the list, that guarantees an exact match rather than retyping the name.</p>
+          <p class="admin-hint">Give every product that should share one continuous history the exact same value here, start typing and existing ones you've already used will show up to pick from. Two products with this set to "iPhone" show each other's launches on the same timeline; leave it blank and this product won't be linked to anything.</p>
           <label>Previous model (pick a product, or leave blank)
             <input type="text" id="previous_model" list="product-options-by-category" placeholder="Start typing a product name">
           </label>

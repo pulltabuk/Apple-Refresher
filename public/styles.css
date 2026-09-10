@@ -628,17 +628,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card-meta--lifespan { font-weight: 700; color: #d32f2f; }
 .gallery-tags { display: flex; flex-direction: column; gap: 4px; margin-top: auto; }
 .gallery-tags-row { display: flex; flex-wrap: wrap; gap: 4px; }
-.card-photo-count {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #fff;
-  background: var(--accent-blue);
-  padding: 2px 8px;
-  border-radius: 999px;
-}
+.pill--count { color: var(--fresh-text); border-color: var(--fresh-text); background: var(--fresh-bg); }
+.pill--count:hover { background: #dcecc9; border-color: var(--fresh-text); color: var(--fresh-text); }
 
 .gallery-photo-page { max-width: 640px; margin: 1.5rem auto 0; }
 .event-detail-page { max-width: 640px; margin: 1.5rem auto 0; }

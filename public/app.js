@@ -78,24 +78,36 @@
     var groupKey = normaliseGroupKeyJS(product.timeline_name || product.category);
     var sameCategory = (allProducts || []).filter(function (p) { return normaliseGroupKeyJS(p.timeline_name || p.category) === groupKey; });
 
-    var dateOwners = {};
+    var seenKeys = {};
+    var dateEntries = [];
     sameCategory.forEach(function (p) {
       (p.refresh_history || []).forEach(function (d) {
-        if (!dateOwners[d]) dateOwners[d] = p.name;
+        var key = d + '|' + p.name;
+        if (seenKeys[key]) return;
+        seenKeys[key] = true;
+        dateEntries.push({ date: d, productName: p.name });
       });
     });
+    var sortedEntries = dateEntries.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
 
     var launchCandidates = sameCategory.map(function (p) { return p.original_launch_date; }).filter(Boolean);
-    var dateKeys = Object.keys(dateOwners).sort();
     var lineLaunch = launchCandidates.length
       ? launchCandidates.reduce(function (earliest, d) { return d < earliest ? d : earliest; })
-      : (dateKeys.length ? dateKeys[0] : null);
+      : (sortedEntries.length ? sortedEntries[0].date : null);
     var launchOwnerFromField = sameCategory.filter(function (p) { return p.original_launch_date === lineLaunch; })[0];
-    var launchOwnerName = launchOwnerFromField ? launchOwnerFromField.name : (lineLaunch ? dateOwners[lineLaunch] : null);
+    var launchEntry = sortedEntries.filter(function (e) { return e.date === lineLaunch; })[0];
+    var launchOwnerName = launchOwnerFromField ? launchOwnerFromField.name : (launchEntry ? launchEntry.productName : null);
 
     var points = [];
     if (lineLaunch) points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwnerName || product.name });
-    dateKeys.filter(function (d) { return d !== lineLaunch; }).forEach(function (d) { points.push({ date: d, label: 'Refresh', type: 'refresh', productName: dateOwners[d] }); });
+    var launchConsumed = false;
+    sortedEntries.forEach(function (e) {
+      if (!launchConsumed && e.date === lineLaunch && e.productName === (launchOwnerName || product.name)) {
+        launchConsumed = true;
+        return;
+      }
+      points.push({ date: e.date, label: 'Refresh', type: 'refresh', productName: e.productName });
+    });
 
     sameCategory.forEach(function (p) {
       if (p.discontinued && p.discontinued_date) {
@@ -908,16 +920,22 @@
     var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
     var searchText = [photo.caption, photo.location, photo.country].concat(photo.tags || []).filter(Boolean).join(' ').toLowerCase();
     var images = galleryPhotoImagesJS(photo);
+    var photoCountPill = images.length > 1 ? '<span class="pill pill--count">' + images.length + ' photos</span>' : '';
+    var tagsHtml = galleryTagsHtmlJS(photo);
+    var combinedTags = photoCountPill
+      ? (tagsHtml
+          ? tagsHtml.replace('<div class="gallery-tags-row">', '<div class="gallery-tags-row">' + photoCountPill)
+          : '<div class="gallery-tags"><div class="gallery-tags-row">' + photoCountPill + '</div></div>')
+      : tagsHtml;
     return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
       '<a class="card-link" href="/gallery/' + photo.id + '/">' +
         '<div class="card-image">' +
           (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') +
-          (images.length > 1 ? '<span class="card-photo-count">' + images.length + ' photos</span>' : '') +
         '</div>' +
         '<p class="card-name">' + escapeHtmlJS(displayName) + '</p>' +
         (photo.date_taken ? '<p class="card-meta">' + formatDateJS(photo.date_taken) + '</p>' : '') +
       '</a>' +
-      galleryTagsHtmlJS(photo) +
+      combinedTags +
     '</article>';
   }
 
