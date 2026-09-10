@@ -132,7 +132,9 @@ async function main() {
     if (!dateA && !dateB) return 0;
     if (!dateA) return 1;
     if (!dateB) return -1;
-    return new Date(dateB).getTime() - new Date(dateA).getTime();
+    const diff = new Date(dateB).getTime() - new Date(dateA).getTime();
+    if (diff !== 0) return diff;
+    return a.product.name.localeCompare(b.product.name);
   });
 
   // The /products/ page gets its own default order: current products
@@ -147,11 +149,13 @@ async function main() {
     if (!aDisc) {
       const daysA = a.status ? a.status.daysSince : -Infinity;
       const daysB = b.status ? b.status.daysSince : -Infinity;
-      return daysB - daysA;
+      if (daysA !== daysB) return daysB - daysA;
+      return a.product.name.localeCompare(b.product.name);
     }
     const discA = a.product.discontinued_date ? new Date(a.product.discontinued_date).getTime() : 0;
     const discB = b.product.discontinued_date ? new Date(b.product.discontinued_date).getTime() : 0;
-    return discB - discA;
+    if (discA !== discB) return discB - discA;
+    return a.product.name.localeCompare(b.product.name);
   });
 
   // Homepage hero: 3 random current products, one marked featured (an

@@ -593,6 +593,20 @@
     if (row) window.location.href = row.getAttribute('data-href');
   });
 
+  function updateStatusBarVisibility() {
+    var wrapper = document.getElementById('status-bar-wrapper');
+    var statusBar = document.querySelector('.filter-bar[data-filter-key="status"]');
+    if (!wrapper || !statusBar) return;
+    var categoryIsAll = !activeFilters.category || activeFilters.category === 'all';
+    wrapper.style.display = categoryIsAll ? 'none' : '';
+    if (categoryIsAll && activeFilters.status !== 'all') {
+      activeFilters.status = 'all';
+      statusBar.querySelectorAll('.filter-btn').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-filter-value') === 'all');
+      });
+    }
+  }
+
   function wireFilterBars() {
     document.querySelectorAll('.filter-bar[data-filter-key]').forEach(function (bar) {
       var key = bar.getAttribute('data-filter-key');
@@ -604,10 +618,12 @@
           btn.classList.add('active');
           activeFilters[key] = btn.getAttribute('data-filter-value');
           if (searchInput) searchInput.value = '';
+          updateStatusBarVisibility();
           applyFilters();
         });
       });
     });
+    updateStatusBarVisibility();
   }
 
   wireFilterBars();
@@ -622,6 +638,7 @@
         });
       });
       if (searchInput) searchInput.value = '';
+      updateStatusBarVisibility();
       applyFilters();
     });
   }
@@ -821,7 +838,9 @@
             if (!dateA && !dateB) return 0;
             if (!dateA) return 1;
             if (!dateB) return -1;
-            return new Date(dateB) - new Date(dateA);
+            var diff = new Date(dateB) - new Date(dateA);
+            if (diff !== 0) return diff;
+            return a.product.name.localeCompare(b.product.name);
           });
       } else {
         items = items.sort(function (a, b) {
@@ -831,11 +850,13 @@
           if (!aDisc) {
             var daysA = a.status ? a.status.daysSince : -Infinity;
             var daysB = b.status ? b.status.daysSince : -Infinity;
-            return daysB - daysA;
+            if (daysA !== daysB) return daysB - daysA;
+            return a.product.name.localeCompare(b.product.name);
           }
           var discA = a.product.discontinued_date ? new Date(a.product.discontinued_date).getTime() : 0;
           var discB = b.product.discontinued_date ? new Date(b.product.discontinued_date).getTime() : 0;
-          return discB - discA;
+          if (discA !== discB) return discB - discA;
+          return a.product.name.localeCompare(b.product.name);
         });
       }
 

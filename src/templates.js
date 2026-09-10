@@ -742,7 +742,7 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
 <div class="filters-with-everything">
   <button type="button" id="everything-btn" class="everything-btn">Everything</button>
   <div class="filter-bars-stack">
-    ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
+    <div id="status-bar-wrapper" style="display:none;">${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}</div>
     ${filterBar('category', categories, null, categoryCounts, items.length, true, 'All Products')}
   </div>
 </div>
