@@ -922,11 +922,7 @@
     var images = galleryPhotoImagesJS(photo);
     var photoCountPill = images.length > 1 ? '<span class="pill pill--count">' + images.length + ' photos</span>' : '';
     var tagsHtml = galleryTagsHtmlJS(photo);
-    var combinedTags = photoCountPill
-      ? (tagsHtml
-          ? tagsHtml.replace('<div class="gallery-tags-row">', '<div class="gallery-tags-row">' + photoCountPill)
-          : '<div class="gallery-tags"><div class="gallery-tags-row">' + photoCountPill + '</div></div>')
-      : tagsHtml;
+    var footer = (tagsHtml || photoCountPill) ? '<div class="gallery-card-footer">' + tagsHtml + photoCountPill + '</div>' : '';
     return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
       '<a class="card-link" href="/gallery/' + photo.id + '/">' +
         '<div class="card-image">' +
@@ -935,7 +931,7 @@
         '<p class="card-name">' + escapeHtmlJS(displayName) + '</p>' +
         (photo.date_taken ? '<p class="card-meta">' + formatDateJS(photo.date_taken) + '</p>' : '') +
       '</a>' +
-      combinedTags +
+      footer +
     '</article>';
   }
 

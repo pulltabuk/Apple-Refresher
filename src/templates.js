@@ -447,11 +447,7 @@ function galleryPhotoCardHtml(photo) {
   const images = galleryPhotoImages(photo);
   const photoCountPill = images.length > 1 ? `<span class="pill pill--count">${images.length} photos</span>` : '';
   const tagsHtml = galleryTagsHtml(photo);
-  const combinedTags = photoCountPill
-    ? (tagsHtml
-        ? tagsHtml.replace('<div class="gallery-tags-row">', `<div class="gallery-tags-row">${photoCountPill}`)
-        : `<div class="gallery-tags"><div class="gallery-tags-row">${photoCountPill}</div></div>`)
-    : tagsHtml;
+  const footer = (tagsHtml || photoCountPill) ? `<div class="gallery-card-footer">${tagsHtml}${photoCountPill}</div>` : '';
   return `<article class="card" data-date="${dateToTimestamp(photo.date_taken)}" data-search="${escapeHtml(searchText.toLowerCase())}">
   <a class="card-link" href="/gallery/${photo.id}/">
     <div class="card-image">
@@ -460,7 +456,7 @@ function galleryPhotoCardHtml(photo) {
     <p class="card-name">${escapeHtml(displayName)}</p>
     ${photo.date_taken ? `<p class="card-meta">${formatDate(photo.date_taken)}</p>` : ''}
   </a>
-  ${combinedTags}
+  ${footer}
 </article>`;
 }
 
