@@ -552,12 +552,18 @@ function eventCardHtml(event) {
     : `<article class="card card--featured card--event">${inner}</article>`;
 }
 
+function normalizedAnnouncedProducts(event) {
+  return (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p));
+}
+
 function eventArchiveCardHtml(event) {
   const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
-  const sortedProducts = (event.announced_products || []).slice().sort((a, b) => a.localeCompare(b));
-  const shown = sortedProducts.slice(0, 3);
-  const remaining = sortedProducts.length - shown.length;
-  const tags = shown.map((t) => `<span class="pill">${escapeHtml(t)}</span>`).join('') + (remaining > 0 ? `<span class="pill pill--muted">+${remaining} more</span>` : '');
+  const products = normalizedAnnouncedProducts(event);
+  const featured = products.filter((p) => p.featured).sort((a, b) => a.name.localeCompare(b.name));
+  const rest = products.filter((p) => !p.featured).sort((a, b) => a.name.localeCompare(b.name));
+  const shown = featured.concat(rest).slice(0, 3);
+  const remaining = products.length - shown.length;
+  const tags = shown.map((p) => `<span class="pill">${escapeHtml(p.name)}</span>`).join('') + (remaining > 0 ? `<span class="pill pill--muted">+${remaining} more</span>` : '');
   const inner = `<div class="card-image">${event.image_url ? `<img src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}</div>
     <p class="card-name">${escapeHtml(event.heading)}</p>
     ${dateText ? `<p class="card-meta">${escapeHtml(dateText)}</p>` : ''}`;
@@ -569,7 +575,7 @@ function eventArchiveCardHtml(event) {
 
 function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
-  const sortedProducts = (event.announced_products || []).slice().sort((a, b) => a.localeCompare(b));
+  const sortedProducts = normalizedAnnouncedProducts(event).map((p) => p.name).sort((a, b) => a.localeCompare(b));
   const productsList = sortedProducts.length
     ? `<ul class="event-products-list">
     ${sortedProducts.map((name) => {

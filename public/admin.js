@@ -1103,8 +1103,15 @@
     eventProductsListEl.innerHTML = '';
     currentEventProducts.forEach((product, i) => {
       const li = document.createElement('li');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = !!product.featured;
+      checkbox.title = 'Feature on the archive card preview';
+      checkbox.addEventListener('change', () => {
+        currentEventProducts[i].featured = checkbox.checked;
+      });
       const span = document.createElement('span');
-      span.textContent = product;
+      span.textContent = product.name;
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.textContent = 'Remove';
@@ -1112,6 +1119,7 @@
         currentEventProducts.splice(i, 1);
         renderEventProducts();
       });
+      li.appendChild(checkbox);
       li.appendChild(span);
       li.appendChild(removeBtn);
       eventProductsListEl.appendChild(li);
@@ -1122,7 +1130,9 @@
     const input = document.getElementById('new-event-product');
     const value = input.value.trim();
     if (!value) return;
-    if (currentEventProducts.indexOf(value) === -1) currentEventProducts.push(value);
+    if (!currentEventProducts.some((p) => p.name.toLowerCase() === value.toLowerCase())) {
+      currentEventProducts.push({ name: value, featured: false });
+    }
     input.value = '';
     renderEventProducts();
   });
@@ -1171,7 +1181,7 @@
     document.getElementById('event_date').value = event.event_date || '';
     document.getElementById('event_time').value = event.event_time || '';
     document.getElementById('event_url').value = event.event_url || '';
-    currentEventProducts = (event.announced_products || []).slice();
+    currentEventProducts = (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p));
     renderEventImageThumb();
     renderEventProducts();
     showEventForm();

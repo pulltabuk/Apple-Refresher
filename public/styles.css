@@ -207,6 +207,8 @@ a { color: inherit; text-decoration: none; }
   color: var(--overdue-text);
   cursor: pointer;
 }
+#event-products-list li { justify-content: flex-start; gap: 8px; }
+#event-products-list li button { margin-left: auto; }
 .refresh-history-add { display: flex; gap: 8px; align-items: center; }
 
 .admin-thumbs { display: flex; flex-wrap: wrap; gap: 8px; }

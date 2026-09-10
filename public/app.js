@@ -913,10 +913,12 @@
 
   function eventArchiveCardHtmlJS(event) {
     var dateText = [formatDateJS(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
-    var sortedProducts = (event.announced_products || []).slice().sort(function (a, b) { return a.localeCompare(b); });
-    var shown = sortedProducts.slice(0, 3);
-    var remaining = sortedProducts.length - shown.length;
-    var tags = shown.map(function (t) { return '<span class="pill">' + escapeHtmlJS(t) + '</span>'; }).join('') + (remaining > 0 ? '<span class="pill pill--muted">+' + remaining + ' more</span>' : '');
+    var products = (event.announced_products || []).map(function (p) { return typeof p === 'string' ? { name: p, featured: false } : p; });
+    var featured = products.filter(function (p) { return p.featured; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var rest = products.filter(function (p) { return !p.featured; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var shown = featured.concat(rest).slice(0, 3);
+    var remaining = products.length - shown.length;
+    var tags = shown.map(function (p) { return '<span class="pill">' + escapeHtmlJS(p.name) + '</span>'; }).join('') + (remaining > 0 ? '<span class="pill pill--muted">+' + remaining + ' more</span>' : '');
     var inner = '<div class="card-image">' + (event.image_url ? '<img src="' + escapeHtmlJS(event.image_url) + '" alt="' + escapeHtmlJS(event.heading) + '">' : '') + '</div>' +
       '<p class="card-name">' + escapeHtmlJS(event.heading) + '</p>' +
       (dateText ? '<p class="card-meta">' + escapeHtmlJS(dateText) + '</p>' : '');
