@@ -595,6 +595,25 @@
     if (row) window.location.href = row.getAttribute('data-href');
   });
 
+  function updateStatusBarCounts() {
+    var statusBar = document.querySelector('.filter-bar[data-filter-key="status"]');
+    if (!statusBar) return;
+    var category = activeFilters.category;
+    var cards = Array.prototype.slice.call(document.querySelectorAll('#grid .card, #grid .league-row'));
+    var scoped = (!category || category === 'all') ? cards : cards.filter(function (c) { return c.getAttribute('data-category') === category; });
+    var totalCount = scoped.length;
+    var currentCount = scoped.filter(function (c) { return c.getAttribute('data-status') === 'current'; }).length;
+    var discontinuedCount = scoped.filter(function (c) { return c.getAttribute('data-status') === 'discontinued'; }).length;
+
+    statusBar.querySelectorAll('.filter-btn').forEach(function (btn) {
+      var value = btn.getAttribute('data-filter-value');
+      var countEl = btn.querySelector('.filter-btn-count');
+      if (!countEl) return;
+      var count = value === 'all' ? totalCount : (value === 'current' ? currentCount : discontinuedCount);
+      countEl.textContent = '(' + count + ')';
+    });
+  }
+
   function updateStatusBarVisibility() {
     var wrapper = document.getElementById('status-bar-wrapper');
     var statusBar = document.querySelector('.filter-bar[data-filter-key="status"]');
@@ -607,6 +626,7 @@
         b.classList.toggle('active', b.getAttribute('data-filter-value') === 'all');
       });
     }
+    updateStatusBarCounts();
   }
 
   function wireFilterBars() {

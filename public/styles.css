@@ -629,7 +629,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .gallery-tags { display: flex; flex-direction: column; gap: 4px; margin-top: auto; }
 .gallery-tags-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .gallery-card-footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.pill--count { font-weight: 700; color: var(--fresh-text); border-color: var(--fresh-text); background: var(--fresh-bg); flex-shrink: 0; margin-left: auto; }
+.pill--count { font-weight: 700; color: var(--fresh-text); border-color: var(--fresh-text); background: var(--fresh-bg); flex-shrink: 0; margin-left: auto; margin-top: 20px; }
 .pill--count:hover { background: #dcecc9; border-color: var(--fresh-text); color: var(--fresh-text); }
 
 .gallery-photo-page { max-width: 640px; margin: 1.5rem auto 0; }
