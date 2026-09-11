@@ -147,6 +147,16 @@
     }
 
     var rowsHtml = rows.map(function (row, rowIndex) {
+      var maxStack = 1;
+      row.forEach(function (group) {
+        if (group.length >= 2) {
+          var aboveCount2 = Math.ceil(group.length / 2);
+          var belowCount2 = Math.floor(group.length / 2);
+          maxStack = Math.max(maxStack, aboveCount2, belowCount2);
+        }
+      });
+      var rowPadding = 100 + (maxStack - 1) * 60;
+
       var items = row.map(function (group, i) {
         var leftLine = i > 0 ? '<span class="timeline-point-line-half timeline-point-line-half--left"></span>' : '';
         var rightLine = i < row.length - 1 ? '<span class="timeline-point-line-half timeline-point-line-half--right"></span>' : '';
@@ -170,7 +180,7 @@
         '</div>';
       }).join('');
       var continues = rowIndex < rows.length - 1 ? ' timeline-horizontal--continues' : '';
-      return '<div class="timeline-horizontal' + continues + '">' + items + '</div>';
+      return '<div class="timeline-horizontal' + continues + '" style="padding-top:' + rowPadding + 'px;padding-bottom:' + rowPadding + 'px;">' + items + '</div>';
     }).join('');
     return rows.length > 1 ? '<div class="timeline-rows">' + rowsHtml + '</div>' : rowsHtml;
   }

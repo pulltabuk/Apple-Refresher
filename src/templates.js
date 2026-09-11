@@ -191,6 +191,20 @@ function horizontalTimelineHtml(product, allProducts) {
   }
 
   const rowsHtml = rows.map((row, rowIndex) => {
+    // Padding scales with the tallest stack of entries in this row
+    // (a single point needs far less room than 2-3 products merged
+    // into one shared position), so a simple timeline doesn't carry
+    // the same large gap a busy one needs.
+    let maxStack = 1;
+    row.forEach((group) => {
+      if (group.length >= 2) {
+        const aboveCount = Math.ceil(group.length / 2);
+        const belowCount = Math.floor(group.length / 2);
+        maxStack = Math.max(maxStack, aboveCount, belowCount);
+      }
+    });
+    const rowPadding = 100 + (maxStack - 1) * 60;
+
     const items = row.map((group, i) => {
       const leftLine = i > 0 ? `<span class="timeline-point-line-half timeline-point-line-half--left"></span>` : '';
       const rightLine = i < row.length - 1 ? `<span class="timeline-point-line-half timeline-point-line-half--right"></span>` : '';
@@ -222,7 +236,7 @@ function horizontalTimelineHtml(product, allProducts) {
   </div>`;
     }).join('\n');
     const continues = rowIndex < rows.length - 1 ? ' timeline-horizontal--continues' : '';
-    return `<div class="timeline-horizontal${continues}">${items}</div>`;
+    return `<div class="timeline-horizontal${continues}" style="padding-top:${rowPadding}px;padding-bottom:${rowPadding}px;">${items}</div>`;
   }).join('\n');
 
   return rows.length > 1 ? `<div class="timeline-rows">${rowsHtml}</div>` : rowsHtml;
