@@ -1009,7 +1009,7 @@
     var photoCountPill = images.length > 1 ? '<span class="pill pill--count">' + images.length + ' photos</span>' : '';
     var tagsHtml = galleryTagsHtmlJS(photo);
     var footer = (tagsHtml || photoCountPill) ? '<div class="gallery-card-footer">' + tagsHtml + photoCountPill + '</div>' : '';
-    return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
+    return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-created="' + dateToTimestampJS(photo.created_at) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
       '<a class="card-link" href="/gallery/' + photo.id + '/">' +
         '<div class="card-image">' +
           (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') +
@@ -1067,7 +1067,7 @@
   }
 
   if (gridSection && gridSection.getAttribute('data-mode') === 'gallery' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*&order=date_taken.desc.nullslast,created_at.desc', {
+    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*&order=created_at.desc', {
       headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
     })
       .then(function (res) { return res.json(); })
@@ -1086,7 +1086,7 @@
   if (galleryPhotoPageEl && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     var galleryPathParts = window.location.pathname.split('/').filter(Boolean);
     var idFromUrl = galleryPathParts[galleryPathParts.length - 1];
-    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*&order=date_taken.desc.nullslast,created_at.desc', {
+    fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*&order=created_at.desc', {
       headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
     })
       .then(function (res) { return res.json(); })

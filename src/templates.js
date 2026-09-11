@@ -407,6 +407,7 @@ const STATUS_VALUES = ['current', 'discontinued'];
 const STATUS_LABELS = ['Current', 'Discontinued'];
 
 const GALLERY_SORT_OPTIONS = [
+  ['created-desc', 'Recently added'],
   ['date-desc', 'Newest first'],
   ['date-asc', 'Oldest first'],
   ['name-asc', 'Name: A to Z'],
@@ -453,7 +454,7 @@ function galleryPhotoCardHtml(photo) {
   const photoCountPill = images.length > 1 ? `<span class="pill pill--count">${images.length} photos</span>` : '';
   const tagsHtml = galleryTagsHtml(photo);
   const footer = (tagsHtml || photoCountPill) ? `<div class="gallery-card-footer">${tagsHtml}${photoCountPill}</div>` : '';
-  return `<article class="card" data-date="${dateToTimestamp(photo.date_taken)}" data-search="${escapeHtml(searchText.toLowerCase())}">
+  return `<article class="card" data-date="${dateToTimestamp(photo.date_taken)}" data-created="${dateToTimestamp(photo.created_at)}" data-search="${escapeHtml(searchText.toLowerCase())}">
   <a class="card-link" href="/gallery/${photo.id}/">
     <div class="card-image">
       ${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}
