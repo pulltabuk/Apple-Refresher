@@ -1,4 +1,4 @@
-# Apple Refresher
+# Apple Sunset
 
 Static site, generated at build time from a Supabase table, deployed on Netlify.
 No JavaScript rendering on the way in, so it's crawlable from day one.

@@ -354,6 +354,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .intro-hero { padding: 2rem 0 0.5rem; }
 .intro-heading { font-size: 34px; line-height: 1.15; font-weight: 700; margin: 0 0 1rem; }
 .intro-subtitle { font-size: 16px; color: var(--text-secondary); max-width: 420px; margin: 0 0 1.5rem; }
+.intro-subtitle:not(:last-of-type) { margin-bottom: 0.75rem; }
 .intro-cta {
   display: inline-block;
   background: var(--accent-blue);

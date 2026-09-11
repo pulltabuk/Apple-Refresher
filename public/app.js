@@ -1120,7 +1120,7 @@
             '<a href="/gallery/" class="gallery-nav-link">Full Gallery</a>' +
             (nextPhoto ? '<a href="/gallery/' + nextPhoto.id + '/" class="gallery-nav-link">Next &rarr;</a>' : '<span></span>') +
           '</div>';
-        document.title = displayName + ' \u2014 Apple Refresher Gallery';
+        document.title = displayName + ' \u2014 Apple Sunset Gallery';
         revealAdminEditLinks(galleryPhotoPageEl.querySelectorAll('.admin-edit-link'));
       })
       .catch(function () {});
@@ -1143,7 +1143,7 @@
         productPageEl.innerHTML = productBodyHtmlJS(product, status, bySlug);
         wireWaitButtons(productPageEl.querySelectorAll('.wait-btn'));
         revealAdminEditLinks(productPageEl.querySelectorAll('.admin-edit-link'));
-        document.title = product.name + ' \u2014 Apple Refresher';
+        document.title = product.name + ' \u2014 Apple Sunset';
       })
       .catch(function () {});
   }

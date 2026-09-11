@@ -312,7 +312,7 @@ ${noindex ? '<meta name="robots" content="noindex">' : ''}
 <body>
 <header class="site-header-bg">
   <div class="site-header">
-    <a class="site-title" href="/"><img src="/logo.png" alt="" class="site-logo"><span>Apple Refresher</span></a>
+    <a class="site-title" href="/"><img src="/logo.png" alt="" class="site-logo"><span>Apple Sunset</span></a>
     <nav class="site-nav">
       <a href="/products/">All products</a>
       <a href="/categories/">Categories</a>
@@ -334,7 +334,7 @@ ${bodyHtml}
       <a href="/about/">About us</a>
       <a href="/admin/">Admin</a>
     </nav>
-    <p>Apple Refresher is an independent tracker and is not affiliated with Apple Inc.</p>
+    <p>Apple Sunset is an independent tracker and is not affiliated with Apple Inc.</p>
   </div>
 </footer>
 <script>
@@ -494,8 +494,8 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   </div>
 </article>`;
   return shell({
-    title: `${escapeHtml(displayName)} — Apple Refresher Gallery`,
-    description: `A photo from the Apple Refresher gallery${photo.location ? `, taken in ${photo.location}` : ''}.`,
+    title: `${escapeHtml(displayName)} — Apple Sunset Gallery`,
+    description: `A photo from the Apple Sunset gallery${photo.location ? `, taken in ${photo.location}` : ''}.`,
     siteUrl,
     path: `/gallery/${photo.id}/`,
     bodyHtml: body,
@@ -527,7 +527,7 @@ function galleryPage({ photos, siteUrl, supabaseUrl, supabaseAnonKey }) {
 </div>
 <p class="page-intro">No photos yet. Add some in <a href="/admin/">/admin/</a>.</p>`;
   return shell({
-    title: 'Gallery — Apple Refresher',
+    title: 'Gallery — Apple Sunset',
     description: 'Photos taken along the way, in Apple Stores and elsewhere.',
     siteUrl,
     path: '/gallery/',
@@ -634,7 +634,7 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
   <p><a href="/events/" class="gallery-nav-link">&larr; All Apple Events</a></p>
 </article>`;
   return shell({
-    title: `${event.heading} — Apple Refresher`,
+    title: `${event.heading} — Apple Sunset`,
     description: `${event.heading}${dateText ? `, ${dateText}` : ''}. ${sortedProducts.length ? 'Announced: ' + sortedProducts.join(', ') + '.' : ''}`,
     siteUrl,
     path: `/events/${event.id}/`,
@@ -656,7 +656,7 @@ function eventsPage({ events, siteUrl, supabaseUrl, supabaseAnonKey }) {
   ${events.map(eventArchiveCardHtml).join('\n')}
 </div>`;
   return shell({
-    title: 'Apple Events — Apple Refresher',
+    title: 'Apple Events — Apple Sunset',
     description: 'A running archive of every Apple Event announced, and what was revealed at each one.',
     siteUrl,
     path: '/events/',
@@ -685,7 +685,7 @@ function factsPage({ facts, siteUrl, supabaseUrl, supabaseAnonKey }) {
   ${facts.map(factCardHtml).join('\n')}
 </div>`;
   return shell({
-    title: 'Facts — Apple Refresher',
+    title: 'Facts — Apple Sunset',
     description: 'Interesting patterns spotted across every Apple product tracked on this site.',
     siteUrl,
     path: '/facts/',
@@ -748,7 +748,8 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
   <div class="intro-hero-layout">
     <div class="intro-hero-text">
       <h1 class="intro-heading">Apple product refresh tracker</h1>
-      <p class="intro-subtitle">Every current Apple product, and exactly how long it's been since its last refresh, so you're never guessing.</p>
+      <p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed, or when it was discontinued.</p>
+      <p class="intro-subtitle">Stay informed on refresh cycles so you always know whether to buy now or wait for the next update.</p>
       <a class="intro-cta" href="/products/">Browse all products</a>
     </div>
     <div class="intro-hero-cards" id="hero-cards">
@@ -762,7 +763,7 @@ ${overdueSection}
 ${factSection}
 ${gallerySection}`;
   return shell({
-    title: 'Apple Refresher — time since every Apple product was last refreshed',
+    title: 'Apple Sunset — time since every Apple product was last refreshed',
     description: 'A quick look at how long it has been since every current Apple product was last updated, plus an archive of the ones Apple discontinued.',
     siteUrl,
     path: '/',
@@ -803,7 +804,7 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
 <h1>All products</h1>
 ${emptyState('products')}`;
   return shell({
-    title: 'All products — Apple Refresher',
+    title: 'All products — Apple Sunset',
     description: 'Every Apple product on the site, current and discontinued, searchable and sortable.',
     siteUrl,
     path: '/products/',
@@ -833,7 +834,7 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
 <h1>Discontinued products</h1>
 <p class="page-intro">Nothing here yet. Tick Discontinued on a product in <a href="/admin/">/admin/</a> and give it a discontinued date, and it'll appear here.</p>`;
   return shell({
-    title: 'Discontinued Apple products — Apple Refresher',
+    title: 'Discontinued Apple products — Apple Sunset',
     description: 'An archive of the Apple products that have been discontinued: when they launched, when they went, how long they lasted, and what replaced them.',
     siteUrl,
     path: '/discontinued/',
@@ -858,7 +859,7 @@ function categoriesIndexPage({ groups, siteUrl, supabaseUrl, supabaseAnonKey }) 
 <p class="page-intro">Every product line on the site, current and discontinued.</p>
 <div class="category-grid">${tiles}</div>`;
   return shell({
-    title: 'Categories — Apple Refresher',
+    title: 'Categories — Apple Sunset',
     description: 'Browse Apple products by category: iPhone, Mac, iPad, Apple Watch, AirPods, Vision Pro and more.',
     siteUrl,
     path: '/categories/',
@@ -921,8 +922,8 @@ ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 ${leagueTableHtml(items, category)}`;
   return shell({
-    title: `${category} — Apple Refresher`,
-    description: `Every ${category} product on Apple Refresher, current and discontinued, with time since refresh and full release history.`,
+    title: `${category} — Apple Sunset`,
+    description: `Every ${category} product on Apple Sunset, current and discontinued, with time since refresh and full release history.`,
     siteUrl,
     path: `/categories/${slug}/`,
     bodyHtml: body,
@@ -1047,10 +1048,10 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     ? `${product.name} was discontinued${product.discontinued_date ? ` in ${formatDate(product.discontinued_date)}` : ''}${launch ? `, after launching in ${formatDate(launch)}` : ''}.${successor ? ` It was replaced by the ${successor.name}.` : ''}`
     : status
     ? `${product.name} was last refreshed ${status.daysSince} days ago. See the full release history and whether now is a good time to buy.`
-    : `${product.name} on Apple Refresher.`;
+    : `${product.name} on Apple Sunset.`;
 
   return shell({
-    title: `${product.name} — Apple Refresher`,
+    title: `${product.name} — Apple Sunset`,
     description,
     siteUrl,
     path: `/products/${product.slug}/`,
@@ -1069,14 +1070,14 @@ function aboutPage({ content, siteUrl, supabaseUrl, supabaseAnonKey }) {
 
   const body = `
 <article class="about-page">
-  <h1>${escapeHtml(content.heading || 'About Apple Refresher')}</h1>
+  <h1>${escapeHtml(content.heading || 'About Apple Sunset')}</h1>
   ${content.image_url ? `<div class="about-image"><img src="${content.image_url}" alt=""></div>` : ''}
   <div class="about-body">${paragraphs}</div>
 </article>`;
 
   return shell({
-    title: 'About — Apple Refresher',
-    description: 'What Apple Refresher is and why it exists.',
+    title: 'About — Apple Sunset',
+    description: 'What Apple Sunset is and why it exists.',
     siteUrl,
     path: '/about/',
     bodyHtml: body,
@@ -1344,7 +1345,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 </section>`;
 
   return shell({
-    title: 'Admin — Apple Refresher',
+    title: 'Admin — Apple Sunset',
     description: 'Manage products and site content.',
     siteUrl,
     path: '/admin/',
