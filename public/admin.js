@@ -1333,21 +1333,25 @@
     candidates.forEach((text) => {
       const row = document.createElement('div');
       row.className = 'admin-fact-row';
-      const p = document.createElement('p');
-      p.textContent = text;
+      const textarea = document.createElement('textarea');
+      textarea.className = 'admin-fact-textarea';
+      textarea.value = text;
+      textarea.rows = 2;
       const publishBtn = document.createElement('button');
       publishBtn.type = 'button';
       publishBtn.className = 'admin-btn admin-btn--small admin-btn--primary';
       publishBtn.textContent = 'Publish';
       publishBtn.addEventListener('click', async () => {
-        const { error } = await client.from('facts').insert({ text });
+        const finalText = textarea.value.trim();
+        if (!finalText) return;
+        const { error } = await client.from('facts').insert({ text: finalText });
         if (error) {
           window.alert('Failed to publish: ' + error.message);
           return;
         }
         loadPublishedFacts();
       });
-      row.appendChild(p);
+      row.appendChild(textarea);
       row.appendChild(publishBtn);
       listEl.appendChild(row);
     });
@@ -1372,6 +1376,33 @@
       row.className = 'admin-fact-row';
       const p = document.createElement('p');
       p.textContent = fact.text;
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'admin-btn admin-btn--small';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => {
+        const textarea = document.createElement('textarea');
+        textarea.className = 'admin-fact-textarea';
+        textarea.value = fact.text;
+        textarea.rows = 2;
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'admin-btn admin-btn--small admin-btn--primary';
+        saveBtn.textContent = 'Save';
+        saveBtn.addEventListener('click', async () => {
+          const newText = textarea.value.trim();
+          if (!newText) return;
+          const { error: updateError } = await client.from('facts').update({ text: newText }).eq('id', fact.id);
+          if (updateError) {
+            window.alert('Save failed: ' + updateError.message);
+            return;
+          }
+          loadPublishedFacts();
+        });
+        row.innerHTML = '';
+        row.appendChild(textarea);
+        row.appendChild(saveBtn);
+      });
       const copyBtn = document.createElement('button');
       copyBtn.type = 'button';
       copyBtn.className = 'admin-btn admin-btn--small';
@@ -1399,6 +1430,7 @@
         loadPublishedFacts();
       });
       row.appendChild(p);
+      row.appendChild(editBtn);
       row.appendChild(copyBtn);
       row.appendChild(deleteBtn);
       listEl.appendChild(row);
