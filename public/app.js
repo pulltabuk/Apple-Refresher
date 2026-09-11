@@ -532,6 +532,24 @@
     }
   }
 
+  function updateStatusDivider() {
+    var grid = document.getElementById('grid');
+    if (!grid || grid.getAttribute('data-mode') !== 'all') return;
+    var existingDivider = grid.querySelector('.products-status-divider');
+    if (existingDivider) existingDivider.remove();
+
+    var visibleCards = Array.prototype.slice.call(grid.querySelectorAll('.card')).filter(function (c) { return c.style.display !== 'none'; });
+    var firstDiscontinuedIndex = visibleCards.findIndex(function (c) { return c.getAttribute('data-status') === 'discontinued'; });
+    if (firstDiscontinuedIndex <= 0) return;
+    var isGrouped = visibleCards.slice(0, firstDiscontinuedIndex).every(function (c) { return c.getAttribute('data-status') === 'current'; })
+      && visibleCards.slice(firstDiscontinuedIndex).every(function (c) { return c.getAttribute('data-status') === 'discontinued'; });
+    if (!isGrouped) return;
+
+    var divider = document.createElement('div');
+    divider.className = 'products-status-divider';
+    grid.insertBefore(divider, visibleCards[firstDiscontinuedIndex]);
+  }
+
   function applyPagination() {
     if (!isPaginatedGrid()) return;
     var grid = document.getElementById('grid');
@@ -548,6 +566,8 @@
       var page = Math.floor(i / PAGE_SIZE) + 1;
       card.style.display = page === currentPage ? '' : 'none';
     });
+
+    updateStatusDivider();
 
     if (totalPages <= 1) {
       paginationEl.innerHTML = '';

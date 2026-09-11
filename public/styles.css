@@ -484,6 +484,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
   .league-launch, th.league-launch { display: none; }
 }
 
+.products-status-divider { grid-column: 1 / -1; height: 1px; background: var(--border); margin: 1.5rem 0; }
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
