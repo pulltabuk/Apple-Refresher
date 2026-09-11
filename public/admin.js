@@ -1238,6 +1238,86 @@
 
   // --- Facts ---
 
+  function buildTweetText(factText) {
+    const lower = factText.toLowerCase();
+    let emoji = '\ud83c\udf4e';
+    const hashtags = ['#Apple'];
+    const addTag = (keyword, tag, tagEmoji) => {
+      if (lower.indexOf(keyword) !== -1) {
+        hashtags.push(tag);
+        if (tagEmoji) emoji = tagEmoji;
+      }
+    };
+    addTag('iphone', '#iPhone', '\ud83d\udcf1');
+    addTag('apple tv', '#AppleTV', '\ud83d\udcfa');
+    addTag('airtag', '#AirTag', '\ud83d\udccd');
+    addTag('vision pro', '#VisionPro', '\ud83e\udd7d');
+    addTag('apple pencil', '#ApplePencil', '\u270f\ufe0f');
+    addTag('watch', '#AppleWatch', '\u231a');
+    addTag('airpods', '#AirPods', '\ud83c\udfa7');
+    addTag('mac', '#Mac', '\ud83d\udcbb');
+    addTag('ipad', '#iPad', '\ud83d\udcf2');
+    if (hashtags.length < 3) hashtags.push('#TechFacts');
+    const uniqueHashtags = Array.from(new Set(hashtags)).slice(0, 4);
+
+    const hook = emoji + ' Apple Fact:';
+    const footer = uniqueHashtags.join(' ') + '\n' + window.location.host;
+    let body = hook + ' ' + factText;
+    let full = body + '\n\n' + footer;
+
+    // Twitter's 280-char limit: trim the fact text itself (never the
+    // hashtags or link) if the combined text runs over.
+    if (full.length > 280) {
+      const overBy = full.length - 280;
+      const keep = Math.max(20, factText.length - overBy - 1);
+      const trimmed = factText.slice(0, keep).trim() + '\u2026';
+      body = hook + ' ' + trimmed;
+      full = body + '\n\n' + footer;
+    }
+    return full;
+  }
+
+  function generateFactImage(factText) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 675;
+    const ctx = canvas.getContext('2d');
+
+    const gradient = ctx.createLinearGradient(0, 0, 1200, 675);
+    gradient.addColorStop(0, '#0071e3');
+    gradient.addColorStop(1, '#14213d');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1200, 675);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 34px system-ui, -apple-system, sans-serif';
+    ctx.fillText('\ud83c\udf4e DID YOU KNOW?', 80, 120);
+
+    ctx.font = '700 52px system-ui, -apple-system, sans-serif';
+    const words = factText.split(' ');
+    let line = '';
+    let y = 230;
+    const lineHeight = 66;
+    const maxWidth = 1040;
+    words.forEach((word) => {
+      const testLine = line + word + ' ';
+      if (ctx.measureText(testLine).width > maxWidth && line !== '') {
+        ctx.fillText(line.trim(), 80, y);
+        line = word + ' ';
+        y += lineHeight;
+      } else {
+        line = testLine;
+      }
+    });
+    ctx.fillText(line.trim(), 80, y);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = '400 26px system-ui, -apple-system, sans-serif';
+    ctx.fillText(window.location.host, 80, 610);
+
+    return canvas.toDataURL('image/png');
+  }
+
   function generateFactCandidates() {
     const facts = [];
     const allDates = [];
@@ -1408,13 +1488,24 @@
       copyBtn.className = 'admin-btn admin-btn--small';
       copyBtn.textContent = 'Copy for Twitter';
       copyBtn.addEventListener('click', () => {
-        const tweetText = fact.text + '\n\n' + window.location.host;
+        const tweetText = buildTweetText(fact.text);
         navigator.clipboard.writeText(tweetText).then(() => {
           copyBtn.textContent = 'Copied!';
           setTimeout(() => { copyBtn.textContent = 'Copy for Twitter'; }, 1500);
         }).catch(() => {
           window.alert('Could not copy automatically, here is the text:\n\n' + tweetText);
         });
+      });
+      const imageBtn = document.createElement('button');
+      imageBtn.type = 'button';
+      imageBtn.className = 'admin-btn admin-btn--small';
+      imageBtn.textContent = 'Download image';
+      imageBtn.addEventListener('click', () => {
+        const dataUrl = generateFactImage(fact.text);
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = 'apple-refresher-fact.png';
+        link.click();
       });
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
@@ -1432,6 +1523,7 @@
       row.appendChild(p);
       row.appendChild(editBtn);
       row.appendChild(copyBtn);
+      row.appendChild(imageBtn);
       row.appendChild(deleteBtn);
       listEl.appendChild(row);
     });
