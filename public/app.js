@@ -547,6 +547,7 @@
 
     var divider = document.createElement('div');
     divider.className = 'products-status-divider';
+    divider.innerHTML = '<span class="products-status-divider-label">Discontinued</span>';
     grid.insertBefore(divider, visibleCards[firstDiscontinuedIndex]);
   }
 
