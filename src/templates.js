@@ -312,7 +312,23 @@ ${noindex ? '<meta name="robots" content="noindex">' : ''}
 <body>
 <header class="site-header-bg">
   <div class="site-header">
-    <a class="site-title" href="/"><img src="/logo.png" alt="" class="site-logo"><span>Apple Sunset</span></a>
+    <a class="site-title" href="/">
+      <svg class="site-logo-svg" viewBox="0 0 52 52" aria-hidden="true">
+        <defs>
+          <clipPath id="siteLogoAppleClip">
+            <path d="M26 6c-9 0-16 8-16 20 0 10 7 20 14 20 3 0 5-1.5 8-1.5s5 1.5 8 1.5c6 0 12-8 14-16-8-3-9-15 0-19-4-5-9-7-13-7-2 0-4 1-6 1s-4-1-6-1-4.5 0-3-1z"/>
+          </clipPath>
+        </defs>
+        <g clip-path="url(#siteLogoAppleClip)">
+          <rect x="0" y="0" width="52" height="26" fill="#f7c65a"/>
+          <rect x="0" y="26" width="52" height="26" fill="#8a2f4d"/>
+          <circle cx="26" cy="28" r="13" fill="#e8752c"/>
+        </g>
+        <path d="M26 6c-9 0-16 8-16 20 0 10 7 20 14 20 3 0 5-1.5 8-1.5s5 1.5 8 1.5c6 0 12-8 14-16-8-3-9-15 0-19-4-5-9-7-13-7-2 0-4 1-6 1s-4-1-6-1-4.5 0-3-1z" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.55"/>
+        <path d="M20 6c0-4 3-6 6-6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+      </svg>
+      <span>Apple Sunset</span>
+    </a>
     <nav class="site-nav">
       <a href="/products/">All products</a>
       <a href="/categories/">Categories</a>
