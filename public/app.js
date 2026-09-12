@@ -878,10 +878,19 @@
         .filter(function (i) { return i.status; });
       if (!withStatus.length && !activeEvent) return;
 
-      var heroPicks = pickRandomJS(withStatus, activeEvent ? 2 : 3);
-      var heroFeatured = activeEvent ? null : (heroPicks.filter(function (i) { return i.product.featured; })[0]
-        || heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0]);
-      var heroRest = activeEvent ? heroPicks : heroPicks.filter(function (i) { return i !== heroFeatured; });
+      var explicitlyFeatured = activeEvent ? null : withStatus.filter(function (i) { return i.product.featured; })[0];
+      var heroFeatured, heroRest;
+      if (activeEvent) {
+        heroFeatured = null;
+        heroRest = pickRandomJS(withStatus, 2);
+      } else if (explicitlyFeatured) {
+        heroFeatured = explicitlyFeatured;
+        heroRest = pickRandomJS(withStatus.filter(function (i) { return i !== explicitlyFeatured; }), 2);
+      } else {
+        var heroPicks = pickRandomJS(withStatus, 3);
+        heroFeatured = heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0];
+        heroRest = heroPicks.filter(function (i) { return i !== heroFeatured; });
+      }
 
       var featuredSlotHtml = activeEvent ? eventCardHtmlJS(activeEvent) : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');
       heroCardsSection.innerHTML =

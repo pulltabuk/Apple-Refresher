@@ -192,16 +192,24 @@ async function main() {
     return a.product.name.localeCompare(b.product.name);
   });
 
-  // Homepage hero: 3 random current products, one marked featured (an
-  // explicit "Featured on homepage" flag wins if it's among the three,
-  // otherwise the most overdue of the three). Client-side JS re-randomises
-  // on every page load; this build-time pick is just the pre-JS fallback.
+  // Homepage hero: 3 current products, one marked featured. An
+  // explicit "Featured on homepage" flag always wins when set on any
+  // product (checked across all candidates, not just a random subset),
+  // otherwise the most overdue of 3 random picks is used. Client-side
+  // JS re-randomises the two non-featured slots on every page load;
+  // this build-time pick is just the pre-JS fallback.
   const rankable = withStatus.filter((i) => i.status);
-  const heroPicks = pickRandom(rankable, 3);
-  let heroFeatured = heroPicks.find((i) => i.product.featured)
-    || [...heroPicks].sort((a, b) => b.status.ratio - a.status.ratio)[0]
-    || null;
-  const heroRest = heroPicks.filter((i) => i !== heroFeatured);
+  const explicitlyFeatured = rankable.find((i) => i.product.featured);
+  let heroFeatured;
+  let heroRest;
+  if (explicitlyFeatured) {
+    heroFeatured = explicitlyFeatured;
+    heroRest = pickRandom(rankable.filter((i) => i !== explicitlyFeatured), 2);
+  } else {
+    const heroPicks = pickRandom(rankable, 3);
+    heroFeatured = [...heroPicks].sort((a, b) => b.status.ratio - a.status.ratio)[0] || null;
+    heroRest = heroPicks.filter((i) => i !== heroFeatured);
+  }
 
   // The two-row "waiting longest" section: the true most-overdue list,
   // regardless of what's also shown in the hero above (the hero picks
