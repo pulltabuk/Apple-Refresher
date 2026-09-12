@@ -260,7 +260,22 @@
     wrap.className = 'admin-thumb';
     const img = document.createElement('img');
     img.src = url;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '\u00d7';
+    removeBtn.setAttribute('aria-label', 'Remove custom icon');
+    removeBtn.addEventListener('click', async () => {
+      if (!window.confirm('Remove this icon and revert to the built-in shape for this category?')) return;
+      const { error } = await client.from('category_icons').delete().ilike('category', document.getElementById('category').value.trim());
+      if (error) {
+        window.alert('Failed to remove: ' + error.message);
+        return;
+      }
+      delete cachedCategoryIcons[currentCategory];
+      updateCategoryIconPreview();
+    });
     wrap.appendChild(img);
+    wrap.appendChild(removeBtn);
     thumbEl.appendChild(wrap);
   }
 
