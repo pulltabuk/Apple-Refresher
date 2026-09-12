@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, launchDate, slugify } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, setCustomCategoryIcons, launchDate, slugify } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -88,6 +88,22 @@ async function loadFacts() {
   return [];
 }
 
+async function loadCategoryIcons() {
+  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data, error } = await supabase.from('category_icons').select('*');
+    if (error) {
+      console.log('Could not load custom category icons (the table may not exist yet), using built-in shapes.');
+      return {};
+    }
+    const map = {};
+    (data || []).forEach((row) => { map[row.category] = row.icon_url; });
+    return map;
+  }
+  return {};
+}
+
 async function loadGalleryPhotos() {
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     const { createClient } = require('@supabase/supabase-js');
@@ -115,6 +131,8 @@ function pickRandom(arr, n) {
 async function main() {
   const products = await loadProducts();
   const aboutContent = await loadSiteContent();
+  const categoryIcons = await loadCategoryIcons();
+  setCustomCategoryIcons(categoryIcons);
   const events = await loadEvents();
   const facts = await loadFacts();
   const latestFact = facts[0] || null;

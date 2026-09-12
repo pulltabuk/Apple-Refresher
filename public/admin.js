@@ -163,6 +163,7 @@
     dashboard.style.display = 'block';
     await loadProducts();
     loadAbout();
+    loadCategoryIcons();
     const params = new URLSearchParams(window.location.search);
     const editId = params.get('edit');
     if (editId) {
@@ -232,6 +233,61 @@
       });
   }
 
+  // --- Category icons: one uploaded image per category, replacing the
+  // built-in shape everywhere that category's icon appears.
+
+  let cachedCategoryIcons = {};
+
+  async function loadCategoryIcons() {
+    const { data, error } = await client.from('category_icons').select('*');
+    if (error) return;
+    cachedCategoryIcons = {};
+    data.forEach((row) => { cachedCategoryIcons[row.category.toLowerCase()] = row.icon_url; });
+    updateCategoryIconPreview();
+  }
+
+  function updateCategoryIconPreview() {
+    const thumbEl = document.getElementById('category-icon-thumb');
+    if (!thumbEl) return;
+    const currentCategory = (document.getElementById('category').value || '').trim().toLowerCase();
+    const url = cachedCategoryIcons[currentCategory];
+    thumbEl.innerHTML = '';
+    if (!url) {
+      thumbEl.textContent = currentCategory ? 'No custom icon yet for this category, using the built-in shape.' : 'Type a category above to check for an icon.';
+      return;
+    }
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-thumb';
+    const img = document.createElement('img');
+    img.src = url;
+    wrap.appendChild(img);
+    thumbEl.appendChild(wrap);
+  }
+
+  document.getElementById('category-icon-upload').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const currentCategory = document.getElementById('category').value.trim();
+    if (!currentCategory) {
+      window.alert('Enter a category first.');
+      e.target.value = '';
+      return;
+    }
+    try {
+      const url = await uploadFile(file);
+      const { error } = await client.from('category_icons').upsert({ category: currentCategory, icon_url: url, updated_at: new Date().toISOString() });
+      if (error) {
+        window.alert('Failed to save the icon: ' + error.message);
+        return;
+      }
+      cachedCategoryIcons[currentCategory.toLowerCase()] = url;
+      updateCategoryIconPreview();
+    } catch (err) {
+      window.alert('Upload failed: ' + err.message);
+    }
+    e.target.value = '';
+  });
+
   function updateCategoryOptions() {
     const categoryOptions = document.getElementById('category-options');
     const categories = new Set(DEFAULT_CATEGORIES);
@@ -244,9 +300,11 @@
     });
 
     updateProductOptionsByCategory();
+    updateCategoryIconPreview();
     const categoryFieldEl = document.getElementById('category');
     if (!categoryFieldEl.dataset.wiredProductOptions) {
       categoryFieldEl.addEventListener('input', updateProductOptionsByCategory);
+      categoryFieldEl.addEventListener('input', updateCategoryIconPreview);
       categoryFieldEl.dataset.wiredProductOptions = 'true';
     }
 

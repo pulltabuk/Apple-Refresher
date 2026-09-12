@@ -229,10 +229,50 @@
     Other: '<rect x="8" y="8" width="24" height="24" rx="4"/>',
   };
 
+  var CUSTOM_CATEGORY_ICONS = {};
+
+  function refreshCustomIconsInDomJS() {
+    document.querySelectorAll('[data-category]').forEach(function (el) {
+      var category = el.getAttribute('data-category');
+      var iconEl = el.querySelector('.placeholder-icon');
+      if (!iconEl || iconEl.tagName === 'IMG') return;
+      var customKey = Object.keys(CUSTOM_CATEGORY_ICONS).find(function (k) { return k.toLowerCase() === String(category || '').toLowerCase(); });
+      if (!customKey) return;
+      var size = iconEl.getAttribute('width') || 40;
+      var newIcon = document.createElement('img');
+      newIcon.className = 'placeholder-icon';
+      newIcon.src = CUSTOM_CATEGORY_ICONS[customKey];
+      newIcon.alt = '';
+      newIcon.width = size;
+      newIcon.height = size;
+      newIcon.style.objectFit = 'contain';
+      iconEl.replaceWith(newIcon);
+    });
+  }
+
+  function fetchCustomCategoryIconsJS() {
+    if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return;
+    fetch(window.SUPABASE_URL + '/rest/v1/category_icons?select=*', {
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (rows) {
+        if (!Array.isArray(rows)) return;
+        rows.forEach(function (row) { CUSTOM_CATEGORY_ICONS[row.category] = row.icon_url; });
+        refreshCustomIconsInDomJS();
+      })
+      .catch(function () {});
+  }
+  fetchCustomCategoryIconsJS();
+
   function categoryIconJS(category, size) {
+    var s = size || 40;
+    var customKey = Object.keys(CUSTOM_CATEGORY_ICONS).find(function (k) { return k.toLowerCase() === String(category || '').toLowerCase(); });
+    if (customKey) {
+      return '<img class="placeholder-icon" src="' + escapeHtmlJS(CUSTOM_CATEGORY_ICONS[customKey]) + '" alt="" width="' + s + '" height="' + s + '" style="object-fit:contain;">';
+    }
     var key = Object.keys(CATEGORY_ICON_SHAPES).find(function (k) { return k.toLowerCase() === String(category || '').toLowerCase(); });
     var shape = (key && CATEGORY_ICON_SHAPES[key]) || CATEGORY_ICON_SHAPES.Other;
-    var s = size || 40;
     return '<svg class="placeholder-icon" viewBox="0 0 40 40" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + shape + '</svg>';
   }
 

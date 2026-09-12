@@ -11,10 +11,19 @@ const CATEGORY_ICONS = {
   Other: `<rect x="8" y="8" width="24" height="24" rx="4"/>`,
 };
 
+let CUSTOM_CATEGORY_ICONS = {};
+function setCustomCategoryIcons(icons) {
+  CUSTOM_CATEGORY_ICONS = icons || {};
+}
+
 function categoryIcon(category, size) {
+  const s = size || 40;
+  const customKey = Object.keys(CUSTOM_CATEGORY_ICONS).find((k) => k.toLowerCase() === String(category || '').toLowerCase());
+  if (customKey) {
+    return `<img class="placeholder-icon" src="${escapeHtml(CUSTOM_CATEGORY_ICONS[customKey])}" alt="" width="${s}" height="${s}" style="object-fit:contain;">`;
+  }
   const key = Object.keys(CATEGORY_ICONS).find((k) => k.toLowerCase() === String(category || '').toLowerCase());
   const shape = (key && CATEGORY_ICONS[key]) || CATEGORY_ICONS.Other;
-  const s = size || 40;
   return `<svg class="placeholder-icon" viewBox="0 0 40 40" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
 }
 
@@ -942,7 +951,7 @@ function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }
     return s === v;
   }).length);
   const body = `
-<div class="category-page-heading">${categoryIcon(category, 36)}<h1>${escapeHtml(category)}</h1></div>
+<div class="category-page-heading" data-category="${escapeHtml(category)}">${categoryIcon(category, 36)}<h1>${escapeHtml(category)}</h1></div>
 <p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}. Newest first.</p>
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)}…" aria-label="Search">
@@ -1177,6 +1186,13 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <datalist id="category-options"></datalist>
         </label>
         <div class="admin-subfield">
+          <span class="admin-subfield-label">Icon for this category</span>
+          <div id="category-icon-thumb" class="admin-thumbs"></div>
+          <label for="category-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload icon</label>
+          <input type="file" id="category-icon-upload" accept="image/*" class="admin-file-input">
+          <p class="admin-hint">Optional. Uploading replaces the built-in shape for every product in this category, everywhere it appears on the site.</p>
+        </div>
+        <div class="admin-subfield">
           <span class="admin-subfield-label">Starting price</span>
           <div class="price-currency-row">
             <label class="checkbox-label"><input type="radio" name="price_currency" value="£"> £</label>
@@ -1400,6 +1416,7 @@ module.exports = {
   eventsPage,
   eventDetailPage,
   factsPage,
+  setCustomCategoryIcons,
   homePage,
   allProductsPage,
   discontinuedPage,
