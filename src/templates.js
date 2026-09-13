@@ -782,7 +782,8 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
   <div class="intro-hero-layout">
     <div class="intro-hero-text">
       <h1 class="intro-heading">Apple Sunset</h1>
-      <p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued. See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>
+      <p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
+      <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>
       <a class="intro-cta" href="/products/">Browse all products</a>
     </div>
     <div class="intro-hero-cards" id="hero-cards">
