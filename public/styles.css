@@ -770,6 +770,23 @@ label.admin-btn { cursor: pointer; color: #fff; }
   cursor: pointer;
   padding: 8px;
 }
+.gallery-lightbox-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #fff;
+  font-size: 40px;
+  line-height: 1;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.gallery-lightbox-arrow:hover { background: rgba(255, 255, 255, 0.22); }
+.gallery-lightbox-prev { left: 20px; }
+.gallery-lightbox-next { right: 20px; }
 .gallery-photo-copyright { margin-top: 1.5rem; padding: 1.25rem 0; border-top: 1px solid var(--border); text-align: center; }
 .gallery-photo-copyright p { font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; }
 .gallery-photo-nav {

@@ -1140,12 +1140,16 @@
   }
 
   // --- Gallery photo lightbox: click an image to enlarge it, Escape or
-  // clicking the overlay background closes it. Uses event delegation so
-  // it keeps working even if live-refresh replaces the images below.
+  // clicking the overlay background closes it, left/right arrows (on
+  // screen or keyboard) step through every image in the album. Uses
+  // event delegation so it keeps working even if live-refresh replaces
+  // the images below.
 
   var galleryPhotoPageForLightbox = document.querySelector('.gallery-photo-page');
   if (galleryPhotoPageForLightbox) {
     var activeLightbox = null;
+    var lightboxImages = [];
+    var lightboxIndex = 0;
 
     function closeLightbox() {
       if (!activeLightbox) return;
@@ -1154,37 +1158,70 @@
       document.removeEventListener('keydown', onLightboxKeydown);
     }
 
-    function onLightboxKeydown(e) {
-      if (e.key === 'Escape') closeLightbox();
+    function showLightboxImage(index) {
+      if (!activeLightbox || index < 0 || index >= lightboxImages.length) return;
+      lightboxIndex = index;
+      var img = activeLightbox.querySelector('img');
+      img.src = lightboxImages[lightboxIndex].src;
+      img.alt = lightboxImages[lightboxIndex].alt;
+      var prevBtn = activeLightbox.querySelector('.gallery-lightbox-prev');
+      var nextBtn = activeLightbox.querySelector('.gallery-lightbox-next');
+      prevBtn.style.visibility = lightboxIndex > 0 ? 'visible' : 'hidden';
+      nextBtn.style.visibility = lightboxIndex < lightboxImages.length - 1 ? 'visible' : 'hidden';
     }
 
-    function openLightbox(src, alt) {
+    function onLightboxKeydown(e) {
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowLeft') showLightboxImage(lightboxIndex - 1);
+      else if (e.key === 'ArrowRight') showLightboxImage(lightboxIndex + 1);
+    }
+
+    function openLightbox(clickedImg) {
       closeLightbox();
+      lightboxImages = Array.prototype.slice.call(galleryPhotoPageForLightbox.querySelectorAll('.gallery-photo-images img')).map(function (el) {
+        return { src: el.src, alt: el.alt };
+      });
+      var startIndex = Array.prototype.indexOf.call(galleryPhotoPageForLightbox.querySelectorAll('.gallery-photo-images img'), clickedImg);
+
       var overlay = document.createElement('div');
       overlay.className = 'gallery-lightbox';
       var img = document.createElement('img');
-      img.src = src;
-      img.alt = alt || '';
+      var prevBtn = document.createElement('button');
+      prevBtn.type = 'button';
+      prevBtn.className = 'gallery-lightbox-arrow gallery-lightbox-prev';
+      prevBtn.textContent = '\u2039';
+      prevBtn.setAttribute('aria-label', 'Previous photo');
+      var nextBtn = document.createElement('button');
+      nextBtn.type = 'button';
+      nextBtn.className = 'gallery-lightbox-arrow gallery-lightbox-next';
+      nextBtn.textContent = '\u203a';
+      nextBtn.setAttribute('aria-label', 'Next photo');
       var closeBtn = document.createElement('button');
       closeBtn.type = 'button';
       closeBtn.className = 'gallery-lightbox-close';
       closeBtn.textContent = '\u00d7';
       closeBtn.setAttribute('aria-label', 'Close');
+
+      overlay.appendChild(prevBtn);
       overlay.appendChild(img);
+      overlay.appendChild(nextBtn);
       overlay.appendChild(closeBtn);
       overlay.addEventListener('click', function (e) {
         if (e.target === overlay) closeLightbox();
       });
       closeBtn.addEventListener('click', closeLightbox);
+      prevBtn.addEventListener('click', function () { showLightboxImage(lightboxIndex - 1); });
+      nextBtn.addEventListener('click', function () { showLightboxImage(lightboxIndex + 1); });
       document.body.appendChild(overlay);
       activeLightbox = overlay;
+      showLightboxImage(startIndex >= 0 ? startIndex : 0);
       document.addEventListener('keydown', onLightboxKeydown);
     }
 
     galleryPhotoPageForLightbox.addEventListener('click', function (e) {
       var img = e.target.closest('.gallery-photo-images img');
       if (!img) return;
-      openLightbox(img.src, img.alt);
+      openLightbox(img);
     });
   }
 
@@ -1213,7 +1250,7 @@
           '<div class="gallery-photo-header">' +
             '<div class="page-header-row">' +
               '<h1>' + escapeHtmlJS(displayName) + '</h1>' +
-              '<a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>' +
+              '<a href="/admin/?editPhoto=' + photo.id + '" class="admin-edit-link" style="display:none;">Edit</a>' +
             '</div>' +
             (photo.date_taken ? '<p class="gallery-photo-date">' + formatDateJS(photo.date_taken) + '</p>' : '') +
             galleryTagsHtmlJS(photo, true) +
