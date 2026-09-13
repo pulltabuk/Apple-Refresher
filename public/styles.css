@@ -508,6 +508,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
   gap: 14px;
   margin-top: 1.5rem;
 }
+.card-grid[data-mode="events"] { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
 .card-grid[data-mode="gallery"] { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
 .card {
   border: 1px solid #c7c4b8;
