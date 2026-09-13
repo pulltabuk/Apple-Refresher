@@ -46,7 +46,7 @@ a { color: inherit; text-decoration: none; }
   padding: 1.5rem 1.5rem;
 }
 .site-title { font-size: 26px; font-weight: 700; display: flex; align-items: center; gap: 12px; color: #fff; letter-spacing: -0.01em; }
-.site-title img, .site-logo-svg { flex-shrink: 0; width: 52px; height: 52px; }
+.site-logo-img { flex-shrink: 0; width: 64px; height: 64px; border-radius: 12px; }
 .site-nav a { margin-left: 1.75rem; font-size: 15px; font-weight: 600; color: #fff; opacity: 0.92; }
 .site-nav a:hover { opacity: 1; text-decoration: underline; }
 
