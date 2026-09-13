@@ -1139,6 +1139,55 @@
       .catch(function () {});
   }
 
+  // --- Gallery photo lightbox: click an image to enlarge it, Escape or
+  // clicking the overlay background closes it. Uses event delegation so
+  // it keeps working even if live-refresh replaces the images below.
+
+  var galleryPhotoPageForLightbox = document.querySelector('.gallery-photo-page');
+  if (galleryPhotoPageForLightbox) {
+    var activeLightbox = null;
+
+    function closeLightbox() {
+      if (!activeLightbox) return;
+      activeLightbox.remove();
+      activeLightbox = null;
+      document.removeEventListener('keydown', onLightboxKeydown);
+    }
+
+    function onLightboxKeydown(e) {
+      if (e.key === 'Escape') closeLightbox();
+    }
+
+    function openLightbox(src, alt) {
+      closeLightbox();
+      var overlay = document.createElement('div');
+      overlay.className = 'gallery-lightbox';
+      var img = document.createElement('img');
+      img.src = src;
+      img.alt = alt || '';
+      var closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'gallery-lightbox-close';
+      closeBtn.textContent = '\u00d7';
+      closeBtn.setAttribute('aria-label', 'Close');
+      overlay.appendChild(img);
+      overlay.appendChild(closeBtn);
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeLightbox();
+      });
+      closeBtn.addEventListener('click', closeLightbox);
+      document.body.appendChild(overlay);
+      activeLightbox = overlay;
+      document.addEventListener('keydown', onLightboxKeydown);
+    }
+
+    galleryPhotoPageForLightbox.addEventListener('click', function (e) {
+      var img = e.target.closest('.gallery-photo-images img');
+      if (!img) return;
+      openLightbox(img.src, img.alt);
+    });
+  }
+
   // --- Live refresh: a single gallery photo page, matched by its URL id.
 
   var galleryPhotoPageEl = document.querySelector('.gallery-photo-page');

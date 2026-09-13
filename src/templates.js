@@ -511,7 +511,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   <div class="gallery-photo-header">
     <div class="page-header-row">
       <h1>${escapeHtml(displayName)}</h1>
-      <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+      <a href="/admin/?editPhoto=${photo.id}" class="admin-edit-link" style="display:none;">Edit</a>
     </div>
     ${photo.date_taken ? `<p class="gallery-photo-date">${formatDate(photo.date_taken)}</p>` : ''}
     ${galleryTagsHtml(photo, true)}
@@ -1317,9 +1317,15 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         ${datePrecisionFieldHtml('gallery_date_taken', 'Date taken')}
 
-        <label>Location<input type="text" id="gallery-location" placeholder="e.g. Cardiff"></label>
+        <label>Location
+          <input type="text" id="gallery-location" list="gallery-location-options" placeholder="e.g. Cardiff">
+          <datalist id="gallery-location-options"></datalist>
+        </label>
 
-        <label>Country<input type="text" id="gallery-country" placeholder="e.g. United Kingdom"></label>
+        <label>Country
+          <input type="text" id="gallery-country" list="gallery-country-options" placeholder="e.g. United Kingdom">
+          <datalist id="gallery-country-options"></datalist>
+        </label>
 
         <div class="admin-subfield">
           <span class="admin-subfield-label">Tags</span>

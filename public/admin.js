@@ -178,10 +178,16 @@
     loadCategoryIcons();
     const params = new URLSearchParams(window.location.search);
     const editId = params.get('edit');
+    const editPhotoId = params.get('editPhoto');
     if (editId) {
       editProduct(editId);
     } else if (params.get('new')) {
       startNewProduct();
+    } else if (editPhotoId) {
+      document.querySelector('.admin-tab-btn[data-tab="gallery"]').click();
+      galleryLoaded = true;
+      await loadGalleryPhotos();
+      editGalleryPhoto(editPhotoId);
     } else {
       showProductList();
     }
@@ -851,7 +857,7 @@
   const galleryForm = document.getElementById('gallery-form');
   const galleryTagsListEl = document.getElementById('gallery-tags-list');
   const galleryImageThumbsEl = document.getElementById('gallery-image-thumbs');
-  const MAX_GALLERY_IMAGES = 6;
+  const MAX_GALLERY_IMAGES = 8;
 
   function showGalleryList() {
     galleryListView.style.display = 'block';
@@ -864,6 +870,16 @@
     window.scrollTo(0, 0);
   }
 
+  function updateGalleryLocationCountryOptions() {
+    const locationOptions = document.getElementById('gallery-location-options');
+    const countryOptions = document.getElementById('gallery-country-options');
+    if (!locationOptions || !countryOptions) return;
+    const locations = Array.from(new Set(cachedGalleryPhotos.map((p) => p.location).filter(Boolean))).sort();
+    const countries = Array.from(new Set(cachedGalleryPhotos.map((p) => p.country).filter(Boolean))).sort();
+    locationOptions.innerHTML = locations.map((v) => `<option value="${v.replace(/"/g, '&quot;')}">`).join('');
+    countryOptions.innerHTML = countries.map((v) => `<option value="${v.replace(/"/g, '&quot;')}">`).join('');
+  }
+
   async function loadGalleryPhotos() {
     const { data, error } = await client.from('gallery_photos').select('*').order('created_at', { ascending: false });
     galleryListEl.innerHTML = '';
@@ -872,6 +888,7 @@
       return;
     }
     cachedGalleryPhotos = data;
+    updateGalleryLocationCountryOptions();
     if (!data.length) {
       galleryListEl.textContent = 'No photos yet, add your first one below.';
       return;
@@ -951,22 +968,68 @@
     });
   }
 
+  let draggedGalleryIndex = null;
+
   function renderGalleryImageThumbs() {
     galleryImageThumbsEl.innerHTML = '';
     currentGalleryImageUrls.forEach((url, i) => {
       const wrap = document.createElement('div');
-      wrap.className = 'admin-thumb';
+      wrap.className = 'admin-thumb admin-thumb--reorderable' + (i === 0 ? ' admin-thumb--main' : '');
+      wrap.draggable = true;
+      wrap.setAttribute('aria-label', i === 0 ? 'Main photo, drag to reorder' : 'Drag to reorder');
+
+      wrap.addEventListener('dragstart', () => {
+        draggedGalleryIndex = i;
+        wrap.classList.add('admin-thumb--dragging');
+      });
+      wrap.addEventListener('dragend', () => {
+        wrap.classList.remove('admin-thumb--dragging');
+        draggedGalleryIndex = null;
+      });
+      wrap.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+      wrap.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (draggedGalleryIndex === null || draggedGalleryIndex === i) return;
+        const [moved] = currentGalleryImageUrls.splice(draggedGalleryIndex, 1);
+        currentGalleryImageUrls.splice(i, 0, moved);
+        renderGalleryImageThumbs();
+      });
+
       const img = document.createElement('img');
       img.src = url;
+      wrap.appendChild(img);
+
+      if (i === 0) {
+        const mainLabel = document.createElement('span');
+        mainLabel.className = 'admin-thumb-main-label';
+        mainLabel.textContent = 'Main';
+        wrap.appendChild(mainLabel);
+      } else {
+        const mainBtn = document.createElement('button');
+        mainBtn.type = 'button';
+        mainBtn.className = 'admin-thumb-main-btn';
+        mainBtn.textContent = '\u2605';
+        mainBtn.setAttribute('aria-label', 'Set as main photo');
+        mainBtn.title = 'Set as main photo';
+        mainBtn.addEventListener('click', () => {
+          const [moved] = currentGalleryImageUrls.splice(i, 1);
+          currentGalleryImageUrls.unshift(moved);
+          renderGalleryImageThumbs();
+        });
+        wrap.appendChild(mainBtn);
+      }
+
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
+      removeBtn.className = 'admin-thumb-remove-btn';
       removeBtn.textContent = '\u00d7';
       removeBtn.setAttribute('aria-label', 'Remove photo');
       removeBtn.addEventListener('click', () => {
         currentGalleryImageUrls.splice(i, 1);
         renderGalleryImageThumbs();
       });
-      wrap.appendChild(img);
       wrap.appendChild(removeBtn);
       galleryImageThumbsEl.appendChild(wrap);
     });
@@ -986,13 +1049,13 @@
     if (!files.length) return;
     const remaining = MAX_GALLERY_IMAGES - currentGalleryImageUrls.length;
     if (remaining <= 0) {
-      window.alert('You already have 6 photos, remove one first.');
+      window.alert('You already have ' + MAX_GALLERY_IMAGES + ' photos, remove one first.');
       e.target.value = '';
       return;
     }
     const toUpload = files.slice(0, remaining);
     if (files.length > remaining) {
-      window.alert('Only ' + remaining + ' more photo(s) can be added (6 max), the rest were skipped.');
+      window.alert('Only ' + remaining + ' more photo(s) can be added (' + MAX_GALLERY_IMAGES + ' max), the rest were skipped.');
     }
     for (const file of toUpload) {
       try {
