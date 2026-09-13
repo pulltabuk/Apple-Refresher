@@ -1,1 +1,165 @@
-{}
+{
+  "iPhone": [
+    {
+      "url": "https://www.apple.com/shop/buy-iphone/iphone-duo",
+      "name": "iPhone Duo",
+      "price": "$1999",
+      "status": "Pre-order"
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-iphone/iphone-18-pro",
+      "name": "iPhone 18 Pro & iPhone 18 Pro Max",
+      "price": "$1199",
+      "status": "New"
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-iphone/iphone-air",
+      "name": "iPhone Air",
+      "price": "$1099",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-iphone/iphone-17",
+      "name": "iPhone 17",
+      "price": "$899",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-iphone/iphone-17e",
+      "name": "iPhone 17e",
+      "price": "$699",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-iphone/iphone-16",
+      "name": "iPhone 16",
+      "price": "$799",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-iphone/carrier-offers",
+      "name": "CARRIER DEALS AT APPLE Get up to $1200 in credit on a new iPhone after trade-in. Includes carrier credits. AT&T: up to $1200. T-Mobile: up to $1200. Verizon: up to $1020. Footnote ‡",
+      "price": null,
+      "status": null
+    }
+  ],
+  "Mac": [
+    {
+      "url": "https://www.apple.com/shop/buy-mac/macbook-neo",
+      "name": "MacBook Neo",
+      "price": "$699",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-mac/macbook-air",
+      "name": "MacBook Air",
+      "price": "$1299",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-mac/macbook-pro",
+      "name": "MacBook Pro",
+      "price": "$1999",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-mac/imac",
+      "name": "iMac",
+      "price": "$1499",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-mac/mac-mini",
+      "name": "Mac mini",
+      "price": "$899",
+      "status": "New"
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-mac/mac-studio",
+      "name": "Mac Studio",
+      "price": "$2499",
+      "status": "New"
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-mac/studio-display",
+      "name": "Studio Display",
+      "price": "$1599",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-mac/studio-display-xdr",
+      "name": "Studio Display XDR",
+      "price": "$2899",
+      "status": null
+    }
+  ],
+  "iPad": [
+    {
+      "url": "https://www.apple.com/shop/buy-ipad/ipad-pro",
+      "name": "iPad Pro",
+      "price": "$1199",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-ipad/ipad-air",
+      "name": "iPad Air",
+      "price": "$749",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-ipad/ipad",
+      "name": "iPad",
+      "price": "$449",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-ipad/ipad-mini",
+      "name": "iPad mini",
+      "price": "$599",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-ipad/ipad-10-2",
+      "name": "Buy iPad (opens in a new window)",
+      "price": null,
+      "status": null
+    }
+  ],
+  "Apple Watch": [
+    {
+      "url": "https://www.apple.com/shop/buy-watch/apple-watch",
+      "name": "Apple Watch Series 12",
+      "price": "$399",
+      "status": "New"
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-watch/apple-watch-se",
+      "name": "Apple Watch SE 3",
+      "price": "$249",
+      "status": null
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-watch/apple-watch-ultra/apple-watch-ultra-4-gps-cellular-49mm-titanium-case",
+      "name": "Apple Watch Ultra 4",
+      "price": "$700",
+      "status": "New"
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-watch/apple-watch-hermes",
+      "name": "Apple Watch Hermès Series 12",
+      "price": "$900",
+      "status": "New"
+    },
+    {
+      "url": "https://www.apple.com/shop/buy-watch/apple-watch-hermes-ultra/apple-watch-herm%C3%A8s-ultra-4-gps-cellular-49mm-titanium-case",
+      "name": "Apple Watch Hermès Ultra 4",
+      "price": "$950",
+      "status": "New"
+    }
+  ],
+  "AirPods": [],
+  "Apple TV & HomePod": [],
+  "Vision Pro": [],
+  "AirTag": [],
+  "Accessories": []
+}
