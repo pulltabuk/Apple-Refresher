@@ -632,7 +632,7 @@ function eventArchiveCardHtml(event) {
   const products = normalizedAnnouncedProducts(event);
   const featured = products.filter((p) => p.featured).sort((a, b) => a.name.localeCompare(b.name));
   const rest = products.filter((p) => !p.featured).sort((a, b) => a.name.localeCompare(b.name));
-  const shown = featured.concat(rest).slice(0, 3);
+  const shown = featured.concat(rest).slice(0, 10);
   const remaining = products.length - shown.length;
   const tags = shown.map((p) => `<span class="pill">${escapeHtml(p.name)}</span>`).join('') + (remaining > 0 ? `<span class="pill pill--muted">+${remaining} more</span>` : '');
   const inner = `<div class="card-image">${event.image_url ? `<img src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}</div>
