@@ -1,0 +1,11 @@
+[
+  { "category": "iPhone", "url": "https://www.apple.com/shop/buy-iphone" },
+  { "category": "Mac", "url": "https://www.apple.com/shop/buy-mac" },
+  { "category": "iPad", "url": "https://www.apple.com/shop/buy-ipad" },
+  { "category": "Apple Watch", "url": "https://www.apple.com/shop/buy-watch" },
+  { "category": "AirPods", "url": "https://www.apple.com/shop/buy-airpods" },
+  { "category": "Apple TV & HomePod", "url": "https://www.apple.com/shop/buy-tv-home" },
+  { "category": "Vision Pro", "url": "https://www.apple.com/shop/buy-vision" },
+  { "category": "AirTag", "url": "https://www.apple.com/shop/buy-airtag" },
+  { "category": "Accessories", "url": "https://www.apple.com/shop/buy-accessories/apple-pencil" }
+]

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iPad — Apple Sunset</title>
+<meta name="description" content="Every iPad product on Apple Sunset, current and discontinued, with time since refresh and full release history.">
+
+<link rel="canonical" href="https://example.netlify.app/categories/ipad/">
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" type="image/png" href="/favicon.png">
+</head>
+<body>
+<header class="site-header-bg">
+  <div class="site-header">
+    <a class="site-title" href="/">
+      <img src="/logo.png" alt="Apple Sunset" class="site-logo-img">
+    </a>
+    <nav class="site-nav">
+      <a href="/products/">All products</a>
+      <a href="/categories/">Categories</a>
+      <a href="/discontinued/">Discontinued</a>
+      <a href="/gallery/">Photo Gallery</a>
+      <a href="/events/">Apple Events</a>
+    </nav>
+  </div>
+</header>
+<main>
+
+<div class="category-page-heading" data-category="iPad"><svg class="placeholder-icon" viewBox="0 0 40 40" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="8" width="26" height="24" rx="3"/><line x1="19" y1="27" x2="21" y2="27"/></svg><h1>iPad</h1></div>
+<p class="page-intro">1 current product. Newest first.</p>
+<div class="controls-row">
+  <input type="search" id="search-input" class="search-input" placeholder="Search iPad…" aria-label="Search">
+  <select id="sort-select" class="sort-select" aria-label="Sort products">
+    <option value="" selected disabled>Sort by...</option>
+    <option value="days-desc">Days since refresh: high to low</option>
+<option value="days-asc">Days since refresh: low to high</option>
+<option value="launch-desc">Launched: newest first</option>
+<option value="launch-asc">Launched: oldest first</option>
+<option value="name-asc">Name: A to Z</option>
+<option value="name-desc">Name: Z to A</option>
+  </select>
+</div>
+<div class="filter-bar" data-filter-key="status">
+  <button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">(1)</span></button>
+  <button class="filter-btn" data-filter-value="current">Current <span class="filter-btn-count">(1)</span></button>
+<button class="filter-btn" data-filter-value="discontinued">Discontinued <span class="filter-btn-count">(0)</span></button>
+</div>
+<p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
+<table class="league-table" id="grid" data-mode="category" data-category-name="iPad">
+  <thead>
+    <tr>
+      <th class="league-rank">#</th>
+      <th class="league-name">Product</th>
+      <th class="league-status">Status</th>
+      <th class="league-launch">Launched</th>
+      <th class="league-price">Price</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="league-row" data-href="/products/ipad-air/" data-category="iPad" data-status="current" data-days="185" data-launch="1715731200000" data-discontinued="" data-lifespan="" data-decade="">
+  <td class="league-rank">1</td>
+  <td class="league-name"><a href="/products/ipad-air/" class="league-name-link"><svg class="placeholder-icon" viewBox="0 0 40 40" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="8" width="26" height="24" rx="3"/><line x1="19" y1="27" x2="21" y2="27"/></svg><span>iPad Air</span></a></td>
+  <td class="league-status"><span class="badge badge--fresh">185 days since refresh</span></td>
+  <td class="league-launch">15 May 2024</td>
+  <td class="league-price">£749</td>
+</tr>
+  </tbody>
+</table>
+</main>
+<footer class="site-footer-bg">
+  <div class="site-footer">
+    <nav class="footer-nav">
+      <a href="/gallery/">Gallery</a>
+      <a href="/events/">Apple Events</a>
+      <a href="/facts/">Facts</a>
+      <a href="/about/">About us</a>
+      <a href="/admin/">Admin</a>
+    </nav>
+    <p>Apple Sunset is an independent tracker and is not affiliated with Apple Inc.</p>
+  </div>
+</footer>
+<script>
+  window.SUPABASE_URL = "";
+  window.SUPABASE_ANON_KEY = "";
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+<script src="/app.js" defer></script>
+</body>
+</html>
