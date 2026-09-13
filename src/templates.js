@@ -136,20 +136,29 @@ function categoryTimelinePoints(product, allProducts) {
   }));
   const sortedEntries = dateEntries.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
-  const launchCandidates = sameCategory.map((p) => p.original_launch_date).filter(Boolean);
-  const lineLaunch = launchCandidates.length
-    ? launchCandidates.reduce((earliest, d) => (d < earliest ? d : earliest))
-    : (sortedEntries.length ? sortedEntries[0].date : null);
-  const launchOwnerFromField = sameCategory.find((p) => p.original_launch_date === lineLaunch);
-  const launchEntry = sortedEntries.find((e) => e.date === lineLaunch);
-  const launchOwnerName = launchOwnerFromField ? launchOwnerFromField.name : (launchEntry ? launchEntry.productName : null);
-
+  // Each product with its own original_launch_date is a genuine origin
+  // point (e.g. the first iPhone in 2007, and separately iPhone Air
+  // debuting a new line within the same timeline) and gets its own
+  // Launch label, rather than only the single earliest one winning.
+  // A group with no explicit launch dates at all still falls back to
+  // its earliest entry, as before.
+  const explicitLaunches = sameCategory.filter((p) => p.original_launch_date);
   const points = [];
-  if (lineLaunch) points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwnerName || product.name });
-  let launchConsumed = false;
+  const consumedKeys = new Set();
+
+  if (explicitLaunches.length) {
+    explicitLaunches.forEach((p) => {
+      points.push({ date: p.original_launch_date, label: 'Launch', type: 'launch', productName: p.name });
+      consumedKeys.add(p.original_launch_date + '|' + p.name);
+    });
+  } else if (sortedEntries.length) {
+    const first = sortedEntries[0];
+    points.push({ date: first.date, label: 'Launch', type: 'launch', productName: first.productName });
+    consumedKeys.add(first.date + '|' + first.productName);
+  }
+
   sortedEntries.forEach((e) => {
-    if (!launchConsumed && e.date === lineLaunch && e.productName === (launchOwnerName || product.name)) {
-      launchConsumed = true;
+    if (consumedKeys.has(e.date + '|' + e.productName)) {
       return;
     }
     points.push({ date: e.date, label: 'Refresh', type: 'refresh', productName: e.productName });
