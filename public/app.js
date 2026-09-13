@@ -929,7 +929,7 @@
       .then(function (res) { return res.json(); })
       .then(function (photos) {
         if (!Array.isArray(photos) || !photos.length) return;
-        var picks = pickRandomJS(photos, 12);
+        var picks = pickRandomJS(photos, 10);
         galleryStripSection.innerHTML = picks.map(function (photo) {
           var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
           var images = galleryPhotoImagesJS(photo);

@@ -390,10 +390,15 @@
     return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> days ' + info.suffix + '</p>';
   }
 
-  function productBodyHtmlJS(product, status, productsBySlug) {
+  function productBodyHtmlJS(product, status, productsBySlug, galleryPhotos) {
     var sortedDates = sortedHistoryJS(product);
     var launch = product.original_launch_date || sortedDates[0] || null;
     var latest = sortedDates[sortedDates.length - 1] || null;
+
+    var productNameLower = product.name.trim().toLowerCase();
+    var relatedPhotos = (galleryPhotos || []).filter(function (photo) {
+      return (photo.tags || []).some(function (tag) { return tag.trim().toLowerCase() === productNameLower; });
+    });
 
     var videoBlock = product.video_url ? '<video class="product-video" src="' + product.video_url + '" controls></video>' : '';
 
@@ -443,6 +448,7 @@
     var releaseHistorySection = timelinePoints.length ? '<h2>Release history</h2>' + horizontalTimelineHtmlJS(product, allProducts) : '';
 
     return (
+      '<p><a href="/products/" class="gallery-nav-link">&larr; All products</a></p>' +
       '<div class="product-top' + (product.video_url ? '' : ' product-top--no-media') + '">' +
         (product.video_url ? '<div class="product-media">' + videoBlock + '</div>' : '') +
         '<div class="product-info">' +
@@ -455,7 +461,8 @@
         '</div>' +
       '</div>' +
       releaseHistorySection +
-      (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '')
+      (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
+      (relatedPhotos.length ? '<h2>From the gallery</h2><div class="gallery-strip">' + relatedPhotos.map(galleryStripItemHtmlJS).join('') + '</div>' : '')
     );
   }
 
@@ -929,12 +936,8 @@
       .then(function (res) { return res.json(); })
       .then(function (photos) {
         if (!Array.isArray(photos) || !photos.length) return;
-        var picks = pickRandomJS(photos, 12);
-        galleryStripSection.innerHTML = picks.map(function (photo) {
-          var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
-          var images = galleryPhotoImagesJS(photo);
-          return '<a class="gallery-strip-item" href="/gallery/' + photo.id + '/">' + (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</a>';
-        }).join('');
+        var picks = pickRandomJS(photos, 10);
+        galleryStripSection.innerHTML = picks.map(galleryStripItemHtmlJS).join('');
       })
       .catch(function () {});
   }
@@ -1038,6 +1041,12 @@
   function galleryPhotoImagesJS(photo) {
     if (photo.image_urls && photo.image_urls.length) return photo.image_urls;
     return photo.image_url ? [photo.image_url] : [];
+  }
+
+  function galleryStripItemHtmlJS(photo) {
+    var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
+    var images = galleryPhotoImagesJS(photo);
+    return '<a class="gallery-strip-item" href="/gallery/' + photo.id + '/">' + (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</a>';
   }
 
   function galleryTagLinkJS(value, extraClass) {
@@ -1278,14 +1287,21 @@
   if (productPageEl && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     var pathParts = window.location.pathname.split('/').filter(Boolean);
     var slugFromUrl = pathParts[pathParts.length - 1];
-    fetchAllProductsJS()
-      .then(function (products) {
+    Promise.all([
+      fetchAllProductsJS(),
+      fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=*', {
+        headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+      }).then(function (res) { return res.json(); }).catch(function () { return []; }),
+    ])
+      .then(function (results) {
+        var products = results[0];
+        var galleryPhotos = Array.isArray(results[1]) ? results[1] : [];
         var bySlug = {};
         products.forEach(function (p) { bySlug[p.slug] = p; });
         var product = bySlug[slugFromUrl];
         if (!product) return;
         var status = product.discontinued ? null : computeStatusJS(product);
-        productPageEl.innerHTML = productBodyHtmlJS(product, status, bySlug);
+        productPageEl.innerHTML = productBodyHtmlJS(product, status, bySlug, galleryPhotos);
         wireWaitButtons(productPageEl.querySelectorAll('.wait-btn'));
         revealAdminEditLinks(productPageEl.querySelectorAll('.admin-edit-link'));
         document.title = product.name + ' \u2014 Apple Sunset';

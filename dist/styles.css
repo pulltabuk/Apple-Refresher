@@ -49,6 +49,26 @@ a { color: inherit; text-decoration: none; }
 .site-logo-img { flex-shrink: 0; width: 116px; height: 116px; border-radius: 12px; }
 .site-nav a { margin-left: 1.75rem; font-size: 15px; font-weight: 600; color: #fff; opacity: 0.92; }
 .site-nav a:hover { opacity: 1; text-decoration: underline; }
+.site-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 1.75rem;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+.site-search svg { width: 15px; height: 15px; color: #fff; opacity: 0.8; flex-shrink: 0; }
+.site-search input {
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  width: 130px;
+}
+.site-search input::placeholder { color: rgba(255, 255, 255, 0.7); }
 
 .site-footer-bg { background: var(--accent-bg); border-top: 1px solid var(--border); }
 .site-footer {
@@ -504,7 +524,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .fact-card .fact-date { margin: 14px 0 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--accent-dark); }
 .homepage-section h2 { font-size: 18px; margin: 0 0 1rem; }
 
-.gallery-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; overflow: hidden; max-height: 410px; }
+.gallery-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
 .gallery-strip-item { display: block; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden; background: #f6f5f1; }
 .gallery-strip-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
