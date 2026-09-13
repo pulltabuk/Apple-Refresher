@@ -16,6 +16,8 @@
   let editingSlug = null;
   let cachedProducts = [];
   let currentRefreshHistory = [];
+  let currentOriginalLaunchDate = null;
+  let currentDiscontinuedDate = null;
   let currentVideoUrl = null;
 
   function slugify(name) {
@@ -31,6 +33,16 @@
   // is a set of three radios (day/month/year) named "<prefix>_precision"
   // plus three inputs "<prefix>_day" (date), "<prefix>_month" (month),
   // "<prefix>_year" (number), only one of which shows at a time.
+
+  function formatAdminDate(value) {
+    if (!value) return '';
+    if (/^\d{4}$/.test(value)) return value;
+    if (/^\d{4}-\d{2}$/.test(value)) {
+      const [y, m] = value.split('-');
+      return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    }
+    return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
 
   function updateDatePrecisionVisibility(prefix) {
     const checked = document.querySelector('input[name="' + prefix + '_precision"]:checked');
@@ -85,7 +97,7 @@
     updateDatePrecisionVisibility(prefix);
   }
 
-  const DATE_FIELD_PREFIXES = ['original_launch_date', 'discontinued_date', 'new_refresh_date', 'gallery_date_taken'];
+  const DATE_FIELD_PREFIXES = ['new_refresh_date', 'gallery_date_taken'];
 
   // --- Timeline group: one field, matching Category's pattern. Typing
   // an existing name (case/whitespace-insensitive) joins that group,
@@ -529,9 +541,63 @@
     renderRefreshHistory();
   }
 
-  document.getElementById('add-refresh-date-btn').addEventListener('click', addRefreshDateFromWidget);
-  ['new_refresh_date_day', 'new_refresh_date_month', 'new_refresh_date_year'].forEach((id) => {
-    document.getElementById(id).addEventListener('change', addRefreshDateFromWidget);
+  function renderLaunchDateDisplay() {
+    const wrap = document.getElementById('launch-date-display-wrap');
+    const display = document.getElementById('launch-date-display');
+    if (!currentOriginalLaunchDate) {
+      wrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = '';
+    display.innerHTML = '';
+    display.appendChild(document.createTextNode(formatAdminDate(currentOriginalLaunchDate) + ' '));
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.textContent = '\u00d7';
+    clearBtn.setAttribute('aria-label', 'Clear launch date');
+    clearBtn.addEventListener('click', () => {
+      currentOriginalLaunchDate = null;
+      renderLaunchDateDisplay();
+    });
+    display.appendChild(clearBtn);
+  }
+
+  function renderDiscontinuedDateDisplay() {
+    const wrap = document.getElementById('discontinued-date-display-wrap');
+    const display = document.getElementById('discontinued-date-display');
+    if (!currentDiscontinuedDate) {
+      wrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = '';
+    display.innerHTML = '';
+    display.appendChild(document.createTextNode(formatAdminDate(currentDiscontinuedDate) + ' '));
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.textContent = '\u00d7';
+    clearBtn.setAttribute('aria-label', 'Clear discontinued date');
+    clearBtn.addEventListener('click', () => {
+      currentDiscontinuedDate = null;
+      renderDiscontinuedDateDisplay();
+    });
+    display.appendChild(clearBtn);
+  }
+
+  document.getElementById('add-as-refresh-btn').addEventListener('click', addRefreshDateFromWidget);
+  document.getElementById('add-as-launch-btn').addEventListener('click', () => {
+    const value = getDatePrecisionValue('new_refresh_date');
+    if (!value) return;
+    currentOriginalLaunchDate = value;
+    setDatePrecisionValue('new_refresh_date', null);
+    renderLaunchDateDisplay();
+  });
+  document.getElementById('add-as-discontinued-btn').addEventListener('click', () => {
+    const value = getDatePrecisionValue('new_refresh_date');
+    if (!value) return;
+    currentDiscontinuedDate = value;
+    document.getElementById('discontinued').checked = true;
+    setDatePrecisionValue('new_refresh_date', null);
+    renderDiscontinuedDateDisplay();
   });
 
   function renderVideoStatus() {
@@ -587,9 +653,11 @@
     document.getElementById('previous_model').value = p.previous_model || '';
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     document.getElementById('is_new_launch').checked = !!p.is_new_launch;
-    setDatePrecisionValue('original_launch_date', p.original_launch_date || null);
-    setDatePrecisionValue('discontinued_date', p.discontinued_date || null);
     setDatePrecisionValue('new_refresh_date', null);
+    currentOriginalLaunchDate = p.original_launch_date || null;
+    currentDiscontinuedDate = p.discontinued_date || null;
+    renderLaunchDateDisplay();
+    renderDiscontinuedDateDisplay();
     currentRefreshHistory = (p.refresh_history || []).slice();
     currentVideoUrl = p.video_url || null;
     renderRefreshHistory();
@@ -609,9 +677,11 @@
     updateProductOptionsByCategory();
     setTimelineName(null);
     document.getElementById('rumor_note_editor').innerHTML = '';
-    setDatePrecisionValue('original_launch_date', null);
-    setDatePrecisionValue('discontinued_date', null);
     setDatePrecisionValue('new_refresh_date', null);
+    currentOriginalLaunchDate = null;
+    currentDiscontinuedDate = null;
+    renderLaunchDateDisplay();
+    renderDiscontinuedDateDisplay();
     currentRefreshHistory = [];
     currentVideoUrl = null;
     renderRefreshHistory();
@@ -694,30 +764,7 @@
       const name = document.getElementById('name').value.trim();
       const slug = editingId ? editingSlug : slugify(name);
 
-      const originalLaunchDate = getDatePrecisionValue('original_launch_date');
-      const targetGroupKey = (getTimelineName() || document.getElementById('category').value.trim() || 'Other').trim().toLowerCase();
-
-      if (originalLaunchDate) {
-        const conflict = cachedProducts.find((p) => {
-          if (p.id === editingId) return false;
-          if (!p.original_launch_date) return false;
-          const pKey = (p.timeline_name || p.category || '').trim().toLowerCase();
-          return pKey === targetGroupKey;
-        });
-        if (conflict) {
-          const proceed = window.confirm(
-            '"' + conflict.name + '" already has an Original launch date set for this same timeline. ' +
-            'Only one product per timeline should hold this date, otherwise the shared timeline gets confused about which one is the true origin.\n\n' +
-            'Click OK to move it here (this will clear it from "' + conflict.name + '"), or Cancel to leave things as they are and stop this save.'
-          );
-          if (!proceed) return;
-          const clearResult = await client.from('products').update({ original_launch_date: null }).eq('id', conflict.id);
-          if (clearResult.error) {
-            window.alert('Failed to clear the Original launch date from "' + conflict.name + '": ' + clearResult.error.message);
-            return;
-          }
-        }
-      }
+      const originalLaunchDate = currentOriginalLaunchDate;
 
       const refreshHistoryWithLaunch = originalLaunchDate && !currentRefreshHistory.includes(originalLaunchDate)
         ? [...currentRefreshHistory, originalLaunchDate].sort()
@@ -748,7 +795,7 @@
         is_new_launch: document.getElementById('is_new_launch').checked,
         previous_model: document.getElementById('previous_model').value.trim() || null,
         discontinued: document.getElementById('discontinued').checked,
-        discontinued_date: getDatePrecisionValue('discontinued_date'),
+        discontinued_date: currentDiscontinuedDate,
         replaced_by: document.getElementById('replaced_by').value.trim() || null,
         discontinued_reason: document.getElementById('discontinued_reason').value.trim() || null,
         video_url: currentVideoUrl,
@@ -768,12 +815,14 @@
       productForm.reset();
       setTimelineName(null);
       document.getElementById('rumor_note_editor').innerHTML = '';
-      setDatePrecisionValue('original_launch_date', null);
-        setDatePrecisionValue('discontinued_date', null);
       setDatePrecisionValue('new_refresh_date', null);
       editingId = null;
       editingSlug = null;
       currentRefreshHistory = [];
+      currentOriginalLaunchDate = null;
+      currentDiscontinuedDate = null;
+      renderLaunchDateDisplay();
+      renderDiscontinuedDateDisplay();
       currentVideoUrl = null;
       renderRefreshHistory();
       renderVideoStatus();

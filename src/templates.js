@@ -1210,23 +1210,34 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
         </div>
 
-        <h3 class="admin-form-section">Release &amp; refresh dates</h3>
-        <p class="admin-hint">This is the one place every product needs a date. Adding a brand new product or generation (like a 2nd-gen model)? Just add its release date here, that single date is both its "release" and its first entry, there's nothing else to fill in for it. If this exact model gets refreshed again later, add that date here too. This is also what the day-count badge is calculated from.</p>
+        <h3 class="admin-form-section">Launch / Release / Refresh Date</h3>
+        <p class="admin-hint">Pick a date below, then click what kind of date it is. Most products just need a Refresh Date, that covers a brand new product too, it's what the day-count badge is calculated from. Only use Launch Date if this is a true origin point for its timeline (e.g. the very first iPhone, or a new line like iPhone Air debuting within the existing iPhone timeline), a timeline can have more than one Launch if it's genuinely got more than one origin. Discontinued Date also marks the product as discontinued.</p>
         <div class="admin-subfield">
-          <span class="admin-subfield-label">Dates</span>
+          <span class="admin-subfield-label">Refresh history</span>
           <ul id="refresh-history-list" class="refresh-history-list"></ul>
-          <div class="date-precision-radios">
-            <label><input type="radio" name="new_refresh_date_precision" value="day" checked> Full date</label>
-            <label><input type="radio" name="new_refresh_date_precision" value="month"> Month &amp; year</label>
-            <label><input type="radio" name="new_refresh_date_precision" value="year"> Year only</label>
-          </div>
-          <div class="refresh-history-add">
-            <input type="date" id="new_refresh_date_day" class="date-precision-input">
-            <input type="month" id="new_refresh_date_month" class="date-precision-input" style="display:none;">
-            <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
-            <button type="button" id="add-refresh-date-btn" class="admin-btn admin-btn--small">Add date</button>
-          </div>
-          <p class="admin-hint">Pick a date and it's added automatically. Each one is a time this specific model was refreshed.</p>
+        </div>
+        <div class="admin-subfield" id="launch-date-display-wrap" style="display:none;">
+          <span class="admin-subfield-label">Original launch date</span>
+          <p class="date-chip" id="launch-date-display"></p>
+        </div>
+        <div class="admin-subfield" id="discontinued-date-display-wrap" style="display:none;">
+          <span class="admin-subfield-label">Discontinued date</span>
+          <p class="date-chip" id="discontinued-date-display"></p>
+        </div>
+        <div class="date-precision-radios">
+          <label><input type="radio" name="new_refresh_date_precision" value="day" checked> Full date</label>
+          <label><input type="radio" name="new_refresh_date_precision" value="month"> Month &amp; year</label>
+          <label><input type="radio" name="new_refresh_date_precision" value="year"> Year only</label>
+        </div>
+        <div class="refresh-history-add">
+          <input type="date" id="new_refresh_date_day" class="date-precision-input">
+          <input type="month" id="new_refresh_date_month" class="date-precision-input" style="display:none;">
+          <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
+        </div>
+        <div class="unified-date-buttons">
+          <button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--small admin-btn--primary">Refresh Date</button>
+          <button type="button" id="add-as-launch-btn" class="admin-btn admin-btn--small">Launch Date</button>
+          <button type="button" id="add-as-discontinued-btn" class="admin-btn admin-btn--small">Discontinued Date</button>
         </div>
 
         <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
@@ -1252,7 +1263,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <input type="text" id="previous_model" list="product-options-by-category" placeholder="Start typing a product name">
           </label>
           <p class="admin-hint">If this product replaces one already on the site, picking it here automatically marks that one Discontinued and fills in its "Replaced by" for you.</p>
-          ${datePrecisionFieldHtml('original_launch_date', 'Original launch date (of the product line, e.g. the first iPhone)', 'This does not replace Refresh history above, the day-count badge is calculated from Refresh history only, so add this product\u2019s own date(s) there regardless. Only fill this in if this is the ONE product that\u2019s the true origin of a whole line, leave it blank on every other product joining that line. If another product in the same line already has this set, saving will ask before changing anything.')}
 
           <h3 class="admin-form-section">Video</h3>
           <div class="admin-subfield">
@@ -1287,7 +1297,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
           <h3 class="admin-form-section">Discontinued</h3>
           <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
-          ${datePrecisionFieldHtml('discontinued_date', 'Discontinued date')}
+          <p class="admin-hint">Set automatically when you click "Discontinued Date" above, but you can also check this on its own if you don't have an exact date.</p>
           <label>Replaced by (pick a product, or leave blank)
             <input type="text" id="replaced_by" list="product-options-by-category" placeholder="Start typing a product name">
             <datalist id="product-options-by-category"></datalist>

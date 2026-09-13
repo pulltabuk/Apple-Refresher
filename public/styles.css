@@ -242,6 +242,19 @@ a { color: inherit; text-decoration: none; }
 #event-products-list li { justify-content: flex-start; gap: 8px; }
 #event-products-list li button { margin-left: auto; }
 .refresh-history-add { display: flex; gap: 8px; align-items: center; }
+.unified-date-buttons { display: flex; gap: 8px; margin-top: 8px; }
+.date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 12px;
+  background: var(--accent-bg);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.date-chip button { background: none; border: none; color: var(--accent-dark); font-weight: 700; cursor: pointer; padding: 0; }
 
 .admin-thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
 .admin-thumb { position: relative; width: 64px; height: 64px; }
