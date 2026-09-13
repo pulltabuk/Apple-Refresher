@@ -781,9 +781,8 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
 <section class="intro-hero">
   <div class="intro-hero-layout">
     <div class="intro-hero-text">
-      <h1 class="intro-heading">Apple product refresh tracker</h1>
-      <p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed, or when it was discontinued.</p>
-      <p class="intro-subtitle">Stay informed on refresh cycles so you always know whether to buy now or wait for the next update.</p>
+      <h1 class="intro-heading">Apple Sunset</h1>
+      <p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued. See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>
       <a class="intro-cta" href="/products/">Browse all products</a>
     </div>
     <div class="intro-hero-cards" id="hero-cards">
