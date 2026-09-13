@@ -108,12 +108,21 @@ async function fetchPage(url, attempt = 1) {
   try {
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; AppleWatcher/1.0; +personal use)',
-        Accept: 'text/html',
+        // A realistic browser User-Agent, not a bot-identifying one.
+        // Large sites commonly serve a fake "not found" page to
+        // non-browser clients as anti-scraping protection, which looks
+        // identical to a genuinely wrong URL from the outside, so this
+        // matters as much as getting the URL right.
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
       },
       signal: AbortSignal.timeout(20000),
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) {
+      const bodySnippet = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 150);
+      throw new Error('HTTP ' + res.status + (bodySnippet ? ' — page said: "' + bodySnippet + '..."' : ''));
+    }
     return await res.text();
   } catch (err) {
     if (attempt < 2) {

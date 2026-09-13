@@ -242,6 +242,7 @@
     productOptionsByCategory.innerHTML = '';
     cachedProducts
       .filter((p) => (p.category || '').trim().toLowerCase() === currentCategory)
+      .filter((p) => p.id !== editingId)
       .forEach((p) => {
         const opt = document.createElement('option');
         opt.value = p.slug;
