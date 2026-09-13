@@ -774,17 +774,20 @@ label.admin-btn { cursor: pointer; color: #fff; }
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-dark);
   border: none;
   color: #fff;
-  font-size: 40px;
-  line-height: 1;
   width: 52px;
   height: 52px;
   border-radius: 50%;
   cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
-.gallery-lightbox-arrow:hover { background: rgba(255, 255, 255, 0.22); }
+.gallery-lightbox-arrow:hover { background: var(--accent); }
+.gallery-lightbox-arrow svg { width: 24px; height: 24px; }
 .gallery-lightbox-prev { left: 20px; }
 .gallery-lightbox-next { right: 20px; }
 .gallery-photo-copyright { margin-top: 1.5rem; padding: 1.25rem 0; border-top: 1px solid var(--border); text-align: center; }

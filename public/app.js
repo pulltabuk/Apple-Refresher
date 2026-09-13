@@ -1189,12 +1189,12 @@
       var prevBtn = document.createElement('button');
       prevBtn.type = 'button';
       prevBtn.className = 'gallery-lightbox-arrow gallery-lightbox-prev';
-      prevBtn.textContent = '\u2039';
+      prevBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 6 9 12 15 18"></polyline></svg>';
       prevBtn.setAttribute('aria-label', 'Previous photo');
       var nextBtn = document.createElement('button');
       nextBtn.type = 'button';
       nextBtn.className = 'gallery-lightbox-arrow gallery-lightbox-next';
-      nextBtn.textContent = '\u203a';
+      nextBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg>';
       nextBtn.setAttribute('aria-label', 'Next photo');
       var closeBtn = document.createElement('button');
       closeBtn.type = 'button';
