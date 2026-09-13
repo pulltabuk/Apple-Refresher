@@ -1,0 +1,39 @@
+name: Apple Watcher
+
+on:
+  schedule:
+    # 08:00 UTC every day. Edit the two numbers below to change the time
+    # (they're in cron format: minute hour * * *, always UTC).
+    - cron: '0 8 * * *'
+  workflow_dispatch: {}
+    # Lets you trigger a run manually from the Actions tab, useful for
+    # testing without waiting for the schedule.
+
+permissions:
+  contents: write
+  # Needed so the workflow can commit the updated snapshot back to the repo.
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Apple Watcher
+        working-directory: apple-watcher
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+        run: node check-apple.js
+
+      - name: Save updated snapshot
+        run: |
+          git config user.name "Apple Watcher"
+          git config user.email "actions@github.com"
+          git add apple-watcher/snapshot.json
+          git diff --staged --quiet || git commit -m "Apple Watcher: update snapshot"
+          git push
