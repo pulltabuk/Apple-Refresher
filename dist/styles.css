@@ -452,15 +452,15 @@ label.admin-btn { cursor: pointer; color: #fff; }
   width: 30px;
   height: 30px;
   flex-shrink: 0;
-  border: 1.5px solid var(--border);
+  border: 1.5px solid var(--accent);
   border-radius: 8px;
   background: var(--bg);
-  color: var(--text-secondary);
+  color: var(--accent);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
 }
-.sort-reset-btn:hover { background: var(--overdue-bg); color: var(--overdue-text); border-color: var(--overdue-text); }
+.sort-reset-btn:hover { background: var(--accent); color: #fff; }
 .badge {
   display: inline-block;
   font-size: 12px;

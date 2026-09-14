@@ -637,7 +637,7 @@
   }
 
   var currentPage = 1;
-  var PAGE_SIZE = 25;
+  var PAGE_SIZE = 30;
 
   function isPaginatedGrid() {
     var grid = document.getElementById('grid');
