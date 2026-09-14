@@ -490,6 +490,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
   position: relative;
 }
 .card-image img { width: 100%; height: 100%; object-fit: cover; }
+.card-grid[data-mode="events"] .card-image img { object-fit: contain; }
 .placeholder-icon { position: relative; z-index: 1; filter: drop-shadow(0 6px 10px rgba(20, 33, 61, 0.12)); }
 
 .card--featured {
@@ -524,7 +525,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card-featured-count--overdue .card-featured-count-number { color: var(--overdue-text); }
 
 .card--event { justify-content: flex-start; border-color: var(--fresh-text); box-shadow: 0 0 0 1px var(--fresh-text); }
-.card-event-image { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; display: block; }
+.card-event-image { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #f6f5f1; border-radius: 10px; display: block; }
 .card-event-title { font-size: 20px; font-weight: 600; margin: 14px 0 0; }
 .card-event-date { font-size: 14px; color: var(--text-secondary); margin: 6px 0 0; }
 
