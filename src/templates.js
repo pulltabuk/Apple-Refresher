@@ -216,8 +216,8 @@ function horizontalTimelineHtml(product, allProducts) {
     let maxStack = 1;
     row.forEach((group) => {
       if (group.length >= 2) {
-        const aboveCount = Math.ceil(group.length / 2);
-        const belowCount = Math.floor(group.length / 2);
+        const aboveCount = group.filter((e) => e.type !== 'discontinued').length;
+        const belowCount = group.filter((e) => e.type === 'discontinued').length;
         maxStack = Math.max(maxStack, aboveCount, belowCount);
       }
     });
@@ -227,9 +227,8 @@ function horizontalTimelineHtml(product, allProducts) {
       const leftLine = i > 0 ? `<span class="timeline-point-line-half timeline-point-line-half--left"></span>` : '';
       const rightLine = i < row.length - 1 ? `<span class="timeline-point-line-half timeline-point-line-half--right"></span>` : '';
       if (group.length >= 2) {
-        const aboveCount = Math.ceil(group.length / 2);
-        const aboveEntries = group.slice(0, aboveCount);
-        const belowEntries = group.slice(aboveCount);
+        const aboveEntries = group.filter((e) => e.type !== 'discontinued');
+        const belowEntries = group.filter((e) => e.type === 'discontinued');
         return `<div class="timeline-point timeline-point--merged">
     ${leftLine}
     ${rightLine}
@@ -243,7 +242,7 @@ function horizontalTimelineHtml(product, allProducts) {
   </div>`;
       }
       const pt = group[0];
-      const side = i % 2 === 0 ? 'above' : 'below';
+      const side = pt.type === 'discontinued' ? 'below' : 'above';
       return `<div class="timeline-point timeline-point--${pt.type} timeline-point--${side}">
     ${leftLine}
     ${rightLine}
@@ -949,6 +948,13 @@ function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }
     const s = i.product.discontinued ? 'discontinued' : 'current';
     return s === v;
   }).length);
+  const allProductsInCategory = items.map((i) => i.product);
+  const seedProduct = allProductsInCategory[0];
+  const timelinePoints = seedProduct ? categoryTimelinePoints(seedProduct, allProductsInCategory) : [];
+  const releaseHistorySection = timelinePoints.length
+    ? `<h2>Release history</h2>
+  ${horizontalTimelineHtml(seedProduct, allProductsInCategory)}`
+    : '';
   const body = `
 <div class="category-page-heading" data-category="${escapeHtml(category)}">${categoryIcon(category, 36)}<h1>${escapeHtml(category)}</h1></div>
 <p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}. Newest first.</p>
@@ -958,6 +964,9 @@ function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }
 </div>
 ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
+<div id="category-timeline-section" style="display:${timelinePoints.length ? '' : 'none'};">
+  ${releaseHistorySection}
+</div>
 ${leagueTableHtml(items, category)}`;
   return shell({
     title: `${category} — Apple Sunset`,

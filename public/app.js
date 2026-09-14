@@ -150,8 +150,8 @@
       var maxStack = 1;
       row.forEach(function (group) {
         if (group.length >= 2) {
-          var aboveCount2 = Math.ceil(group.length / 2);
-          var belowCount2 = Math.floor(group.length / 2);
+          var aboveCount2 = group.filter(function (e) { return e.type !== 'discontinued'; }).length;
+          var belowCount2 = group.filter(function (e) { return e.type === 'discontinued'; }).length;
           maxStack = Math.max(maxStack, aboveCount2, belowCount2);
         }
       });
@@ -161,9 +161,8 @@
         var leftLine = i > 0 ? '<span class="timeline-point-line-half timeline-point-line-half--left"></span>' : '';
         var rightLine = i < row.length - 1 ? '<span class="timeline-point-line-half timeline-point-line-half--right"></span>' : '';
         if (group.length >= 2) {
-          var aboveCount = Math.ceil(group.length / 2);
-          var aboveEntries = group.slice(0, aboveCount);
-          var belowEntries = group.slice(aboveCount);
+          var aboveEntries = group.filter(function (e) { return e.type !== 'discontinued'; });
+          var belowEntries = group.filter(function (e) { return e.type === 'discontinued'; });
           return '<div class="timeline-point timeline-point--merged">' +
             leftLine + rightLine +
             '<span class="timeline-dot"></span>' +
@@ -172,7 +171,7 @@
           '</div>';
         }
         var pt = group[0];
-        var side = i % 2 === 0 ? 'above' : 'below';
+        var side = pt.type === 'discontinued' ? 'below' : 'above';
         return '<div class="timeline-point timeline-point--' + pt.type + ' timeline-point--' + side + '">' +
           leftLine + rightLine +
           '<span class="timeline-dot"></span>' +
@@ -1086,6 +1085,20 @@
       if (mode === 'category') {
         var tbodyEl = gridSection.querySelector('tbody') || gridSection;
         tbodyEl.innerHTML = items.map(function (i, idx) { return leagueRowHtmlJS(i.product, i.status, idx + 1); }).join('');
+
+        var timelineSection = document.getElementById('category-timeline-section');
+        if (timelineSection) {
+          var categoryProducts = items.map(function (i) { return i.product; });
+          var seedProduct = categoryProducts[0];
+          var points = seedProduct ? categoryTimelinePointsJS(seedProduct, categoryProducts) : [];
+          if (points.length) {
+            timelineSection.style.display = '';
+            timelineSection.innerHTML = '<h2>Release history</h2>' + horizontalTimelineHtmlJS(seedProduct, categoryProducts);
+          } else {
+            timelineSection.style.display = 'none';
+            timelineSection.innerHTML = '';
+          }
+        }
       } else {
         gridSection.innerHTML = items.map(function (i) { return cardHtmlJS(i.product, i.status); }).join('');
       }
