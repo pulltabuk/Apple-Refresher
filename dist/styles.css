@@ -438,6 +438,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
   color: var(--text);
   font-family: inherit;
 }
+.sort-select-wrap { display: inline-flex; align-items: center; gap: 6px; }
 .sort-select {
   font-size: 14px;
   padding: 9px 12px;
@@ -447,6 +448,19 @@ label.admin-btn { cursor: pointer; color: #fff; }
   color: var(--text);
   font-family: inherit;
 }
+.sort-reset-btn {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sort-reset-btn:hover { background: var(--overdue-bg); color: var(--overdue-text); border-color: var(--overdue-text); }
 .badge {
   display: inline-block;
   font-size: 12px;

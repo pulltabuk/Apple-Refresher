@@ -35,15 +35,18 @@
 <p class="page-intro">1 current product. Newest first.</p>
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search Apple Watch…" aria-label="Search">
-  <select id="sort-select" class="sort-select" aria-label="Sort products">
-    <option value="" selected disabled>Sort by...</option>
-    <option value="days-desc">Days since refresh: high to low</option>
+  <div class="sort-select-wrap">
+    <select id="sort-select" class="sort-select" aria-label="Sort products">
+      <option value="" selected disabled>Sort by...</option>
+      <option value="days-desc">Days since refresh: high to low</option>
 <option value="days-asc">Days since refresh: low to high</option>
 <option value="launch-desc">Launched: newest first</option>
 <option value="launch-asc">Launched: oldest first</option>
 <option value="name-asc">Name: A to Z</option>
 <option value="name-desc">Name: Z to A</option>
-  </select>
+    </select>
+    <button type="button" id="sort-reset-btn" class="sort-reset-btn" aria-label="Reset sort order" title="Reset to default order" style="display:none;">&times;</button>
+  </div>
 </div>
 <div class="filter-bar" data-filter-key="status">
   <button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">(1)</span></button>

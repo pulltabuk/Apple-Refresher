@@ -415,10 +415,13 @@ function filterBar(key, values, labels, counts, totalCount, showAll = true, allL
 }
 
 function sortSelect(options) {
-  return `<select id="sort-select" class="sort-select" aria-label="Sort products">
-    <option value="" selected disabled>Sort by...</option>
-    ${options.map(([value, label]) => `<option value="${value}">${label}</option>`).join('\n')}
-  </select>`;
+  return `<div class="sort-select-wrap">
+    <select id="sort-select" class="sort-select" aria-label="Sort products">
+      <option value="" selected disabled>Sort by...</option>
+      ${options.map(([value, label]) => `<option value="${value}">${label}</option>`).join('\n')}
+    </select>
+    <button type="button" id="sort-reset-btn" class="sort-reset-btn" aria-label="Reset sort order" title="Reset to default order" style="display:none;">&times;</button>
+  </div>`;
 }
 
 const PRODUCT_SORT_OPTIONS = [

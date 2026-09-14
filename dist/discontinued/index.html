@@ -35,16 +35,19 @@
 <p class="page-intro">The products Apple no longer sells, when they launched, when they went, and what took their place.</p>
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search discontinued products…" aria-label="Search discontinued products">
-  <select id="sort-select" class="sort-select" aria-label="Sort products">
-    <option value="" selected disabled>Sort by...</option>
-    <option value="discontinued-desc">Discontinued: newest first</option>
+  <div class="sort-select-wrap">
+    <select id="sort-select" class="sort-select" aria-label="Sort products">
+      <option value="" selected disabled>Sort by...</option>
+      <option value="discontinued-desc">Discontinued: newest first</option>
 <option value="discontinued-asc">Discontinued: oldest first</option>
 <option value="lifespan-desc">Longest lived first</option>
 <option value="lifespan-asc">Shortest lived first</option>
 <option value="launch-asc">Launched: oldest first</option>
 <option value="name-asc">Name: A to Z</option>
 <option value="name-desc">Name: Z to A</option>
-  </select>
+    </select>
+    <button type="button" id="sort-reset-btn" class="sort-reset-btn" aria-label="Reset sort order" title="Reset to default order" style="display:none;">&times;</button>
+  </div>
 </div>
 <div class="filter-bar" data-filter-key="decade">
   <button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">(3)</span></button>

@@ -845,6 +845,16 @@
   // number sort to the end whichever direction you pick.
 
   var sortSelect = document.getElementById('sort-select');
+  var sortResetBtn = document.getElementById('sort-reset-btn');
+  var originalGridOrder = null;
+
+  function captureOriginalOrderIfNeeded() {
+    if (originalGridOrder) return;
+    var grid = document.getElementById('grid');
+    if (!grid) return;
+    var items = grid.querySelectorAll('.card, .league-row');
+    if (items.length) originalGridOrder = Array.prototype.slice.call(items);
+  }
 
   function applySort() {
     var grid = document.getElementById('grid');
@@ -883,8 +893,33 @@
     }
   }
 
-  if (sortSelect) sortSelect.addEventListener('change', applySort);
+  if (sortSelect) {
+    sortSelect.addEventListener('change', function () {
+      captureOriginalOrderIfNeeded();
+      applySort();
+      if (sortResetBtn) sortResetBtn.style.display = '';
+    });
+  }
   applySort();
+
+  if (sortResetBtn) {
+    sortResetBtn.addEventListener('click', function () {
+      if (!originalGridOrder || !originalGridOrder.length) return;
+      var parent = originalGridOrder[0].parentElement;
+      if (!parent) return;
+      originalGridOrder.forEach(function (item) {
+        if (item.parentElement) parent.appendChild(item);
+      });
+      sortSelect.value = '';
+      sortResetBtn.style.display = 'none';
+      if (isPaginatedGrid()) {
+        currentPage = 1;
+        applyPagination();
+      } else {
+        renumberLeagueRanks();
+      }
+    });
+  }
 
   // --- Reveal "Edit this product" to the logged-in admin only.
 
