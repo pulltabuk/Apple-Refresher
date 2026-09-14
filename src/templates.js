@@ -353,6 +353,10 @@ ${noindex ? '<meta name="robots" content="noindex">' : ''}
       <a href="/discontinued/">Discontinued</a>
       <a href="/gallery/">Photo Gallery</a>
       <a href="/events/">Apple Events</a>
+      <form class="site-search" action="/products/" method="get">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="search" name="search" placeholder="Search products" aria-label="Search products">
+      </form>
     </nav>
   </div>
 </header>
@@ -985,7 +989,7 @@ function externalLinkLabel(product) {
   return `${product.name}${isWiki ? ' (Wiki)' : ''}`;
 }
 
-function productPage({ product, status, history, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function productPage({ product, status, history, productsBySlug, galleryPhotos, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const sortedDates = history.slice().sort();
   const launch = product.original_launch_date || sortedDates[0] || null;
   const latest = sortedDates[sortedDates.length - 1] || null;
@@ -1013,6 +1017,16 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
     : '';
 
   const daysInfo = status ? badgeDaysInfo(product, status) : null;
+
+  // Related gallery photos: an exact (case-insensitive) match between one
+  // of a photo's tags and this product's name. This only surfaces
+  // something when you've actually tagged a photo with the product name,
+  // so it stays a bonus rather than a guess, and the section below is
+  // fully hidden when nothing matches.
+  const productNameLower = product.name.trim().toLowerCase();
+  const relatedPhotos = (galleryPhotos || []).filter((photo) =>
+    (photo.tags || []).some((tag) => tag.trim().toLowerCase() === productNameLower)
+  );
 
   const specs = [
     specRow('Category', categoryPill(product.category)),
@@ -1050,6 +1064,7 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
 
   const body = `
 <article class="product-page">
+  <p><a href="/products/" class="gallery-nav-link">&larr; All products</a></p>
   <div class="product-top${product.video_url ? '' : ' product-top--no-media'}">
     ${product.video_url ? `<div class="product-media">
       ${videoBlock}
@@ -1076,6 +1091,11 @@ function productPage({ product, status, history, productsBySlug, siteUrl, supaba
   ${releaseHistorySection}
 
   ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note, siteUrl)}</div></div>` : ''}
+
+  ${relatedPhotos.length ? `<h2>From the gallery</h2>
+  <div class="gallery-strip">
+    ${relatedPhotos.map(galleryStripItemHtml).join('\n')}
+  </div>` : ''}
 </article>`;
 
   const description = product.discontinued

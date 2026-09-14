@@ -39,6 +39,8 @@ a { color: inherit; text-decoration: none; }
 .site-header-bg { background: linear-gradient(100deg, #f5b942 0%, #e8752c 30%, #c8432f 58%, #7d2a4a 82%, #2e1a3d 100%); }
 .site-header {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
   align-items: center;
   justify-content: space-between;
   max-width: 1040px;
@@ -47,6 +49,7 @@ a { color: inherit; text-decoration: none; }
 }
 .site-title { font-size: 26px; font-weight: 700; display: flex; align-items: center; gap: 12px; color: #fff; letter-spacing: -0.01em; }
 .site-logo-img { flex-shrink: 0; width: 116px; height: 116px; border-radius: 12px; }
+.site-nav { display: flex; flex-wrap: wrap; row-gap: 0.5rem; align-items: center; }
 .site-nav a { margin-left: 1.75rem; font-size: 15px; font-weight: 600; color: #fff; opacity: 0.92; }
 .site-nav a:hover { opacity: 1; text-decoration: underline; }
 .site-search {
@@ -66,7 +69,7 @@ a { color: inherit; text-decoration: none; }
   color: #fff;
   font-size: 14px;
   font-weight: 500;
-  width: 130px;
+  width: 105px;
 }
 .site-search input::placeholder { color: rgba(255, 255, 255, 0.7); }
 
