@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+  <title>Apple Sunset — Recent Refreshes &amp; Discontinuations</title>
+  <link>https://example.netlify.app</link>
+  <description>Recently refreshed and discontinued Apple products, tracked by Apple Sunset.</description>
+  <item>
+    <title>Mac mini</title>
+    <link>https://example.netlify.app/products/mac-mini/</link>
+    <guid>https://example.netlify.app/products/mac-mini/#2026-08-15</guid>
+    <pubDate>Sat, 15 Aug 2026 00:00:00 GMT</pubDate>
+    <description>Mac mini was refreshed.</description>
+  </item>
+  <item>
+    <title>iPad Air</title>
+    <link>https://example.netlify.app/products/ipad-air/</link>
+    <guid>https://example.netlify.app/products/ipad-air/#2026-03-12</guid>
+    <pubDate>Thu, 12 Mar 2026 00:00:00 GMT</pubDate>
+    <description>iPad Air was refreshed.</description>
+  </item>
+  <item>
+    <title>iPhone 17 Pro</title>
+    <link>https://example.netlify.app/products/iphone-17-pro/</link>
+    <guid>https://example.netlify.app/products/iphone-17-pro/#2025-09-19</guid>
+    <pubDate>Fri, 19 Sep 2025 00:00:00 GMT</pubDate>
+    <description>iPhone 17 Pro was refreshed.</description>
+  </item>
+  <item>
+    <title>Apple Watch Ultra</title>
+    <link>https://example.netlify.app/products/apple-watch-ultra/</link>
+    <guid>https://example.netlify.app/products/apple-watch-ultra/#2025-09-19</guid>
+    <pubDate>Fri, 19 Sep 2025 00:00:00 GMT</pubDate>
+    <description>Apple Watch Ultra was refreshed.</description>
+  </item>
+  <item>
+    <title>MacBook Air</title>
+    <link>https://example.netlify.app/products/macbook-air/</link>
+    <guid>https://example.netlify.app/products/macbook-air/#2025-03-04</guid>
+    <pubDate>Tue, 04 Mar 2025 00:00:00 GMT</pubDate>
+    <description>MacBook Air was refreshed.</description>
+  </item>
+  <item>
+    <title>AirPods Max</title>
+    <link>https://example.netlify.app/products/airpods-max/</link>
+    <guid>https://example.netlify.app/products/airpods-max/#2024-12-10</guid>
+    <pubDate>Tue, 10 Dec 2024 00:00:00 GMT</pubDate>
+    <description>AirPods Max was refreshed.</description>
+  </item>
+  <item>
+    <title>iPod touch</title>
+    <link>https://example.netlify.app/products/ipod-touch/</link>
+    <guid>https://example.netlify.app/products/ipod-touch/#2022-05-10</guid>
+    <pubDate>Tue, 10 May 2022 00:00:00 GMT</pubDate>
+    <description>iPod touch was discontinued.</description>
+  </item>
+  <item>
+    <title>HomePod (1st generation)</title>
+    <link>https://example.netlify.app/products/homepod-original/</link>
+    <guid>https://example.netlify.app/products/homepod-original/#2021-03-12</guid>
+    <pubDate>Fri, 12 Mar 2021 00:00:00 GMT</pubDate>
+    <description>HomePod (1st generation) was discontinued.</description>
+  </item>
+  <item>
+    <title>MacBook (12-inch)</title>
+    <link>https://example.netlify.app/products/macbook-12-inch/</link>
+    <guid>https://example.netlify.app/products/macbook-12-inch/#2019-07-09</guid>
+    <pubDate>Tue, 09 Jul 2019 00:00:00 GMT</pubDate>
+    <description>MacBook (12-inch) was discontinued.</description>
+  </item>
+</channel>
+</rss>

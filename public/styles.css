@@ -882,7 +882,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 .category-tile:hover { background: var(--accent-bg); border-color: var(--accent); }
 .category-tile-icon { color: var(--text-secondary); }
-.category-tile-name { font-size: 14px; font-weight: 700; margin: 4px 0 0; text-transform: uppercase; }
+.category-tile-name { font-size: 14px; font-weight: 700; line-height: 1.3; margin: 4px 0 0; text-transform: uppercase; min-height: 2.6em; display: flex; align-items: center; justify-content: center; }
 .category-tile-count { font-size: 26px; font-weight: 700; color: var(--accent); margin: 6px 0 0; }
 .category-tile-caption { font-size: 11px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; margin: 0; }
 

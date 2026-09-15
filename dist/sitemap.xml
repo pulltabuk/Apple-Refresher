@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.netlify.app/</loc></url>
+  <url><loc>https://example.netlify.app/products/</loc></url>
+  <url><loc>https://example.netlify.app/discontinued/</loc></url>
+  <url><loc>https://example.netlify.app/about/</loc></url>
+  <url><loc>https://example.netlify.app/gallery/</loc></url>
+  <url><loc>https://example.netlify.app/events/</loc></url>
+  <url><loc>https://example.netlify.app/facts/</loc></url>
+  <url><loc>https://example.netlify.app/categories/</loc></url>
+  <url><loc>https://example.netlify.app/categories/airpods/</loc></url>
+  <url><loc>https://example.netlify.app/categories/apple-watch/</loc></url>
+  <url><loc>https://example.netlify.app/categories/ipad/</loc></url>
+  <url><loc>https://example.netlify.app/categories/iphone/</loc></url>
+  <url><loc>https://example.netlify.app/categories/mac/</loc></url>
+  <url><loc>https://example.netlify.app/categories/other/</loc></url>
+  <url><loc>https://example.netlify.app/products/ipad-air/</loc><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://example.netlify.app/products/mac-mini/</loc><lastmod>2026-08-15</lastmod></url>
+  <url><loc>https://example.netlify.app/products/apple-watch-ultra/</loc><lastmod>2025-09-19</lastmod></url>
+  <url><loc>https://example.netlify.app/products/iphone-17-pro/</loc><lastmod>2025-09-19</lastmod></url>
+  <url><loc>https://example.netlify.app/products/macbook-air/</loc><lastmod>2025-03-04</lastmod></url>
+  <url><loc>https://example.netlify.app/products/airpods-max/</loc><lastmod>2024-12-10</lastmod></url>
+  <url><loc>https://example.netlify.app/products/ipod-touch/</loc><lastmod>2022-05-10</lastmod></url>
+  <url><loc>https://example.netlify.app/products/homepod-original/</loc><lastmod>2021-03-12</lastmod></url>
+  <url><loc>https://example.netlify.app/products/macbook-12-inch/</loc><lastmod>2019-07-09</lastmod></url>
+</urlset>

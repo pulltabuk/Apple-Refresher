@@ -72,6 +72,50 @@ function slugify(str) {
     .replace(/(^-+|-+$)/g, '');
 }
 
+function mostRecentActivityDate(product) {
+  const dates = [product.discontinued && product.discontinued_date, ...(product.refresh_history || [])].filter(Boolean);
+  if (!dates.length) return null;
+  return dates.sort().reverse()[0];
+}
+
+function rssFeedXml({ allItems, siteUrl }) {
+  const escapeXml = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const withDates = allItems
+    .map((i) => ({ product: i.product, date: mostRecentActivityDate(i.product) }))
+    .filter((i) => i.date)
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    .slice(0, 40);
+  const items = withDates.map(({ product, date }) => {
+    const link = `${siteUrl}/products/${product.slug}/`;
+    const desc = product.discontinued
+      ? `${product.name} was discontinued.`
+      : `${product.name} was refreshed.`;
+    let pubDate;
+    try {
+      pubDate = new Date(date).toUTCString();
+    } catch (e) {
+      pubDate = new Date().toUTCString();
+    }
+    return `  <item>
+    <title>${escapeXml(product.name)}</title>
+    <link>${link}</link>
+    <guid>${link}#${date}</guid>
+    <pubDate>${pubDate}</pubDate>
+    <description>${escapeXml(desc)}</description>
+  </item>`;
+  }).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+  <title>Apple Sunset — Recent Refreshes &amp; Discontinuations</title>
+  <link>${siteUrl}</link>
+  <description>Recently refreshed and discontinued Apple products, tracked by Apple Sunset.</description>
+${items}
+</channel>
+</rss>
+`;
+}
+
 function datePrecision(str) {
   if (!str) return null;
   if (/^\d{4}$/.test(str)) return 'year';
@@ -326,8 +370,10 @@ const DEFAULT_SCRIPTS = [
   '<script src="/app.js" defer></script>',
 ];
 
-function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supabaseAnonKey, noindex, scripts }) {
+function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supabaseAnonKey, noindex, scripts, ogImage, ogType, extraJsonLd }) {
   const scriptTags = (scripts || DEFAULT_SCRIPTS).join('\n');
+  const fullUrl = `${siteUrl}${path}`;
+  const imageUrl = ogImage || `${siteUrl}/logo.png`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -335,9 +381,38 @@ function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supab
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeHtml(description)}">
-${noindex ? '<meta name="robots" content="noindex">' : ''}
-<link rel="canonical" href="${siteUrl}${path}">
+${noindex ? '<meta name="robots" content="noindex">' : '<meta name="robots" content="index, follow">'}
+<link rel="canonical" href="${fullUrl}">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${escapeHtml(description)}">
+<meta property="og:url" content="${fullUrl}">
+<meta property="og:type" content="${ogType || 'website'}">
+<meta property="og:site_name" content="Apple Sunset">
+<meta property="og:image" content="${imageUrl}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escapeHtml(title)}">
+<meta name="twitter:description" content="${escapeHtml(description)}">
+<meta name="twitter:image" content="${imageUrl}">
+<script type="application/ld+json">${JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      name: 'Apple Sunset',
+      url: siteUrl,
+      description: "Tracks how long it's been since every Apple product was last refreshed or discontinued.",
+    },
+    {
+      '@type': 'Organization',
+      name: 'Apple Sunset',
+      url: siteUrl,
+      logo: `${siteUrl}/logo.png`,
+    },
+  ],
+})}</script>
+${extraJsonLd ? `<script type="application/ld+json">${JSON.stringify(extraJsonLd)}</script>` : ''}
 <link rel="stylesheet" href="/styles.css">
+<link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
 </head>
 <body>
@@ -369,6 +444,7 @@ ${bodyHtml}
       <a href="/events/">Apple Events</a>
       <a href="/facts/">Facts</a>
       <a href="/about/">About us</a>
+      <a href="/feed.xml">RSS Feed</a>
       <a href="/admin/">Admin</a>
     </nav>
     <p>Apple Sunset is an independent tracker and is not affiliated with Apple Inc.</p>
@@ -541,6 +617,8 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
+    ogImage: images[0],
+    ogType: 'article',
   });
 }
 
@@ -1124,6 +1202,27 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
+    extraJsonLd: {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Product',
+          name: product.name,
+          category: product.category,
+          releaseDate: launch || undefined,
+          url: `${siteUrl}/products/${product.slug}/`,
+          brand: { '@type': 'Brand', name: 'Apple' },
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'All products', item: `${siteUrl}/products/` },
+            { '@type': 'ListItem', position: 2, name: product.category, item: `${siteUrl}/categories/${slugify(product.category)}/` },
+            { '@type': 'ListItem', position: 3, name: product.name, item: `${siteUrl}/products/${product.slug}/` },
+          ],
+        },
+      ],
+    },
   });
 }
 
@@ -1471,4 +1570,6 @@ module.exports = {
   cardHtml,
   productBadge,
   slugify,
+  rssFeedXml,
+  mostRecentActivityDate,
 };
