@@ -17,7 +17,8 @@
   let cachedProducts = [];
   let currentRefreshHistory = [];
   let currentOriginalLaunchDate = null;
-  let currentDiscontinuedDate = null;
+  let currentGenerationDetails = {};
+  let currentIconUrl = null;
   let currentVideoUrl = null;
 
   function slugify(name) {
@@ -97,27 +98,8 @@
     updateDatePrecisionVisibility(prefix);
   }
 
-  const DATE_FIELD_PREFIXES = ['new_refresh_date', 'gallery_date_taken'];
+  const DATE_FIELD_PREFIXES = ['new_refresh_date', 'new_generation_announced', 'discontinued_date', 'gallery_date_taken'];
 
-  // --- Timeline group: one field, matching Category's pattern. Typing
-  // an existing name (case/whitespace-insensitive) joins that group,
-  // typing anything else starts a new one. getTimelineName normalizes
-  // near-matches to the exact existing casing so a small typo or case
-  // difference can never silently create a second, disconnected group.
-
-  function getTimelineName() {
-    const typed = document.getElementById('timeline_name').value.trim();
-    if (!typed) return null;
-    const typedKey = typed.toLowerCase();
-    const existingNames = new Set();
-    cachedProducts.forEach((p) => { if (p.timeline_name) existingNames.add(p.timeline_name); });
-    const match = Array.from(existingNames).find((n) => n.trim().toLowerCase() === typedKey);
-    return match || typed;
-  }
-
-  function setTimelineName(value) {
-    document.getElementById('timeline_name').value = value || '';
-  }
   DATE_FIELD_PREFIXES.forEach(wireDatePrecisionField);
 
   document.querySelectorAll('.date-precision-clear').forEach((btn) => {
@@ -223,39 +205,244 @@
   });
 
   // --- Products ---
+  //
+  // The products tab works in three visual steps: pick a family (the
+  // category), pick a product line (a product row), then add a
+  // generation (a date in refresh_history, with an optional name and
+  // announced date kept in generation_details, keyed by that date).
 
   const DEFAULT_CATEGORIES = ['iPhone', 'Mac', 'iPad', 'Apple Watch', 'AirPods', 'Vision Pro', 'Apple TV', 'AirTag', 'Apple Pencil', 'Other'];
 
-  // "Replaced by" / "Previous model" pickers: filtered to the same
-  // category as whatever's currently in the Category field, since a
-  // product can only sensibly be replaced by / follow on from another
-  // product in its own line. The value saved is the product's slug,
-  // the label shown is its name. The field itself still accepts free
-  // typing beyond these suggestions. Called both on user typing and
-  // whenever the category field is set programmatically (editing an
-  // existing product, or resetting for a new one), since setting
-  // .value in JS doesn't fire an input event on its own.
-  function updateProductOptionsByCategory() {
-    const categoryFieldEl = document.getElementById('category');
-    const productOptionsByCategory = document.getElementById('product-options-by-category');
-    const currentCategory = (categoryFieldEl.value || '').trim().toLowerCase();
-    productOptionsByCategory.innerHTML = '';
-    cachedProducts
-      .filter((p) => (p.category || '').trim().toLowerCase() === currentCategory)
-      .filter((p) => p.id !== editingId)
-      .forEach((p) => {
-        const opt = document.createElement('option');
-        opt.value = p.slug;
-        opt.label = p.name;
-        opt.textContent = p.name;
-        productOptionsByCategory.appendChild(opt);
-      });
-  }
-
-  // --- Category icons: one uploaded image per category, replacing the
-  // built-in shape everywhere that category's icon appears.
+  // Same built-in shapes as the public site, so admin tiles match it.
+  const CATEGORY_ICON_SHAPES = {
+    iPhone: '<rect x="13" y="4" width="14" height="32" rx="3"/><line x1="17" y1="31" x2="23" y2="31"/>',
+    Mac: '<rect x="8" y="9" width="24" height="16" rx="1.5"/><path d="M5 30h30l-2.5-3h-25z"/>',
+    iPad: '<rect x="7" y="8" width="26" height="24" rx="3"/><line x1="19" y1="27" x2="21" y2="27"/>',
+    'Apple Watch': '<rect x="12" y="10" width="16" height="20" rx="5"/><rect x="27.5" y="17" width="3" height="6" rx="1"/>',
+    AirPods: '<path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/>',
+    'Vision Pro': '<path d="M6 18c0-4 3-6 14-6s14 2 14 6-3 6-14 6S6 22 6 18z"/><circle cx="15" cy="18" r="2.5"/><circle cx="25" cy="18" r="2.5"/>',
+    'Apple TV': '<rect x="9" y="9" width="22" height="22" rx="4"/><text x="20" y="24" font-size="9" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">TV</text>',
+    AirTag: '<circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="10.5"/>',
+    'Apple Pencil': '<path d="M17 6c0-1.5 1.3-2.5 3-2.5s3 1 3 2.5v22l-3 8-3-8V6z"/><line x1="20" y1="9" x2="20" y2="14"/>',
+    Other: '<rect x="8" y="8" width="24" height="24" rx="4"/>',
+    All: '<rect x="7" y="7" width="11" height="11" rx="2"/><rect x="22" y="7" width="11" height="11" rx="2"/><rect x="7" y="22" width="11" height="11" rx="2"/><rect x="22" y="22" width="11" height="11" rx="2"/>',
+  };
 
   let cachedCategoryIcons = {};
+  let selectedFamily = null; // null = All, on the list view
+
+  function escapeAttr(str) {
+    return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function iconHtml(category, iconUrl, size) {
+    const s = size || 32;
+    const custom = iconUrl || cachedCategoryIcons[String(category || '').toLowerCase()];
+    if (custom) return '<img class="admin-icon" src="' + escapeAttr(custom) + '" alt="" width="' + s + '" height="' + s + '">';
+    const key = Object.keys(CATEGORY_ICON_SHAPES).find((k) => k.toLowerCase() === String(category || '').toLowerCase());
+    const shape = (key && CATEGORY_ICON_SHAPES[key]) || CATEGORY_ICON_SHAPES.Other;
+    return '<svg class="admin-icon" viewBox="0 0 40 40" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + shape + '</svg>';
+  }
+
+  function ordinal(n) {
+    const suffixes = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return n + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
+  }
+
+  // Matches autoGenerationName in src/templates.js, so the suggestion
+  // shown here is exactly what the public site shows for a blank name.
+  function autoGenerationName(productName, index, total) {
+    const name = productName || 'This product';
+    if (total <= 1) return name;
+    return name + ' (' + ordinal(index + 1) + ' generation)';
+  }
+
+  function allFamilyNames() {
+    const names = new Map();
+    DEFAULT_CATEGORIES.forEach((c) => names.set(c.toLowerCase(), c));
+    cachedProducts.forEach((p) => { if (p.category && !names.has(p.category.trim().toLowerCase())) names.set(p.category.trim().toLowerCase(), p.category.trim()); });
+    return Array.from(names.values()).sort((a, b) => a.localeCompare(b));
+  }
+
+  function canonicalFamily(typed) {
+    const t = (typed || '').trim();
+    if (!t) return '';
+    return allFamilyNames().find((n) => n.toLowerCase() === t.toLowerCase()) || t;
+  }
+
+  // --- Step 1: family picker (tiles). #category stays the one source
+  // of truth; tiles just set it, "+ New family" reveals it for typing.
+
+  function renderFamilyPicker() {
+    const picker = document.getElementById('family-picker');
+    const categoryEl = document.getElementById('category');
+    const current = categoryEl.value.trim().toLowerCase();
+    const newWrap = document.getElementById('new-family-wrap');
+    const families = allFamilyNames();
+    const isExisting = families.some((f) => f.toLowerCase() === current);
+    picker.innerHTML = '';
+    families.forEach((family) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'family-tile family-tile--small' + (family.toLowerCase() === current ? ' is-selected' : '');
+      btn.setAttribute('role', 'radio');
+      btn.setAttribute('aria-checked', family.toLowerCase() === current ? 'true' : 'false');
+      btn.innerHTML = iconHtml(family, null, 28) + '<span>' + escapeAttr(family) + '</span>';
+      btn.addEventListener('click', () => {
+        categoryEl.value = family;
+        newWrap.style.display = 'none';
+        document.getElementById('family-error').textContent = '';
+        onFamilyChanged();
+      });
+      picker.appendChild(btn);
+    });
+    const newBtn = document.createElement('button');
+    newBtn.type = 'button';
+    const newSelected = newWrap.style.display !== 'none' || (current && !isExisting);
+    newBtn.className = 'family-tile family-tile--small family-tile--new' + (newSelected ? ' is-selected' : '');
+    newBtn.innerHTML = '<span class="family-tile-plus">+</span><span>New family</span>';
+    newBtn.addEventListener('click', () => {
+      if (isExisting) categoryEl.value = '';
+      newWrap.style.display = '';
+      categoryEl.focus();
+      onFamilyChanged();
+    });
+    picker.appendChild(newBtn);
+    if (current && !isExisting) newWrap.style.display = '';
+  }
+
+  function onFamilyChanged() {
+    renderFamilyPicker();
+    updateProductOptionsByCategory();
+    updateCategoryIconPreview();
+    renderProductIconPreview();
+  }
+
+  document.getElementById('category').addEventListener('input', () => {
+    updateProductOptionsByCategory();
+    updateCategoryIconPreview();
+    renderProductIconPreview();
+  });
+
+  // --- "Replaced by" / "Previous model" dropdowns: products in the same
+  // family, saved as the product's slug. A saved value that no longer
+  // matches a product is kept as its own option so nothing is lost.
+
+  function fillProductSelect(selectEl, keepValue) {
+    const currentCategory = (document.getElementById('category').value || '').trim().toLowerCase();
+    const value = keepValue !== undefined ? keepValue : selectEl.value;
+    selectEl.innerHTML = '';
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = 'None';
+    selectEl.appendChild(none);
+    const options = cachedProducts
+      .filter((p) => (p.category || '').trim().toLowerCase() === currentCategory && p.id !== editingId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    options.forEach((p) => {
+      const opt = document.createElement('option');
+      opt.value = p.slug;
+      opt.textContent = p.name + (p.discontinued ? ' (discontinued)' : '');
+      selectEl.appendChild(opt);
+    });
+    if (value && !options.some((p) => p.slug === value)) {
+      const other = cachedProducts.find((p) => p.slug === value);
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = other ? other.name + ' (' + other.category + ')' : value;
+      selectEl.appendChild(opt);
+    }
+    selectEl.value = value || '';
+  }
+
+  function updateProductOptionsByCategory() {
+    fillProductSelect(document.getElementById('replaced_by'));
+    fillProductSelect(document.getElementById('previous_model'));
+  }
+
+  // --- Timeline group dropdown: "Same as family" (blank), any group
+  // already in use, or "+ New group" to type one. Typed names still
+  // snap to an existing group's exact casing, so a near-match can never
+  // silently start a second, disconnected timeline.
+
+  const TIMELINE_NEW = '__new__';
+  const TIMELINE_OWN = '__own__';
+
+  function existingTimelineNames() {
+    const names = new Set();
+    cachedProducts.forEach((p) => { if (p.timeline_name) names.add(p.timeline_name); });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }
+
+  function fillTimelineSelect() {
+    const select = document.getElementById('timeline_name_select');
+    const value = select.value;
+    select.innerHTML = '';
+    const same = document.createElement('option');
+    same.value = '';
+    same.textContent = 'Whole family (default)';
+    select.appendChild(same);
+    const own = document.createElement('option');
+    own.value = TIMELINE_OWN;
+    own.textContent = 'Just this product line';
+    select.appendChild(own);
+    existingTimelineNames().forEach((t) => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      select.appendChild(opt);
+    });
+    const newOpt = document.createElement('option');
+    newOpt.value = TIMELINE_NEW;
+    newOpt.textContent = '+ New group…';
+    select.appendChild(newOpt);
+    if (Array.from(select.options).some((o) => o.value === value)) select.value = value;
+  }
+
+  document.getElementById('timeline_name_select').addEventListener('change', (e) => {
+    const isNew = e.target.value === TIMELINE_NEW;
+    document.getElementById('timeline-new-wrap').style.display = isNew ? '' : 'none';
+    if (isNew) document.getElementById('timeline_name').focus();
+  });
+
+  function getTimelineName() {
+    const selectValue = document.getElementById('timeline_name_select').value;
+    if (selectValue === TIMELINE_OWN) return document.getElementById('name').value.trim() || null;
+    if (selectValue !== TIMELINE_NEW) return selectValue || null;
+    const typed = document.getElementById('timeline_name').value.trim();
+    if (!typed) return null;
+    const match = existingTimelineNames().find((n) => n.trim().toLowerCase() === typed.toLowerCase());
+    return match || typed;
+  }
+
+  function setTimelineName(value) {
+    fillTimelineSelect();
+    const select = document.getElementById('timeline_name_select');
+    const input = document.getElementById('timeline_name');
+    const wrap = document.getElementById('timeline-new-wrap');
+    const ownName = document.getElementById('name').value.trim().toLowerCase();
+    if (!value) {
+      select.value = '';
+      input.value = '';
+      wrap.style.display = 'none';
+    } else if (ownName && value.trim().toLowerCase() === ownName) {
+      select.value = TIMELINE_OWN;
+      input.value = '';
+      wrap.style.display = 'none';
+    } else if (Array.from(select.options).some((o) => o.value === value)) {
+      select.value = value;
+      input.value = '';
+      wrap.style.display = 'none';
+    } else {
+      select.value = TIMELINE_NEW;
+      input.value = value;
+      wrap.style.display = '';
+    }
+  }
+
+  // --- Icons: one per family (category_icons table), and optionally
+  // one per product line (products.icon_url).
 
   async function loadCategoryIcons() {
     const { data, error } = await client.from('category_icons').select('*');
@@ -263,6 +450,8 @@
     cachedCategoryIcons = {};
     data.forEach((row) => { cachedCategoryIcons[row.category.toLowerCase()] = row.icon_url; });
     updateCategoryIconPreview();
+    renderProductList();
+    if (productFormView.style.display !== 'none') renderFamilyPicker();
   }
 
   function updateCategoryIconPreview() {
@@ -272,7 +461,7 @@
     const url = cachedCategoryIcons[currentCategory];
     thumbEl.innerHTML = '';
     if (!url) {
-      thumbEl.textContent = currentCategory ? 'No custom icon yet for this category, using the built-in shape.' : 'Type a category above to check for an icon.';
+      thumbEl.textContent = currentCategory ? 'No custom icon for this family yet, the built-in shape is used.' : 'Pick a family above first.';
       return;
     }
     const wrap = document.createElement('div');
@@ -282,9 +471,9 @@
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.textContent = '\u00d7';
-    removeBtn.setAttribute('aria-label', 'Remove custom icon');
+    removeBtn.setAttribute('aria-label', 'Remove family icon');
     removeBtn.addEventListener('click', async () => {
-      if (!window.confirm('Remove this icon and revert to the built-in shape for this category?')) return;
+      if (!window.confirm('Remove this icon and go back to the built-in shape for this family?')) return;
       const { error } = await client.from('category_icons').delete().ilike('category', document.getElementById('category').value.trim());
       if (error) {
         window.alert('Failed to remove: ' + error.message);
@@ -292,6 +481,8 @@
       }
       delete cachedCategoryIcons[currentCategory];
       updateCategoryIconPreview();
+      renderFamilyPicker();
+      renderProductIconPreview();
     });
     wrap.appendChild(img);
     wrap.appendChild(removeBtn);
@@ -301,9 +492,9 @@
   document.getElementById('category-icon-upload').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const currentCategory = document.getElementById('category').value.trim();
+    const currentCategory = canonicalFamily(document.getElementById('category').value);
     if (!currentCategory) {
-      window.alert('Enter a category first.');
+      window.alert('Pick a family first.');
       e.target.value = '';
       return;
     }
@@ -316,6 +507,41 @@
       }
       cachedCategoryIcons[currentCategory.toLowerCase()] = url;
       updateCategoryIconPreview();
+      renderFamilyPicker();
+      renderProductIconPreview();
+    } catch (err) {
+      window.alert('Upload failed: ' + err.message);
+    }
+    e.target.value = '';
+  });
+
+  function renderProductIconPreview() {
+    const thumbEl = document.getElementById('product-icon-thumb');
+    if (!thumbEl) return;
+    thumbEl.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-thumb admin-thumb--icon' + (currentIconUrl ? '' : ' admin-thumb--fallback');
+    wrap.innerHTML = iconHtml(document.getElementById('category').value, currentIconUrl, 40);
+    if (currentIconUrl) {
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = '\u00d7';
+      removeBtn.setAttribute('aria-label', 'Remove product icon');
+      removeBtn.addEventListener('click', () => {
+        currentIconUrl = null;
+        renderProductIconPreview();
+      });
+      wrap.appendChild(removeBtn);
+    }
+    thumbEl.appendChild(wrap);
+  }
+
+  document.getElementById('product-icon-upload').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      currentIconUrl = await uploadFile(file);
+      renderProductIconPreview();
     } catch (err) {
       window.alert('Upload failed: ' + err.message);
     }
@@ -323,37 +549,9 @@
   });
 
   function updateCategoryOptions() {
-    const categoryOptions = document.getElementById('category-options');
-    const categories = new Set(DEFAULT_CATEGORIES);
-    cachedProducts.forEach((p) => { if (p.category) categories.add(p.category); });
-    categoryOptions.innerHTML = '';
-    Array.from(categories).sort((a, b) => a.localeCompare(b)).forEach((c) => {
-      const opt = document.createElement('option');
-      opt.value = c;
-      categoryOptions.appendChild(opt);
-    });
-
+    fillTimelineSelect();
     updateProductOptionsByCategory();
     updateCategoryIconPreview();
-    const categoryFieldEl = document.getElementById('category');
-    if (!categoryFieldEl.dataset.wiredProductOptions) {
-      categoryFieldEl.addEventListener('input', updateProductOptionsByCategory);
-      categoryFieldEl.addEventListener('input', updateCategoryIconPreview);
-      categoryFieldEl.dataset.wiredProductOptions = 'true';
-    }
-
-    // "Timeline group" datalist: every distinct value already in use,
-    // shown as suggestions while typing so joining an existing line
-    // means picking it rather than retyping and risking a mismatch.
-    const timelineOptionsEl = document.getElementById('timeline-name-options');
-    timelineOptionsEl.innerHTML = '';
-    const timelineNames = new Set();
-    cachedProducts.forEach((p) => { if (p.timeline_name) timelineNames.add(p.timeline_name); });
-    Array.from(timelineNames).sort((a, b) => a.localeCompare(b)).forEach((t) => {
-      const opt = document.createElement('option');
-      opt.value = t;
-      timelineOptionsEl.appendChild(opt);
-    });
   }
 
   async function loadProducts() {
@@ -368,120 +566,256 @@
     renderProductList();
   }
 
+  // --- List view: family tiles, then product line cards.
+
+  function productLastDate(p) {
+    const h = (p.refresh_history || []).slice().sort();
+    return h.length ? h[h.length - 1] : null;
+  }
+
+  function daysSinceText(dateStr) {
+    if (!dateStr) return '';
+    const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+    return days >= 0 ? days + ' days since last generation' : 'Coming ' + formatAdminDate(dateStr);
+  }
+
+  function renderFamilyTiles() {
+    const tilesEl = document.getElementById('family-tiles');
+    if (!tilesEl) return;
+    const counts = {};
+    cachedProducts.forEach((p) => {
+      const key = (p.category || 'Other').trim();
+      const canonical = Object.keys(counts).find((k) => k.toLowerCase() === key.toLowerCase()) || key;
+      counts[canonical] = (counts[canonical] || 0) + 1;
+    });
+    const families = Object.keys(counts).sort((a, b) => a.localeCompare(b));
+    if (selectedFamily && !families.some((f) => f.toLowerCase() === selectedFamily.toLowerCase())) selectedFamily = null;
+    tilesEl.innerHTML = '';
+    const makeTile = (label, count, familyValue) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const active = (familyValue === null && selectedFamily === null) || (familyValue && selectedFamily && familyValue.toLowerCase() === selectedFamily.toLowerCase());
+      btn.className = 'family-tile' + (active ? ' is-selected' : '');
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      btn.innerHTML = iconHtml(familyValue === null ? 'All' : familyValue, null, 32) + '<span class="family-tile-name">' + escapeAttr(label) + '</span><span class="family-tile-count">' + count + '</span>';
+      btn.addEventListener('click', () => {
+        selectedFamily = familyValue;
+        renderProductList();
+      });
+      tilesEl.appendChild(btn);
+    };
+    makeTile('All', cachedProducts.length, null);
+    families.forEach((f) => makeTile(f, counts[f], f));
+  }
+
   function renderProductList() {
+    renderFamilyTiles();
     productListEl.innerHTML = '';
 
     if (!cachedProducts.length) {
-      productListEl.textContent = 'No products yet, add your first one below.';
+      productListEl.textContent = 'No products yet, tap "+ New product line" to add your first one.';
       return;
     }
 
     const query = productSearchInputEl ? productSearchInputEl.value.trim().toLowerCase() : '';
-    const filtered = query ? cachedProducts.filter((p) => p.name.toLowerCase().includes(query)) : cachedProducts;
-
-    if (!filtered.length) {
-      productListEl.textContent = 'No products match your search.';
-      return;
+    let filtered = cachedProducts;
+    if (query) {
+      filtered = filtered.filter((p) => p.name.toLowerCase().includes(query));
+    } else if (selectedFamily) {
+      filtered = filtered.filter((p) => (p.category || '').trim().toLowerCase() === selectedFamily.toLowerCase());
     }
 
-    const sortedForDisplay = filtered.slice().sort((a, b) => {
-      if (!!a.featured !== !!b.featured) return a.featured ? -1 : 1;
+    const sorted = filtered.slice().sort((a, b) => {
+      if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
       return a.name.localeCompare(b.name);
     });
 
-    const table = document.createElement('table');
-    table.className = 'admin-table';
+    sorted.forEach((p) => {
+      const card = document.createElement('div');
+      card.className = 'line-card' + (p.discontinued ? ' line-card--discontinued' : '') + (p.featured ? ' line-card--featured' : '');
 
-    const thead = document.createElement('thead');
-    thead.innerHTML = '<tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr>';
-    table.appendChild(thead);
+      const main = document.createElement('button');
+      main.type = 'button';
+      main.className = 'line-card-main';
+      const gens = (p.refresh_history || []).length;
+      const last = productLastDate(p);
+      const meta = p.discontinued
+        ? 'Discontinued' + (p.discontinued_date ? ' ' + formatAdminDate(p.discontinued_date) : ', date missing')
+        : daysSinceText(last) || 'No generations yet';
+      main.innerHTML =
+        '<span class="line-card-icon">' + iconHtml(p.category, p.icon_url, 36) + '</span>' +
+        '<span class="line-card-text">' +
+          '<span class="line-card-name">' + escapeAttr(p.name) + (p.featured ? ' <span class="line-card-star" title="Featured on homepage">\u2605</span>' : '') + '</span>' +
+          (query || !selectedFamily ? '<span class="line-card-meta">' + escapeAttr(p.category || 'Other') + '</span>' : '') +
+          '<span class="line-card-meta">' + gens + ' generation' + (gens === 1 ? '' : 's') + '</span>' +
+          '<span class="line-card-status' + (p.discontinued ? ' line-card-status--discontinued' : (p.discontinued === false && !last ? ' line-card-status--empty' : '')) + '">' + escapeAttr(meta) + '</span>' +
+        '</span>';
+      main.addEventListener('click', () => editProduct(p.id));
 
-    const tbody = document.createElement('tbody');
-    sortedForDisplay.forEach((p) => {
-      const tr = document.createElement('tr');
-      if (p.featured) tr.className = 'admin-table-row--featured';
-
-      const photoTd = document.createElement('td');
-      photoTd.className = 'admin-table-photo';
-      const placeholder = document.createElement('span');
-      placeholder.className = 'admin-table-photo-placeholder';
-      photoTd.appendChild(placeholder);
-
-      const nameTd = document.createElement('td');
-      const nameLink = document.createElement('a');
-      nameLink.href = '/products/' + p.slug + '/';
-      nameLink.target = '_blank';
-      nameLink.rel = 'noopener';
-      nameLink.textContent = p.name;
-      nameTd.appendChild(nameLink);
-
-      const categoryTd = document.createElement('td');
-      categoryTd.textContent = p.category || '';
-
-      const priceTd = document.createElement('td');
-      priceTd.textContent = p.price ? (/^[£$€]/.test(p.price.trim()) ? p.price : '£' + p.price) : '\u2014';
-
-      const statusTd = document.createElement('td');
-      statusTd.textContent = p.discontinued ? 'Discontinued' : 'Active';
-
-      const actionsTd = document.createElement('td');
-      actionsTd.className = 'admin-row-actions';
-
+      const actions = document.createElement('div');
+      actions.className = 'line-card-actions';
+      const addGenBtn = document.createElement('button');
+      addGenBtn.type = 'button';
+      addGenBtn.className = 'admin-btn admin-btn--small admin-btn--primary';
+      addGenBtn.textContent = '+ Generation';
+      addGenBtn.addEventListener('click', () => editProduct(p.id, { focusGeneration: true }));
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
+      editBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
       editBtn.textContent = 'Edit';
       editBtn.addEventListener('click', () => editProduct(p.id));
-
-      let featureBtn = null;
-      if (!p.featured) {
-        featureBtn = document.createElement('button');
+      actions.appendChild(addGenBtn);
+      actions.appendChild(editBtn);
+      if (!p.featured && !p.discontinued) {
+        const featureBtn = document.createElement('button');
         featureBtn.type = 'button';
-        featureBtn.textContent = 'Make Featured';
+        featureBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
+        featureBtn.textContent = '\u2606 Feature';
+        featureBtn.title = 'Make this the featured product on the homepage';
         featureBtn.addEventListener('click', () => makeFeatured(p));
+        actions.appendChild(featureBtn);
       }
 
-      const deleteBtn = document.createElement('button');
-      deleteBtn.type = 'button';
-      deleteBtn.textContent = 'Delete';
-      deleteBtn.addEventListener('click', () => deleteProduct(p.id));
-
-      actionsTd.appendChild(editBtn);
-      if (featureBtn) actionsTd.appendChild(featureBtn);
-      actionsTd.appendChild(deleteBtn);
-
-      tr.appendChild(photoTd);
-      tr.appendChild(nameTd);
-      tr.appendChild(categoryTd);
-      tr.appendChild(priceTd);
-      tr.appendChild(statusTd);
-      tr.appendChild(actionsTd);
-      tbody.appendChild(tr);
+      card.appendChild(main);
+      card.appendChild(actions);
+      productListEl.appendChild(card);
     });
-    table.appendChild(tbody);
-    productListEl.appendChild(table);
+
+    if (!sorted.length) {
+      productListEl.textContent = query ? 'No products match your search.' : 'Nothing in this family yet.';
+    }
+
+    if (!query && selectedFamily) {
+      const newCard = document.createElement('button');
+      newCard.type = 'button';
+      newCard.className = 'line-card line-card--new';
+      newCard.innerHTML = '<span class="family-tile-plus">+</span><span>New product line in ' + escapeAttr(selectedFamily) + '</span>';
+      newCard.addEventListener('click', () => startNewProduct({ category: selectedFamily }));
+      productListEl.appendChild(newCard);
+    }
   }
 
   const productSearchInputEl = document.getElementById('product-search-input');
   if (productSearchInputEl) productSearchInputEl.addEventListener('input', renderProductList);
 
+  // --- Step 3: generations.
+
+  function generationSuggestion() {
+    const name = document.getElementById('name').value.trim();
+    return autoGenerationName(name, currentRefreshHistory.length, currentRefreshHistory.length + 1);
+  }
+
+  function updateGenerationSuggestion() {
+    const input = document.getElementById('new_generation_name');
+    if (input) input.placeholder = 'Suggested: ' + generationSuggestion();
+  }
+
+  function detailFor(date) {
+    if (!currentGenerationDetails[date]) currentGenerationDetails[date] = {};
+    return currentGenerationDetails[date];
+  }
+
   function renderRefreshHistory() {
     refreshHistoryListEl.innerHTML = '';
-    currentRefreshHistory.forEach((date, i) => {
+    const productName = document.getElementById('name').value.trim();
+    const dates = currentRefreshHistory.slice().sort();
+    if (!dates.length) {
+      const empty = document.createElement('li');
+      empty.className = 'generation-empty';
+      empty.textContent = 'No generations yet. Add the first one below.';
+      refreshHistoryListEl.appendChild(empty);
+    }
+    dates.slice().reverse().forEach((date) => {
+      const index = dates.indexOf(date);
+      const info = currentGenerationDetails[date] || {};
       const li = document.createElement('li');
-      const span = document.createElement('span');
-      span.textContent = date;
+      li.className = 'generation-item' + (index === dates.length - 1 ? ' generation-item--latest' : '');
+
+      const top = document.createElement('div');
+      top.className = 'generation-item-top';
+      const released = document.createElement('span');
+      released.className = 'generation-date';
+      released.textContent = 'Released ' + formatAdminDate(date);
+      top.appendChild(released);
+      if (currentOriginalLaunchDate === date) {
+        const first = document.createElement('span');
+        first.className = 'generation-tag';
+        first.textContent = 'First launch';
+        top.appendChild(first);
+      }
+      if (index === dates.length - 1) {
+        const latest = document.createElement('span');
+        latest.className = 'generation-tag generation-tag--latest';
+        latest.textContent = 'Latest';
+        top.appendChild(latest);
+      }
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
+      removeBtn.className = 'generation-remove';
       removeBtn.textContent = 'Remove';
       removeBtn.addEventListener('click', () => {
-        currentRefreshHistory.splice(i, 1);
+        const label = (info.name || autoGenerationName(productName, index, dates.length));
+        if (!window.confirm('Remove "' + label + '" (' + formatAdminDate(date) + ')?')) return;
+        currentRefreshHistory = currentRefreshHistory.filter((d) => d !== date);
+        delete currentGenerationDetails[date];
+        if (currentOriginalLaunchDate === date) {
+          currentOriginalLaunchDate = null;
+          renderLaunchDateDisplay();
+        }
         renderRefreshHistory();
       });
-      li.appendChild(span);
-      li.appendChild(removeBtn);
+      top.appendChild(removeBtn);
+      li.appendChild(top);
+
+      const fields = document.createElement('div');
+      fields.className = 'generation-item-fields';
+
+      const nameLabel = document.createElement('label');
+      nameLabel.textContent = 'Name';
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = info.name || '';
+      nameInput.placeholder = autoGenerationName(productName, index, dates.length);
+      nameInput.addEventListener('input', () => { detailFor(date).name = nameInput.value; });
+      nameLabel.appendChild(nameInput);
+      fields.appendChild(nameLabel);
+
+      const annLabel = document.createElement('label');
+      annLabel.textContent = 'Announced';
+      if (!info.announced || /^\d{4}-\d{2}-\d{2}$/.test(info.announced)) {
+        const annInput = document.createElement('input');
+        annInput.type = 'date';
+        annInput.value = info.announced || '';
+        annInput.addEventListener('change', () => { detailFor(date).announced = annInput.value || null; });
+        annLabel.appendChild(annInput);
+      } else {
+        const chip = document.createElement('span');
+        chip.className = 'date-chip';
+        chip.textContent = formatAdminDate(info.announced) + ' ';
+        const clear = document.createElement('button');
+        clear.type = 'button';
+        clear.textContent = '\u00d7';
+        clear.setAttribute('aria-label', 'Clear announced date');
+        clear.addEventListener('click', () => {
+          detailFor(date).announced = null;
+          renderRefreshHistory();
+        });
+        chip.appendChild(clear);
+        annLabel.appendChild(chip);
+      }
+      fields.appendChild(annLabel);
+      li.appendChild(fields);
       refreshHistoryListEl.appendChild(li);
     });
+    updateGenerationSuggestion();
   }
+
+  // Suggested names follow the product name as it's typed. Only the
+  // placeholders change, names already typed for a generation stay.
+  document.getElementById('name').addEventListener('input', () => {
+    document.getElementById('name-error').textContent = '';
+    renderRefreshHistory();
+  });
 
   const richTextEditor = document.getElementById('rumor_note_editor');
   if (document.queryCommandSupported && document.queryCommandSupported('defaultParagraphSeparator')) {
@@ -537,21 +871,48 @@
     richTextEditor.innerHTML = paragraphs.map((p) => '<p>' + escapeText(p) + '</p>').join('');
   });
 
-  function addRefreshDateFromWidget() {
-    const value = getDatePrecisionValue('new_refresh_date');
-    if (!value) return;
-    if (currentRefreshHistory.indexOf(value) === -1) {
-      currentRefreshHistory.push(value);
-      currentRefreshHistory.sort();
-    }
+  function resetGenerationPanel() {
     setDatePrecisionValue('new_refresh_date', null);
+    setDatePrecisionValue('new_generation_announced', null);
+    document.getElementById('new_generation_name').value = '';
+    document.getElementById('new_generation_is_first').checked = false;
+    document.getElementById('generation-add-error').textContent = '';
+  }
+
+  function addGenerationFromPanel() {
+    const errorEl = document.getElementById('generation-add-error');
+    errorEl.textContent = '';
+    const value = getDatePrecisionValue('new_refresh_date');
+    if (!value) {
+      errorEl.textContent = 'Pick a released date first.';
+      return;
+    }
+    if (currentRefreshHistory.indexOf(value) !== -1) {
+      errorEl.textContent = 'There is already a generation on ' + formatAdminDate(value) + '.';
+      return;
+    }
+    const name = document.getElementById('new_generation_name').value.trim();
+    const announced = getDatePrecisionValue('new_generation_announced');
+    currentRefreshHistory.push(value);
+    currentRefreshHistory.sort();
+    if (name || announced) {
+      currentGenerationDetails[value] = { name: name || null, announced: announced || null };
+    }
+    if (document.getElementById('new_generation_is_first').checked) {
+      currentOriginalLaunchDate = value;
+      renderLaunchDateDisplay();
+    }
+    resetGenerationPanel();
     renderRefreshHistory();
   }
 
   function renderLaunchDateDisplay() {
     const wrap = document.getElementById('launch-date-display-wrap');
     const display = document.getElementById('launch-date-display');
-    if (!currentOriginalLaunchDate) {
+    // Only worth showing separately when it isn't already visible as
+    // one of this product's own generations (e.g. a line's origin date
+    // set on a later model).
+    if (!currentOriginalLaunchDate || currentRefreshHistory.indexOf(currentOriginalLaunchDate) !== -1) {
       wrap.style.display = 'none';
       return;
     }
@@ -565,46 +926,24 @@
     clearBtn.addEventListener('click', () => {
       currentOriginalLaunchDate = null;
       renderLaunchDateDisplay();
+      renderRefreshHistory();
     });
     display.appendChild(clearBtn);
   }
 
-  function renderDiscontinuedDateDisplay() {
-    const wrap = document.getElementById('discontinued-date-display-wrap');
-    const display = document.getElementById('discontinued-date-display');
-    if (!currentDiscontinuedDate) {
-      wrap.style.display = 'none';
-      return;
-    }
-    wrap.style.display = '';
-    display.innerHTML = '';
-    display.appendChild(document.createTextNode(formatAdminDate(currentDiscontinuedDate) + ' '));
-    const clearBtn = document.createElement('button');
-    clearBtn.type = 'button';
-    clearBtn.textContent = '\u00d7';
-    clearBtn.setAttribute('aria-label', 'Clear discontinued date');
-    clearBtn.addEventListener('click', () => {
-      currentDiscontinuedDate = null;
-      renderDiscontinuedDateDisplay();
-    });
-    display.appendChild(clearBtn);
+  document.getElementById('add-as-refresh-btn').addEventListener('click', addGenerationFromPanel);
+
+  // --- Step 4: status toggle. #discontinued (hidden) stays in sync.
+
+  function setStatusToggle(isDiscontinued) {
+    document.querySelector('input[name="status_toggle"][value="' + (isDiscontinued ? 'discontinued' : 'current') + '"]').checked = true;
+    document.getElementById('discontinued').checked = !!isDiscontinued;
+    document.getElementById('discontinued-fields').style.display = isDiscontinued ? '' : 'none';
+    document.getElementById('discontinued-error').textContent = '';
   }
 
-  document.getElementById('add-as-refresh-btn').addEventListener('click', addRefreshDateFromWidget);
-  document.getElementById('add-as-launch-btn').addEventListener('click', () => {
-    const value = getDatePrecisionValue('new_refresh_date');
-    if (!value) return;
-    currentOriginalLaunchDate = value;
-    setDatePrecisionValue('new_refresh_date', null);
-    renderLaunchDateDisplay();
-  });
-  document.getElementById('add-as-discontinued-btn').addEventListener('click', () => {
-    const value = getDatePrecisionValue('new_refresh_date');
-    if (!value) return;
-    currentDiscontinuedDate = value;
-    document.getElementById('discontinued').checked = true;
-    setDatePrecisionValue('new_refresh_date', null);
-    renderDiscontinuedDateDisplay();
+  document.querySelectorAll('input[name="status_toggle"]').forEach((radio) => {
+    radio.addEventListener('change', () => setStatusToggle(radio.value === 'discontinued' && radio.checked));
   });
 
   function renderVideoStatus() {
@@ -626,21 +965,27 @@
     videoStatusEl.appendChild(removeBtn);
   }
 
-  function editProduct(id) {
+  function clearFormErrors() {
+    ['family-error', 'name-error', 'discontinued-error', 'generation-add-error'].forEach((id) => {
+      document.getElementById(id).textContent = '';
+    });
+  }
+
+  function editProduct(id, options) {
     const p = cachedProducts.find((x) => x.id === id);
     if (!p) return;
     editingId = id;
     editingSlug = p.slug;
+    clearFormErrors();
     const advancedSection = document.querySelector('.admin-advanced');
-    if (advancedSection) advancedSection.open = true;
+    if (advancedSection) advancedSection.open = false;
     if (window.history && window.history.pushState) {
       window.history.pushState({}, '', '/admin/?edit=' + id);
     }
-    document.getElementById('form-title').textContent = 'Edit product';
+    document.getElementById('form-title').textContent = 'Edit ' + (p.name || 'product');
     document.getElementById('name').value = p.name || '';
-    document.getElementById('category').value = p.category || '';
-    updateProductOptionsByCategory();
-    setTimelineName(p.timeline_name || null);
+    document.getElementById('category').value = canonicalFamily(p.category || '');
+    document.getElementById('new-family-wrap').style.display = 'none';
     (function () {
       const raw = (p.price || '').trim();
       const symbolMatch = raw.match(/^[£$€]/);
@@ -654,56 +999,86 @@
     document.getElementById('apple_url_unavailable').checked = !!p.apple_url_unavailable;
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
-    document.getElementById('discontinued').checked = !!p.discontinued;
-    document.getElementById('replaced_by').value = p.replaced_by || '';
-    document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
-    document.getElementById('previous_model').value = p.previous_model || '';
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     document.getElementById('is_new_launch').checked = !!p.is_new_launch;
-    setDatePrecisionValue('new_refresh_date', null);
+    currentRefreshHistory = (p.refresh_history || []).slice().sort();
+    const details = p.generation_details && typeof p.generation_details === 'object' && !Array.isArray(p.generation_details) ? p.generation_details : {};
+    currentGenerationDetails = JSON.parse(JSON.stringify(details));
     currentOriginalLaunchDate = p.original_launch_date || null;
-    currentDiscontinuedDate = p.discontinued_date || null;
-    renderLaunchDateDisplay();
-    renderDiscontinuedDateDisplay();
-    currentRefreshHistory = (p.refresh_history || []).slice();
+    currentIconUrl = p.icon_url || null;
     currentVideoUrl = p.video_url || null;
+    onFamilyChanged();
+    setTimelineName(p.timeline_name || null);
+    fillProductSelect(document.getElementById('replaced_by'), p.replaced_by || '');
+    fillProductSelect(document.getElementById('previous_model'), p.previous_model || '');
+    document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
+    setDatePrecisionValue('discontinued_date', p.discontinued_date || null);
+    setStatusToggle(!!p.discontinued);
+    resetGenerationPanel();
+    renderLaunchDateDisplay();
     renderRefreshHistory();
     renderVideoStatus();
+    document.getElementById('delete-product-btn').style.display = '';
     showProductForm();
+    if (options && options.focusGeneration) {
+      const panel = document.getElementById('generation-add-panel');
+      panel.scrollIntoView({ block: 'center' });
+      panel.classList.add('generation-add--highlight');
+      setTimeout(() => panel.classList.remove('generation-add--highlight'), 1600);
+      const dayInput = document.getElementById('new_refresh_date_day');
+      if (dayInput) dayInput.focus({ preventScroll: true });
+    }
   }
 
-  function startNewProduct() {
+  function startNewProduct(options) {
     editingId = null;
     editingSlug = null;
+    clearFormErrors();
     const advancedSectionNew = document.querySelector('.admin-advanced');
     if (advancedSectionNew) advancedSectionNew.open = false;
     if (window.history && window.history.pushState) {
       window.history.pushState({}, '', '/admin/?new=1');
     }
     productForm.reset();
-    updateProductOptionsByCategory();
-    setTimelineName(null);
+    const preset = options && options.category ? canonicalFamily(options.category) : (selectedFamily || '');
+    document.getElementById('category').value = preset;
+    document.getElementById('new-family-wrap').style.display = 'none';
     document.getElementById('rumor_note_editor').innerHTML = '';
-    setDatePrecisionValue('new_refresh_date', null);
     currentOriginalLaunchDate = null;
-    currentDiscontinuedDate = null;
-    renderLaunchDateDisplay();
-    renderDiscontinuedDateDisplay();
     currentRefreshHistory = [];
+    currentGenerationDetails = {};
+    currentIconUrl = null;
     currentVideoUrl = null;
+    onFamilyChanged();
+    setTimelineName(null);
+    fillProductSelect(document.getElementById('replaced_by'), '');
+    fillProductSelect(document.getElementById('previous_model'), '');
+    setDatePrecisionValue('discontinued_date', null);
+    setStatusToggle(false);
+    resetGenerationPanel();
+    renderLaunchDateDisplay();
     renderRefreshHistory();
     renderVideoStatus();
-    document.getElementById('form-title').textContent = 'Add product';
+    document.getElementById('delete-product-btn').style.display = 'none';
+    document.getElementById('form-title').textContent = preset ? 'New product line in ' + preset : 'New product line';
     showProductForm();
   }
 
-  document.getElementById('new-product-btn').addEventListener('click', startNewProduct);
+  document.getElementById('new-product-btn').addEventListener('click', () => startNewProduct());
 
-  document.getElementById('back-to-list-btn').addEventListener('click', () => {
+  function backToList() {
     if (window.history && window.history.pushState) {
       window.history.pushState({}, '', '/admin/');
     }
     showProductList();
+  }
+
+  document.getElementById('back-to-list-btn').addEventListener('click', backToList);
+  document.getElementById('cancel-product-btn').addEventListener('click', backToList);
+  document.getElementById('delete-product-btn').addEventListener('click', async () => {
+    if (!editingId) return;
+    const deleted = await deleteProduct(editingId);
+    if (deleted) backToList();
   });
 
   async function makeFeatured(product) {
@@ -724,13 +1099,14 @@
   }
 
   async function deleteProduct(id) {
-    if (!window.confirm('Delete this product? This cannot be undone.')) return;
+    if (!window.confirm('Delete this product? This cannot be undone.')) return false;
     const { error } = await client.from('products').delete().eq('id', id);
     if (error) {
       window.alert('Delete failed: ' + error.message);
-      return;
+      return false;
     }
-    loadProducts();
+    await loadProducts();
+    return true;
   }
 
   // When a product declares a "Previous model", that's a deliberate,
@@ -765,22 +1141,67 @@
     }
   }
 
+  // Keeps only details for dates that are still generations, and only
+  // entries that actually hold something, so blank names keep using
+  // the automatic suggestion on the site.
+  function cleanGenerationDetails(history) {
+    const out = {};
+    history.forEach((date) => {
+      const info = currentGenerationDetails[date];
+      if (!info) return;
+      const name = (info.name || '').trim();
+      const announced = info.announced || null;
+      if (name || announced) out[date] = { name: name || null, announced };
+    });
+    return out;
+  }
+
   productForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    clearFormErrors();
+    const saveBtn = document.getElementById('save-product-btn');
     try {
       const name = document.getElementById('name').value.trim();
+      const category = canonicalFamily(document.getElementById('category').value);
+      const isDiscontinued = document.getElementById('discontinued').checked;
+      const discontinuedDate = getDatePrecisionValue('discontinued_date');
+
+      let firstError = null;
+      if (!category) {
+        document.getElementById('family-error').textContent = 'Pick a family.';
+        firstError = firstError || document.getElementById('step-family');
+      }
+      if (!name) {
+        document.getElementById('name-error').textContent = 'Give this product line a name.';
+        firstError = firstError || document.getElementById('step-line');
+      }
+      if (isDiscontinued && !discontinuedDate) {
+        document.getElementById('discontinued-error').textContent = 'Add the discontinued date (Year only is fine), or switch back to Current.';
+        firstError = firstError || document.getElementById('step-status');
+      }
+      const pendingGenerationDate = getDatePrecisionValue('new_refresh_date');
+      if (pendingGenerationDate && currentRefreshHistory.indexOf(pendingGenerationDate) === -1) {
+        document.getElementById('generation-add-error').textContent = 'You picked a date but haven\u2019t added it yet. Tap "+ Add generation", or clear the date.';
+        firstError = firstError || document.getElementById('step-generations');
+      }
+      if (firstError) {
+        firstError.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
       const slug = editingId ? editingSlug : slugify(name);
-
       const originalLaunchDate = currentOriginalLaunchDate;
-
-      const refreshHistoryWithLaunch = originalLaunchDate && !currentRefreshHistory.includes(originalLaunchDate)
-        ? [...currentRefreshHistory, originalLaunchDate].sort()
-        : currentRefreshHistory;
+      const refreshHistoryWithLaunch = (originalLaunchDate && !currentRefreshHistory.includes(originalLaunchDate)
+        ? [...currentRefreshHistory, originalLaunchDate]
+        : currentRefreshHistory.slice()).sort();
 
       const payload = {
         slug,
         name,
-        category: document.getElementById('category').value.trim() || 'Other',
+        category,
         timeline_name: getTimelineName(),
         price: (function () {
           const raw = document.getElementById('price').value.trim();
@@ -792,6 +1213,8 @@
         apple_url: document.getElementById('apple_url').value.trim() || null,
         apple_url_unavailable: document.getElementById('apple_url_unavailable').checked,
         refresh_history: refreshHistoryWithLaunch,
+        generation_details: cleanGenerationDetails(refreshHistoryWithLaunch),
+        icon_url: currentIconUrl,
         original_launch_date: originalLaunchDate,
         rumor_note: (function () {
           const html = document.getElementById('rumor_note_editor').innerHTML.trim();
@@ -800,11 +1223,11 @@
         featured: document.getElementById('featured').checked,
         days_basis: document.querySelector('input[name="days_basis"]:checked').value,
         is_new_launch: document.getElementById('is_new_launch').checked,
-        previous_model: document.getElementById('previous_model').value.trim() || null,
-        discontinued: document.getElementById('discontinued').checked,
-        discontinued_date: currentDiscontinuedDate,
-        replaced_by: document.getElementById('replaced_by').value.trim() || null,
-        discontinued_reason: document.getElementById('discontinued_reason').value.trim() || null,
+        previous_model: document.getElementById('previous_model').value || null,
+        discontinued: isDiscontinued,
+        discontinued_date: isDiscontinued ? discontinuedDate : null,
+        replaced_by: isDiscontinued ? (document.getElementById('replaced_by').value || null) : null,
+        discontinued_reason: isDiscontinued ? (document.getElementById('discontinued_reason').value.trim() || null) : null,
         video_url: currentVideoUrl,
       };
 
@@ -814,34 +1237,25 @@
 
       if (result.error) {
         console.error('Save failed:', result.error);
-        window.alert('Save failed: ' + result.error.message);
+        const missingColumns = /generation_details|icon_url/.test(result.error.message || '');
+        window.alert(missingColumns
+          ? 'Save failed because the database hasn\u2019t been updated yet. Run supabase-schema-update-19.sql in the Supabase SQL editor, then save again.'
+          : 'Save failed: ' + result.error.message);
         return;
       }
       await autoDiscontinuePreviousModel(payload);
       await enforceFeaturedExclusivity(payload);
-      productForm.reset();
-      setTimelineName(null);
-      document.getElementById('rumor_note_editor').innerHTML = '';
-      setDatePrecisionValue('new_refresh_date', null);
+      selectedFamily = category;
       editingId = null;
       editingSlug = null;
-      currentRefreshHistory = [];
-      currentOriginalLaunchDate = null;
-      currentDiscontinuedDate = null;
-      renderLaunchDateDisplay();
-      renderDiscontinuedDateDisplay();
-      currentVideoUrl = null;
-      renderRefreshHistory();
-      renderVideoStatus();
-      document.getElementById('form-title').textContent = 'Add product';
       await loadProducts();
-      if (window.history && window.history.pushState) {
-        window.history.pushState({}, '', '/admin/');
-      }
-      showProductList();
+      backToList();
     } catch (err) {
       console.error('Unexpected error while saving:', err);
       window.alert('Something went wrong saving this product: ' + err.message + '. Check the browser console for the full error.');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save product';
     }
   });
 

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, setCustomCategoryIcons, launchDate, slugify } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, setCustomCategoryIcons, launchDate, slugify, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -16,10 +16,16 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 
 const DIST = path.join(__dirname, 'dist');
 
-function write(relPath, content) {
+const sitemapUrls = [];
+
+function write(relPath, content, lastmod) {
   const fullPath = path.join(DIST, relPath);
   fs.mkdirSync(path.dirname(fullPath), { recursive: true });
   fs.writeFileSync(fullPath, content);
+  if (relPath.endsWith('index.html') && !relPath.startsWith('admin/')) {
+    const urlPath = '/' + relPath.replace(/index\.html$/, '');
+    sitemapUrls.push({ path: urlPath, lastmod: lastmod || null });
+  }
 }
 
 function copyStatic() {
@@ -226,7 +232,7 @@ async function main() {
   const categoryLinks = Object.keys(categoryTally).sort((a, b) => a.localeCompare(b)).map((c) => ({ category: c, count: categoryTally[c] }));
 
   // A handful of random gallery photos for the homepage strip.
-  const galleryPicks = pickRandom(galleryPhotos, 12);
+  const galleryPicks = pickRandom(galleryPhotos, 10);
 
   const opts = { siteUrl: SITE_URL, supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON_KEY };
 
@@ -283,12 +289,31 @@ async function main() {
         status: item.status,
         history: item.product.refresh_history || [],
         productsBySlug,
+        galleryPhotos,
         ...opts,
-      })
+      }),
+      mostRecentActivityDate(item.product)
     );
   }
 
   copyStatic();
+
+  const rssXml = rssFeedXml({ allItems, siteUrl: SITE_URL });
+  fs.writeFileSync(path.join(DIST, 'feed.xml'), rssXml);
+
+  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${sitemapUrls.map((u) => `  <url><loc>${SITE_URL}${u.path}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}</url>`).join('\n')}
+</urlset>
+`;
+  write('sitemap.xml', sitemapXml);
+
+  const robotsTxt = `User-agent: *
+Disallow: /admin/
+Sitemap: ${SITE_URL}/sitemap.xml
+`;
+  fs.writeFileSync(path.join(DIST, 'robots.txt'), robotsTxt);
+
   console.log(`Built ${allItems.length} product pages (${discontinuedItems.length} discontinued), ${categoryNames.length} category pages, ${galleryPhotos.length} gallery photos, 1 home page.`);
 }
 

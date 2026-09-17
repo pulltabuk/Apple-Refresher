@@ -74,10 +74,84 @@
     return (value || '').trim().toLowerCase();
   }
 
+  // --- Generations: mirrors the helpers in src/templates.js so the live
+  // refresh of a product page shows exactly what the build produced.
+
+  function ordinalJS(n) {
+    var suffixes = ['th', 'st', 'nd', 'rd'];
+    var v = n % 100;
+    return n + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
+  }
+
+  function generationDetailsJS(product) {
+    var d = product && product.generation_details;
+    return d && typeof d === 'object' && !Array.isArray(d) ? d : {};
+  }
+
+  function autoGenerationNameJS(product, index, total) {
+    if (total <= 1) return product.name;
+    return product.name + ' (' + ordinalJS(index + 1) + ' generation)';
+  }
+
+  function storedGenerationNameJS(product, date) {
+    var info = generationDetailsJS(product)[date];
+    return info && info.name && String(info.name).trim() ? String(info.name).trim() : null;
+  }
+
+  function productGenerationsJS(product) {
+    var details = generationDetailsJS(product);
+    var seen = {};
+    var dates = (product.refresh_history || []).filter(function (d) {
+      if (seen[d]) return false;
+      seen[d] = true;
+      return true;
+    }).sort();
+    var today = new Date().toISOString().slice(0, 10);
+    return dates.map(function (date, i) {
+      var info = details[date] || {};
+      var next = dates[i + 1] || null;
+      var end = next || (product.discontinued ? product.discontinued_date || null : today);
+      var stored = storedGenerationNameJS(product, date);
+      return {
+        date: date,
+        name: stored || autoGenerationNameJS(product, i, dates.length),
+        hasStoredDetails: !!(stored || info.announced),
+        announced: info.announced || null,
+        end: end,
+        isCurrent: !next && !product.discontinued,
+      };
+    });
+  }
+
+  function generationsSectionHtmlJS(product) {
+    var gens = productGenerationsJS(product);
+    if (!gens.length) return '';
+    if (gens.length < 2 && !gens.some(function (g) { return g.hasStoredDetails; })) return '';
+    var showAnnounced = gens.some(function (g) { return g.announced; });
+    var rows = gens.slice().reverse().map(function (g) {
+      var onMarket = g.end ? lifespanTextJS(g.date, g.end) + (g.isCurrent ? ' so far' : '') : '\u2013';
+      return '<tr class="generation-row' + (g.isCurrent ? ' generation-row--current' : '') + '">' +
+        '<td class="generation-name">' + escapeHtmlJS(g.name) + (g.isCurrent ? ' <span class="generation-current-pill">Current</span>' : '') + '</td>' +
+        (showAnnounced ? '<td>' + (g.announced ? formatDateJS(g.announced) : '\u2013') + '</td>' : '') +
+        '<td>' + formatDateJS(g.date) + '</td>' +
+        '<td>' + onMarket + '</td>' +
+        '</tr>';
+    }).join('');
+    return '<h2>Generations</h2><div class="generations-table-wrap"><table class="generations-table">' +
+      '<thead><tr><th>Generation</th>' + (showAnnounced ? '<th>Announced</th>' : '') + '<th>Released</th><th>Time on market</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table></div>';
+  }
+
   function categoryTimelinePointsJS(product, allProducts) {
     var groupKey = normaliseGroupKeyJS(product.timeline_name || product.category);
     var sameCategory = (allProducts || []).filter(function (p) { return normaliseGroupKeyJS(p.timeline_name || p.category) === groupKey; });
 
+    var singleLine = sameCategory.length === 1;
+    var pointNameJS = function (p, d) {
+      if (!singleLine) return storedGenerationNameJS(p, d);
+      var gen = productGenerationsJS(p).filter(function (g) { return g.date === d; })[0];
+      return gen ? gen.name : storedGenerationNameJS(p, d);
+    };
     var seenKeys = {};
     var dateEntries = [];
     sameCategory.forEach(function (p) {
@@ -85,7 +159,7 @@
         var key = d + '|' + p.name;
         if (seenKeys[key]) return;
         seenKeys[key] = true;
-        dateEntries.push({ date: d, productName: p.name });
+        dateEntries.push({ date: d, productName: p.name, displayName: pointNameJS(p, d) });
       });
     });
     var sortedEntries = dateEntries.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
@@ -99,14 +173,15 @@
     var launchOwnerName = launchOwnerFromField ? launchOwnerFromField.name : (launchEntry ? launchEntry.productName : null);
 
     var points = [];
-    if (lineLaunch) points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwnerName || product.name });
+    var launchOwner = sameCategory.filter(function (p) { return p.name === (launchOwnerName || product.name); })[0];
+    if (lineLaunch) points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwnerName || product.name, displayName: launchOwner ? pointNameJS(launchOwner, lineLaunch) : null });
     var launchConsumed = false;
     sortedEntries.forEach(function (e) {
       if (!launchConsumed && e.date === lineLaunch && e.productName === (launchOwnerName || product.name)) {
         launchConsumed = true;
         return;
       }
-      points.push({ date: e.date, label: 'Refresh', type: 'refresh', productName: e.productName });
+      points.push({ date: e.date, label: 'Refresh', type: 'refresh', productName: e.productName, displayName: e.displayName });
     });
 
     sameCategory.forEach(function (p) {
@@ -134,7 +209,7 @@
 
     var entryHtmlJS = function (pt) {
       return '<div class="timeline-point-entry">' +
-        '<p class="timeline-point-name">' + escapeHtmlJS(pt.productName) + '</p>' +
+        '<p class="timeline-point-name">' + escapeHtmlJS(pt.displayName || pt.productName) + '</p>' +
         '<p class="timeline-point-label">' + pt.label + '</p>' +
         '<p class="timeline-point-date">' + formatDateJS(pt.date) + '</p>' +
       '</div>';
@@ -308,7 +383,7 @@
         matches.slice(0, 8).forEach(function (p) {
           var link = document.createElement('a');
           link.href = '/products/' + p.slug + '/';
-          link.innerHTML = categoryIconJS(p.category, 22) + '<span>' + escapeHtmlJS(p.name) + '</span>';
+          link.innerHTML = productIconJS(p, 22) + '<span>' + escapeHtmlJS(p.name) + '</span>';
           dropdown.appendChild(link);
         });
       }
@@ -371,6 +446,16 @@
     return '<svg class="placeholder-icon" viewBox="0 0 40 40" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + shape + '</svg>';
   }
 
+  // Mirrors productIcon in src/templates.js: a product line's own icon,
+  // falling back to its family (category) icon.
+  function productIconJS(product, size) {
+    if (product && product.icon_url) {
+      var s = size || 40;
+      return '<img class="placeholder-icon placeholder-icon--product" src="' + escapeHtmlJS(String(product.icon_url).replace(/"/g, '%22')) + '" alt="" width="' + s + '" height="' + s + '" style="object-fit:contain;">';
+    }
+    return categoryIconJS(product && product.category, size);
+  }
+
   function pillJS(category) {
     return '<a class="pill" href="/categories/' + slugifyJS(category) + '/">' + escapeHtmlJS(category) + '</a>';
   }
@@ -410,7 +495,7 @@
     return (
       '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<a class="card-link" href="/products/' + product.slug + '/">' +
-          '<div class="card-name-row">' + categoryIconJS(product.category, 36) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
+          '<div class="card-name-row">' + productIconJS(product, 36) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
           badgeHtmlJS(product, statusInfo) +
           meta +
         '</a>' +
@@ -430,7 +515,7 @@
     return (
       '<tr class="league-row' + (status === 'discontinued' ? ' league-row--discontinued' : '') + '" data-href="/products/' + product.slug + '/" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<td class="league-rank">' + rank + '</td>' +
-        '<td class="league-name"><a href="/products/' + product.slug + '/" class="league-name-link">' + categoryIconJS(product.category, 24) + '<span>' + escapeHtmlJS(product.name) + '</span></a></td>' +
+        '<td class="league-name"><a href="/products/' + product.slug + '/" class="league-name-link">' + productIconJS(product, 24) + '<span>' + escapeHtmlJS(product.name) + '</span></a></td>' +
         '<td class="league-status">' + badgeHtmlJS(product, statusInfo) + '</td>' +
         '<td class="league-launch">' + (launch ? formatDateJS(launch) : '\u2014') + '</td>' +
         '<td class="league-price">' + (product.price ? escapeHtmlJS(formatPriceJS(product.price)) : '\u2014') + '</td>' +
@@ -556,6 +641,7 @@
         '</div>' +
       '</div>' +
       releaseHistorySection +
+      generationsSectionHtmlJS(product) +
       (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
       (relatedPhotos.length ? '<h2>From the gallery</h2><div class="gallery-strip">' + relatedPhotos.map(galleryStripItemHtmlJS).join('') + '</div>' : '')
     );
@@ -971,7 +1057,7 @@
     return '<article class="card card--featured" data-category="' + escapeHtmlJS(product.category) + '">' +
       '<a class="card-link" href="/products/' + product.slug + '/">' +
         '<span class="card-featured-label">Featured</span>' +
-        '<div class="card-name-row">' + categoryIconJS(product.category, 42) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
+        '<div class="card-name-row">' + productIconJS(product, 42) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
         countHtml +
         (detailRows.length ? '<div class="card-featured-details">' + detailRows.join('') + '</div>' : '') +
       '</a>' +
@@ -1123,7 +1209,8 @@
 
         var timelineSection = document.getElementById('category-timeline-section');
         if (timelineSection) {
-          var categoryProducts = items.map(function (i) { return i.product; });
+          // Family page: every line together, whatever each product page shows.
+          var categoryProducts = items.map(function (i) { return Object.assign({}, i.product, { timeline_name: null }); });
           var seedProduct = categoryProducts[0];
           var points = seedProduct ? categoryTimelinePointsJS(seedProduct, categoryProducts) : [];
           if (points.length) {

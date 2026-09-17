@@ -27,6 +27,17 @@ function categoryIcon(category, size) {
   return `<svg class="placeholder-icon" viewBox="0 0 40 40" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
 }
 
+// A product line can have its own icon (e.g. AirPods Max inside the
+// AirPods family). Blank falls back to the family (category) icon.
+function productIcon(product, size) {
+  if (product && product.icon_url) {
+    const s = size || 40;
+    const src = escapeHtml(String(product.icon_url).replace(/"/g, '%22'));
+    return `<img class="placeholder-icon placeholder-icon--product" src="${src}" alt="" width="${s}" height="${s}" style="object-fit:contain;">`;
+  }
+  return categoryIcon(product && product.category, size);
+}
+
 function sanitizeRichText(html, siteUrl) {
   if (!html) return '';
   const allowed = new Set(['p', 'b', 'strong', 'i', 'em', 'u', 'br', 'a']);
@@ -148,6 +159,75 @@ function latestRefresh(product) {
   return h.length ? h[h.length - 1] : null;
 }
 
+function ordinal(n) {
+  const suffixes = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
+}
+
+function generationDetails(product) {
+  const d = product && product.generation_details;
+  return d && typeof d === 'object' && !Array.isArray(d) ? d : {};
+}
+
+// Used for any generation without a name typed in admin. A line with a
+// single generation just uses the product name; once there are more,
+// each gets its place in the sequence, so the names stay right as new
+// generations are added without anything needing to be re-entered.
+function autoGenerationName(product, index, total) {
+  if (total <= 1) return product.name;
+  return `${product.name} (${ordinal(index + 1)} generation)`;
+}
+
+function storedGenerationName(product, date) {
+  const info = generationDetails(product)[date];
+  return info && info.name && String(info.name).trim() ? String(info.name).trim() : null;
+}
+
+function productGenerations(product) {
+  const details = generationDetails(product);
+  const dates = [...new Set(product.refresh_history || [])].sort();
+  const today = new Date().toISOString().slice(0, 10);
+  return dates.map((date, i) => {
+    const info = details[date] || {};
+    const next = dates[i + 1] || null;
+    const end = next || (product.discontinued ? product.discontinued_date || null : today);
+    return {
+      date,
+      name: storedGenerationName(product, date) || autoGenerationName(product, i, dates.length),
+      hasStoredDetails: !!(storedGenerationName(product, date) || info.announced),
+      announced: info.announced || null,
+      end,
+      isCurrent: !next && !product.discontinued,
+    };
+  });
+}
+
+function generationsSectionHtml(product) {
+  const gens = productGenerations(product);
+  if (!gens.length) return '';
+  if (gens.length < 2 && !gens.some((g) => g.hasStoredDetails)) return '';
+  const showAnnounced = gens.some((g) => g.announced);
+  const rows = gens.slice().reverse().map((g) => {
+    const onMarket = g.end ? `${lifespanText(g.date, g.end)}${g.isCurrent ? ' so far' : ''}` : '\u2013';
+    return `<tr class="generation-row${g.isCurrent ? ' generation-row--current' : ''}">
+    <td class="generation-name">${escapeHtml(g.name)}${g.isCurrent ? ' <span class="generation-current-pill">Current</span>' : ''}</td>
+    ${showAnnounced ? `<td>${g.announced ? formatDate(g.announced) : '\u2013'}</td>` : ''}
+    <td>${formatDate(g.date)}</td>
+    <td>${onMarket}</td>
+  </tr>`;
+  }).join('\n');
+  return `<h2>Generations</h2>
+  <div class="generations-table-wrap">
+  <table class="generations-table">
+    <thead><tr><th>Generation</th>${showAnnounced ? '<th>Announced</th>' : ''}<th>Released</th><th>Time on market</th></tr></thead>
+    <tbody>
+  ${rows}
+    </tbody>
+  </table>
+  </div>`;
+}
+
 function monthsBetween(a, b) {
   const start = new Date(a);
   const end = new Date(b);
@@ -170,13 +250,23 @@ function categoryTimelinePoints(product, allProducts) {
   // both keep their own point here — the "merge" step in
   // horizontalTimelineHtml is what visually pairs same-date points,
   // this step must never drop one first just because a date repeats.
+  // On a timeline holding one product line only, every point can safely
+  // use its generation name (typed or automatic). With several lines
+  // together, only typed names are used, so each point stays clearly
+  // tied to its own product.
+  const singleLine = sameCategory.length === 1;
+  const pointName = (p, d) => {
+    if (!singleLine) return storedGenerationName(p, d);
+    const gen = productGenerations(p).find((g) => g.date === d);
+    return gen ? gen.name : storedGenerationName(p, d);
+  };
   const seenKeys = new Set();
   const dateEntries = [];
   sameCategory.forEach((p) => (p.refresh_history || []).forEach((d) => {
     const key = d + '|' + p.name;
     if (seenKeys.has(key)) return;
     seenKeys.add(key);
-    dateEntries.push({ date: d, productName: p.name });
+    dateEntries.push({ date: d, productName: p.name, displayName: pointName(p, d) });
   }));
   const sortedEntries = dateEntries.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
@@ -192,12 +282,12 @@ function categoryTimelinePoints(product, allProducts) {
 
   if (explicitLaunches.length) {
     explicitLaunches.forEach((p) => {
-      points.push({ date: p.original_launch_date, label: 'Launch', type: 'launch', productName: p.name });
+      points.push({ date: p.original_launch_date, label: 'Launch', type: 'launch', productName: p.name, displayName: pointName(p, p.original_launch_date) });
       consumedKeys.add(p.original_launch_date + '|' + p.name);
     });
   } else if (sortedEntries.length) {
     const first = sortedEntries[0];
-    points.push({ date: first.date, label: 'Launch', type: 'launch', productName: first.productName });
+    points.push({ date: first.date, label: 'Launch', type: 'launch', productName: first.productName, displayName: first.displayName });
     consumedKeys.add(first.date + '|' + first.productName);
   }
 
@@ -205,7 +295,7 @@ function categoryTimelinePoints(product, allProducts) {
     if (consumedKeys.has(e.date + '|' + e.productName)) {
       return;
     }
-    points.push({ date: e.date, label: 'Refresh', type: 'refresh', productName: e.productName });
+    points.push({ date: e.date, label: 'Refresh', type: 'refresh', productName: e.productName, displayName: e.displayName });
   });
 
   sameCategory.forEach((p) => {
@@ -237,7 +327,7 @@ function horizontalTimelineHtml(product, allProducts) {
   }
 
   const entryHtml = (pt) => `<div class="timeline-point-entry">
-      <p class="timeline-point-name">${escapeHtml(pt.productName)}</p>
+      <p class="timeline-point-name">${escapeHtml(pt.displayName || pt.productName)}</p>
       <p class="timeline-point-label">${pt.label}</p>
       <p class="timeline-point-date">${formatDate(pt.date)}</p>
     </div>`;
@@ -475,7 +565,7 @@ function cardHtml(product, statusInfo) {
     : '';
   return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <a class="card-link" href="/products/${product.slug}/">
-        <div class="card-name-row">${categoryIcon(product.category, 36)}<p class="card-name">${escapeHtml(product.name)}</p></div>
+        <div class="card-name-row">${productIcon(product, 36)}<p class="card-name">${escapeHtml(product.name)}</p></div>
     ${productBadge(product, statusInfo)}
     ${meta}
   </a>
@@ -682,7 +772,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
   return `<article class="card card--featured" data-category="${escapeHtml(product.category)}">
   <a class="card-link" href="/products/${product.slug}/">
     <span class="card-featured-label">Featured</span>
-    <div class="card-name-row">${categoryIcon(product.category, 42)}<p class="card-name">${escapeHtml(product.name)}</p></div>
+    <div class="card-name-row">${productIcon(product, 42)}<p class="card-name">${escapeHtml(product.name)}</p></div>
     ${countHtml}
     ${detailRows ? `<div class="card-featured-details">${detailRows}</div>` : ''}
   </a>
@@ -997,7 +1087,7 @@ function leagueRowHtml(product, statusInfo, rank) {
   const decade = product.discontinued && product.discontinued_date ? `${Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10}s` : '';
   return `<tr class="league-row${status === 'discontinued' ? ' league-row--discontinued' : ''}" data-href="/products/${product.slug}/" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <td class="league-rank">${rank}</td>
-  <td class="league-name"><a href="/products/${product.slug}/" class="league-name-link">${categoryIcon(product.category, 24)}<span>${escapeHtml(product.name)}</span></a></td>
+  <td class="league-name"><a href="/products/${product.slug}/" class="league-name-link">${productIcon(product, 24)}<span>${escapeHtml(product.name)}</span></a></td>
   <td class="league-status">${productBadge(product, statusInfo)}</td>
   <td class="league-launch">${launch ? formatDate(launch) : '\u2014'}</td>
   <td class="league-price">${product.price ? escapeHtml(formatPrice(product.price)) : '\u2014'}</td>
@@ -1029,7 +1119,9 @@ function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }
     const s = i.product.discontinued ? 'discontinued' : 'current';
     return s === v;
   }).length);
-  const allProductsInCategory = items.map((i) => i.product);
+  // The family page is the combined overview, so every line in it shares
+  // one timeline here, whatever each product's own page is set to show.
+  const allProductsInCategory = items.map((i) => ({ ...i.product, timeline_name: null }));
   const seedProduct = allProductsInCategory[0];
   const timelinePoints = seedProduct ? categoryTimelinePoints(seedProduct, allProductsInCategory) : [];
   const releaseHistorySection = timelinePoints.length
@@ -1180,6 +1272,8 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
 
   ${releaseHistorySection}
 
+  ${generationsSectionHtml(product)}
+
   ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note, siteUrl)}</div></div>` : ''}
 
   ${relatedPhotos.length ? `<h2>From the gallery</h2>
@@ -1191,7 +1285,7 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
   const description = product.discontinued
     ? `${product.name} was discontinued${product.discontinued_date ? ` in ${formatDate(product.discontinued_date)}` : ''}${launch ? `, after launching in ${formatDate(launch)}` : ''}.${successor ? ` It was replaced by the ${successor.name}.` : ''}`
     : status
-    ? `${product.name} was last refreshed ${status.daysSince} days ago. See the full release history and whether now is a good time to buy.`
+    ? `${product.name} was last refreshed ${status.daysSince} days ago. See every generation and the full release history.`
     : `${product.name} on Apple Sunset.`;
 
   return shell({
@@ -1296,103 +1390,123 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
   <div id="tab-products" class="admin-tab-panel">
     <div id="product-list-view">
-      <button id="new-product-btn" class="admin-btn admin-btn--primary">Add new product</button>
-      <input type="search" id="product-search-input" class="admin-search-input" placeholder="Search products by name…" aria-label="Search products">
-      <div id="product-list" class="admin-list"></div>
+      <div class="admin-list-header">
+        <p class="admin-steps-guide"><span>1</span> Pick a family <span>2</span> Pick a product line <span>3</span> Add a generation or edit</p>
+        <button type="button" id="new-product-btn" class="admin-btn admin-btn--primary">+ New product line</button>
+      </div>
+      <div id="family-tiles" class="family-tiles" aria-label="Families"></div>
+      <input type="search" id="product-search-input" class="admin-search-input" placeholder="Search every product by name…" aria-label="Search products">
+      <div id="product-list" class="line-card-grid"></div>
     </div>
 
     <div id="product-form-view" style="display:none;">
       <button type="button" id="back-to-list-btn" class="admin-back-link">&larr; Back to products</button>
-      <h3 id="form-title">Add product</h3>
-      <form id="product-form" class="admin-form">
-        <h3 class="admin-form-section">Product details</h3>
-        <label>Name<input type="text" id="name" required></label>
-        <label>Category
-          <input type="text" id="category" list="category-options" placeholder="e.g. iPhone, Vision Pro">
-          <datalist id="category-options"></datalist>
-        </label>
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Icon for this category</span>
-          <div id="category-icon-thumb" class="admin-thumbs"></div>
-          <label for="category-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload icon</label>
-          <input type="file" id="category-icon-upload" accept="image/*" class="admin-file-input">
-          <p class="admin-hint">Optional. Uploading replaces the built-in shape for every product in this category, everywhere it appears on the site.</p>
-        </div>
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Starting price</span>
-          <div class="price-currency-row">
-            <label class="checkbox-label"><input type="radio" name="price_currency" value="£"> £</label>
-            <label class="checkbox-label"><input type="radio" name="price_currency" value="$" checked> $</label>
-            <input type="text" id="price" placeholder="799">
+      <h2 id="form-title" class="admin-form-title">New product line</h2>
+      <form id="product-form" class="admin-form admin-form--steps" novalidate>
+
+        <section class="admin-step" id="step-family">
+          <h3 class="admin-step-title"><span class="admin-step-num">1</span> Family</h3>
+          <div id="family-picker" class="family-picker" role="radiogroup" aria-label="Family"></div>
+          <div id="new-family-wrap" class="admin-subfield" style="display:none;">
+            <label>New family name<input type="text" id="category" placeholder="e.g. Vision Pro" autocomplete="off"></label>
           </div>
-        </div>
+          <details class="admin-mini-details">
+            <summary>Family icon</summary>
+            <div class="admin-subfield">
+              <div id="category-icon-thumb" class="admin-thumbs"></div>
+              <div><label for="category-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload family icon</label></div>
+              <input type="file" id="category-icon-upload" accept="image/*" class="admin-file-input">
+              <p class="admin-hint">Optional. Replaces the built-in shape for every product in this family.</p>
+            </div>
+          </details>
+          <p id="family-error" class="form-error"></p>
+        </section>
 
-        <h3 class="admin-form-section">Launch / Release / Refresh Date</h3>
-        <p class="admin-hint">Pick a date below, then click what kind of date it is. Most products just need a Refresh Date, that covers a brand new product too, it's what the day-count badge is calculated from. Only use Launch Date if this is a true origin point for its timeline (e.g. the very first iPhone, or a new line like iPhone Air debuting within the existing iPhone timeline), a timeline can have more than one Launch if it's genuinely got more than one origin. Discontinued Date also marks the product as discontinued.</p>
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Refresh history</span>
-          <ul id="refresh-history-list" class="refresh-history-list"></ul>
-        </div>
-        <div class="admin-subfield" id="launch-date-display-wrap" style="display:none;">
-          <span class="admin-subfield-label">Original launch date</span>
-          <p class="date-chip" id="launch-date-display"></p>
-        </div>
-        <div class="admin-subfield" id="discontinued-date-display-wrap" style="display:none;">
-          <span class="admin-subfield-label">Discontinued date</span>
-          <p class="date-chip" id="discontinued-date-display"></p>
-        </div>
-        <div class="date-precision-radios">
-          <label><input type="radio" name="new_refresh_date_precision" value="day" checked> Full date</label>
-          <label><input type="radio" name="new_refresh_date_precision" value="month"> Month &amp; year</label>
-          <label><input type="radio" name="new_refresh_date_precision" value="year"> Year only</label>
-        </div>
-        <div class="refresh-history-add">
-          <input type="date" id="new_refresh_date_day" class="date-precision-input">
-          <input type="month" id="new_refresh_date_month" class="date-precision-input" style="display:none;">
-          <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
-        </div>
-        <div class="unified-date-buttons">
-          <button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--small admin-btn--primary">Refresh Date</button>
-          <button type="button" id="add-as-launch-btn" class="admin-btn admin-btn--small">Launch Date</button>
-          <button type="button" id="add-as-discontinued-btn" class="admin-btn admin-btn--small">Discontinued Date</button>
-        </div>
+        <section class="admin-step" id="step-line">
+          <h3 class="admin-step-title"><span class="admin-step-num">2</span> Product line</h3>
+          <label>Name<input type="text" id="name" placeholder="e.g. AirPods Pro" autocomplete="off"></label>
+          <p id="name-error" class="form-error"></p>
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Icon for this product line <span class="admin-optional">Optional</span></span>
+            <div class="admin-icon-row">
+              <div id="product-icon-thumb" class="admin-thumbs"></div>
+              <label for="product-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload icon</label>
+              <input type="file" id="product-icon-upload" accept="image/*" class="admin-file-input">
+            </div>
+            <p class="admin-hint">Leave blank to use the family icon.</p>
+          </div>
+          <label>Timeline on this product&rsquo;s page
+            <select id="timeline_name_select"></select>
+          </label>
+          <div id="timeline-new-wrap" style="display:none;">
+            <label>New timeline group name<input type="text" id="timeline_name" placeholder="e.g. iPhone" autocomplete="off"></label>
+          </div>
+          <p class="admin-hint">&ldquo;Just this product line&rdquo; shows only its own generations (e.g. AirPods Pro). The family page always shows every line together.</p>
+        </section>
 
-        <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
+        <section class="admin-step" id="step-generations">
+          <h3 class="admin-step-title"><span class="admin-step-num">3</span> Generations</h3>
+          <ul id="refresh-history-list" class="generation-list"></ul>
+          <div id="launch-date-display-wrap" class="admin-subfield" style="display:none;">
+            <span class="admin-subfield-label">Line first launched</span>
+            <p class="date-chip" id="launch-date-display"></p>
+          </div>
+          <div class="generation-add" id="generation-add-panel">
+            <p class="generation-add-title">Add a generation</p>
+            <label><span class="admin-label-row">Name <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
+            ${datePrecisionFieldHtml('new_refresh_date', 'Released')}
+            ${datePrecisionFieldHtml('new_generation_announced', 'Announced <span class="admin-optional">Optional</span>')}
+            <label class="checkbox-label"><input type="checkbox" id="new_generation_is_first"> This was the very first launch of this line</label>
+            <div><button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--primary">+ Add generation</button></div>
+            <p id="generation-add-error" class="form-error"></p>
+          </div>
+        </section>
+
+        <section class="admin-step" id="step-status">
+          <h3 class="admin-step-title"><span class="admin-step-num">4</span> Status</h3>
+          <div class="segmented segmented--status" role="radiogroup" aria-label="Status">
+            <label><input type="radio" name="status_toggle" value="current" checked><span>Current</span></label>
+            <label><input type="radio" name="status_toggle" value="discontinued"><span>Discontinued</span></label>
+          </div>
+          <input type="checkbox" id="discontinued" hidden>
+          <div id="discontinued-fields" class="admin-discontinued-fields" style="display:none;">
+            ${datePrecisionFieldHtml('discontinued_date', 'Discontinued date', 'Required. Use Year only if you don&rsquo;t know the exact day.')}
+            <p id="discontinued-error" class="form-error"></p>
+            <label><span class="admin-label-row">Replaced by <span class="admin-optional">Optional</span></span><select id="replaced_by"></select></label>
+            <label><span class="admin-label-row">Why it went <span class="admin-optional">Optional, only if there&rsquo;s more to say than &ldquo;Replaced by&rdquo;</span></span><textarea id="discontinued_reason" rows="2"></textarea></label>
+          </div>
+        </section>
 
         <details class="admin-advanced">
-          <summary>More options (product line, video, links, notes, featured, discontinued)</summary>
+          <summary><span class="admin-step-num">5</span> Extras (optional): price, links, notes, video, homepage</summary>
 
           <div class="admin-subfield">
-            <span class="admin-subfield-label">Badge shows</span>
-            <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked> Days since refresh</label>
-            <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_launch" value="launch"> Days since launch</label>
+            <span class="admin-subfield-label">Starting price</span>
+            <div class="price-currency-row">
+              <div class="segmented segmented--small" role="radiogroup" aria-label="Currency">
+                <label><input type="radio" name="price_currency" value="£"><span>£</span></label>
+                <label><input type="radio" name="price_currency" value="$" checked><span>$</span></label>
+              </div>
+              <input type="text" id="price" placeholder="799" inputmode="decimal">
+            </div>
           </div>
 
-          <h3 class="admin-form-section">Product line</h3>
-          <p class="admin-hint">Optional: only needed if this product is part of a series with others already on the site (e.g. every iPhone model). Skip this whole section for a one-off product.</p>
           <div class="admin-subfield">
-            <span class="admin-subfield-label">Timeline group</span>
-            <input type="text" id="timeline_name" list="timeline-name-options" placeholder="e.g. iPhone">
-            <datalist id="timeline-name-options"></datalist>
-          </div>
-          <p class="admin-hint">Give every product that should share one continuous history the exact same value here, start typing and existing ones you've already used will show up to pick from. Two products with this set to "iPhone" show each other's launches on the same timeline; leave it blank and this product won't be linked to anything.</p>
-          <label>Previous model (pick a product, or leave blank)
-            <input type="text" id="previous_model" list="product-options-by-category" placeholder="Start typing a product name">
-          </label>
-          <p class="admin-hint">If this product replaces one already on the site, picking it here automatically marks that one Discontinued and fills in its "Replaced by" for you.</p>
-
-          <h3 class="admin-form-section">Video</h3>
-          <div class="admin-subfield">
-            <span class="admin-subfield-label">Video</span>
-            <div id="video-status" class="admin-video-status">No video uploaded.</div>
-            <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label>
-            <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
+            <span class="admin-subfield-label">Badge counts days since</span>
+            <div class="segmented segmented--small" role="radiogroup" aria-label="Badge basis">
+              <label><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked><span>Last generation</span></label>
+              <label><input type="radio" name="days_basis" id="days_basis_launch" value="launch"><span>First launch</span></label>
+            </div>
           </div>
 
-          <h3 class="admin-form-section">More information</h3>
-          <label>Official Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/uk/iphone-17-pro/"></label>
+          <label><span class="admin-label-row">Previous model <span class="admin-optional">Optional</span></span><select id="previous_model"></select></label>
+          <p class="admin-hint">Picking one marks it Discontinued and sets its &ldquo;Replaced by&rdquo; to this product automatically.</p>
+
+          <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
+
+          <label>Official Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/uk/airpods-pro/"></label>
           <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> No longer available on Apple's website</label>
-          <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
+          <label>External link (e.g. Wikipedia)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
 
           <div class="admin-subfield">
             <span class="admin-subfield-label">Notes</span>
@@ -1408,21 +1522,22 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
           </div>
 
-          <h3 class="admin-form-section">Homepage</h3>
-          <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
-          <p class="admin-hint">Only one product can be featured at a time, choosing this one will automatically un-feature whichever product currently holds it.</p>
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Video</span>
+            <div id="video-status" class="admin-video-status">No video uploaded.</div>
+            <div><label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label></div>
+            <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
+          </div>
 
-          <h3 class="admin-form-section">Discontinued</h3>
-          <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
-          <p class="admin-hint">Set automatically when you click "Discontinued Date" above, but you can also check this on its own if you don't have an exact date.</p>
-          <label>Replaced by (pick a product, or leave blank)
-            <input type="text" id="replaced_by" list="product-options-by-category" placeholder="Start typing a product name">
-            <datalist id="product-options-by-category"></datalist>
-          </label>
-          <label>Why it went (only if there's more to it than "Replaced by" already says, e.g. a design flaw, price problem, or how it was received, leave blank otherwise)<textarea id="discontinued_reason" rows="2"></textarea></label>
+          <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
+          <p class="admin-hint">Only one product can be featured at a time. Choosing this one un-features the current one.</p>
         </details>
 
-        <button type="submit" class="admin-btn admin-btn--primary">Save product</button>
+        <div class="admin-save-bar">
+          <button type="submit" id="save-product-btn" class="admin-btn admin-btn--primary">Save product</button>
+          <button type="button" id="cancel-product-btn" class="admin-btn admin-btn--ghost">Cancel</button>
+          <button type="button" id="delete-product-btn" class="admin-btn admin-btn--danger" style="display:none;">Delete</button>
+        </div>
       </form>
     </div>
   </div>

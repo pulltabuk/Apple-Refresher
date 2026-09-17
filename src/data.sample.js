@@ -140,6 +140,26 @@ const products = [
     days_basis: 'refresh',
     discontinued_reason: 'Squeezed out by the redesigned MacBook Air, which was thinner, faster and cheaper.',
   },
+  // AirPods family: three product lines, each with its own generations.
+  {
+    id: 'sample-airpods', slug: 'airpods', name: 'AirPods', category: 'AirPods', price: '$129',
+    image_urls: [], video_url: null,
+    refresh_history: ['2016-12-13', '2019-03-20', '2021-10-26', '2024-09-20'],
+    generation_details: {
+      '2016-12-13': { name: 'AirPods (1st generation)', announced: '2016-09-07' },
+      '2024-09-20': { name: 'AirPods 4', announced: '2024-09-09' },
+    },
+    original_launch_date: '2016-12-13',
+    featured: false, waiting_count: 40, discontinued: false,
+  },
+  {
+    id: 'sample-airpods-pro', slug: 'airpods-pro', name: 'AirPods Pro', category: 'AirPods', price: '$249',
+    image_urls: [], video_url: null,
+    refresh_history: ['2019-10-30', '2022-09-23', '2025-09-19'],
+    generation_details: {},
+    timeline_name: 'AirPods Pro',
+    featured: false, waiting_count: 22, discontinued: false,
+  },
 ];
 
 module.exports = { products };
