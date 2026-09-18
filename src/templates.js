@@ -1393,8 +1393,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <div id="tab-products" class="admin-tab-panel">
     <div id="product-list-view">
       <div class="admin-list-header">
-        <p class="admin-steps-guide"><span>1</span> Pick a family <span>2</span> Pick a product line <span>3</span> Add a generation or edit</p>
-        <button type="button" id="new-product-btn" class="admin-btn admin-btn--primary">+ New product line</button>
+        <p class="admin-steps-guide"><span>1</span> Pick or add a family <span>2</span> Pick or add a product <span>3</span> Add its release dates</p>
+        <button type="button" id="new-product-btn" class="admin-btn admin-btn--primary">+ New product</button>
       </div>
       <div id="family-tiles" class="family-tiles" aria-label="Families"></div>
       <input type="search" id="product-search-input" class="admin-search-input" placeholder="Search every product by name…" aria-label="Search products">
@@ -1425,11 +1425,11 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </section>
 
         <section class="admin-step" id="step-line">
-          <h3 class="admin-step-title"><span class="admin-step-num">2</span> Product line</h3>
+          <h3 class="admin-step-title"><span class="admin-step-num">2</span> Product</h3>
           <label>Name<input type="text" id="name" placeholder="e.g. AirPods Pro" autocomplete="off"></label>
           <p id="name-error" class="form-error"></p>
           <div class="admin-subfield">
-            <span class="admin-subfield-label">Icon for this product line <span class="admin-optional">Optional</span></span>
+            <span class="admin-subfield-label">Icon for this product <span class="admin-optional">Optional</span></span>
             <div class="admin-icon-row">
               <div id="product-icon-thumb" class="admin-thumbs"></div>
               <label for="product-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload icon</label>
@@ -1437,13 +1437,38 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             </div>
             <p class="admin-hint">Leave blank to use the family icon.</p>
           </div>
-          <label>Timeline on this product&rsquo;s page
+          <label>Release history shown on this product&rsquo;s page
             <select id="timeline_name_select"></select>
           </label>
           <div id="timeline-new-wrap" style="display:none;">
-            <label>New timeline group name<input type="text" id="timeline_name" placeholder="e.g. iPhone" autocomplete="off"></label>
+            <label>New group name<input type="text" id="timeline_name" placeholder="e.g. iPhone" autocomplete="off"></label>
           </div>
-          <p class="admin-hint">&ldquo;Just this product line&rdquo; shows only this product&rsquo;s own dates. The family page always shows every line in the family together.</p>
+          <p class="admin-hint">&ldquo;This product only&rdquo; shows just its own dates. The family page always shows every product in the family together.</p>
+
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Starting price <span class="admin-optional">Optional</span></span>
+            <div class="price-currency-row">
+              <div class="segmented segmented--small" role="radiogroup" aria-label="Currency">
+                <label><input type="radio" name="price_currency" value="&pound;"><span>&pound;</span></label>
+                <label><input type="radio" name="price_currency" value="$" checked><span>$</span></label>
+              </div>
+              <input type="text" id="price" placeholder="799" inputmode="decimal">
+            </div>
+          </div>
+
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Notes <span class="admin-optional">Optional, shown on the product page</span></span>
+            <div class="richtext-toolbar">
+              <button type="button" data-cmd="bold"><b>B</b></button>
+              <button type="button" data-cmd="italic"><i>I</i></button>
+              <button type="button" data-cmd="underline"><u>U</u></button>
+              <button type="button" data-cmd="insertParagraph">&para;</button>
+              <button type="button" id="richtext-link-btn">&#128279;</button>
+              <button type="button" data-cmd="removeFormat" class="richtext-clear">&times;</button>
+              <button type="button" id="richtext-clear-all-btn" class="richtext-clear-all">Clear all formatting</button>
+            </div>
+            <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
+          </div>
         </section>
 
         <section class="admin-step" id="step-generations">
@@ -1492,7 +1517,14 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <label><span class="admin-label-row">Why it went <span class="admin-optional">Optional, only if there&rsquo;s more to say than &ldquo;Replaced by&rdquo;</span></span><textarea id="discontinued_reason" rows="2"></textarea></label>
           </div>
           <label><span class="admin-label-row">Replaces <span class="admin-optional">Optional</span></span><select id="previous_model"></select></label>
-          <p class="admin-hint">The older line this one took over from. Choosing it marks that one Discontinued automatically.</p>
+          <div id="previous-model-choice" class="admin-subfield" style="display:none;">
+            <span class="admin-subfield-label">Is that older product still on sale?</span>
+            <div class="segmented segmented--small" role="radiogroup" aria-label="Older product status">
+              <label><input type="radio" name="previous_model_action" value="keep" checked><span>Still on sale, leave it</span></label>
+              <label><input type="radio" name="previous_model_action" value="discontinue"><span>Mark it discontinued</span></label>
+            </div>
+            <p class="admin-hint">&ldquo;Mark it discontinued&rdquo; sets its discontinued date to this product&rsquo;s first release date and points it here.</p>
+          </div>
         </section>
 
         <section class="admin-step" id="step-links">
@@ -1506,37 +1538,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </section>
 
         <details class="admin-advanced">
-          <summary><span class="admin-step-num">6</span> Extras (optional): price, notes, video, homepage</summary>
-
-          <div class="admin-subfield">
-            <span class="admin-subfield-label">Starting price</span>
-            <div class="price-currency-row">
-              <div class="segmented segmented--small" role="radiogroup" aria-label="Currency">
-                <label><input type="radio" name="price_currency" value="£"><span>£</span></label>
-                <label><input type="radio" name="price_currency" value="$" checked><span>$</span></label>
-              </div>
-              <input type="text" id="price" placeholder="799" inputmode="decimal">
-            </div>
-          </div>
-
-
-
-          <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
-
-
-          <div class="admin-subfield">
-            <span class="admin-subfield-label">Notes</span>
-            <div class="richtext-toolbar">
-              <button type="button" data-cmd="bold"><b>B</b></button>
-              <button type="button" data-cmd="italic"><i>I</i></button>
-              <button type="button" data-cmd="underline"><u>U</u></button>
-              <button type="button" data-cmd="insertParagraph">&para;</button>
-              <button type="button" id="richtext-link-btn">&#128279;</button>
-              <button type="button" data-cmd="removeFormat" class="richtext-clear">&times;</button>
-              <button type="button" id="richtext-clear-all-btn" class="richtext-clear-all">Clear all formatting</button>
-            </div>
-            <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
-          </div>
+          <summary><span class="admin-step-num">6</span> Extras (optional): video and homepage</summary>
 
           <div class="admin-subfield">
             <span class="admin-subfield-label">Video</span>
@@ -1547,6 +1549,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
           <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
           <p class="admin-hint">Only one product can be featured at a time. Choosing this one un-features the current one.</p>
+
+          <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
         </details>
 
         <div class="admin-save-bar">

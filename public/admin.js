@@ -359,7 +359,20 @@
   function updateProductOptionsByCategory() {
     fillProductSelect(document.getElementById('replaced_by'));
     fillProductSelect(document.getElementById('previous_model'));
+    updatePreviousModelChoice();
   }
+
+  // A new product doesn't always end the old one: both can be on sale
+  // together, so discontinuing the older one is an explicit choice.
+  function updatePreviousModelChoice() {
+    const picked = document.getElementById('previous_model').value;
+    const wrap = document.getElementById('previous-model-choice');
+    const prev = cachedProducts.find((p) => p.slug === picked);
+    wrap.style.display = picked && prev && !prev.discontinued ? '' : 'none';
+    if (!picked) document.querySelector('input[name="previous_model_action"][value="keep"]').checked = true;
+  }
+
+  document.getElementById('previous_model').addEventListener('change', updatePreviousModelChoice);
 
   // --- Timeline group dropdown: "Same as family" (blank), any group
   // already in use, or "+ New group" to type one. Typed names still
@@ -385,7 +398,7 @@
     select.appendChild(same);
     const own = document.createElement('option');
     own.value = TIMELINE_OWN;
-    own.textContent = 'Just this product line';
+    own.textContent = 'This product only';
     select.appendChild(own);
     existingTimelineNames().forEach((t) => {
       const opt = document.createElement('option');
@@ -395,7 +408,7 @@
     });
     const newOpt = document.createElement('option');
     newOpt.value = TIMELINE_NEW;
-    newOpt.textContent = '+ New group…';
+    newOpt.textContent = '+ New group (shared with another family)…';
     select.appendChild(newOpt);
     if (Array.from(select.options).some((o) => o.value === value)) select.value = value;
   }
@@ -606,6 +619,13 @@
     };
     makeTile('All', cachedProducts.length, null);
     families.forEach((f) => makeTile(f, counts[f], f));
+    const newFamily = document.createElement('button');
+    newFamily.type = 'button';
+    newFamily.className = 'family-tile family-tile--new';
+    newFamily.innerHTML = '<span class="family-tile-plus">+</span><span class="family-tile-name">New family</span>';
+    newFamily.title = 'Start a product in a family that does not exist yet';
+    newFamily.addEventListener('click', () => startNewProduct({ newFamily: true }));
+    tilesEl.appendChild(newFamily);
   }
 
   function renderProductList() {
@@ -689,7 +709,7 @@
       const newCard = document.createElement('button');
       newCard.type = 'button';
       newCard.className = 'line-card line-card--new';
-      newCard.innerHTML = '<span class="family-tile-plus">+</span><span>New product line in ' + escapeAttr(selectedFamily) + '</span>';
+      newCard.innerHTML = '<span class="family-tile-plus">+</span><span>Add a product to ' + escapeAttr(selectedFamily) + '</span>';
       newCard.addEventListener('click', () => startNewProduct({ category: selectedFamily }));
       productListEl.appendChild(newCard);
     }
@@ -1049,6 +1069,8 @@
     setTimelineName(p.timeline_name || null);
     fillProductSelect(document.getElementById('replaced_by'), p.replaced_by || '');
     fillProductSelect(document.getElementById('previous_model'), p.previous_model || '');
+    document.querySelector('input[name="previous_model_action"][value="keep"]').checked = true;
+    updatePreviousModelChoice();
     document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
     setDatePrecisionValue('discontinued_date', p.discontinued_date || null);
     setStatusToggle(!!p.discontinued);
@@ -1079,9 +1101,10 @@
       window.history.pushState({}, '', '/admin/?new=1');
     }
     productForm.reset();
-    const preset = options && options.category ? canonicalFamily(options.category) : (selectedFamily || '');
+    const wantsNewFamily = !!(options && options.newFamily);
+    const preset = wantsNewFamily ? '' : (options && options.category ? canonicalFamily(options.category) : (selectedFamily || ''));
     document.getElementById('category').value = preset;
-    document.getElementById('new-family-wrap').style.display = 'none';
+    document.getElementById('new-family-wrap').style.display = wantsNewFamily ? '' : 'none';
     document.getElementById('rumor_note_editor').innerHTML = '';
     currentOriginalLaunchDate = null;
     currentRefreshHistory = [];
@@ -1092,6 +1115,8 @@
     setTimelineName(null);
     fillProductSelect(document.getElementById('replaced_by'), '');
     fillProductSelect(document.getElementById('previous_model'), '');
+    document.querySelector('input[name="previous_model_action"][value="keep"]').checked = true;
+    updatePreviousModelChoice();
     setDatePrecisionValue('discontinued_date', null);
     setStatusToggle(false);
     expandedGenerations.clear();
@@ -1100,8 +1125,9 @@
     renderRefreshHistory();
     renderVideoStatus();
     document.getElementById('delete-product-btn').style.display = 'none';
-    document.getElementById('form-title').textContent = preset ? 'New product line in ' + preset : 'New product line';
+    document.getElementById('form-title').textContent = preset ? 'New product in ' + preset : 'New product';
     showProductForm();
+    if (wantsNewFamily) document.getElementById('category').focus();
   }
 
   document.getElementById('new-product-btn').addEventListener('click', () => startNewProduct());
@@ -1149,8 +1175,7 @@
     return true;
   }
 
-  // When a product declares a "Previous model", that's a deliberate,
-  // one-to-one "this replaces that" relationship, unlike Timeline group
+  // "Replaces" is a deliberate, one-to-one relationship, unlike Timeline group
   // (which can validly hold multiple simultaneously-current siblings,
   // e.g. iPhone 17 and iPhone 17 Pro). So automatic discontinuation is
   // driven off Previous model specifically, never off Timeline group.
@@ -1166,8 +1191,8 @@
     }
   }
 
-  async function autoDiscontinuePreviousModel(payload) {
-    if (!payload.previous_model) return;
+  async function autoDiscontinuePreviousModel(payload, shouldDiscontinue) {
+    if (!payload.previous_model || !shouldDiscontinue) return;
     const prev = cachedProducts.find((p) => p.slug === payload.previous_model);
     if (!prev || prev.discontinued) return;
     const newLaunchDate = payload.original_launch_date || (payload.refresh_history && payload.refresh_history[0]) || null;
@@ -1285,7 +1310,7 @@
           : 'Save failed: ' + result.error.message);
         return;
       }
-      await autoDiscontinuePreviousModel(payload);
+      await autoDiscontinuePreviousModel(payload, document.querySelector('input[name="previous_model_action"]:checked').value === 'discontinue');
       await enforceFeaturedExclusivity(payload);
       selectedFamily = category;
       editingId = null;
