@@ -315,6 +315,7 @@
 
   function onFamilyChanged() {
     renderFamilyPicker();
+    updateTimelineExamples();
     updateProductOptionsByCategory();
     updateCategoryIconPreview();
     renderProductIconPreview();
@@ -395,12 +396,8 @@
     select.innerHTML = '';
     const same = document.createElement('option');
     same.value = '';
-    same.textContent = 'Whole family (default)';
+    same.textContent = 'No shared group';
     select.appendChild(same);
-    const own = document.createElement('option');
-    own.value = TIMELINE_OWN;
-    own.textContent = 'This product only';
-    select.appendChild(own);
     existingTimelineNames().forEach((t) => {
       const opt = document.createElement('option');
       opt.value = t;
@@ -409,7 +406,7 @@
     });
     const newOpt = document.createElement('option');
     newOpt.value = TIMELINE_NEW;
-    newOpt.textContent = '+ New group (shared with another family)…';
+    newOpt.textContent = '+ New group…';
     select.appendChild(newOpt);
     if (Array.from(select.options).some((o) => o.value === value)) select.value = value;
   }
@@ -421,6 +418,23 @@
 
   function setTimelineMode(mode) {
     document.querySelector('input[name="timeline_mode"][value="' + (mode === 'own' ? 'own' : 'family') + '"]').checked = true;
+  }
+
+  // The two options are spelled out with this product's and family's real
+  // names, so there's nothing to work out.
+  function updateTimelineExamples() {
+    const name = document.getElementById('name').value.trim();
+    const family = canonicalFamily(document.getElementById('category').value) || 'this family';
+    const siblings = cachedProducts.filter((p) =>
+      (p.category || '').trim().toLowerCase() === family.toLowerCase() && p.id !== editingId);
+    const names = siblings.slice(0, 3).map((p) => p.name);
+    const extra = siblings.length > 3 ? ' and ' + (siblings.length - 3) + ' more' : '';
+    document.getElementById('timeline-own-example').textContent = name
+      ? 'Just the dates you list below for ' + name + '.'
+      : 'Just the dates you list below.';
+    document.getElementById('timeline-family-example').textContent = names.length
+      ? 'Its dates mixed in with ' + names.join(', ') + extra + '.'
+      : 'Nothing else is in ' + family + ' yet, so this looks the same for now.';
   }
 
   document.querySelectorAll('input[name="timeline_mode"]').forEach((radio) => {
@@ -457,6 +471,7 @@
 
   function setTimelineName(value) {
     fillTimelineSelect();
+    document.getElementById('timeline-group-details').open = false;
     const select = document.getElementById('timeline_name_select');
     const input = document.getElementById('timeline_name');
     const wrap = document.getElementById('timeline-new-wrap');
@@ -471,11 +486,13 @@
     } else if (Array.from(select.options).some((o) => o.value === value)) {
       setTimelineMode('family');
       select.value = value;
+      document.getElementById('timeline-group-details').open = true;
     } else {
       setTimelineMode('family');
       select.value = TIMELINE_NEW;
       input.value = value;
       wrap.style.display = '';
+      document.getElementById('timeline-group-details').open = true;
     }
   }
 
@@ -638,11 +655,12 @@
       btn.innerHTML = iconHtml(familyValue === null ? 'All' : familyValue, null, 32) + '<span class="family-tile-name">' + escapeAttr(label) + '</span><span class="family-tile-count">' + count + '</span>';
       btn.addEventListener('click', () => {
         selectedFamily = familyValue;
+        if (productSearchInputEl) productSearchInputEl.value = '';
         renderProductList();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
       tilesEl.appendChild(btn);
     };
-    makeTile('All', cachedProducts.length, null);
     families.forEach((f) => makeTile(f, counts[f], f));
     const newFamily = document.createElement('button');
     newFamily.type = 'button';
@@ -653,91 +671,110 @@
     tilesEl.appendChild(newFamily);
   }
 
+  function showFamilyScreen() {
+    document.getElementById('family-screen').style.display = '';
+    document.getElementById('products-screen').style.display = 'none';
+    document.getElementById('search-screen').style.display = 'none';
+  }
+
+  function productCard(p, showFamilyName) {
+    const card = document.createElement('div');
+    card.className = 'line-card' + (p.discontinued ? ' line-card--discontinued' : '') + (p.featured ? ' line-card--featured' : '');
+    const main = document.createElement('button');
+    main.type = 'button';
+    main.className = 'line-card-main';
+    const dates = (p.refresh_history || []).length;
+    const last = productLastDate(p);
+    const meta = p.discontinued
+      ? 'Discontinued' + (p.discontinued_date ? ' ' + formatAdminDate(p.discontinued_date) : ', date missing')
+      : daysSinceText(last) || 'No dates yet';
+    main.innerHTML =
+      '<span class="line-card-icon">' + iconHtml(p.category, p.icon_url, 36) + '</span>' +
+      '<span class="line-card-text">' +
+        '<span class="line-card-name">' + escapeAttr(p.name) + (p.featured ? ' <span class="line-card-star" title="Featured on homepage">\u2605</span>' : '') + '</span>' +
+        (showFamilyName ? '<span class="line-card-meta">' + escapeAttr(p.category || 'Other') + '</span>' : '') +
+        '<span class="line-card-meta">' + dates + ' date' + (dates === 1 ? '' : 's') + '</span>' +
+        '<span class="line-card-status' + (p.discontinued ? ' line-card-status--discontinued' : (!last ? ' line-card-status--empty' : '')) + '">' + escapeAttr(meta) + '</span>' +
+      '</span>';
+    main.addEventListener('click', () => editProduct(p.id));
+
+    const actions = document.createElement('div');
+    actions.className = 'line-card-actions';
+    const addDateBtn = document.createElement('button');
+    addDateBtn.type = 'button';
+    addDateBtn.className = 'admin-btn admin-btn--small admin-btn--primary';
+    addDateBtn.textContent = '+ Date';
+    addDateBtn.addEventListener('click', () => editProduct(p.id, { focusGeneration: true }));
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
+    editBtn.textContent = 'Edit';
+    editBtn.addEventListener('click', () => editProduct(p.id));
+    actions.appendChild(addDateBtn);
+    actions.appendChild(editBtn);
+    if (!p.featured && !p.discontinued) {
+      const featureBtn = document.createElement('button');
+      featureBtn.type = 'button';
+      featureBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
+      featureBtn.textContent = '\u2606 Feature';
+      featureBtn.title = 'Make this the featured product on the homepage';
+      featureBtn.addEventListener('click', () => makeFeatured(p));
+      actions.appendChild(featureBtn);
+    }
+    card.appendChild(main);
+    card.appendChild(actions);
+    return card;
+  }
+
   function renderProductList() {
     renderFamilyTiles();
-    productListEl.innerHTML = '';
+    const query = productSearchInputEl ? productSearchInputEl.value.trim().toLowerCase() : '';
 
-    if (!cachedProducts.length) {
-      productListEl.textContent = 'No products yet, tap "+ New product line" to add your first one.';
+    // Searching jumps straight to matching products, from either screen.
+    if (query) {
+      document.getElementById('family-screen').style.display = '';
+      document.getElementById('products-screen').style.display = 'none';
+      const searchScreen = document.getElementById('search-screen');
+      const results = document.getElementById('search-results');
+      searchScreen.style.display = '';
+      results.innerHTML = '';
+      const matches = cachedProducts
+        .filter((p) => p.name.toLowerCase().includes(query))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      if (!matches.length) {
+        results.textContent = 'No products match your search.';
+        return;
+      }
+      matches.forEach((p) => results.appendChild(productCard(p, true)));
+      return;
+    }
+    document.getElementById('search-screen').style.display = 'none';
+
+    if (!selectedFamily) {
+      showFamilyScreen();
       return;
     }
 
-    const query = productSearchInputEl ? productSearchInputEl.value.trim().toLowerCase() : '';
-    let filtered = cachedProducts;
-    if (query) {
-      filtered = filtered.filter((p) => p.name.toLowerCase().includes(query));
-    } else if (selectedFamily) {
-      filtered = filtered.filter((p) => (p.category || '').trim().toLowerCase() === selectedFamily.toLowerCase());
-    }
+    // A family is open, so show its products on their own screen.
+    document.getElementById('family-screen').style.display = 'none';
+    document.getElementById('products-screen').style.display = '';
+    const familyLabel = document.getElementById('products-screen-family');
+    familyLabel.innerHTML = iconHtml(selectedFamily, null, 22) + '<span>' + escapeAttr(selectedFamily) + '</span>';
+    productListEl.innerHTML = '';
+    const inFamily = cachedProducts
+      .filter((p) => (p.category || '').trim().toLowerCase() === selectedFamily.toLowerCase())
+      .sort((a, b) => {
+        if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
+        return a.name.localeCompare(b.name);
+      });
+    inFamily.forEach((p) => productListEl.appendChild(productCard(p, false)));
 
-    const sorted = filtered.slice().sort((a, b) => {
-      if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
-      return a.name.localeCompare(b.name);
-    });
-
-    sorted.forEach((p) => {
-      const card = document.createElement('div');
-      card.className = 'line-card' + (p.discontinued ? ' line-card--discontinued' : '') + (p.featured ? ' line-card--featured' : '');
-
-      const main = document.createElement('button');
-      main.type = 'button';
-      main.className = 'line-card-main';
-      const gens = (p.refresh_history || []).length;
-      const last = productLastDate(p);
-      const meta = p.discontinued
-        ? 'Discontinued' + (p.discontinued_date ? ' ' + formatAdminDate(p.discontinued_date) : ', date missing')
-        : daysSinceText(last) || 'No generations yet';
-      main.innerHTML =
-        '<span class="line-card-icon">' + iconHtml(p.category, p.icon_url, 36) + '</span>' +
-        '<span class="line-card-text">' +
-          '<span class="line-card-name">' + escapeAttr(p.name) + (p.featured ? ' <span class="line-card-star" title="Featured on homepage">\u2605</span>' : '') + '</span>' +
-          (query || !selectedFamily ? '<span class="line-card-meta">' + escapeAttr(p.category || 'Other') + '</span>' : '') +
-          '<span class="line-card-meta">' + gens + ' generation' + (gens === 1 ? '' : 's') + '</span>' +
-          '<span class="line-card-status' + (p.discontinued ? ' line-card-status--discontinued' : (p.discontinued === false && !last ? ' line-card-status--empty' : '')) + '">' + escapeAttr(meta) + '</span>' +
-        '</span>';
-      main.addEventListener('click', () => editProduct(p.id));
-
-      const actions = document.createElement('div');
-      actions.className = 'line-card-actions';
-      const addGenBtn = document.createElement('button');
-      addGenBtn.type = 'button';
-      addGenBtn.className = 'admin-btn admin-btn--small admin-btn--primary';
-      addGenBtn.textContent = '+ Generation';
-      addGenBtn.addEventListener('click', () => editProduct(p.id, { focusGeneration: true }));
-      const editBtn = document.createElement('button');
-      editBtn.type = 'button';
-      editBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
-      editBtn.textContent = 'Edit';
-      editBtn.addEventListener('click', () => editProduct(p.id));
-      actions.appendChild(addGenBtn);
-      actions.appendChild(editBtn);
-      if (!p.featured && !p.discontinued) {
-        const featureBtn = document.createElement('button');
-        featureBtn.type = 'button';
-        featureBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
-        featureBtn.textContent = '\u2606 Feature';
-        featureBtn.title = 'Make this the featured product on the homepage';
-        featureBtn.addEventListener('click', () => makeFeatured(p));
-        actions.appendChild(featureBtn);
-      }
-
-      card.appendChild(main);
-      card.appendChild(actions);
-      productListEl.appendChild(card);
-    });
-
-    if (!sorted.length) {
-      productListEl.textContent = query ? 'No products match your search.' : 'Nothing in this family yet.';
-    }
-
-    if (!query && selectedFamily) {
-      const newCard = document.createElement('button');
-      newCard.type = 'button';
-      newCard.className = 'line-card line-card--new';
-      newCard.innerHTML = '<span class="family-tile-plus">+</span><span>Add a product to ' + escapeAttr(selectedFamily) + '</span>';
-      newCard.addEventListener('click', () => startNewProduct({ category: selectedFamily }));
-      productListEl.appendChild(newCard);
-    }
+    const newCard = document.createElement('button');
+    newCard.type = 'button';
+    newCard.className = 'line-card line-card--new';
+    newCard.innerHTML = '<span class="family-tile-plus">+</span><span>Add a product to ' + escapeAttr(selectedFamily) + '</span>';
+    newCard.addEventListener('click', () => startNewProduct({ category: selectedFamily }));
+    productListEl.appendChild(newCard);
   }
 
   const productSearchInputEl = document.getElementById('product-search-input');
@@ -1039,6 +1076,13 @@
 
   document.getElementById('add-as-refresh-btn').addEventListener('click', addGenerationFromPanel);
 
+  // Suggested names and the timeline wording follow the name as it's typed.
+  document.getElementById('name').addEventListener('input', () => {
+    document.getElementById('name-error').textContent = '';
+    renderRefreshHistory();
+    updateTimelineExamples();
+  });
+
   function renderVideoStatus() {
     videoStatusEl.innerHTML = '';
     if (!currentVideoUrl) {
@@ -1149,6 +1193,7 @@
     currentVideoUrl = null;
     onFamilyChanged();
     setTimelineName(null);
+    setTimelineMode('own');
     fillProductSelect(document.getElementById('replaced_by'), '');
     fillProductSelect(document.getElementById('previous_model'), '');
     document.querySelector('input[name="previous_model_action"][value="keep"]').checked = true;
@@ -1175,6 +1220,11 @@
   }
 
   document.getElementById('back-to-list-btn').addEventListener('click', backToList);
+  document.getElementById('back-to-families-btn').addEventListener('click', () => {
+    selectedFamily = null;
+    if (productSearchInputEl) productSearchInputEl.value = '';
+    renderProductList();
+  });
   document.getElementById('cancel-product-btn').addEventListener('click', backToList);
   document.getElementById('delete-product-btn').addEventListener('click', async () => {
     if (!editingId) return;

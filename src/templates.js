@@ -1392,13 +1392,20 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
   <div id="tab-products" class="admin-tab-panel">
     <div id="product-list-view">
-      <div class="admin-list-header">
-        <p class="admin-steps-guide"><span>1</span> Pick or add a family <span>2</span> Pick or add a product <span>3</span> Add its release dates</p>
-        <button type="button" id="new-product-btn" class="admin-btn admin-btn--primary">+ New product</button>
+      <div id="family-screen">
+        <h2 class="admin-screen-title"><span class="admin-step-num">1</span> Pick a family</h2>
+        <input type="search" id="product-search-input" class="admin-search-input" placeholder="Or search every product by name…" aria-label="Search products">
+        <div id="family-tiles" class="family-tiles" aria-label="Families"></div>
       </div>
-      <div id="family-tiles" class="family-tiles" aria-label="Families"></div>
-      <input type="search" id="product-search-input" class="admin-search-input" placeholder="Search every product by name…" aria-label="Search products">
-      <div id="product-list" class="line-card-grid"></div>
+      <div id="products-screen" style="display:none;">
+        <button type="button" id="back-to-families-btn" class="admin-back-link">&larr; All families</button>
+        <h2 class="admin-screen-title"><span class="admin-step-num">2</span> Pick a product <span id="products-screen-family" class="admin-screen-family"></span></h2>
+        <div id="product-list" class="line-card-grid"></div>
+      </div>
+      <div id="search-screen" style="display:none;">
+        <div id="search-results" class="line-card-grid"></div>
+      </div>
+      <button type="button" id="new-product-btn" hidden></button>
     </div>
 
     <div id="product-form-view" style="display:none;">
@@ -1440,15 +1447,27 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <p class="admin-hint">Leave blank to use the family icon.</p>
           </div>
           <div class="admin-subfield">
-            <span class="admin-subfield-label">Release history on this product&rsquo;s page</span>
-            <div class="segmented" role="radiogroup" aria-label="Release history shown">
-              <label><input type="radio" name="timeline_mode" value="family" checked><span>Whole family</span></label>
-              <label><input type="radio" name="timeline_mode" value="own"><span>This product only</span></label>
+            <span class="admin-subfield-label">On this product&rsquo;s own page, which dates should the Release history show?</span>
+            <div class="choice-cards" role="radiogroup" aria-label="Release history shown">
+              <label class="choice-card">
+                <input type="radio" name="timeline_mode" value="own" checked>
+                <span class="choice-card-body">
+                  <span class="choice-card-title">Only this product&rsquo;s dates</span>
+                  <span class="choice-card-note" id="timeline-own-example">Just the dates you list in step 3.</span>
+                </span>
+              </label>
+              <label class="choice-card">
+                <input type="radio" name="timeline_mode" value="family">
+                <span class="choice-card-body">
+                  <span class="choice-card-title">Every product in this family</span>
+                  <span class="choice-card-note" id="timeline-family-example">Its own dates plus the other products in the family.</span>
+                </span>
+              </label>
             </div>
-            <p class="admin-hint">The family page always shows every product in the family together, whichever you pick.</p>
-            <details class="admin-mini-details">
-              <summary>Share a timeline with another family</summary>
-              <label>Group name<select id="timeline_name_select"></select></label>
+            <p class="admin-hint">This only changes this one page. The family page always shows every product together.</p>
+            <details class="admin-mini-details" id="timeline-group-details">
+              <summary>Advanced: link this product to a group in another family</summary>
+              <label>Group<select id="timeline_name_select"></select></label>
               <div id="timeline-new-wrap" style="display:none;">
                 <label>New group name<input type="text" id="timeline_name" placeholder="e.g. iPhone" autocomplete="off"></label>
               </div>
