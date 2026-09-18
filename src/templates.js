@@ -1428,6 +1428,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <h3 class="admin-step-title"><span class="admin-step-num">2</span> Product</h3>
           <label>Name<input type="text" id="name" placeholder="e.g. AirPods Pro" autocomplete="off"></label>
           <p id="name-error" class="form-error"></p>
+          <label class="checkbox-label checkbox-label--feature"><input type="checkbox" id="featured"> &#9733; Feature this product on the homepage</label>
+          <p class="admin-hint">Only one product can be featured. Choosing this one un-features the current one.</p>
           <div class="admin-subfield">
             <span class="admin-subfield-label">Icon for this product <span class="admin-optional">Optional</span></span>
             <div class="admin-icon-row">
@@ -1437,13 +1439,21 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             </div>
             <p class="admin-hint">Leave blank to use the family icon.</p>
           </div>
-          <label>Release history shown on this product&rsquo;s page
-            <select id="timeline_name_select"></select>
-          </label>
-          <div id="timeline-new-wrap" style="display:none;">
-            <label>New group name<input type="text" id="timeline_name" placeholder="e.g. iPhone" autocomplete="off"></label>
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Release history on this product&rsquo;s page</span>
+            <div class="segmented" role="radiogroup" aria-label="Release history shown">
+              <label><input type="radio" name="timeline_mode" value="family" checked><span>Whole family</span></label>
+              <label><input type="radio" name="timeline_mode" value="own"><span>This product only</span></label>
+            </div>
+            <p class="admin-hint">The family page always shows every product in the family together, whichever you pick.</p>
+            <details class="admin-mini-details">
+              <summary>Share a timeline with another family</summary>
+              <label>Group name<select id="timeline_name_select"></select></label>
+              <div id="timeline-new-wrap" style="display:none;">
+                <label>New group name<input type="text" id="timeline_name" placeholder="e.g. iPhone" autocomplete="off"></label>
+              </div>
+            </details>
           </div>
-          <p class="admin-hint">&ldquo;This product only&rdquo; shows just its own dates. The family page always shows every product in the family together.</p>
 
           <div class="admin-subfield">
             <span class="admin-subfield-label">Starting price <span class="admin-optional">Optional</span></span>
@@ -1472,16 +1482,18 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </section>
 
         <section class="admin-step" id="step-generations">
-          <h3 class="admin-step-title"><span class="admin-step-num">3</span> Release dates</h3>
-          <p class="admin-hint">Every date this product has been released or refreshed. One date is fine.</p>
+          <h3 class="admin-step-title"><span class="admin-step-num">3</span> Dates</h3>
+          <p class="admin-hint">Every date in this product&rsquo;s life: its launch, each release or refresh, and the day it was discontinued.</p>
           <ul id="refresh-history-list" class="generation-list"></ul>
-          <div id="launch-date-display-wrap" class="admin-subfield" style="display:none;">
-            <span class="admin-subfield-label">Line first launched</span>
-            <p class="date-chip" id="launch-date-display"></p>
-          </div>
           <div class="generation-add" id="generation-add-panel">
+            <p class="generation-add-title">Add a date</p>
+            <div class="segmented segmented--type" role="radiogroup" aria-label="Type of date">
+              <label><input type="radio" name="entry_type" value="launch"><span>&#9679; Launch</span></label>
+              <label><input type="radio" name="entry_type" value="release" checked><span>&#9679; Release</span></label>
+              <label><input type="radio" name="entry_type" value="discontinued"><span>&#9679; Discontinued</span></label>
+            </div>
             <div class="generation-add-row">
-              ${datePrecisionFieldHtml('new_refresh_date', 'Add a release date')}
+              ${datePrecisionFieldHtml('new_refresh_date', 'Date')}
               <button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--primary">+ Add</button>
             </div>
             <details class="admin-mini-details" id="generation-extra-details">
@@ -1489,7 +1501,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <div class="admin-subfield">
                 <label><span class="admin-label-row">Name <span class="admin-optional">Leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
                 ${datePrecisionFieldHtml('new_generation_announced', 'Announced')}
-                <label class="checkbox-label" id="first-launch-wrap"><input type="checkbox" id="new_generation_is_first"> This was the very first launch of this line</label>
               </div>
             </details>
             <p id="generation-add-error" class="form-error"></p>
@@ -1504,19 +1515,11 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </section>
 
         <section class="admin-step" id="step-status">
-          <h3 class="admin-step-title"><span class="admin-step-num">4</span> Status</h3>
-          <div class="segmented segmented--status" role="radiogroup" aria-label="Status">
-            <label><input type="radio" name="status_toggle" value="current" checked><span>Current</span></label>
-            <label><input type="radio" name="status_toggle" value="discontinued"><span>Discontinued</span></label>
-          </div>
+          <h3 class="admin-step-title"><span class="admin-step-num">4</span> Replacement <span class="admin-optional">Optional</span></h3>
+          <p class="admin-status-readout" id="status-readout"></p>
           <input type="checkbox" id="discontinued" hidden>
-          <div id="discontinued-fields" class="admin-discontinued-fields" style="display:none;">
-            ${datePrecisionFieldHtml('discontinued_date', 'Discontinued date', 'Required. Use Year only if you don&rsquo;t know the exact day.')}
-            <p id="discontinued-error" class="form-error"></p>
-            <label><span class="admin-label-row">Replaced by <span class="admin-optional">Optional</span></span><select id="replaced_by"></select></label>
-            <label><span class="admin-label-row">Why it went <span class="admin-optional">Optional, only if there&rsquo;s more to say than &ldquo;Replaced by&rdquo;</span></span><textarea id="discontinued_reason" rows="2"></textarea></label>
-          </div>
-          <label><span class="admin-label-row">Replaces <span class="admin-optional">Optional</span></span><select id="previous_model"></select></label>
+          <p id="discontinued-error" class="form-error"></p>
+          <label><span class="admin-label-row">This product replaces <span class="admin-optional">Optional</span></span><select id="previous_model"></select></label>
           <div id="previous-model-choice" class="admin-subfield" style="display:none;">
             <span class="admin-subfield-label">Is that older product still on sale?</span>
             <div class="segmented segmented--small" role="radiogroup" aria-label="Older product status">
@@ -1524,6 +1527,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <label><input type="radio" name="previous_model_action" value="discontinue"><span>Mark it discontinued</span></label>
             </div>
             <p class="admin-hint">&ldquo;Mark it discontinued&rdquo; sets its discontinued date to this product&rsquo;s first release date and points it here.</p>
+          </div>
+          <div id="discontinued-fields" class="admin-discontinued-fields" style="display:none;">
+            <label><span class="admin-label-row">Replaced by <span class="admin-optional">Optional</span></span><select id="replaced_by"></select></label>
+            <label><span class="admin-label-row">Why it went <span class="admin-optional">Optional</span></span><textarea id="discontinued_reason" rows="2"></textarea></label>
           </div>
         </section>
 
@@ -1538,7 +1545,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </section>
 
         <details class="admin-advanced">
-          <summary><span class="admin-step-num">6</span> Extras (optional): video and homepage</summary>
+          <summary><span class="admin-step-num">6</span> Extras (optional): video</summary>
 
           <div class="admin-subfield">
             <span class="admin-subfield-label">Video</span>
@@ -1547,8 +1554,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
           </div>
 
-          <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
-          <p class="admin-hint">Only one product can be featured at a time. Choosing this one un-features the current one.</p>
 
           <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
         </details>

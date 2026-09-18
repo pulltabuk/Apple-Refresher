@@ -18,6 +18,7 @@
   let currentRefreshHistory = [];
   let currentOriginalLaunchDate = null;
   let currentGenerationDetails = {};
+  let currentDiscontinuedDate = null;
   let currentIconUrl = null;
   let currentVideoUrl = null;
 
@@ -98,7 +99,7 @@
     updateDatePrecisionVisibility(prefix);
   }
 
-  const DATE_FIELD_PREFIXES = ['new_refresh_date', 'new_generation_announced', 'discontinued_date', 'gallery_date_taken'];
+  const DATE_FIELD_PREFIXES = ['new_refresh_date', 'new_generation_announced', 'gallery_date_taken'];
 
   DATE_FIELD_PREFIXES.forEach(wireDatePrecisionField);
 
@@ -413,6 +414,25 @@
     if (Array.from(select.options).some((o) => o.value === value)) select.value = value;
   }
 
+  function timelineMode() {
+    const checked = document.querySelector('input[name="timeline_mode"]:checked');
+    return checked ? checked.value : 'family';
+  }
+
+  function setTimelineMode(mode) {
+    document.querySelector('input[name="timeline_mode"][value="' + (mode === 'own' ? 'own' : 'family') + '"]').checked = true;
+  }
+
+  document.querySelectorAll('input[name="timeline_mode"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      if (radio.checked) {
+        const select = document.getElementById('timeline_name_select');
+        select.value = '';
+        document.getElementById('timeline-new-wrap').style.display = 'none';
+      }
+    });
+  });
+
   document.getElementById('timeline_name_select').addEventListener('change', (e) => {
     const isNew = e.target.value === TIMELINE_NEW;
     document.getElementById('timeline-new-wrap').style.display = isNew ? '' : 'none';
@@ -421,12 +441,18 @@
 
   function getTimelineName() {
     const selectValue = document.getElementById('timeline_name_select').value;
-    if (selectValue === TIMELINE_OWN) return document.getElementById('name').value.trim() || null;
-    if (selectValue !== TIMELINE_NEW) return selectValue || null;
-    const typed = document.getElementById('timeline_name').value.trim();
-    if (!typed) return null;
-    const match = existingTimelineNames().find((n) => n.trim().toLowerCase() === typed.toLowerCase());
-    return match || typed;
+    if (selectValue === TIMELINE_NEW) {
+      const typed = document.getElementById('timeline_name').value.trim();
+      if (typed) {
+        const match = existingTimelineNames().find((n) => n.trim().toLowerCase() === typed.toLowerCase());
+        return match || typed;
+      }
+    } else if (selectValue && selectValue !== TIMELINE_OWN) {
+      return selectValue;
+    }
+    // No shared group chosen, so the two buttons decide: the whole family
+    // (no group) or this product on its own (a group of one, named after it).
+    return timelineMode() === 'own' ? (document.getElementById('name').value.trim() || null) : null;
   }
 
   function setTimelineName(value) {
@@ -435,19 +461,18 @@
     const input = document.getElementById('timeline_name');
     const wrap = document.getElementById('timeline-new-wrap');
     const ownName = document.getElementById('name').value.trim().toLowerCase();
+    input.value = '';
+    wrap.style.display = 'none';
+    select.value = '';
     if (!value) {
-      select.value = '';
-      input.value = '';
-      wrap.style.display = 'none';
+      setTimelineMode('family');
     } else if (ownName && value.trim().toLowerCase() === ownName) {
-      select.value = TIMELINE_OWN;
-      input.value = '';
-      wrap.style.display = 'none';
+      setTimelineMode('own');
     } else if (Array.from(select.options).some((o) => o.value === value)) {
+      setTimelineMode('family');
       select.value = value;
-      input.value = '';
-      wrap.style.display = 'none';
     } else {
+      setTimelineMode('family');
       select.value = TIMELINE_NEW;
       input.value = value;
       wrap.style.display = '';
@@ -735,85 +760,100 @@
     return currentGenerationDetails[date];
   }
 
-  // Each row stays collapsed to its date, with the name shown as plain
-  // text. Name and announced fields only appear when "Edit" is tapped,
-  // so a product with one release date shows one short line.
+  // One list of dated events: Launch, Release and Discontinued. Each row
+  // is a single line; the name and announced date only appear on Edit.
   const expandedGenerations = new Set();
+
+  function entryTypeFor(date, dates) {
+    if (currentDiscontinuedDate === date) return 'discontinued';
+    if (currentOriginalLaunchDate === date || (!currentOriginalLaunchDate && date === dates[0])) return 'launch';
+    return 'release';
+  }
+
+  const ENTRY_LABELS = { launch: 'Launch', release: 'Release', discontinued: 'Discontinued' };
+
+  function allEntryDates() {
+    const dates = currentRefreshHistory.slice();
+    if (currentDiscontinuedDate && dates.indexOf(currentDiscontinuedDate) === -1) dates.push(currentDiscontinuedDate);
+    return dates.sort();
+  }
 
   function renderRefreshHistory() {
     refreshHistoryListEl.innerHTML = '';
     const productName = document.getElementById('name').value.trim();
-    const dates = currentRefreshHistory.slice().sort();
+    const releaseDates = currentRefreshHistory.slice().sort();
+    const dates = allEntryDates();
     if (!dates.length) {
       const empty = document.createElement('li');
       empty.className = 'generation-empty';
-      empty.textContent = 'No release dates yet. Add the first one below.';
+      empty.textContent = 'No dates yet. Add the launch date below.';
       refreshHistoryListEl.appendChild(empty);
     }
     dates.slice().reverse().forEach((date) => {
-      const index = dates.indexOf(date);
+      const type = entryTypeFor(date, releaseDates);
+      const index = releaseDates.indexOf(date);
       const info = currentGenerationDetails[date] || {};
-      const autoName = autoGenerationName(productName, index, dates.length);
+      const autoName = index === -1 ? '' : autoGenerationName(productName, index, releaseDates.length);
       const li = document.createElement('li');
-      li.className = 'generation-item' + (index === dates.length - 1 ? ' generation-item--latest' : '');
+      li.className = 'generation-item generation-item--' + type;
 
       const top = document.createElement('div');
       top.className = 'generation-item-top';
+
+      const tag = document.createElement('span');
+      tag.className = 'entry-tag entry-tag--' + type;
+      tag.textContent = ENTRY_LABELS[type];
+      top.appendChild(tag);
+
       const released = document.createElement('span');
       released.className = 'generation-date';
       released.textContent = formatAdminDate(date);
       top.appendChild(released);
-      if (dates.length > 1 && index === dates.length - 1) {
-        const latest = document.createElement('span');
-        latest.className = 'generation-tag generation-tag--latest';
-        latest.textContent = 'Latest';
-        top.appendChild(latest);
-      }
-      if (dates.length > 1 && currentOriginalLaunchDate === date) {
-        const first = document.createElement('span');
-        first.className = 'generation-tag';
-        first.textContent = 'First launch';
-        top.appendChild(first);
-      }
 
-      const nameText = document.createElement('span');
-      nameText.className = 'generation-name-text' + ((info.name || '').trim() ? '' : ' generation-name-text--auto');
-      nameText.textContent = (info.name || '').trim() || autoName;
-      top.appendChild(nameText);
+      if (type !== 'discontinued') {
+        const nameText = document.createElement('span');
+        nameText.className = 'generation-name-text' + ((info.name || '').trim() ? '' : ' generation-name-text--auto');
+        nameText.textContent = (info.name || '').trim() || autoName;
+        top.appendChild(nameText);
+      }
 
       const isOpen = expandedGenerations.has(date);
-      const editBtn = document.createElement('button');
-      editBtn.type = 'button';
-      editBtn.className = 'generation-edit';
-      editBtn.textContent = isOpen ? 'Done' : 'Edit';
-      editBtn.addEventListener('click', () => {
-        if (isOpen) expandedGenerations.delete(date);
-        else expandedGenerations.add(date);
-        renderRefreshHistory();
-      });
+      const actions = document.createElement('span');
+      actions.className = 'generation-item-actions';
+      if (type !== 'discontinued') {
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'generation-edit';
+        editBtn.textContent = isOpen ? 'Done' : 'Edit';
+        editBtn.addEventListener('click', () => {
+          if (isOpen) expandedGenerations.delete(date);
+          else expandedGenerations.add(date);
+          renderRefreshHistory();
+        });
+        actions.appendChild(editBtn);
+      }
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'generation-remove';
       removeBtn.textContent = 'Remove';
       removeBtn.addEventListener('click', () => {
-        if (!window.confirm('Remove the ' + formatAdminDate(date) + ' release date?')) return;
-        currentRefreshHistory = currentRefreshHistory.filter((d) => d !== date);
-        delete currentGenerationDetails[date];
-        expandedGenerations.delete(date);
-        if (currentOriginalLaunchDate === date) {
-          currentOriginalLaunchDate = null;
-          renderLaunchDateDisplay();
+        if (!window.confirm('Remove the ' + ENTRY_LABELS[type].toLowerCase() + ' date ' + formatAdminDate(date) + '?')) return;
+        if (type === 'discontinued') {
+          currentDiscontinuedDate = null;
+        } else {
+          currentRefreshHistory = currentRefreshHistory.filter((d) => d !== date);
+          delete currentGenerationDetails[date];
+          expandedGenerations.delete(date);
+          if (currentOriginalLaunchDate === date) currentOriginalLaunchDate = null;
         }
         renderRefreshHistory();
+        updateStatusReadout();
       });
-      const actions = document.createElement('span');
-      actions.className = 'generation-item-actions';
-      actions.appendChild(editBtn);
       actions.appendChild(removeBtn);
       top.appendChild(actions);
       li.appendChild(top);
 
-      if (isOpen) {
+      if (isOpen && type !== 'discontinued') {
         const fields = document.createElement('div');
         fields.className = 'generation-item-fields';
 
@@ -856,18 +896,48 @@
       refreshHistoryListEl.appendChild(li);
     });
     updateGenerationSuggestion();
-    // The badge choice only means something with more than one date, and
-    // the first date added is the first launch by definition.
-    document.getElementById('days-basis-wrap').style.display = dates.length > 1 ? '' : 'none';
-    document.getElementById('first-launch-wrap').style.display = dates.length ? '' : 'none';
+    document.getElementById('days-basis-wrap').style.display = releaseDates.length > 1 ? '' : 'none';
+    // Nothing to launch twice, and nothing to discontinue twice.
+    setEntryTypeAvailability(releaseDates.length, !!currentDiscontinuedDate);
   }
 
-  // Suggested names follow the product name as it's typed. Only the
-  // placeholders change, names already typed for a generation stay.
-  document.getElementById('name').addEventListener('input', () => {
-    document.getElementById('name-error').textContent = '';
-    renderRefreshHistory();
-  });
+  function setEntryTypeAvailability(releaseCount, hasDiscontinued) {
+    const launch = document.querySelector('input[name="entry_type"][value="launch"]');
+    const release = document.querySelector('input[name="entry_type"][value="release"]');
+    const discontinued = document.querySelector('input[name="entry_type"][value="discontinued"]');
+    const hasLaunch = !!currentOriginalLaunchDate || releaseCount > 0;
+    // A product launches once and is discontinued once, so those stay
+    // visible but greyed out after they've been used.
+    const setState = (input, unavailable, why) => {
+      input.disabled = unavailable;
+      const label = input.closest('label');
+      label.classList.toggle('segmented-option--off', unavailable);
+      label.title = unavailable ? why : '';
+    };
+    setState(launch, hasLaunch, 'This product already has a launch date');
+    setState(discontinued, hasDiscontinued, 'This product already has a discontinued date');
+    setState(release, false, '');
+    if (!hasLaunch) launch.checked = true;
+    else if (launch.checked || (discontinued.checked && hasDiscontinued)) release.checked = true;
+  }
+
+  function selectedEntryType() {
+    const checked = document.querySelector('input[name="entry_type"]:checked');
+    return checked ? checked.value : 'release';
+  }
+
+  // Status is simply read off the dates, so there is no separate switch
+  // to keep in step with them.
+  function updateStatusReadout() {
+    const readout = document.getElementById('status-readout');
+    const isDiscontinued = !!currentDiscontinuedDate;
+    document.getElementById('discontinued').checked = isDiscontinued;
+    document.getElementById('discontinued-fields').style.display = isDiscontinued ? '' : 'none';
+    readout.className = 'admin-status-readout admin-status-readout--' + (isDiscontinued ? 'discontinued' : 'current');
+    readout.textContent = isDiscontinued
+      ? 'Discontinued ' + formatAdminDate(currentDiscontinuedDate) + '. Add or remove that date in step 3 to change this.'
+      : 'Current. Add a Discontinued date in step 3 if it has been retired.';
+  }
 
   const richTextEditor = document.getElementById('rumor_note_editor');
   if (document.queryCommandSupported && document.queryCommandSupported('defaultParagraphSeparator')) {
@@ -918,16 +988,15 @@
   document.getElementById('richtext-clear-all-btn').addEventListener('click', () => {
     if (!richTextEditor.textContent.trim()) return;
     if (!window.confirm('Remove all formatting from the notes? This keeps the text but clears bold, italic, and links.')) return;
-    const escapeText = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escapeText = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const paragraphs = extractParagraphs(richTextEditor);
-    richTextEditor.innerHTML = paragraphs.map((p) => '<p>' + escapeText(p) + '</p>').join('');
+    richTextEditor.innerHTML = paragraphs.map((para) => '<p>' + escapeText(para) + '</p>').join('');
   });
 
   function resetGenerationPanel() {
     setDatePrecisionValue('new_refresh_date', null);
     setDatePrecisionValue('new_generation_announced', null);
     document.getElementById('new_generation_name').value = '';
-    document.getElementById('new_generation_is_first').checked = false;
     document.getElementById('generation-add-error').textContent = '';
     const extra = document.getElementById('generation-extra-details');
     if (extra) extra.open = false;
@@ -941,8 +1010,16 @@
       errorEl.textContent = 'Pick a date first.';
       return;
     }
+    const type = selectedEntryType();
+    if (type === 'discontinued') {
+      currentDiscontinuedDate = value;
+      resetGenerationPanel();
+      renderRefreshHistory();
+      updateStatusReadout();
+      return;
+    }
     if (currentRefreshHistory.indexOf(value) !== -1) {
-      errorEl.textContent = 'There is already a generation on ' + formatAdminDate(value) + '.';
+      errorEl.textContent = 'There is already a date on ' + formatAdminDate(value) + '.';
       return;
     }
     const name = document.getElementById('new_generation_name').value.trim();
@@ -952,55 +1029,15 @@
     if (name || announced) {
       currentGenerationDetails[value] = { name: name || null, announced: announced || null };
     }
-    // The first date added is the line's first launch by definition, so
-    // there is nothing to tick in the common case.
-    if (document.getElementById('new_generation_is_first').checked || (!currentOriginalLaunchDate && currentRefreshHistory.length === 1)) {
+    if (type === 'launch' || (!currentOriginalLaunchDate && currentRefreshHistory.length === 1)) {
       currentOriginalLaunchDate = value;
-      renderLaunchDateDisplay();
     }
     resetGenerationPanel();
     renderRefreshHistory();
-  }
-
-  function renderLaunchDateDisplay() {
-    const wrap = document.getElementById('launch-date-display-wrap');
-    const display = document.getElementById('launch-date-display');
-    // Only worth showing separately when it isn't already visible as
-    // one of this product's own generations (e.g. a line's origin date
-    // set on a later model).
-    if (!currentOriginalLaunchDate || currentRefreshHistory.indexOf(currentOriginalLaunchDate) !== -1) {
-      wrap.style.display = 'none';
-      return;
-    }
-    wrap.style.display = '';
-    display.innerHTML = '';
-    display.appendChild(document.createTextNode(formatAdminDate(currentOriginalLaunchDate) + ' '));
-    const clearBtn = document.createElement('button');
-    clearBtn.type = 'button';
-    clearBtn.textContent = '\u00d7';
-    clearBtn.setAttribute('aria-label', 'Clear launch date');
-    clearBtn.addEventListener('click', () => {
-      currentOriginalLaunchDate = null;
-      renderLaunchDateDisplay();
-      renderRefreshHistory();
-    });
-    display.appendChild(clearBtn);
+    updateStatusReadout();
   }
 
   document.getElementById('add-as-refresh-btn').addEventListener('click', addGenerationFromPanel);
-
-  // --- Step 4: status toggle. #discontinued (hidden) stays in sync.
-
-  function setStatusToggle(isDiscontinued) {
-    document.querySelector('input[name="status_toggle"][value="' + (isDiscontinued ? 'discontinued' : 'current') + '"]').checked = true;
-    document.getElementById('discontinued').checked = !!isDiscontinued;
-    document.getElementById('discontinued-fields').style.display = isDiscontinued ? '' : 'none';
-    document.getElementById('discontinued-error').textContent = '';
-  }
-
-  document.querySelectorAll('input[name="status_toggle"]').forEach((radio) => {
-    radio.addEventListener('change', () => setStatusToggle(radio.value === 'discontinued' && radio.checked));
-  });
 
   function renderVideoStatus() {
     videoStatusEl.innerHTML = '';
@@ -1072,12 +1109,11 @@
     document.querySelector('input[name="previous_model_action"][value="keep"]').checked = true;
     updatePreviousModelChoice();
     document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
-    setDatePrecisionValue('discontinued_date', p.discontinued_date || null);
-    setStatusToggle(!!p.discontinued);
+    currentDiscontinuedDate = p.discontinued ? (p.discontinued_date || null) : null;
     expandedGenerations.clear();
     resetGenerationPanel();
-    renderLaunchDateDisplay();
     renderRefreshHistory();
+    updateStatusReadout();
     renderVideoStatus();
     document.getElementById('delete-product-btn').style.display = '';
     showProductForm();
@@ -1117,12 +1153,11 @@
     fillProductSelect(document.getElementById('previous_model'), '');
     document.querySelector('input[name="previous_model_action"][value="keep"]').checked = true;
     updatePreviousModelChoice();
-    setDatePrecisionValue('discontinued_date', null);
-    setStatusToggle(false);
+    currentDiscontinuedDate = null;
     expandedGenerations.clear();
     resetGenerationPanel();
-    renderLaunchDateDisplay();
     renderRefreshHistory();
+    updateStatusReadout();
     renderVideoStatus();
     document.getElementById('delete-product-btn').style.display = 'none';
     document.getElementById('form-title').textContent = preset ? 'New product in ' + preset : 'New product';
@@ -1228,8 +1263,8 @@
     try {
       const name = document.getElementById('name').value.trim();
       const category = canonicalFamily(document.getElementById('category').value);
-      const isDiscontinued = document.getElementById('discontinued').checked;
-      const discontinuedDate = getDatePrecisionValue('discontinued_date');
+      const isDiscontinued = !!currentDiscontinuedDate;
+      const discontinuedDate = currentDiscontinuedDate;
 
       let firstError = null;
       if (!category) {
@@ -1240,12 +1275,8 @@
         document.getElementById('name-error').textContent = 'Give this product line a name.';
         firstError = firstError || document.getElementById('step-line');
       }
-      if (isDiscontinued && !discontinuedDate) {
-        document.getElementById('discontinued-error').textContent = 'Add the discontinued date (Year only is fine), or switch back to Current.';
-        firstError = firstError || document.getElementById('step-status');
-      }
       const pendingGenerationDate = getDatePrecisionValue('new_refresh_date');
-      if (pendingGenerationDate && currentRefreshHistory.indexOf(pendingGenerationDate) === -1) {
+      if (pendingGenerationDate && currentRefreshHistory.indexOf(pendingGenerationDate) === -1 && pendingGenerationDate !== currentDiscontinuedDate) {
         document.getElementById('generation-add-error').textContent = 'You picked a date but haven\u2019t added it yet. Tap "+ Add", or clear the date.';
         firstError = firstError || document.getElementById('step-generations');
       }
