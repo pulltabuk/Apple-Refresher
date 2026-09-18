@@ -1199,12 +1199,43 @@
     loadProducts();
   }
 
+  // Deleting a product leaves its page address dead, so admin offers to
+  // point it at whatever replaced it. The build turns these into 301s.
+  async function askForRedirect(product) {
+    const others = cachedProducts
+      .filter((p) => p.id !== product.id)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const sameFamily = others.filter((p) => (p.category || '').toLowerCase() === (product.category || '').toLowerCase());
+    const choices = (sameFamily.length ? sameFamily : others).slice(0, 20);
+    const menu = choices.map((p, i) => (i + 1) + '. ' + p.name).join('\n');
+    const answer = window.prompt(
+      'Where should "' + product.name + '" send its old visitors and Google results?\n\n' +
+      'Type a number, or leave blank to send them to the ' + (product.category || 'products') + ' page.\n\n' + menu,
+      ''
+    );
+    if (answer === null) return null;
+    const picked = choices[parseInt(answer, 10) - 1];
+    if (picked) return '/products/' + picked.slug + '/';
+    return '/categories/' + slugify(product.category || 'other') + '/';
+  }
+
   async function deleteProduct(id) {
+    const product = cachedProducts.find((p) => p.id === id);
     if (!window.confirm('Delete this product? This cannot be undone.')) return false;
+    let redirectTo = null;
+    if (product && window.confirm('Send its old page address somewhere, so existing links and Google results don\u2019t hit a "page not found"?')) {
+      redirectTo = await askForRedirect(product);
+    }
     const { error } = await client.from('products').delete().eq('id', id);
     if (error) {
       window.alert('Delete failed: ' + error.message);
       return false;
+    }
+    if (product && redirectTo) {
+      const redirectResult = await client.from('product_redirects').upsert({ from_slug: product.slug, to_path: redirectTo });
+      if (redirectResult.error) {
+        window.alert('The product was deleted, but the redirect could not be saved: ' + redirectResult.error.message + '\n\nRun supabase-schema-update-21.sql if you have not yet.');
+      }
     }
     await loadProducts();
     return true;

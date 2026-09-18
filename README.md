@@ -12,7 +12,7 @@ No JavaScript rendering on the way in, so it's crawlable from day one.
    `supabase-schema-update-4.sql`, then `supabase-schema-update-5.sql`,
    then `supabase-schema-update-6.sql`, then `supabase-schema-update-7.sql`,
    then `supabase-schema-update-8.sql`, then `supabase-schema-update-9.sql`, then `supabase-schema-update-10.sql`,
-   then `supabase-schema-update-11.sql`, then `supabase-schema-update-12.sql`, then `supabase-schema-update-13.sql`, then `supabase-schema-update-14.sql`, then `supabase-schema-update-15.sql`, then `supabase-schema-update-16.sql`, then `supabase-schema-update-17.sql`, then `supabase-schema-update-18.sql`, then `supabase-schema-update-19.sql`, then `supabase-schema-update-20.sql`.
+   then `supabase-schema-update-11.sql`, then `supabase-schema-update-12.sql`, then `supabase-schema-update-13.sql`, then `supabase-schema-update-14.sql`, then `supabase-schema-update-15.sql`, then `supabase-schema-update-16.sql`, then `supabase-schema-update-17.sql`, then `supabase-schema-update-18.sql`, then `supabase-schema-update-19.sql`, then `supabase-schema-update-20.sql`, then `supabase-schema-update-21.sql`.
 3. Storage: create a bucket called exactly `product-images`, and make
    sure its **Public** toggle is on. Uploads will silently produce
    broken image links if this is off, even though the upload itself
@@ -73,6 +73,11 @@ engines won't list it, but it isn't hidden, anyone who finds the URL
 still needs your login to change anything.
 
 ## Notes
+
+- Deleting a product in admin offers to record a redirect for its old
+  page address. Those are stored in `product_redirects` and written to
+  `dist/_redirects` at build time as 301s, so old links and search
+  results land on the replacement page.
 
 - Products are organised as family (Category) > product line (a product)
   > generations (dates in `refresh_history`). Each generation can have an

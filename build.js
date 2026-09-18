@@ -52,6 +52,20 @@ async function loadProducts() {
   return require('./src/data.sample').products;
 }
 
+// Redirects for deleted product pages. The table is optional: if it
+// hasn't been created yet, the build carries on without redirects.
+async function loadRedirects() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return [];
+  const { createClient } = require('@supabase/supabase-js');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data, error } = await supabase.from('product_redirects').select('*');
+  if (error) {
+    console.log('No redirects table yet, skipping redirects.');
+    return [];
+  }
+  return data || [];
+}
+
 async function loadSiteContent() {
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     const { createClient } = require('@supabase/supabase-js');
@@ -307,6 +321,17 @@ ${sitemapUrls.map((u) => `  <url><loc>${SITE_URL}${u.path}</loc>${u.lastmod ? `<
 </urlset>
 `;
   write('sitemap.xml', sitemapXml);
+
+  const redirects = await loadRedirects();
+  const livePaths = new Set(sitemapUrls.map((u) => u.path));
+  // Never redirect a page that exists again, e.g. if a slug is reused.
+  const redirectLines = redirects
+    .filter((r) => r.from_slug && r.to_path && !livePaths.has('/products/' + r.from_slug + '/'))
+    .map((r) => `/products/${r.from_slug}/* ${r.to_path} 301!`);
+  if (redirectLines.length) {
+    fs.writeFileSync(path.join(DIST, '_redirects'), redirectLines.join('\n') + '\n');
+    console.log(`Wrote ${redirectLines.length} redirect${redirectLines.length === 1 ? '' : 's'}.`);
+  }
 
   const robotsTxt = `User-agent: *
 Disallow: /admin/
