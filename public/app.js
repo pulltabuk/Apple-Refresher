@@ -619,6 +619,8 @@
         : product.apple_url
         ? specRowJS('Official Apple page', '<a href="' + product.apple_url + '" target="_blank" rel="noopener">apple.com &#8599;</a>')
         : '',
+      product.specs_url ? specRowJS('Tech specs', '<a href="' + product.specs_url + '" target="_blank" rel="noopener">Apple specs &#8599;</a>') : '',
+      product.press_release_url ? specRowJS('Press release', '<a href="' + product.press_release_url + '" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>') : '',
       product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
       product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people'),
     ].filter(Boolean).join('');

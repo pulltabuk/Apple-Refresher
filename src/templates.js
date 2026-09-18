@@ -1235,6 +1235,8 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
       : product.apple_url
       ? specRow('Official Apple page', `<a href="${product.apple_url}" target="_blank" rel="noopener">apple.com &#8599;</a>`)
       : '',
+    product.specs_url ? specRow('Tech specs', `<a href="${product.specs_url}" target="_blank" rel="noopener">Apple specs &#8599;</a>`) : '',
+    product.press_release_url ? specRow('Press release', `<a href="${product.press_release_url}" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>`) : '',
     product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(externalLinkLabel(product))} &#8599;</a>`) : '',
     product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> people`),
   ].filter(Boolean).join('\n');
@@ -1460,6 +1462,13 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <div><button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--primary">+ Add generation</button></div>
             <p id="generation-add-error" class="form-error"></p>
           </div>
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">The big number on this product counts days since</span>
+            <div class="segmented segmented--small" role="radiogroup" aria-label="Badge basis">
+              <label><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked><span>Latest generation</span></label>
+              <label><input type="radio" name="days_basis" id="days_basis_launch" value="launch"><span>First launch</span></label>
+            </div>
+          </div>
         </section>
 
         <section class="admin-step" id="step-status">
@@ -1475,10 +1484,22 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <label><span class="admin-label-row">Replaced by <span class="admin-optional">Optional</span></span><select id="replaced_by"></select></label>
             <label><span class="admin-label-row">Why it went <span class="admin-optional">Optional, only if there&rsquo;s more to say than &ldquo;Replaced by&rdquo;</span></span><textarea id="discontinued_reason" rows="2"></textarea></label>
           </div>
+          <label><span class="admin-label-row">Replaces <span class="admin-optional">Optional</span></span><select id="previous_model"></select></label>
+          <p class="admin-hint">The older line this one took over from. Choosing it marks that one Discontinued automatically.</p>
+        </section>
+
+        <section class="admin-step" id="step-links">
+          <h3 class="admin-step-title"><span class="admin-step-num">5</span> Links <span class="admin-optional">All optional</span></h3>
+          <label>Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/airpods-pro/"></label>
+          <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> Apple has taken this page down</label>
+          <label>Apple specs page<input type="url" id="specs_url" placeholder="https://support.apple.com/en-gb/111854"></label>
+          <label>Wikipedia page<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/AirPods"></label>
+          <label>Press release<input type="url" id="press_release_url" placeholder="https://www.apple.com/newsroom/..."></label>
+          <p class="admin-hint">Press releases usually only exist for recent products. Leave it blank otherwise.</p>
         </section>
 
         <details class="admin-advanced">
-          <summary><span class="admin-step-num">5</span> Extras (optional): price, links, notes, video, homepage</summary>
+          <summary><span class="admin-step-num">6</span> Extras (optional): price, notes, video, homepage</summary>
 
           <div class="admin-subfield">
             <span class="admin-subfield-label">Starting price</span>
@@ -1491,22 +1512,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             </div>
           </div>
 
-          <div class="admin-subfield">
-            <span class="admin-subfield-label">Badge counts days since</span>
-            <div class="segmented segmented--small" role="radiogroup" aria-label="Badge basis">
-              <label><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked><span>Last generation</span></label>
-              <label><input type="radio" name="days_basis" id="days_basis_launch" value="launch"><span>First launch</span></label>
-            </div>
-          </div>
 
-          <label><span class="admin-label-row">Previous model <span class="admin-optional">Optional</span></span><select id="previous_model"></select></label>
-          <p class="admin-hint">Picking one marks it Discontinued and sets its &ldquo;Replaced by&rdquo; to this product automatically.</p>
 
           <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
 
-          <label>Official Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/uk/airpods-pro/"></label>
-          <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> No longer available on Apple's website</label>
-          <label>External link (e.g. Wikipedia)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
 
           <div class="admin-subfield">
             <span class="admin-subfield-label">Notes</span>

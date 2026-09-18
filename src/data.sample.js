@@ -158,6 +158,10 @@ const products = [
     refresh_history: ['2019-10-30', '2022-09-23', '2025-09-19'],
     generation_details: {},
     timeline_name: 'AirPods Pro',
+    apple_url: 'https://www.apple.com/airpods-pro/',
+    specs_url: 'https://support.apple.com/en-gb/111851',
+    press_release_url: 'https://www.apple.com/newsroom/2025/09/airpods-pro-3/',
+    external_link: 'https://en.wikipedia.org/wiki/AirPods_Pro',
     featured: false, waiting_count: 22, discontinued: false,
   },
 ];

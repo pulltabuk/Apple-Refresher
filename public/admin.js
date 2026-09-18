@@ -996,6 +996,8 @@
     })();
     document.getElementById('external_link').value = p.external_link || '';
     document.getElementById('apple_url').value = p.apple_url || '';
+    document.getElementById('specs_url').value = p.specs_url || '';
+    document.getElementById('press_release_url').value = p.press_release_url || '';
     document.getElementById('apple_url_unavailable').checked = !!p.apple_url_unavailable;
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
@@ -1210,6 +1212,8 @@
           return symbol + raw;
         })(),
         external_link: document.getElementById('external_link').value.trim() || null,
+        specs_url: document.getElementById('specs_url').value.trim() || null,
+        press_release_url: document.getElementById('press_release_url').value.trim() || null,
         apple_url: document.getElementById('apple_url').value.trim() || null,
         apple_url_unavailable: document.getElementById('apple_url_unavailable').checked,
         refresh_history: refreshHistoryWithLaunch,
@@ -1237,9 +1241,9 @@
 
       if (result.error) {
         console.error('Save failed:', result.error);
-        const missingColumns = /generation_details|icon_url/.test(result.error.message || '');
+        const missingColumns = /generation_details|icon_url|specs_url|press_release_url/.test(result.error.message || '');
         window.alert(missingColumns
-          ? 'Save failed because the database hasn\u2019t been updated yet. Run supabase-schema-update-19.sql in the Supabase SQL editor, then save again.'
+          ? 'Save failed because the database hasn\u2019t been updated yet. Run the latest supabase-schema-update SQL file (19 and 20) in the Supabase SQL editor, then save again.'
           : 'Save failed: ' + result.error.message);
         return;
       }
