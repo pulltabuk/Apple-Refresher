@@ -707,13 +707,18 @@
 
   function updateGenerationSuggestion() {
     const input = document.getElementById('new_generation_name');
-    if (input) input.placeholder = 'Suggested: ' + generationSuggestion();
+    if (input) input.placeholder = generationSuggestion();
   }
 
   function detailFor(date) {
     if (!currentGenerationDetails[date]) currentGenerationDetails[date] = {};
     return currentGenerationDetails[date];
   }
+
+  // Each row stays collapsed to its date, with the name shown as plain
+  // text. Name and announced fields only appear when "Edit" is tapped,
+  // so a product with one release date shows one short line.
+  const expandedGenerations = new Set();
 
   function renderRefreshHistory() {
     refreshHistoryListEl.innerHTML = '';
@@ -722,12 +727,13 @@
     if (!dates.length) {
       const empty = document.createElement('li');
       empty.className = 'generation-empty';
-      empty.textContent = 'No generations yet. Add the first one below.';
+      empty.textContent = 'No release dates yet. Add the first one below.';
       refreshHistoryListEl.appendChild(empty);
     }
     dates.slice().reverse().forEach((date) => {
       const index = dates.indexOf(date);
       const info = currentGenerationDetails[date] || {};
+      const autoName = autoGenerationName(productName, index, dates.length);
       const li = document.createElement('li');
       li.className = 'generation-item' + (index === dates.length - 1 ? ' generation-item--latest' : '');
 
@@ -735,79 +741,105 @@
       top.className = 'generation-item-top';
       const released = document.createElement('span');
       released.className = 'generation-date';
-      released.textContent = 'Released ' + formatAdminDate(date);
+      released.textContent = formatAdminDate(date);
       top.appendChild(released);
-      if (currentOriginalLaunchDate === date) {
-        const first = document.createElement('span');
-        first.className = 'generation-tag';
-        first.textContent = 'First launch';
-        top.appendChild(first);
-      }
-      if (index === dates.length - 1) {
+      if (dates.length > 1 && index === dates.length - 1) {
         const latest = document.createElement('span');
         latest.className = 'generation-tag generation-tag--latest';
         latest.textContent = 'Latest';
         top.appendChild(latest);
       }
+      if (dates.length > 1 && currentOriginalLaunchDate === date) {
+        const first = document.createElement('span');
+        first.className = 'generation-tag';
+        first.textContent = 'First launch';
+        top.appendChild(first);
+      }
+
+      const nameText = document.createElement('span');
+      nameText.className = 'generation-name-text' + ((info.name || '').trim() ? '' : ' generation-name-text--auto');
+      nameText.textContent = (info.name || '').trim() || autoName;
+      top.appendChild(nameText);
+
+      const isOpen = expandedGenerations.has(date);
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'generation-edit';
+      editBtn.textContent = isOpen ? 'Done' : 'Edit';
+      editBtn.addEventListener('click', () => {
+        if (isOpen) expandedGenerations.delete(date);
+        else expandedGenerations.add(date);
+        renderRefreshHistory();
+      });
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'generation-remove';
       removeBtn.textContent = 'Remove';
       removeBtn.addEventListener('click', () => {
-        const label = (info.name || autoGenerationName(productName, index, dates.length));
-        if (!window.confirm('Remove "' + label + '" (' + formatAdminDate(date) + ')?')) return;
+        if (!window.confirm('Remove the ' + formatAdminDate(date) + ' release date?')) return;
         currentRefreshHistory = currentRefreshHistory.filter((d) => d !== date);
         delete currentGenerationDetails[date];
+        expandedGenerations.delete(date);
         if (currentOriginalLaunchDate === date) {
           currentOriginalLaunchDate = null;
           renderLaunchDateDisplay();
         }
         renderRefreshHistory();
       });
-      top.appendChild(removeBtn);
+      const actions = document.createElement('span');
+      actions.className = 'generation-item-actions';
+      actions.appendChild(editBtn);
+      actions.appendChild(removeBtn);
+      top.appendChild(actions);
       li.appendChild(top);
 
-      const fields = document.createElement('div');
-      fields.className = 'generation-item-fields';
+      if (isOpen) {
+        const fields = document.createElement('div');
+        fields.className = 'generation-item-fields';
 
-      const nameLabel = document.createElement('label');
-      nameLabel.textContent = 'Name';
-      const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.value = info.name || '';
-      nameInput.placeholder = autoGenerationName(productName, index, dates.length);
-      nameInput.addEventListener('input', () => { detailFor(date).name = nameInput.value; });
-      nameLabel.appendChild(nameInput);
-      fields.appendChild(nameLabel);
+        const nameLabel = document.createElement('label');
+        nameLabel.textContent = 'Name';
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.value = info.name || '';
+        nameInput.placeholder = autoName;
+        nameInput.addEventListener('input', () => { detailFor(date).name = nameInput.value; });
+        nameLabel.appendChild(nameInput);
+        fields.appendChild(nameLabel);
 
-      const annLabel = document.createElement('label');
-      annLabel.textContent = 'Announced';
-      if (!info.announced || /^\d{4}-\d{2}-\d{2}$/.test(info.announced)) {
-        const annInput = document.createElement('input');
-        annInput.type = 'date';
-        annInput.value = info.announced || '';
-        annInput.addEventListener('change', () => { detailFor(date).announced = annInput.value || null; });
-        annLabel.appendChild(annInput);
-      } else {
-        const chip = document.createElement('span');
-        chip.className = 'date-chip';
-        chip.textContent = formatAdminDate(info.announced) + ' ';
-        const clear = document.createElement('button');
-        clear.type = 'button';
-        clear.textContent = '\u00d7';
-        clear.setAttribute('aria-label', 'Clear announced date');
-        clear.addEventListener('click', () => {
-          detailFor(date).announced = null;
-          renderRefreshHistory();
-        });
-        chip.appendChild(clear);
-        annLabel.appendChild(chip);
+        const annLabel = document.createElement('label');
+        annLabel.textContent = 'Announced';
+        if (!info.announced || /^\d{4}-\d{2}-\d{2}$/.test(info.announced)) {
+          const annInput = document.createElement('input');
+          annInput.type = 'date';
+          annInput.value = info.announced || '';
+          annInput.addEventListener('change', () => { detailFor(date).announced = annInput.value || null; });
+          annLabel.appendChild(annInput);
+        } else {
+          const chip = document.createElement('span');
+          chip.className = 'date-chip';
+          chip.textContent = formatAdminDate(info.announced) + ' ';
+          const clear = document.createElement('button');
+          clear.type = 'button';
+          clear.textContent = '\u00d7';
+          clear.setAttribute('aria-label', 'Clear announced date');
+          clear.addEventListener('click', () => {
+            detailFor(date).announced = null;
+            renderRefreshHistory();
+          });
+          chip.appendChild(clear);
+          annLabel.appendChild(chip);
+        }
+        fields.appendChild(annLabel);
+        li.appendChild(fields);
       }
-      fields.appendChild(annLabel);
-      li.appendChild(fields);
       refreshHistoryListEl.appendChild(li);
     });
     updateGenerationSuggestion();
+    // The badge choice only means something with more than one date, and
+    // the first date added is the first launch by definition.
+    document.getElementById('days-basis-wrap').style.display = dates.length > 1 ? '' : 'none';
+    document.getElementById('first-launch-wrap').style.display = dates.length ? '' : 'none';
   }
 
   // Suggested names follow the product name as it's typed. Only the
@@ -877,6 +909,8 @@
     document.getElementById('new_generation_name').value = '';
     document.getElementById('new_generation_is_first').checked = false;
     document.getElementById('generation-add-error').textContent = '';
+    const extra = document.getElementById('generation-extra-details');
+    if (extra) extra.open = false;
   }
 
   function addGenerationFromPanel() {
@@ -884,7 +918,7 @@
     errorEl.textContent = '';
     const value = getDatePrecisionValue('new_refresh_date');
     if (!value) {
-      errorEl.textContent = 'Pick a released date first.';
+      errorEl.textContent = 'Pick a date first.';
       return;
     }
     if (currentRefreshHistory.indexOf(value) !== -1) {
@@ -898,7 +932,9 @@
     if (name || announced) {
       currentGenerationDetails[value] = { name: name || null, announced: announced || null };
     }
-    if (document.getElementById('new_generation_is_first').checked) {
+    // The first date added is the line's first launch by definition, so
+    // there is nothing to tick in the common case.
+    if (document.getElementById('new_generation_is_first').checked || (!currentOriginalLaunchDate && currentRefreshHistory.length === 1)) {
       currentOriginalLaunchDate = value;
       renderLaunchDateDisplay();
     }
@@ -1016,6 +1052,7 @@
     document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
     setDatePrecisionValue('discontinued_date', p.discontinued_date || null);
     setStatusToggle(!!p.discontinued);
+    expandedGenerations.clear();
     resetGenerationPanel();
     renderLaunchDateDisplay();
     renderRefreshHistory();
@@ -1057,6 +1094,7 @@
     fillProductSelect(document.getElementById('previous_model'), '');
     setDatePrecisionValue('discontinued_date', null);
     setStatusToggle(false);
+    expandedGenerations.clear();
     resetGenerationPanel();
     renderLaunchDateDisplay();
     renderRefreshHistory();
@@ -1183,7 +1221,7 @@
       }
       const pendingGenerationDate = getDatePrecisionValue('new_refresh_date');
       if (pendingGenerationDate && currentRefreshHistory.indexOf(pendingGenerationDate) === -1) {
-        document.getElementById('generation-add-error').textContent = 'You picked a date but haven\u2019t added it yet. Tap "+ Add generation", or clear the date.';
+        document.getElementById('generation-add-error').textContent = 'You picked a date but haven\u2019t added it yet. Tap "+ Add", or clear the date.';
         firstError = firstError || document.getElementById('step-generations');
       }
       if (firstError) {

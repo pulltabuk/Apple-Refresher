@@ -1154,3 +1154,10 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .admin-form .form-error { margin: 0; }
 .admin-icon-row label.admin-btn { display: inline-block; }
 .admin-form label.admin-btn--small { display: inline-block; font-size: 12px; font-weight: 500; }
+.generation-add-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.generation-add-row .admin-btn { align-self: flex-end; }
+.generation-name-text { font-size: 13px; color: var(--text-secondary); }
+.generation-name-text--auto { font-style: italic; }
+.generation-item-actions { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
+.generation-edit { font-size: 12px; border: none; background: transparent; color: var(--accent-dark); cursor: pointer; padding: 4px; font-weight: 600; }
+.generation-remove { margin-left: 0; }

@@ -1443,29 +1443,36 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <div id="timeline-new-wrap" style="display:none;">
             <label>New timeline group name<input type="text" id="timeline_name" placeholder="e.g. iPhone" autocomplete="off"></label>
           </div>
-          <p class="admin-hint">&ldquo;Just this product line&rdquo; shows only its own generations (e.g. AirPods Pro). The family page always shows every line together.</p>
+          <p class="admin-hint">&ldquo;Just this product line&rdquo; shows only this product&rsquo;s own dates. The family page always shows every line in the family together.</p>
         </section>
 
         <section class="admin-step" id="step-generations">
-          <h3 class="admin-step-title"><span class="admin-step-num">3</span> Generations</h3>
+          <h3 class="admin-step-title"><span class="admin-step-num">3</span> Release dates</h3>
+          <p class="admin-hint">Every date this product has been released or refreshed. One date is fine.</p>
           <ul id="refresh-history-list" class="generation-list"></ul>
           <div id="launch-date-display-wrap" class="admin-subfield" style="display:none;">
             <span class="admin-subfield-label">Line first launched</span>
             <p class="date-chip" id="launch-date-display"></p>
           </div>
           <div class="generation-add" id="generation-add-panel">
-            <p class="generation-add-title">Add a generation</p>
-            <label><span class="admin-label-row">Name <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
-            ${datePrecisionFieldHtml('new_refresh_date', 'Released')}
-            ${datePrecisionFieldHtml('new_generation_announced', 'Announced <span class="admin-optional">Optional</span>')}
-            <label class="checkbox-label"><input type="checkbox" id="new_generation_is_first"> This was the very first launch of this line</label>
-            <div><button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--primary">+ Add generation</button></div>
+            <div class="generation-add-row">
+              ${datePrecisionFieldHtml('new_refresh_date', 'Add a release date')}
+              <button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--primary">+ Add</button>
+            </div>
+            <details class="admin-mini-details" id="generation-extra-details">
+              <summary>Add a name or announced date</summary>
+              <div class="admin-subfield">
+                <label><span class="admin-label-row">Name <span class="admin-optional">Leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
+                ${datePrecisionFieldHtml('new_generation_announced', 'Announced')}
+                <label class="checkbox-label" id="first-launch-wrap"><input type="checkbox" id="new_generation_is_first"> This was the very first launch of this line</label>
+              </div>
+            </details>
             <p id="generation-add-error" class="form-error"></p>
           </div>
-          <div class="admin-subfield">
+          <div class="admin-subfield" id="days-basis-wrap">
             <span class="admin-subfield-label">The big number on this product counts days since</span>
             <div class="segmented segmented--small" role="radiogroup" aria-label="Badge basis">
-              <label><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked><span>Latest generation</span></label>
+              <label><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked><span>Latest date</span></label>
               <label><input type="radio" name="days_basis" id="days_basis_launch" value="launch"><span>First launch</span></label>
             </div>
           </div>
