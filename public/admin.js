@@ -381,36 +381,6 @@
   // snap to an existing group's exact casing, so a near-match can never
   // silently start a second, disconnected timeline.
 
-  const TIMELINE_NEW = '__new__';
-  const TIMELINE_OWN = '__own__';
-
-  function existingTimelineNames() {
-    const names = new Set();
-    cachedProducts.forEach((p) => { if (p.timeline_name) names.add(p.timeline_name); });
-    return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }
-
-  function fillTimelineSelect() {
-    const select = document.getElementById('timeline_name_select');
-    const value = select.value;
-    select.innerHTML = '';
-    const same = document.createElement('option');
-    same.value = '';
-    same.textContent = 'No shared group';
-    select.appendChild(same);
-    existingTimelineNames().forEach((t) => {
-      const opt = document.createElement('option');
-      opt.value = t;
-      opt.textContent = t;
-      select.appendChild(opt);
-    });
-    const newOpt = document.createElement('option');
-    newOpt.value = TIMELINE_NEW;
-    newOpt.textContent = '+ New group…';
-    select.appendChild(newOpt);
-    if (Array.from(select.options).some((o) => o.value === value)) select.value = value;
-  }
-
   function timelineMode() {
     const checked = document.querySelector('input[name="timeline_mode"]:checked');
     return checked ? checked.value : 'family';
@@ -439,61 +409,56 @@
 
   document.querySelectorAll('input[name="timeline_mode"]').forEach((radio) => {
     radio.addEventListener('change', () => {
-      if (radio.checked) {
-        const select = document.getElementById('timeline_name_select');
-        select.value = '';
-        document.getElementById('timeline-new-wrap').style.display = 'none';
+      if (radio.checked && sharedGroupName) {
+        sharedGroupName = null;
+        const note = document.getElementById('timeline-group-note');
+        note.style.display = 'none';
+        note.textContent = '';
       }
     });
   });
 
-  document.getElementById('timeline_name_select').addEventListener('change', (e) => {
-    const isNew = e.target.value === TIMELINE_NEW;
-    document.getElementById('timeline-new-wrap').style.display = isNew ? '' : 'none';
-    if (isNew) document.getElementById('timeline_name').focus();
-  });
 
+
+  // The two buttons decide: everything in the family (no group) or this
+  // product on its own (a group of one, named after the product). A group
+  // shared with another family is rare and is kept as it was found.
   function getTimelineName() {
-    const selectValue = document.getElementById('timeline_name_select').value;
-    if (selectValue === TIMELINE_NEW) {
-      const typed = document.getElementById('timeline_name').value.trim();
-      if (typed) {
-        const match = existingTimelineNames().find((n) => n.trim().toLowerCase() === typed.toLowerCase());
-        return match || typed;
-      }
-    } else if (selectValue && selectValue !== TIMELINE_OWN) {
-      return selectValue;
-    }
-    // No shared group chosen, so the two buttons decide: the whole family
-    // (no group) or this product on its own (a group of one, named after it).
+    if (sharedGroupName) return sharedGroupName;
     return timelineMode() === 'own' ? (document.getElementById('name').value.trim() || null) : null;
   }
 
+  let sharedGroupName = null;
+
   function setTimelineName(value) {
-    fillTimelineSelect();
-    document.getElementById('timeline-group-details').open = false;
-    const select = document.getElementById('timeline_name_select');
-    const input = document.getElementById('timeline_name');
-    const wrap = document.getElementById('timeline-new-wrap');
     const ownName = document.getElementById('name').value.trim().toLowerCase();
-    input.value = '';
-    wrap.style.display = 'none';
-    select.value = '';
+    const note = document.getElementById('timeline-group-note');
+    sharedGroupName = null;
+    note.style.display = 'none';
+    note.textContent = '';
     if (!value) {
       setTimelineMode('family');
-    } else if (ownName && value.trim().toLowerCase() === ownName) {
-      setTimelineMode('own');
-    } else if (Array.from(select.options).some((o) => o.value === value)) {
-      setTimelineMode('family');
-      select.value = value;
-      document.getElementById('timeline-group-details').open = true;
-    } else {
-      setTimelineMode('family');
-      select.value = TIMELINE_NEW;
-      input.value = value;
-      wrap.style.display = '';
-      document.getElementById('timeline-group-details').open = true;
+      return;
     }
+    if (ownName && value.trim().toLowerCase() === ownName) {
+      setTimelineMode('own');
+      return;
+    }
+    // An existing shared group: shown plainly, with a way to drop it.
+    sharedGroupName = value;
+    setTimelineMode('family');
+    note.style.display = '';
+    note.textContent = 'This product shares a timeline with the group "' + value + '". ';
+    const stop = document.createElement('button');
+    stop.type = 'button';
+    stop.className = 'admin-linkish';
+    stop.textContent = 'Stop sharing';
+    stop.addEventListener('click', () => {
+      sharedGroupName = null;
+      note.style.display = 'none';
+      setTimelineMode('own');
+    });
+    note.appendChild(stop);
   }
 
   // --- Icons: one per family (category_icons table), and optionally
@@ -604,7 +569,6 @@
   });
 
   function updateCategoryOptions() {
-    fillTimelineSelect();
     updateProductOptionsByCategory();
     updateCategoryIconPreview();
   }
@@ -801,13 +765,11 @@
   // is a single line; the name and announced date only appear on Edit.
   const expandedGenerations = new Set();
 
-  function entryTypeFor(date, dates) {
-    if (currentDiscontinuedDate === date) return 'discontinued';
-    if (currentOriginalLaunchDate === date || (!currentOriginalLaunchDate && date === dates[0])) return 'launch';
-    return 'release';
+  function entryTypeFor(date) {
+    return currentDiscontinuedDate === date ? 'discontinued' : 'release';
   }
 
-  const ENTRY_LABELS = { launch: 'Launch', release: 'Release', discontinued: 'Discontinued' };
+  const ENTRY_LABELS = { release: 'Release', discontinued: 'Discontinued' };
 
   function allEntryDates() {
     const dates = currentRefreshHistory.slice();
@@ -827,7 +789,7 @@
       refreshHistoryListEl.appendChild(empty);
     }
     dates.slice().reverse().forEach((date) => {
-      const type = entryTypeFor(date, releaseDates);
+      const type = entryTypeFor(date);
       const index = releaseDates.indexOf(date);
       const info = currentGenerationDetails[date] || {};
       const autoName = index === -1 ? '' : autoGenerationName(productName, index, releaseDates.length);
@@ -841,6 +803,12 @@
       tag.className = 'entry-tag entry-tag--' + type;
       tag.textContent = ENTRY_LABELS[type];
       top.appendChild(tag);
+      if (type === 'release' && releaseDates.length > 1 && index === 0) {
+        const firstTag = document.createElement('span');
+        firstTag.className = 'generation-tag';
+        firstTag.textContent = 'First release';
+        top.appendChild(firstTag);
+      }
 
       const released = document.createElement('span');
       released.className = 'generation-date';
@@ -881,7 +849,7 @@
           currentRefreshHistory = currentRefreshHistory.filter((d) => d !== date);
           delete currentGenerationDetails[date];
           expandedGenerations.delete(date);
-          if (currentOriginalLaunchDate === date) currentOriginalLaunchDate = null;
+          currentOriginalLaunchDate = currentRefreshHistory.slice().sort()[0] || null;
         }
         renderRefreshHistory();
         updateStatusReadout();
@@ -938,24 +906,16 @@
     setEntryTypeAvailability(releaseDates.length, !!currentDiscontinuedDate);
   }
 
+  // A product can only be discontinued once, so that option greys out
+  // once a discontinued date exists. Release is always available.
   function setEntryTypeAvailability(releaseCount, hasDiscontinued) {
-    const launch = document.querySelector('input[name="entry_type"][value="launch"]');
     const release = document.querySelector('input[name="entry_type"][value="release"]');
     const discontinued = document.querySelector('input[name="entry_type"][value="discontinued"]');
-    const hasLaunch = !!currentOriginalLaunchDate || releaseCount > 0;
-    // A product launches once and is discontinued once, so those stay
-    // visible but greyed out after they've been used.
-    const setState = (input, unavailable, why) => {
-      input.disabled = unavailable;
-      const label = input.closest('label');
-      label.classList.toggle('segmented-option--off', unavailable);
-      label.title = unavailable ? why : '';
-    };
-    setState(launch, hasLaunch, 'This product already has a launch date');
-    setState(discontinued, hasDiscontinued, 'This product already has a discontinued date');
-    setState(release, false, '');
-    if (!hasLaunch) launch.checked = true;
-    else if (launch.checked || (discontinued.checked && hasDiscontinued)) release.checked = true;
+    discontinued.disabled = hasDiscontinued;
+    const label = discontinued.closest('label');
+    label.classList.toggle('segmented-option--off', hasDiscontinued);
+    label.title = hasDiscontinued ? 'This product already has a discontinued date' : '';
+    if (hasDiscontinued && discontinued.checked) release.checked = true;
   }
 
   function selectedEntryType() {
@@ -1035,8 +995,6 @@
     setDatePrecisionValue('new_generation_announced', null);
     document.getElementById('new_generation_name').value = '';
     document.getElementById('generation-add-error').textContent = '';
-    const extra = document.getElementById('generation-extra-details');
-    if (extra) extra.open = false;
   }
 
   function addGenerationFromPanel() {
@@ -1066,9 +1024,7 @@
     if (name || announced) {
       currentGenerationDetails[value] = { name: name || null, announced: announced || null };
     }
-    if (type === 'launch' || (!currentOriginalLaunchDate && currentRefreshHistory.length === 1)) {
-      currentOriginalLaunchDate = value;
-    }
+    currentOriginalLaunchDate = currentRefreshHistory[0] || null;
     resetGenerationPanel();
     renderRefreshHistory();
     updateStatusReadout();

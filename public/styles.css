@@ -1162,13 +1162,11 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .generation-edit { font-size: 12px; border: none; background: transparent; color: var(--accent-dark); cursor: pointer; padding: 4px; font-weight: 600; }
 .generation-remove { margin-left: 0; }
 .entry-tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; flex-shrink: 0; letter-spacing: 0.02em; }
-.entry-tag--launch { background: #e6efe6; color: #2f6b3a; }
 .entry-tag--release { background: var(--accent-bg); color: var(--accent-dark); }
 .entry-tag--discontinued { background: var(--discontinued-bg, #efede7); color: var(--discontinued-text); }
 .generation-item--discontinued { border-color: #ded7cf; background: #faf9f6; }
 .segmented--type span { padding: 8px 14px; }
-.segmented--type label:nth-child(1) span { color: #2f6b3a; }
-.segmented--type label:nth-child(3) span { color: var(--discontinued-text); }
+.segmented--type label:nth-child(2) span { color: var(--discontinued-text); }
 .admin-status-readout { margin: 0; font-size: 14px; font-weight: 600; padding: 10px 12px; border-radius: 10px; }
 .admin-status-readout--current { background: var(--fresh-bg); color: var(--fresh-text); }
 .admin-status-readout--discontinued { background: #f3efe9; color: var(--discontinued-text); }
@@ -1187,3 +1185,5 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .choice-card-body { display: flex; flex-direction: column; gap: 2px; }
 .choice-card-title { font-size: 14px; font-weight: 700; }
 .choice-card-note { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
+.admin-linkish { border: none; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent-dark); text-decoration: underline; cursor: pointer; }
+#generation-extra-fields { border-top: 1px solid var(--border); padding-top: 12px; }

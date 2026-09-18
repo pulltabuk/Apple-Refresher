@@ -1419,15 +1419,15 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <div id="new-family-wrap" class="admin-subfield" style="display:none;">
             <label>New family name<input type="text" id="category" placeholder="e.g. Vision Pro" autocomplete="off"></label>
           </div>
-          <details class="admin-mini-details">
-            <summary>Family icon</summary>
-            <div class="admin-subfield">
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Family icon <span class="admin-optional">Optional</span></span>
+            <div class="admin-icon-row">
               <div id="category-icon-thumb" class="admin-thumbs"></div>
-              <div><label for="category-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload family icon</label></div>
+              <label for="category-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload family icon</label>
               <input type="file" id="category-icon-upload" accept="image/*" class="admin-file-input">
-              <p class="admin-hint">Optional. Replaces the built-in shape for every product in this family.</p>
             </div>
-          </details>
+            <p class="admin-hint">Replaces the built-in shape for every product in this family.</p>
+          </div>
           <p id="family-error" class="form-error"></p>
         </section>
 
@@ -1447,31 +1447,24 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <p class="admin-hint">Leave blank to use the family icon.</p>
           </div>
           <div class="admin-subfield">
-            <span class="admin-subfield-label">On this product&rsquo;s own page, which dates should the Release history show?</span>
+            <span class="admin-subfield-label">Release history on this product&rsquo;s page</span>
             <div class="choice-cards" role="radiogroup" aria-label="Release history shown">
               <label class="choice-card">
                 <input type="radio" name="timeline_mode" value="own" checked>
                 <span class="choice-card-body">
-                  <span class="choice-card-title">Only this product&rsquo;s dates</span>
-                  <span class="choice-card-note" id="timeline-own-example">Just the dates you list in step 3.</span>
+                  <span class="choice-card-title">This product only</span>
+                  <span class="choice-card-note" id="timeline-own-example">Shows the dates below and nothing else.</span>
                 </span>
               </label>
               <label class="choice-card">
                 <input type="radio" name="timeline_mode" value="family">
                 <span class="choice-card-body">
-                  <span class="choice-card-title">Every product in this family</span>
-                  <span class="choice-card-note" id="timeline-family-example">Its own dates plus the other products in the family.</span>
+                  <span class="choice-card-title">Everything in this family</span>
+                  <span class="choice-card-note" id="timeline-family-example">Shows the dates below plus the other products in this family.</span>
                 </span>
               </label>
             </div>
-            <p class="admin-hint">This only changes this one page. The family page always shows every product together.</p>
-            <details class="admin-mini-details" id="timeline-group-details">
-              <summary>Advanced: link this product to a group in another family</summary>
-              <label>Group<select id="timeline_name_select"></select></label>
-              <div id="timeline-new-wrap" style="display:none;">
-                <label>New group name<input type="text" id="timeline_name" placeholder="e.g. iPhone" autocomplete="off"></label>
-              </div>
-            </details>
+            <p class="admin-hint" id="timeline-group-note" style="display:none;"></p>
           </div>
 
           <div class="admin-subfield">
@@ -1502,26 +1495,22 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         <section class="admin-step" id="step-generations">
           <h3 class="admin-step-title"><span class="admin-step-num">3</span> Dates</h3>
-          <p class="admin-hint">Every date in this product&rsquo;s life: its launch, each release or refresh, and the day it was discontinued.</p>
+          <p class="admin-hint">Every release or refresh, plus the day it was discontinued if it has been. The earliest one is marked as its first release automatically.</p>
           <ul id="refresh-history-list" class="generation-list"></ul>
           <div class="generation-add" id="generation-add-panel">
             <p class="generation-add-title">Add a date</p>
             <div class="segmented segmented--type" role="radiogroup" aria-label="Type of date">
-              <label><input type="radio" name="entry_type" value="launch"><span>&#9679; Launch</span></label>
-              <label><input type="radio" name="entry_type" value="release" checked><span>&#9679; Release</span></label>
-              <label><input type="radio" name="entry_type" value="discontinued"><span>&#9679; Discontinued</span></label>
+              <label><input type="radio" name="entry_type" value="release" checked><span>Release</span></label>
+              <label><input type="radio" name="entry_type" value="discontinued"><span>Discontinued</span></label>
             </div>
             <div class="generation-add-row">
               ${datePrecisionFieldHtml('new_refresh_date', 'Date')}
               <button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--primary">+ Add</button>
             </div>
-            <details class="admin-mini-details" id="generation-extra-details">
-              <summary>Add a name or announced date</summary>
-              <div class="admin-subfield">
-                <label><span class="admin-label-row">Name <span class="admin-optional">Leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
-                ${datePrecisionFieldHtml('new_generation_announced', 'Announced')}
-              </div>
-            </details>
+            <div class="admin-subfield" id="generation-extra-fields">
+              <label><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
+              ${datePrecisionFieldHtml('new_generation_announced', 'Announced <span class="admin-optional">Optional</span>')}
+            </div>
             <p id="generation-add-error" class="form-error"></p>
           </div>
           <div class="admin-subfield" id="days-basis-wrap">
@@ -1563,19 +1552,15 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <p class="admin-hint">Press releases usually only exist for recent products. Leave it blank otherwise.</p>
         </section>
 
-        <details class="admin-advanced">
-          <summary><span class="admin-step-num">6</span> Extras (optional): video</summary>
-
-          <div class="admin-subfield">
-            <span class="admin-subfield-label">Video</span>
-            <div id="video-status" class="admin-video-status">No video uploaded.</div>
-            <div><label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label></div>
+        <section class="admin-step" id="step-extras">
+          <h3 class="admin-step-title"><span class="admin-step-num">6</span> Video <span class="admin-optional">Optional</span></h3>
+          <div id="video-status" class="admin-video-status">No video uploaded.</div>
+          <div>
+            <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label>
             <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
           </div>
-
-
           <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
-        </details>
+        </section>
 
         <div class="admin-save-bar">
           <button type="submit" id="save-product-btn" class="admin-btn admin-btn--primary">Save product</button>
