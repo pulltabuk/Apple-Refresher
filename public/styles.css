@@ -954,13 +954,14 @@ label.admin-btn { cursor: pointer; color: #fff; }
   flex-direction: column;
   justify-content: center;
   margin: 12px 0 0;
-  padding: 14px 18px;
-  border-radius: 12px;
+  padding: 22px 24px;
+  border-radius: 14px;
   font-size: 14px;
   font-weight: 600;
   text-align: left;
+  gap: 8px;
 }
-.days-hero-number { display: block; font-size: 44px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; }
+.days-hero-number { display: block; font-size: 46px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
 .days-hero--fresh { background: var(--fresh-bg); color: var(--fresh-text); }
 .days-hero--aging { background: var(--aging-bg); color: var(--aging-text); }
 .days-hero--overdue { background: var(--overdue-bg); color: var(--overdue-text); }
@@ -1255,9 +1256,9 @@ label.admin-btn { cursor: pointer; color: #fff; }
 
 /* ---------- Key facts grid ---------- */
 .key-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 1.25rem; }
-.key-fact { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+.key-fact { padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: #fff; }
 .key-fact-label { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); }
-.key-fact-value { margin: 4px 0 0; font-size: 16px; font-weight: 700; line-height: 1.25; }
+.key-fact-value { margin: 7px 0 0; font-size: 17px; font-weight: 700; line-height: 1.3; }
 .spec-list--secondary .spec-row dt { font-size: 12px; }
 .spec-list--secondary .spec-row dd { font-size: 14px; }
 
@@ -1290,11 +1291,11 @@ label.admin-btn { cursor: pointer; color: #fff; }
 
 
 /* Headline number and key facts share one grid */
-.product-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 1.5rem; align-items: stretch; }
+.product-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 18px 0 2rem; align-items: stretch; }
 .product-facts .days-hero { margin: 0; grid-column: span 2; }
 .product-facts .key-fact { display: flex; flex-direction: column; justify-content: center; }
 @media (max-width: 560px) {
-  .product-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .product-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .product-facts .days-hero { grid-column: 1 / -1; }
   .days-hero-number { font-size: 38px; }
 }
