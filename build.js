@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, setCustomCategoryIcons, launchDate, slugify, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
+const shareImages = require('./src/share-images');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, notFoundPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, setCustomCategoryIcons, launchDate, slugify, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -322,7 +323,14 @@ async function main() {
     }));
   }
 
+  // A share image per product, drawn at build time. If image rendering
+  // isn't available the site falls back to the logo, exactly as before.
+  const statusBySlug = {};
+  allItems.forEach((i) => { statusBySlug[i.product.slug] = i.status; });
+  const shareImagePaths = await shareImages.generate(allItems, DIST);
+
   for (const item of allItems) {
+    const shareImage = shareImagePaths[item.product.slug];
     write(
       `products/${item.product.slug}/index.html`,
       productPage({
@@ -330,12 +338,16 @@ async function main() {
         status: item.status,
         history: item.product.refresh_history || [],
         productsBySlug,
+        statusBySlug,
         galleryPhotos,
+        ogImage: shareImage ? `${SITE_URL}${shareImage}` : null,
         ...opts,
       }),
       mostRecentActivityDate(item.product)
     );
   }
+
+  write('404.html', notFoundPage(opts));
 
   copyStatic();
 

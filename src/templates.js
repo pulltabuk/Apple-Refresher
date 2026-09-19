@@ -515,6 +515,29 @@ function pageStandardLine(pageContent, fallbackHtml) {
 
 // Editable page text, written in admin. Passed through the same
 // sanitiser as product notes, so only safe formatting survives.
+function notFoundPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const body = `
+<div class="not-found">
+  <h1>That page has gone</h1>
+  <p class="page-intro">The product may have been renamed or merged into another line. These will get you back on track.</p>
+  <p class="not-found-links">
+    <a class="intro-cta" href="/products/">All products</a>
+    <a class="intro-cta intro-cta--ghost" href="/categories/">Browse by family</a>
+    <a class="intro-cta intro-cta--ghost" href="/">Home</a>
+  </p>
+</div>`;
+  return shell({
+    title: 'Page not found | Apple Sunset',
+    description: 'That page could not be found on Apple Sunset.',
+    siteUrl,
+    path: '/404.html',
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+    noindex: true,
+  });
+}
+
 function pageIntroHtml(pageContent, siteUrl, position) {
   const raw = pageContent && (position === 'footer' ? pageContent.footer_html : pageContent.intro_html);
   const clean = sanitizeRichText(raw, siteUrl);
@@ -1264,6 +1287,11 @@ function categoryPage({ category, items, pageContent, siteUrl, supabaseUrl, supa
   ${verticalTimelineHtml(seedProduct, allProductsInCategory)}`
     : '';
   const body = `
+${breadcrumbsHtml([
+  { label: 'Home', href: '/' },
+  { label: 'Categories', href: '/categories/' },
+  { label: category },
+])}
 <div class="category-page-heading" data-category="${escapeHtml(category)}">${categoryIcon(category, 36)}<h1>${pageHeading(pageContent, category)}</h1></div>
 ${pageStandardLine(pageContent, `<p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}. Newest first.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
@@ -1290,6 +1318,53 @@ ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   });
 }
 
+// The structured data already described these; this puts them on the
+// page, where they help people as well as search results.
+function breadcrumbsHtml(trail) {
+  const parts = trail.map((step, i) => {
+    const last = i === trail.length - 1;
+    return last
+      ? `<li aria-current="page">${escapeHtml(step.label)}</li>`
+      : `<li><a href="${step.href}">${escapeHtml(step.label)}</a></li>`;
+  }).join('<li class="crumb-sep" aria-hidden="true">&rsaquo;</li>');
+  return `<nav class="breadcrumbs" aria-label="Breadcrumb"><ol>${parts}</ol></nav>`;
+}
+
+// Other products in the same family, so a page is never a dead end for
+// a reader or for a crawler.
+function relatedProductsHtml(product, productsBySlug, statusBySlug) {
+  if (!productsBySlug) return '';
+  const siblings = Object.keys(productsBySlug)
+    .map((slug) => productsBySlug[slug])
+    .filter((p) => p.slug !== product.slug && (p.category || '') === (product.category || ''))
+    .sort((a, b) => {
+      if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 6);
+  if (!siblings.length) return '';
+  const cards = siblings.map((p) => {
+    const status = statusBySlug ? statusBySlug[p.slug] : null;
+    const line = p.discontinued
+      ? `Discontinued${p.discontinued_date ? ' ' + formatDate(p.discontinued_date) : ''}`
+      : status
+      ? `${plural(status.daysSince, 'day', 'days')} since refresh`
+      : '';
+    return `<a class="related-card" href="/products/${p.slug}/">
+      <span class="related-card-icon">${productIcon(p, 28)}</span>
+      <span class="related-card-text">
+        <span class="related-card-name">${escapeHtml(p.name)}</span>
+        ${line ? `<span class="related-card-line">${line}</span>` : ''}
+      </span>
+    </a>`;
+  }).join('\n');
+  return `<section class="related-section">
+    <h2>More in ${escapeHtml(product.category || 'this family')}</h2>
+    <div class="related-grid">${cards}</div>
+    <p class="see-all"><a class="intro-cta" href="/categories/${slugify(product.category || 'other')}/">All ${escapeHtml(product.category || 'products')} &rarr;</a></p>
+  </section>`;
+}
+
 function keyFact(label, value) {
   return value ? `<div class="key-fact"><p class="key-fact-label">${label}</p><p class="key-fact-value">${value}</p></div>` : '';
 }
@@ -1313,7 +1388,7 @@ function externalLinkLabel(product) {
   return `${product.name}${isWiki ? ' (Wiki)' : ''}`;
 }
 
-function productPage({ product, status, history, productsBySlug, galleryPhotos, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function productPage({ product, status, history, productsBySlug, statusBySlug, galleryPhotos, ogImage, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const sortedDates = history.slice().sort();
   const launch = product.original_launch_date || sortedDates[0] || null;
   const latest = sortedDates[sortedDates.length - 1] || null;
@@ -1401,7 +1476,11 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
 
   const body = `
 <article class="product-page">
-  <p><a href="/products/" class="gallery-nav-link">&larr; All products</a></p>
+  ${breadcrumbsHtml([
+    { label: 'Home', href: '/' },
+    { label: product.category || 'Products', href: `/categories/${slugify(product.category || 'other')}/` },
+    { label: product.name },
+  ])}
   <div class="product-top${product.video_url ? '' : ' product-top--no-media'}">
     ${product.video_url ? `<div class="product-media">
       ${videoBlock}
@@ -1433,6 +1512,8 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
 
   ${timelineCoversOnlyThisProduct ? '' : generationsSectionHtml(product)}
 
+  ${relatedProductsHtml(product, productsBySlug, statusBySlug)}
+
   ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note, siteUrl)}</div></div>` : ''}
 
   ${relatedPhotos.length ? `<h2>From the gallery</h2>
@@ -1454,6 +1535,7 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
       ? `${product.name}: ${plural(daysInfo ? daysInfo.days : status.daysSince, 'day', 'days')} since the last update | Apple Sunset`
       : `${product.name} | Apple Sunset`,
     description,
+    ogImage,
     siteUrl,
     path: `/products/${product.slug}/`,
     bodyHtml: body,
@@ -1926,6 +2008,7 @@ module.exports = {
   categoryPage,
   productPage,
   aboutPage,
+  notFoundPage,
   adminPage,
   cardHtml,
   productBadge,

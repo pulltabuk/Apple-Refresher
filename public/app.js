@@ -703,7 +703,11 @@
     var releaseHistorySection = timelinePoints.length ? '<h2>Release history</h2>' + verticalTimelineHtmlJS(product, allProducts) : '';
 
     return (
-      '<p><a href="/products/" class="gallery-nav-link">&larr; All products</a></p>' +
+      '<nav class="breadcrumbs" aria-label="Breadcrumb"><ol>' +
+        '<li><a href="/">Home</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li>' +
+        '<li><a href="/categories/' + slugifyJS(product.category || 'other') + '/">' + escapeHtmlJS(product.category || 'Products') + '</a></li>' +
+        '<li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li aria-current="page">' + escapeHtmlJS(product.name) + '</li>' +
+      '</ol></nav>' +
       '<div class="product-top' + (product.video_url ? '' : ' product-top--no-media') + '">' +
         (product.video_url ? '<div class="product-media">' + videoBlock + '</div>' : '') +
         '<div class="product-info">' +

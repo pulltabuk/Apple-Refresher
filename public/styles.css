@@ -1299,3 +1299,33 @@ label.admin-btn { cursor: pointer; color: #fff; }
   .product-facts .days-hero { grid-column: 1 / -1; }
   .days-hero-number { font-size: 38px; }
 }
+
+/* ---------- Breadcrumbs ---------- */
+.breadcrumbs { margin: 0 0 1rem; font-size: 13px; }
+.breadcrumbs ol { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 0; }
+.breadcrumbs a { color: var(--accent-dark); font-weight: 600; text-decoration: none; }
+.breadcrumbs a:hover { text-decoration: underline; }
+.breadcrumbs li[aria-current] { color: var(--text-secondary); }
+.crumb-sep { color: var(--border); }
+
+/* ---------- More in this family ---------- */
+.related-section { margin: 2rem 0; }
+.related-section h2 { margin-bottom: 0.75rem; }
+.related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.related-card {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border);
+  border-radius: 12px; background: #fff; text-decoration: none; color: inherit;
+}
+.related-card:hover { border-color: var(--accent); }
+.related-card-icon { width: 38px; height: 38px; border-radius: 10px; background: #f6f5f1; display: grid; place-items: center; flex-shrink: 0; }
+.related-card-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.related-card-name { font-size: 15px; font-weight: 700; }
+.related-card-line { font-size: 12px; color: var(--text-secondary); }
+
+/* Notes: a comfortable reading measure */
+.product-page .callout-body, .product-page .rich-text, .product-note { max-width: 68ch; }
+
+/* ---------- 404 ---------- */
+.not-found { padding: 3rem 0 4rem; max-width: 60ch; }
+.not-found-links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.5rem; }
+.intro-cta--ghost { background: #fff; color: var(--accent-dark); border: 1px solid var(--border); }

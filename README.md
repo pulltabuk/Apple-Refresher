@@ -74,6 +74,11 @@ still needs your login to change anything.
 
 ## Notes
 
+- `src/share-images.js` draws one social share card per product into
+  `dist/share/<slug>.png` at build time, using sharp. If sharp is
+  missing or rendering fails the page falls back to the logo, so a
+  share image never breaks a deploy.
+
 - The Page text tab in admin writes intro and footer copy for the
   homepage and each family page into `page_content`, keyed `home`, `products`,
   `categories`, `discontinued`, `gallery`, `events`, `facts`, or
