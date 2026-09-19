@@ -712,11 +712,11 @@
               '<div class="product-title-row" data-category="' + escapeHtmlJS(product.category || '') + '">' +
                 '<span class="product-title-icon">' + productIconJS(product, 40) + '</span>' +
                 '<h1>' + escapeHtmlJS(product.name) + '</h1>' +
-              '</div>' + heroStatHtmlJS(product, status) +
+              '</div>' +
             '</div>' +
             '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
           '</div>' +
-          (keyFacts ? '<div class="key-facts">' + keyFacts + '</div>' : '') +
+          '<div class="product-facts">' + heroStatHtmlJS(product, status) + keyFacts + '</div>' +
           '<dl class="spec-list spec-list--secondary">' + specs + '</dl>' +
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
         '</div>' +

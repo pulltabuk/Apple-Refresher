@@ -497,6 +497,22 @@ function daysBetween(a, b) {
   return Math.floor((new Date(b) - new Date(a)) / 86400000);
 }
 
+// The heading, the line under it and the intro are all editable in
+// admin. Anything left blank falls back to the built-in wording, so a
+// page is never left without a heading.
+function pageHeading(pageContent, fallback) {
+  const custom = pageContent && pageContent.heading && pageContent.heading.trim();
+  return escapeHtml(custom || fallback);
+}
+
+function pageStandardLine(pageContent, fallbackHtml) {
+  if (pageContent && pageContent.subheading && pageContent.subheading.trim()) {
+    return `<p class="page-intro">${escapeHtml(pageContent.subheading.trim())}</p>`;
+  }
+  if (pageContent && pageContent.hide_default_line) return '';
+  return fallbackHtml;
+}
+
 // Editable page text, written in admin. Passed through the same
 // sanitiser as product notes, so only safe formatting survives.
 function pageIntroHtml(pageContent, siteUrl, position) {
@@ -824,14 +840,15 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   });
 }
 
-function galleryPage({ photos, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function galleryPage({ photos, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const body = photos.length
     ? `
 <div class="page-header-row">
-  <h1>Gallery</h1>
+  <h1>${pageHeading(pageContent, 'Gallery')}</h1>
   <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
 </div>
-<p class="page-intro">Photos taken along the way, in Apple Stores and elsewhere.</p>
+${pageStandardLine(pageContent, `<p class="page-intro">Photos taken along the way, in Apple Stores and elsewhere.</p>`)}
+${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search photos…" aria-label="Search photos">
   ${sortSelect(GALLERY_SORT_OPTIONS)}
@@ -842,7 +859,7 @@ function galleryPage({ photos, siteUrl, supabaseUrl, supabaseAnonKey }) {
 </div>`
     : `
 <div class="page-header-row">
-  <h1>Gallery</h1>
+  <h1>${pageHeading(pageContent, 'Gallery')}</h1>
   <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
 </div>
 <p class="page-intro">No photos yet. Add some in <a href="/admin/">/admin/</a>.</p>`;
@@ -964,13 +981,14 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
   });
 }
 
-function eventsPage({ events, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function eventsPage({ events, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const body = `
 <div class="page-header-row">
-  <h1>Apple Events</h1>
+  <h1>${pageHeading(pageContent, 'Apple Events')}</h1>
   <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
 </div>
-<p class="page-intro">A running record of every Apple Event announced here, and what was revealed at each one.</p>
+${pageStandardLine(pageContent, `<p class="page-intro">A running record of every Apple Event announced here, and what was revealed at each one.</p>`)}
+${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <p id="no-events" class="page-intro" style="display:${events.length ? 'none' : ''};">No events yet. Add one in <a href="/admin/">/admin/</a>.</p>
 <div class="card-grid" id="grid" data-mode="events">
   ${events.map(eventArchiveCardHtml).join('\n')}
@@ -993,13 +1011,14 @@ function factCardHtml(fact) {
 </div>`;
 }
 
-function factsPage({ facts, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function factsPage({ facts, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const body = `
 <div class="page-header-row">
-  <h1>Facts</h1>
+  <h1>${pageHeading(pageContent, 'Facts')}</h1>
   <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
 </div>
-<p class="page-intro">Interesting patterns spotted across every product tracked on this site.</p>
+${pageStandardLine(pageContent, `<p class="page-intro">Interesting patterns spotted across every product tracked on this site.</p>`)}
+${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <p id="no-facts" class="page-intro" style="display:${facts.length ? 'none' : ''};">Nothing published yet.</p>
 <div id="facts-list" class="facts-list" data-mode="facts">
   ${facts.map(factCardHtml).join('\n')}
@@ -1067,7 +1086,7 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
 <section class="intro-hero">
   <div class="intro-hero-layout">
     <div class="intro-hero-text">
-      <h1 class="intro-heading">Apple Sunset</h1>
+      <h1 class="intro-heading">${pageHeading(pageContent, 'Apple Sunset')}</h1>
       ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
       <a class="intro-cta" href="/products/">Browse all products</a>
@@ -1094,7 +1113,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   });
 }
 
-function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function allProductsPage({ items, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const categories = [...new Set(items.map((i) => i.product.category))].sort((a, b) => a.localeCompare(b));
   const categoryCounts = categories.map((c) => items.filter((i) => i.product.category === c).length);
   const statusCounts = STATUS_VALUES.map((v) => items.filter((i) => {
@@ -1103,8 +1122,9 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
   }).length);
   const body = items.length
     ? `
-<h1>All products</h1>
-<p class="page-intro">Everything on the site, current and discontinued, in one searchable place.</p>
+<h1>${pageHeading(pageContent, 'All products')}</h1>
+${pageStandardLine(pageContent, `<p class="page-intro">Everything on the site, current and discontinued, in one searchable place.</p>`)}
+${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
@@ -1122,7 +1142,7 @@ function allProductsPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
 </div>
 <div id="pagination" class="pagination"></div>`
     : `
-<h1>All products</h1>
+<h1>${pageHeading(pageContent, 'All products')}</h1>
 ${emptyState('products')}`;
   return shell({
     title: 'All products — Apple Sunset',
@@ -1135,13 +1155,14 @@ ${emptyState('products')}`;
   });
 }
 
-function discontinuedPage({ items, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function discontinuedPage({ items, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const decades = [...new Set(items.map((p) => p.discontinued_date ? `${Math.floor(new Date(p.discontinued_date).getFullYear() / 10) * 10}s` : '').filter(Boolean))].sort();
   const decadeCounts = decades.map((d) => items.filter((p) => p.discontinued_date && `${Math.floor(new Date(p.discontinued_date).getFullYear() / 10) * 10}s` === d).length);
   const body = items.length
     ? `
-<h1>Discontinued products</h1>
-<p class="page-intro">The products Apple no longer sells, when they launched, when they went, and what took their place.</p>
+<h1>${pageHeading(pageContent, 'Discontinued products')}</h1>
+${pageStandardLine(pageContent, `<p class="page-intro">The products Apple no longer sells, when they launched, when they went, and what took their place.</p>`)}
+${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search discontinued products…" aria-label="Search discontinued products">
   ${sortSelect(DISCONTINUED_SORT_OPTIONS)}
@@ -1152,7 +1173,7 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
   ${items.map((p) => cardHtml(p, null)).join('\n')}
 </div>`
     : `
-<h1>Discontinued products</h1>
+<h1>${pageHeading(pageContent, 'Discontinued products')}</h1>
 <p class="page-intro">Nothing here yet. Tick Discontinued on a product in <a href="/admin/">/admin/</a> and give it a discontinued date, and it'll appear here.</p>`;
   return shell({
     title: 'Discontinued Apple products — Apple Sunset',
@@ -1165,7 +1186,7 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
   });
 }
 
-function categoriesIndexPage({ groups, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function categoriesIndexPage({ groups, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const tiles = groups.map(({ category, current, discontinued }) => {
     const total = current + discontinued;
     return `<a class="category-tile" href="/categories/${slugify(category)}/">
@@ -1176,8 +1197,9 @@ function categoriesIndexPage({ groups, siteUrl, supabaseUrl, supabaseAnonKey }) 
 </a>`;
   }).join('\n');
   const body = `
-<h1>Browse by category</h1>
-<p class="page-intro">Every product line on the site, current and discontinued.</p>
+<h1>${pageHeading(pageContent, 'Browse by category')}</h1>
+${pageStandardLine(pageContent, `<p class="page-intro">Every product line on the site, current and discontinued.</p>`)}
+${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <div class="category-grid">${tiles}</div>`;
   return shell({
     title: 'Categories — Apple Sunset',
@@ -1242,8 +1264,8 @@ function categoryPage({ category, items, pageContent, siteUrl, supabaseUrl, supa
   ${verticalTimelineHtml(seedProduct, allProductsInCategory)}`
     : '';
   const body = `
-<div class="category-page-heading" data-category="${escapeHtml(category)}">${categoryIcon(category, 36)}<h1>${escapeHtml(category)}</h1></div>
-<p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}. Newest first.</p>
+<div class="category-page-heading" data-category="${escapeHtml(category)}">${categoryIcon(category, 36)}<h1>${pageHeading(pageContent, category)}</h1></div>
+${pageStandardLine(pageContent, `<p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}. Newest first.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 ${!pageContent || pageContent.show_stats !== false ? categoryStatsSentence(category, items) : ''}
 <div class="controls-row">
@@ -1391,12 +1413,11 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
             <span class="product-title-icon">${productIcon(product, 40)}</span>
             <h1>${escapeHtml(product.name)}</h1>
           </div>
-          ${heroStatHtml(product, status)}
         </div>
         <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
       </div>
 
-      ${keyFacts ? `<div class="key-facts">${keyFacts}</div>` : ''}
+      <div class="product-facts">${heroStatHtml(product, status)}${keyFacts}</div>
 
       <dl class="spec-list spec-list--secondary">
         ${specs}
@@ -1810,6 +1831,13 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <h3 class="admin-step-title">Which page?</h3>
         <label>Page<select id="pagetext_target"></select></label>
         <p class="admin-hint" id="pagetext-preview-link"></p>
+      </section>
+
+      <section class="admin-step">
+        <h3 class="admin-step-title">Heading and first line</h3>
+        <label><span class="admin-label-row">Heading <span class="admin-optional">Leave blank to keep the standard one</span></span><input type="text" id="pagetext_heading" autocomplete="off"></label>
+        <label><span class="admin-label-row">Line under the heading <span class="admin-optional">Leave blank to keep the standard one</span></span><input type="text" id="pagetext_subheading" autocomplete="off"></label>
+        <label class="checkbox-label"><input type="checkbox" id="pagetext_hide_default_line"> Hide that line completely</label>
       </section>
 
       <section class="admin-step">

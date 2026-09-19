@@ -284,12 +284,12 @@ async function main() {
     pageContent: pageContent.home || null,
     ...opts,
   }));
-  write('products/index.html', allProductsPage({ items: productsPageItems, ...opts }));
-  write('discontinued/index.html', discontinuedPage({ items: discontinued, ...opts }));
+  write('products/index.html', allProductsPage({ items: productsPageItems, pageContent: pageContent.products || null, ...opts }));
+  write('discontinued/index.html', discontinuedPage({ items: discontinued, pageContent: pageContent.discontinued || null, ...opts }));
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));
-  write('gallery/index.html', galleryPage({ photos: galleryPhotos, ...opts }));
-  write('events/index.html', eventsPage({ events, ...opts }));
-  write('facts/index.html', factsPage({ facts, ...opts }));
+  write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }));
+  write('events/index.html', eventsPage({ events, pageContent: pageContent.events || null, ...opts }));
+  write('facts/index.html', factsPage({ facts, pageContent: pageContent.facts || null, ...opts }));
   for (const event of events) {
     write(`events/${event.id}/index.html`, eventDetailPage({ event, productsBySlug, ...opts }));
   }
@@ -311,7 +311,7 @@ async function main() {
       discontinued: inCategory.filter((i) => i.product.discontinued).length,
     };
   });
-  write('categories/index.html', categoriesIndexPage({ groups, ...opts }));
+  write('categories/index.html', categoriesIndexPage({ groups, pageContent: pageContent.categories || null, ...opts }));
   for (const category of categoryNames) {
     const items = allItems.filter((i) => i.product.category === category);
     write(`categories/${slugify(category)}/index.html`, categoryPage({

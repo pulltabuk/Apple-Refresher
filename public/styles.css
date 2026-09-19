@@ -946,16 +946,21 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .external-link { margin-top: 1rem; font-size: 14px; }
 .external-link a { color: var(--text-accent, var(--accent)); text-decoration: underline; }
 
+/* The headline number is the first card in the facts grid, so the boxes
+   line up as one block instead of a wide banner sitting above two
+   stranded cards. */
 .days-hero {
-  display: inline-block;
-  margin: 8px 0 0;
-  padding: 10px 22px;
-  border-radius: 20px;
-  font-size: 15px;
-  font-weight: 500;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 12px 0 0;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
 }
-.days-hero-number { display: block; font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.days-hero-number { display: block; font-size: 44px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; }
 .days-hero--fresh { background: var(--fresh-bg); color: var(--fresh-text); }
 .days-hero--aging { background: var(--aging-bg); color: var(--aging-text); }
 .days-hero--overdue { background: var(--overdue-bg); color: var(--overdue-text); }
@@ -1281,4 +1286,15 @@ label.admin-btn { cursor: pointer; color: #fff; }
   .card, .line-card, .key-fact { transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
   .card:hover, .key-fact:hover { transform: translateY(-2px); }
   .days-hero-number { display: inline-block; }
+}
+
+
+/* Headline number and key facts share one grid */
+.product-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 1.5rem; align-items: stretch; }
+.product-facts .days-hero { margin: 0; grid-column: span 2; }
+.product-facts .key-fact { display: flex; flex-direction: column; justify-content: center; }
+@media (max-width: 560px) {
+  .product-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .product-facts .days-hero { grid-column: 1 / -1; }
+  .days-hero-number { font-size: 38px; }
 }

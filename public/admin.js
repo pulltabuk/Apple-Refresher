@@ -2279,7 +2279,15 @@
       if (name && !families.some((f) => f.toLowerCase() === name.toLowerCase())) families.push(name);
     });
     families.sort((a, b) => a.localeCompare(b));
-    return [{ key: 'home', label: 'Homepage', path: '/' }].concat(
+    return [
+      { key: 'home', label: 'Homepage', path: '/' },
+      { key: 'products', label: 'All products page', path: '/products/' },
+      { key: 'categories', label: 'Browse by category page', path: '/categories/' },
+      { key: 'discontinued', label: 'Discontinued page', path: '/discontinued/' },
+      { key: 'gallery', label: 'Gallery page', path: '/gallery/' },
+      { key: 'events', label: 'Apple Events page', path: '/events/' },
+      { key: 'facts', label: 'Facts page', path: '/facts/' },
+    ].concat(
       families.map((f) => ({ key: 'category:' + slugify(f), label: f + ' family page', path: '/categories/' + slugify(f) + '/' }))
     );
   }
@@ -2302,12 +2310,15 @@
   function showPagetextRow() {
     const key = pagetextTargetEl.value;
     const row = pageContentRows[key] || {};
+    document.getElementById('pagetext_heading').value = row.heading || '';
+    document.getElementById('pagetext_subheading').value = row.subheading || '';
+    document.getElementById('pagetext_hide_default_line').checked = !!row.hide_default_line;
     document.getElementById('pagetext_intro').innerHTML = row.intro_html || '';
     document.getElementById('pagetext_footer').innerHTML = row.footer_html || '';
     document.getElementById('pagetext_show_stats').checked = row.show_stats !== false;
     // The automatic stats sentence is about a family's refresh dates, so
-    // it has nothing to say on the homepage.
-    document.getElementById('pagetext-stats-step').style.display = key === 'home' ? 'none' : '';
+    // it only belongs on a family page.
+    document.getElementById('pagetext-stats-step').style.display = key.indexOf('category:') === 0 ? '' : 'none';
     const selected = pagetextTargetEl.options[pagetextTargetEl.selectedIndex];
     const path = selected ? selected.dataset.path : '/';
     const link = document.getElementById('pagetext-preview-link');
@@ -2355,8 +2366,12 @@
       e.preventDefault();
       const key = pagetextTargetEl.value;
       const clean = (html) => (html && html.trim() && html.trim() !== '<br>' ? html.trim() : null);
+      const text = (id) => document.getElementById(id).value.trim() || null;
       const payload = {
         key,
+        heading: text('pagetext_heading'),
+        subheading: text('pagetext_subheading'),
+        hide_default_line: document.getElementById('pagetext_hide_default_line').checked,
         intro_html: clean(document.getElementById('pagetext_intro').innerHTML),
         footer_html: clean(document.getElementById('pagetext_footer').innerHTML),
         show_stats: document.getElementById('pagetext_show_stats').checked,
@@ -2365,7 +2380,9 @@
       const { error } = await client.from('page_content').upsert(payload);
       const statusEl = document.getElementById('pagetext-status');
       if (error) {
-        statusEl.textContent = 'Save failed: ' + error.message;
+        statusEl.textContent = /heading|subheading|hide_default_line/.test(error.message || '')
+          ? 'Save failed: run supabase-schema-update-23.sql in Supabase first.'
+          : 'Save failed: ' + error.message;
         return;
       }
       pageContentRows[key] = payload;
