@@ -70,6 +70,22 @@ async function loadRedirects() {
   return data || [];
 }
 
+// Editable intro and footer text for the homepage and family pages.
+// Optional: without the table the pages build exactly as before.
+async function loadPageContent() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return {};
+  const { createClient } = require('@supabase/supabase-js');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data, error } = await supabase.from('page_content').select('*');
+  if (error) {
+    console.log('No page_content table yet, building without page intros.');
+    return {};
+  }
+  const byKey = {};
+  (data || []).forEach((row) => { byKey[row.key] = row; });
+  return byKey;
+}
+
 async function loadSiteContent() {
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     const { createClient } = require('@supabase/supabase-js');
@@ -252,6 +268,7 @@ async function main() {
   // A handful of random gallery photos for the homepage strip.
   const galleryPicks = pickRandom(galleryPhotos, 10);
 
+  const pageContent = await loadPageContent();
   const opts = { siteUrl: SITE_URL, supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON_KEY };
 
   write('index.html', homePage({
@@ -264,6 +281,7 @@ async function main() {
     productsBySlug,
     activeEvent,
     latestFact,
+    pageContent: pageContent.home || null,
     ...opts,
   }));
   write('products/index.html', allProductsPage({ items: productsPageItems, ...opts }));
@@ -296,7 +314,12 @@ async function main() {
   write('categories/index.html', categoriesIndexPage({ groups, ...opts }));
   for (const category of categoryNames) {
     const items = allItems.filter((i) => i.product.category === category);
-    write(`categories/${slugify(category)}/index.html`, categoryPage({ category, items, ...opts }));
+    write(`categories/${slugify(category)}/index.html`, categoryPage({
+      category,
+      items,
+      pageContent: pageContent['category:' + slugify(category)] || null,
+      ...opts,
+    }));
   }
 
   for (const item of allItems) {

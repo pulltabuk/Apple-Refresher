@@ -1237,3 +1237,48 @@ label.admin-btn { cursor: pointer; color: #fff; }
   .product-title-icon .placeholder-icon { width: 32px; height: 32px; }
   .tl-entry-name { font-size: 14px; }
 }
+
+/* Editable page copy and automatic stats line */
+.page-copy { max-width: 68ch; margin: 0 0 1.25rem; color: var(--text); }
+.page-copy p { margin: 0 0 0.75rem; line-height: 1.65; }
+.page-copy--footer { margin: 2rem 0 0; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.page-stats {
+  max-width: 68ch; margin: 0 0 1.25rem; padding: 12px 14px; border-radius: 10px;
+  background: var(--accent-bg); color: var(--accent-dark); font-size: 14px; font-weight: 600; line-height: 1.55;
+}
+.intro-hero-text .page-copy p { font-size: 17px; color: var(--text-secondary); }
+
+/* ---------- Key facts grid ---------- */
+.key-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 1.25rem; }
+.key-fact { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+.key-fact-label { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); }
+.key-fact-value { margin: 4px 0 0; font-size: 16px; font-weight: 700; line-height: 1.25; }
+.spec-list--secondary .spec-row dt { font-size: 12px; }
+.spec-list--secondary .spec-row dd { font-size: 14px; }
+
+/* ---------- Motion: all optional, all free ---------- */
+/* Smooth page-to-page transitions where the browser supports them. */
+@view-transition { navigation: auto; }
+
+/* The timeline draws itself as it scrolls into view, using the browser's
+   own scroll timeline. No JavaScript, and older browsers just see the
+   finished state. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .tl-item, .tl-now {
+      animation: tl-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 30%;
+    }
+    @keyframes tl-reveal {
+      from { opacity: 0.55; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card, .line-card, .key-fact { transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+  .card:hover, .key-fact:hover { transform: translateY(-2px); }
+  .days-hero-number { display: inline-block; }
+}

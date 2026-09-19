@@ -12,7 +12,7 @@ No JavaScript rendering on the way in, so it's crawlable from day one.
    `supabase-schema-update-4.sql`, then `supabase-schema-update-5.sql`,
    then `supabase-schema-update-6.sql`, then `supabase-schema-update-7.sql`,
    then `supabase-schema-update-8.sql`, then `supabase-schema-update-9.sql`, then `supabase-schema-update-10.sql`,
-   then `supabase-schema-update-11.sql`, then `supabase-schema-update-12.sql`, then `supabase-schema-update-13.sql`, then `supabase-schema-update-14.sql`, then `supabase-schema-update-15.sql`, then `supabase-schema-update-16.sql`, then `supabase-schema-update-17.sql`, then `supabase-schema-update-18.sql`, then `supabase-schema-update-19.sql`, then `supabase-schema-update-20.sql`, then `supabase-schema-update-21.sql`.
+   then `supabase-schema-update-11.sql`, then `supabase-schema-update-12.sql`, then `supabase-schema-update-13.sql`, then `supabase-schema-update-14.sql`, then `supabase-schema-update-15.sql`, then `supabase-schema-update-16.sql`, then `supabase-schema-update-17.sql`, then `supabase-schema-update-18.sql`, then `supabase-schema-update-19.sql`, then `supabase-schema-update-20.sql`, then `supabase-schema-update-21.sql`, then `supabase-schema-update-22.sql`.
 3. Storage: create a bucket called exactly `product-images`, and make
    sure its **Public** toggle is on. Uploads will silently produce
    broken image links if this is off, even though the upload itself
@@ -73,6 +73,15 @@ engines won't list it, but it isn't hidden, anyone who finds the URL
 still needs your login to change anything.
 
 ## Notes
+
+- The Page text tab in admin writes intro and footer copy for the
+  homepage and each family page into `page_content`, keyed `home` or
+  `category:<slug>`. Family pages can also show an automatic stats
+  sentence worked out from their own dates at build time.
+- `SITE_URL` must be the public domain. It defaults to
+  `https://applesunset.com`; everything canonical, Open Graph, sitemap
+  and RSS is built from it, and the build writes a 301 from the
+  netlify.app address so only one copy of the site is indexable.
 
 - Deleting a product in admin offers to record a redirect for its old
   page address. Those are stored in `product_redirects` and written to

@@ -123,6 +123,7 @@
       document.getElementById('tab-gallery').style.display = tab === 'gallery' ? 'block' : 'none';
       document.getElementById('tab-event').style.display = tab === 'event' ? 'block' : 'none';
       document.getElementById('tab-facts').style.display = tab === 'facts' ? 'block' : 'none';
+      document.getElementById('tab-pagetext').style.display = tab === 'pagetext' ? 'block' : 'none';
       document.getElementById('tab-about').style.display = tab === 'about' ? 'block' : 'none';
       if (tab === 'gallery' && !galleryLoaded) {
         galleryLoaded = true;
@@ -159,6 +160,7 @@
     await loadProducts();
     loadAbout();
     loadCategoryIcons();
+    loadPageContent();
     const params = new URLSearchParams(window.location.search);
     const editId = params.get('edit');
     const editPhotoId = params.get('editPhoto');
@@ -2261,6 +2263,114 @@
       row.appendChild(imageBtn);
       row.appendChild(deleteBtn);
       listEl.appendChild(row);
+    });
+  }
+
+  // --- Page text (homepage and family page intros) ---
+
+  const pagetextForm = document.getElementById('pagetext-form');
+  const pagetextTargetEl = document.getElementById('pagetext_target');
+  let pageContentRows = {};
+
+  function pagetextKeys() {
+    const families = [];
+    cachedProducts.forEach((p) => {
+      const name = (p.category || '').trim();
+      if (name && !families.some((f) => f.toLowerCase() === name.toLowerCase())) families.push(name);
+    });
+    families.sort((a, b) => a.localeCompare(b));
+    return [{ key: 'home', label: 'Homepage', path: '/' }].concat(
+      families.map((f) => ({ key: 'category:' + slugify(f), label: f + ' family page', path: '/categories/' + slugify(f) + '/' }))
+    );
+  }
+
+  function fillPagetextTargets() {
+    if (!pagetextTargetEl) return;
+    const current = pagetextTargetEl.value;
+    pagetextTargetEl.innerHTML = '';
+    pagetextKeys().forEach((entry) => {
+      const opt = document.createElement('option');
+      opt.value = entry.key;
+      opt.textContent = entry.label + (pageContentRows[entry.key] ? '  (has text)' : '');
+      opt.dataset.path = entry.path;
+      pagetextTargetEl.appendChild(opt);
+    });
+    if (current && Array.from(pagetextTargetEl.options).some((o) => o.value === current)) pagetextTargetEl.value = current;
+    showPagetextRow();
+  }
+
+  function showPagetextRow() {
+    const key = pagetextTargetEl.value;
+    const row = pageContentRows[key] || {};
+    document.getElementById('pagetext_intro').innerHTML = row.intro_html || '';
+    document.getElementById('pagetext_footer').innerHTML = row.footer_html || '';
+    document.getElementById('pagetext_show_stats').checked = row.show_stats !== false;
+    // The automatic stats sentence is about a family's refresh dates, so
+    // it has nothing to say on the homepage.
+    document.getElementById('pagetext-stats-step').style.display = key === 'home' ? 'none' : '';
+    const selected = pagetextTargetEl.options[pagetextTargetEl.selectedIndex];
+    const path = selected ? selected.dataset.path : '/';
+    const link = document.getElementById('pagetext-preview-link');
+    link.innerHTML = '';
+    const a = document.createElement('a');
+    a.href = path;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'View this page \u2197';
+    link.appendChild(a);
+    document.getElementById('pagetext-status').textContent = '';
+  }
+
+  async function loadPageContent() {
+    const { data, error } = await client.from('page_content').select('*');
+    if (error) {
+      document.getElementById('pagetext-status').textContent = 'Page text needs supabase-schema-update-22.sql running first.';
+      return;
+    }
+    pageContentRows = {};
+    (data || []).forEach((row) => { pageContentRows[row.key] = row; });
+    fillPagetextTargets();
+  }
+
+  if (pagetextTargetEl) pagetextTargetEl.addEventListener('change', showPagetextRow);
+
+  document.querySelectorAll('.richtext-toolbar [data-editor]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.getElementById(btn.getAttribute('data-editor')).focus();
+      document.execCommand(btn.getAttribute('data-cmd'));
+    });
+  });
+
+  document.querySelectorAll('.richtext-toolbar [data-link-for]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const url = window.prompt('Link URL (include https://)');
+      if (!url) return;
+      document.getElementById(btn.getAttribute('data-link-for')).focus();
+      document.execCommand('createLink', false, url);
+    });
+  });
+
+  if (pagetextForm) {
+    pagetextForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const key = pagetextTargetEl.value;
+      const clean = (html) => (html && html.trim() && html.trim() !== '<br>' ? html.trim() : null);
+      const payload = {
+        key,
+        intro_html: clean(document.getElementById('pagetext_intro').innerHTML),
+        footer_html: clean(document.getElementById('pagetext_footer').innerHTML),
+        show_stats: document.getElementById('pagetext_show_stats').checked,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await client.from('page_content').upsert(payload);
+      const statusEl = document.getElementById('pagetext-status');
+      if (error) {
+        statusEl.textContent = 'Save failed: ' + error.message;
+        return;
+      }
+      pageContentRows[key] = payload;
+      fillPagetextTargets();
+      statusEl.textContent = 'Saved. It appears on the site after the next build, a minute or two.';
     });
   }
 

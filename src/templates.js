@@ -497,6 +497,32 @@ function daysBetween(a, b) {
   return Math.floor((new Date(b) - new Date(a)) / 86400000);
 }
 
+// Editable page text, written in admin. Passed through the same
+// sanitiser as product notes, so only safe formatting survives.
+function pageIntroHtml(pageContent, siteUrl, position) {
+  const raw = pageContent && (position === 'footer' ? pageContent.footer_html : pageContent.intro_html);
+  const clean = sanitizeRichText(raw, siteUrl);
+  return clean ? `<div class="page-copy page-copy--${position}">${clean}</div>` : '';
+}
+
+// A sentence built from the family's own data. It costs nothing to
+// maintain because every build works it out again from the dates.
+function categoryStatsSentence(category, items) {
+  const withStatus = items.filter((i) => i.status && !i.product.discontinued);
+  const cycles = withStatus.map((i) => i.status.avgCycleDays).filter((d) => d > 0);
+  if (!cycles.length) return '';
+  const avg = Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length);
+  const cycleText = avg >= 330
+    ? `about every ${Math.round(avg / 365.25) === 1 ? 'year' : Math.round(avg / 365.25) + ' years'}`
+    : `about every ${Math.round(avg / 30.4)} months`;
+  const longest = withStatus.slice().sort((a, b) => b.status.daysSince - a.status.daysSince)[0];
+  const newest = withStatus.slice().sort((a, b) => a.status.daysSince - b.status.daysSince)[0];
+  const parts = [`Apple refreshes ${escapeHtml(category)} ${cycleText} on average.`];
+  if (newest) parts.push(`The most recently updated is ${escapeHtml(newest.product.name)}, ${plural(newest.status.daysSince, 'day', 'days')} ago.`);
+  if (longest && longest !== newest) parts.push(`${escapeHtml(longest.product.name)} has waited longest, at ${plural(longest.status.daysSince, 'day', 'days')}.`);
+  return `<p class="page-stats">${parts.join(' ')}</p>`;
+}
+
 function productStatusKey(product) {
   if (product.discontinued) return 'discontinued';
   return 'current';
@@ -995,7 +1021,7 @@ function factBoxInnerHtml(fact) {
     <a href="/facts/" class="fact-more-link">More facts &rarr;</a>`;
 }
 
-function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const featuredSlotHtml = activeEvent
     ? eventCardHtml(activeEvent)
     : heroFeatured
@@ -1042,8 +1068,8 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
   <div class="intro-hero-layout">
     <div class="intro-hero-text">
       <h1 class="intro-heading">Apple Sunset</h1>
-      <p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
-      <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>
+      ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
+      <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
       <a class="intro-cta" href="/products/">Browse all products</a>
     </div>
     <div class="intro-hero-cards" id="hero-cards">
@@ -1055,10 +1081,11 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
 ${categoryLinksHtml}
 ${overdueSection}
 ${factSection}
-${gallerySection}`;
+${gallerySection}
+${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   return shell({
-    title: 'Apple Sunset — time since every Apple product was last refreshed',
-    description: 'A quick look at how long it has been since every current Apple product was last updated, plus an archive of the ones Apple discontinued.',
+    title: 'How long since Apple last updated each product | Apple Sunset',
+    description: `Days since the last refresh for ${totalCount} Apple products, with release histories, typical refresh cycles and an archive of everything Apple has discontinued.`,
     siteUrl,
     path: '/',
     bodyHtml: body,
@@ -1197,7 +1224,7 @@ function leagueTableHtml(items, category) {
 </table>`;
 }
 
-function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function categoryPage({ category, items, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const slug = slugify(category);
   const currentCount = items.filter((i) => !i.product.discontinued).length;
   const discontinuedCount = items.length - currentCount;
@@ -1217,6 +1244,8 @@ function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }
   const body = `
 <div class="category-page-heading" data-category="${escapeHtml(category)}">${categoryIcon(category, 36)}<h1>${escapeHtml(category)}</h1></div>
 <p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}. Newest first.</p>
+${pageIntroHtml(pageContent, siteUrl, 'intro')}
+${!pageContent || pageContent.show_stats !== false ? categoryStatsSentence(category, items) : ''}
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)}…" aria-label="Search">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
@@ -1226,16 +1255,21 @@ ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
 <div id="category-timeline-section" style="display:${timelinePoints.length ? '' : 'none'};">
   ${releaseHistorySection}
 </div>
-${leagueTableHtml(items, category)}`;
+${leagueTableHtml(items, category)}
+${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   return shell({
-    title: `${category} — Apple Sunset`,
-    description: `Every ${category} product on Apple Sunset, current and discontinued, with time since refresh and full release history.`,
+    title: `${category}: release history and time since the last update | Apple Sunset`,
+    description: `How long since each ${category} product was last updated, with release dates, typical refresh cycles and every discontinued model.`,
     siteUrl,
     path: `/categories/${slug}/`,
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
   });
+}
+
+function keyFact(label, value) {
+  return value ? `<div class="key-fact"><p class="key-fact-label">${label}</p><p class="key-fact-value">${value}</p></div>` : '';
 }
 
 function specRow(label, valueHtml) {
@@ -1301,20 +1335,26 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
     (photo.tags || []).some((tag) => tag.trim().toLowerCase() === productNameLower)
   );
 
+  // The six facts people come for, as a card grid, then everything else
+  // in a smaller list underneath. Nothing is hidden, but the page no
+  // longer gives "Days counted from" the same weight as the price.
+  const keyFacts = [
+    keyFact('Latest release', latest ? formatDate(latest) : (launch ? formatDate(launch) : null)),
+    keyFact('First release', launch && launch !== latest ? formatDate(launch) : null),
+    keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}` : null),
+    keyFact('Next expected', status && sortedDates.length > 1 && !product.discontinued
+      ? new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
+      : null),
+    keyFact('Discontinued', product.discontinued && product.discontinued_date ? formatDate(product.discontinued_date) : null),
+    keyFact('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanText(launch, product.discontinued_date) : null),
+    keyFact('Starting price', product.price ? escapeHtml(formatPrice(product.price)) : null),
+    keyFact('Releases so far', sortedDates.length > 1 ? String(sortedDates.length) : null),
+  ].filter(Boolean).slice(0, 6).join('\n');
+
   const specs = [
     specRow('Category', categoryPill(product.category)),
     specRow('Status', product.discontinued ? 'Discontinued' : 'Current'),
-    launch ? specRow('Launched', formatDate(launch)) : '',
-    latest && sortedDates.length > 1 && !product.discontinued ? specRow('Last refreshed', formatDate(latest)) : '',
-    sortedDates.length > 1 ? specRow('Times refreshed', String(sortedDates.length - 1)) : '',
-    status && !product.discontinued ? specRow('Typical refresh cycle', `About every ${plural(status.avgCycleDays, 'day', 'days')}`) : '',
-    status && sortedDates.length > 1 && !product.discontinued
-      ? specRow('Next refresh expected around', new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }))
-      : '',
-    product.discontinued && product.discontinued_date ? specRow('Discontinued', formatDate(product.discontinued_date)) : '',
-    launch && product.discontinued && product.discontinued_date ? specRow('Lifespan', lifespanText(launch, product.discontinued_date)) : '',
     product.discontinued ? specRow('Apple support status', appleSupportStatus(product)) : '',
-    specRow('Starting price', escapeHtml(formatPrice(product.price))),
     sortedDates.length ? specRow('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
     daysInfo ? specRow('Days counted from', `${plural(daysInfo.days, 'day', 'days')} (${product.days_basis === 'launch' ? 'first release' : 'latest release'})`) : '',
     specRow('Chip', escapeHtml(product.chip)),
@@ -1356,7 +1396,9 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
         <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
       </div>
 
-      <dl class="spec-list">
+      ${keyFacts ? `<div class="key-facts">${keyFacts}</div>` : ''}
+
+      <dl class="spec-list spec-list--secondary">
         ${specs}
       </dl>
 
@@ -1385,7 +1427,11 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
     : `${product.name} on Apple Sunset.`;
 
   return shell({
-    title: `${product.name} — Apple Sunset`,
+    title: product.discontinued
+      ? `${product.name}: discontinued${product.discontinued_date ? ' ' + formatDate(product.discontinued_date) : ''} | Apple Sunset`
+      : status
+      ? `${product.name}: ${plural(daysInfo ? daysInfo.days : status.daysSince, 'day', 'days')} since the last update | Apple Sunset`
+      : `${product.name} | Apple Sunset`,
     description,
     siteUrl,
     path: `/products/${product.slug}/`,
@@ -1479,6 +1525,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <button type="button" class="admin-tab-btn" data-tab="gallery">Gallery</button>
       <button type="button" class="admin-tab-btn" data-tab="event">Apple Event</button>
       <button type="button" class="admin-tab-btn" data-tab="facts">Facts</button>
+      <button type="button" class="admin-tab-btn" data-tab="pagetext">Page text</button>
       <button type="button" class="admin-tab-btn" data-tab="about">About page</button>
     </div>
     <button id="logout-btn" class="admin-btn">Log out</button>
@@ -1753,6 +1800,53 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
     <h3 class="admin-form-section">Published facts</h3>
     <div id="published-facts" class="admin-fact-list"></div>
+  </div>
+
+  <div id="tab-pagetext" class="admin-tab-panel" style="display:none;">
+    <h2 class="admin-screen-title">Page text</h2>
+    <p class="admin-hint">Words on the homepage and family pages. This is what Google reads, so a few plain sentences about what the page covers is worth more than anything else you can add.</p>
+    <form id="pagetext-form" class="admin-form admin-form--steps">
+      <section class="admin-step">
+        <h3 class="admin-step-title">Which page?</h3>
+        <label>Page<select id="pagetext_target"></select></label>
+        <p class="admin-hint" id="pagetext-preview-link"></p>
+      </section>
+
+      <section class="admin-step">
+        <h3 class="admin-step-title">Intro <span class="admin-optional">Shown under the heading, above the products</span></h3>
+        <div class="richtext-toolbar">
+          <button type="button" data-cmd="bold" data-editor="pagetext_intro"><b>B</b></button>
+          <button type="button" data-cmd="italic" data-editor="pagetext_intro"><i>I</i></button>
+          <button type="button" data-cmd="insertParagraph" data-editor="pagetext_intro">&para;</button>
+          <button type="button" data-link-for="pagetext_intro">&#128279;</button>
+        </div>
+        <div id="pagetext_intro" class="richtext-editor" contenteditable="true"></div>
+        <p class="admin-hint">Two or three sentences is plenty. Say what the page covers in the words someone would search for.</p>
+      </section>
+
+      <section class="admin-step" id="pagetext-stats-step">
+        <h3 class="admin-step-title">Automatic stats line</h3>
+        <label class="checkbox-label"><input type="checkbox" id="pagetext_show_stats" checked> Add a sentence built from this family&rsquo;s own dates</label>
+        <p class="admin-hint">For example: &ldquo;Apple refreshes iPhone about every year on average. The most recently updated is iPhone 17 Pro, 365 days ago.&rdquo; It rewrites itself on every build, so it never goes stale.</p>
+      </section>
+
+      <section class="admin-step">
+        <h3 class="admin-step-title">Extra text <span class="admin-optional">Shown at the bottom, below the products</span></h3>
+        <div class="richtext-toolbar">
+          <button type="button" data-cmd="bold" data-editor="pagetext_footer"><b>B</b></button>
+          <button type="button" data-cmd="italic" data-editor="pagetext_footer"><i>I</i></button>
+          <button type="button" data-cmd="insertParagraph" data-editor="pagetext_footer">&para;</button>
+          <button type="button" data-link-for="pagetext_footer">&#128279;</button>
+        </div>
+        <div id="pagetext_footer" class="richtext-editor" contenteditable="true"></div>
+        <p class="admin-hint">Room for the longer explanation: how Apple has handled this family over the years, what to expect next. Keeps the products at the top where people want them.</p>
+      </section>
+
+      <div class="admin-save-bar">
+        <button type="submit" class="admin-btn admin-btn--primary">Save page text</button>
+        <span id="pagetext-status" class="admin-hint"></span>
+      </div>
+    </form>
   </div>
 
   <div id="tab-about" class="admin-tab-panel" style="display:none;">

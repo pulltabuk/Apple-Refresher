@@ -588,6 +588,10 @@
     );
   }
 
+  function keyFactJS(label, value) {
+    return value ? '<div class="key-fact"><p class="key-fact-label">' + label + '</p><p class="key-fact-value">' + value + '</p></div>' : '';
+  }
+
   function specRowJS(label, valueHtml) {
     return valueHtml ? '<div class="spec-row"><dt>' + label + '</dt><dd>' + valueHtml + '</dd></div>' : '';
   }
@@ -659,22 +663,26 @@
 
     var daysInfo = status ? badgeDaysInfoJS(product, status) : null;
 
+    // Mirrors the key facts grid plus secondary list in src/templates.js.
+    var keyFacts = [
+      keyFactJS('Latest release', latest ? formatDateJS(latest) : (launch ? formatDateJS(launch) : null)),
+      keyFactJS('First release', launch && launch !== latest ? formatDateJS(launch) : null),
+      keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days') : null),
+      keyFactJS('Next expected', status && sortedDates.length > 1 && !product.discontinued
+        ? new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
+        : null),
+      keyFactJS('Discontinued', product.discontinued && product.discontinued_date ? formatDateJS(product.discontinued_date) : null),
+      keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanTextJS(launch, product.discontinued_date) : null),
+      keyFactJS('Starting price', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
+      keyFactJS('Releases so far', sortedDates.length > 1 ? String(sortedDates.length) : null)
+    ].filter(Boolean).slice(0, 6).join('');
+
     var specs = [
       specRowJS('Category', pillJS(product.category)),
       specRowJS('Status', product.discontinued ? 'Discontinued' : 'Current'),
-      launch ? specRowJS('Launched', formatDateJS(launch)) : '',
-      latest && sortedDates.length > 1 && !product.discontinued ? specRowJS('Last refreshed', formatDateJS(latest)) : '',
-      sortedDates.length > 1 ? specRowJS('Times refreshed', String(sortedDates.length - 1)) : '',
-      status && !product.discontinued ? specRowJS('Typical refresh cycle', 'About every ' + status.avgCycleDays + ' days') : '',
-      status && sortedDates.length > 1 && !product.discontinued
-        ? specRowJS('Next refresh expected around', new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }))
-        : '',
-      product.discontinued && product.discontinued_date ? specRowJS('Discontinued', formatDateJS(product.discontinued_date)) : '',
-      launch && product.discontinued && product.discontinued_date ? specRowJS('Lifespan', lifespanTextJS(launch, product.discontinued_date)) : '',
       product.discontinued ? specRowJS('Apple support status', appleSupportStatusJS(product)) : '',
-      specRowJS('Starting price', escapeHtmlJS(formatPriceJS(product.price))),
       sortedDates.length ? specRowJS('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
-      daysInfo ? specRowJS('Days counted from', daysInfo.days + ' days (' + (product.days_basis === 'launch' ? 'Launch' : 'Refresh') + ')') : '',
+      daysInfo ? specRowJS('Days counted from', pluralJS(daysInfo.days, 'day', 'days') + ' (' + (product.days_basis === 'launch' ? 'first release' : 'latest release') + ')') : '',
       specRowJS('Chip', escapeHtmlJS(product.chip)),
       specRowJS('Previous model', previousModelHtml),
       specRowJS('Replaced by', replacedByHtml),
@@ -687,7 +695,7 @@
       product.specs_url ? specRowJS('Tech specs', '<a href="' + product.specs_url + '" target="_blank" rel="noopener">Apple specs &#8599;</a>') : '',
       product.press_release_url ? specRowJS('Press release', '<a href="' + product.press_release_url + '" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>') : '',
       product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
-      product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people'),
+      product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> ' + ((product.waiting_count || 0) === 1 ? 'person' : 'people')),
     ].filter(Boolean).join('');
 
     var allProducts = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
@@ -700,10 +708,16 @@
         (product.video_url ? '<div class="product-media">' + videoBlock + '</div>' : '') +
         '<div class="product-info">' +
           '<div class="product-header">' +
-            '<div>' + '<h1>' + escapeHtmlJS(product.name) + '</h1>' + heroStatHtmlJS(product, status) + '</div>' +
+            '<div>' +
+              '<div class="product-title-row" data-category="' + escapeHtmlJS(product.category || '') + '">' +
+                '<span class="product-title-icon">' + productIconJS(product, 40) + '</span>' +
+                '<h1>' + escapeHtmlJS(product.name) + '</h1>' +
+              '</div>' + heroStatHtmlJS(product, status) +
+            '</div>' +
             '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
           '</div>' +
-          '<dl class="spec-list">' + specs + '</dl>' +
+          (keyFacts ? '<div class="key-facts">' + keyFacts + '</div>' : '') +
+          '<dl class="spec-list spec-list--secondary">' + specs + '</dl>' +
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
         '</div>' +
       '</div>' +
@@ -1649,4 +1663,47 @@
       })
       .catch(function () {});
   }
+
+  // --- Two small enhancements, both skipped when they can't help ---
+
+  // Start fetching a product page as soon as the pointer lands on its
+  // link, so the click feels instant. Each URL is only ever queued once,
+  // and it is skipped on slow or metered connections.
+  (function prefetchOnHover() {
+    var conn = navigator.connection;
+    if (conn && (conn.saveData || /2g/.test(conn.effectiveType || ''))) return;
+    var done = {};
+    document.addEventListener('pointerover', function (e) {
+      var link = e.target.closest && e.target.closest('a[href^="/products/"], a[href^="/categories/"]');
+      if (!link || done[link.href] || link.origin !== window.location.origin) return;
+      done[link.href] = true;
+      var hint = document.createElement('link');
+      hint.rel = 'prefetch';
+      hint.href = link.href;
+      document.head.appendChild(hint);
+    }, { passive: true });
+  })();
+
+  // Count the headline number up on arrival. Purely decorative: the real
+  // number is already in the HTML, so it is correct before this runs and
+  // if this never runs at all.
+  (function countUpHeroNumber() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var el = document.querySelector('.days-hero-number');
+    if (!el) return;
+    var target = parseInt(el.textContent.replace(/[^0-9]/g, ''), 10);
+    if (!target || target < 10) return;
+    var duration = 650;
+    var start = null;
+    function step(now) {
+      if (start === null) start = now;
+      var progress = Math.min((now - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = String(Math.round(target * eased));
+      if (progress < 1) window.requestAnimationFrame(step);
+      else el.textContent = String(target);
+    }
+    window.requestAnimationFrame(step);
+  })();
+
 })();
