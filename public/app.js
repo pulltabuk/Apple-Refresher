@@ -194,6 +194,71 @@
     return points;
   }
 
+  var TIMELINE_ICONS_JS = {
+    launch: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2.5 14 13H2z" fill="currentColor"/></svg>',
+    refresh: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg>',
+    discontinued: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>'
+  };
+
+  function pluralJS(count, one, many) {
+    return count + ' ' + (count === 1 ? one : many);
+  }
+
+  function timelineGapTextJS(earlier, later) {
+    var days = daysBetweenJS(earlier, later);
+    if (days < 45) return '';
+    var years = Math.round(days / 365.25);
+    if (years >= 1 && Math.abs(days - years * 365.25) <= 45) {
+      return 'about ' + years + ' year' + (years === 1 ? '' : 's') + ' later';
+    }
+    var months = monthsBetweenJS(earlier, later);
+    if (months < 12) return months + ' month' + (months === 1 ? '' : 's') + ' later';
+    return lifespanTextJS(earlier, later) + ' later';
+  }
+
+  // Mirrors verticalTimelineHtml in src/templates.js.
+  function verticalTimelineHtmlJS(product, allProducts) {
+    var points = categoryTimelinePointsJS(product, allProducts);
+    if (!points.length) return '';
+    var byDate = {};
+    var dates = [];
+    points.forEach(function (pt) {
+      if (!byDate[pt.date]) { byDate[pt.date] = []; dates.push(pt.date); }
+      byDate[pt.date].push(pt);
+    });
+    dates.sort().reverse();
+    var today = new Date().toISOString().slice(0, 10);
+    var newestRelease = dates.filter(function (d) {
+      return byDate[d].some(function (pt) { return pt.type !== 'discontinued'; });
+    })[0];
+    var sinceDays = newestRelease ? daysBetweenJS(newestRelease, today) : null;
+    var nowNode = !product.discontinued && sinceDays !== null && sinceDays >= 0
+      ? '<li class="tl-now"><span class="tl-marker tl-marker--now" aria-hidden="true">&#9679;</span>' +
+        '<div class="tl-body"><p class="tl-now-text">Today &middot; ' + pluralJS(sinceDays, 'day', 'days') + ' since the last release</p></div></li>'
+      : '';
+    var lastYear = null;
+    var rows = dates.map(function (date, i) {
+      var entries = byDate[date];
+      var type = entries.some(function (e) { return e.type !== 'discontinued'; })
+        ? (entries.some(function (e) { return e.type === 'launch'; }) ? 'launch' : 'refresh')
+        : 'discontinued';
+      var year = String(date).slice(0, 4);
+      var yearRow = year !== lastYear ? '<li class="tl-year"><span>' + year + '</span></li>' : '';
+      lastYear = year;
+      var nextDate = dates[i + 1];
+      var gap = nextDate ? timelineGapTextJS(nextDate, date) : '';
+      var gapRow = gap ? '<li class="tl-gap"><span class="tl-gap-text">&#8593; ' + gap + '</span></li>' : '';
+      var lines = entries.map(function (e) {
+        return '<p class="tl-entry"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
+          '<span class="tl-entry-type tl-entry-type--' + e.type + '">' + e.label + '</span></p>';
+      }).join('');
+      return yearRow + '<li class="tl-item tl-item--' + type + '">' +
+        '<span class="tl-marker tl-marker--' + type + '">' + (TIMELINE_ICONS_JS[type] || TIMELINE_ICONS_JS.refresh) + '</span>' +
+        '<div class="tl-body"><p class="tl-date">' + formatDateJS(date) + '</p>' + lines + '</div></li>' + gapRow;
+    }).join('');
+    return '<ol class="tl">' + nowNode + rows + '</ol>';
+  }
+
   function horizontalTimelineHtmlJS(product, allProducts) {
     var points = categoryTimelinePointsJS(product, allProducts);
     if (!points.length) return '';
@@ -627,7 +692,7 @@
 
     var allProducts = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
     var timelinePoints = categoryTimelinePointsJS(product, allProducts);
-    var releaseHistorySection = timelinePoints.length ? '<h2>Release history</h2>' + horizontalTimelineHtmlJS(product, allProducts) : '';
+    var releaseHistorySection = timelinePoints.length ? '<h2>Release history</h2>' + verticalTimelineHtmlJS(product, allProducts) : '';
 
     return (
       '<p><a href="/products/" class="gallery-nav-link">&larr; All products</a></p>' +
@@ -643,7 +708,9 @@
         '</div>' +
       '</div>' +
       releaseHistorySection +
-      generationsSectionHtmlJS(product) +
+      (timelinePoints.every(function (pt) { return pt.productName === product.name; })
+        && !productGenerationsJS(product).some(function (g) { return g.announced; })
+        ? '' : generationsSectionHtmlJS(product)) +
       (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
       (relatedPhotos.length ? '<h2>From the gallery</h2><div class="gallery-strip">' + relatedPhotos.map(galleryStripItemHtmlJS).join('') + '</div>' : '')
     );
@@ -1217,7 +1284,7 @@
           var points = seedProduct ? categoryTimelinePointsJS(seedProduct, categoryProducts) : [];
           if (points.length) {
             timelineSection.style.display = '';
-            timelineSection.innerHTML = '<h2>Release history</h2>' + horizontalTimelineHtmlJS(seedProduct, categoryProducts);
+            timelineSection.innerHTML = '<h2>Release history</h2>' + verticalTimelineHtmlJS(seedProduct, categoryProducts);
           } else {
             timelineSection.style.display = 'none';
             timelineSection.innerHTML = '';

@@ -9,7 +9,11 @@ const DEFAULT_ABOUT = {
   image_url: null,
 };
 
-const SITE_URL = process.env.SITE_URL || 'https://example.netlify.app';
+// The public address of the site. Everything canonical, Open Graph,
+// sitemap and RSS is built from this, so it must be the real domain and
+// never the netlify.app address, or Google treats the two as rival
+// copies of the same site and may rank neither.
+const SITE_URL = (process.env.SITE_URL || 'https://applesunset.com').replace(/\/+$/, '');
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
@@ -325,13 +329,16 @@ ${sitemapUrls.map((u) => `  <url><loc>${SITE_URL}${u.path}</loc>${u.lastmod ? `<
   const redirects = await loadRedirects();
   const livePaths = new Set(sitemapUrls.map((u) => u.path));
   // Never redirect a page that exists again, e.g. if a slug is reused.
+  // Send the netlify.app address to the real domain, so there is only
+  // ever one indexable copy of every page.
+  const canonicalHost = SITE_URL.replace(/^https?:\/\//, '');
+  const hostRedirect = [`https://appl-e-refresher.netlify.app/* ${SITE_URL}/:splat 301!`];
   const redirectLines = redirects
     .filter((r) => r.from_slug && r.to_path && !livePaths.has('/products/' + r.from_slug + '/'))
     .map((r) => `/products/${r.from_slug}/* ${r.to_path} 301!`);
-  if (redirectLines.length) {
-    fs.writeFileSync(path.join(DIST, '_redirects'), redirectLines.join('\n') + '\n');
-    console.log(`Wrote ${redirectLines.length} redirect${redirectLines.length === 1 ? '' : 's'}.`);
-  }
+  const allRedirectLines = hostRedirect.concat(redirectLines);
+  fs.writeFileSync(path.join(DIST, '_redirects'), allRedirectLines.join('\n') + '\n');
+  console.log(`Wrote ${allRedirectLines.length} redirect${allRedirectLines.length === 1 ? '' : 's'} (canonical host: ${canonicalHost}).`);
 
   const robotsTxt = `User-agent: *
 Disallow: /admin/

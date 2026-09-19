@@ -308,6 +308,88 @@ function categoryTimelinePoints(product, allProducts) {
   return points;
 }
 
+// A vertical timeline, newest first. It replaces the horizontal rail,
+// which ran out of room once a family had more than a handful of dates.
+// Same-day entries share one node (four iPhones launching together are
+// one row, not four), years act as headings, and the gap between dates
+// is labelled, which is the whole point of the site. It is plain HTML
+// and CSS: no scripts, no images, nothing to load.
+const TIMELINE_ICONS = {
+  launch: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2.5 14 13H2z" fill="currentColor"/></svg>',
+  refresh: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg>',
+  discontinued: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>',
+};
+
+function timelineGapText(earlier, later) {
+  const days = daysBetween(earlier, later);
+  if (days < 45) return '';
+  // A yearly cycle often lands a few days short of the anniversary, so
+  // round to the nearest year rather than reporting "11 months later".
+  const years = Math.round(days / 365.25);
+  if (years >= 1 && Math.abs(days - years * 365.25) <= 45) {
+    return `about ${years} year${years === 1 ? '' : 's'} later`;
+  }
+  const months = monthsBetween(earlier, later);
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'} later`;
+  return `${lifespanText(earlier, later)} later`;
+}
+
+function verticalTimelineHtml(product, allProducts) {
+  const points = categoryTimelinePoints(product, allProducts);
+  if (!points.length) return '';
+
+  const byDate = new Map();
+  points.forEach((pt) => {
+    if (!byDate.has(pt.date)) byDate.set(pt.date, []);
+    byDate.get(pt.date).push(pt);
+  });
+  const dates = [...byDate.keys()].sort().reverse();
+
+  const today = new Date().toISOString().slice(0, 10);
+  const newestRelease = dates.find((d) => byDate.get(d).some((pt) => pt.type !== 'discontinued'));
+  const sinceDays = newestRelease ? daysBetween(newestRelease, today) : null;
+  const nowNode = !product.discontinued && sinceDays !== null && sinceDays >= 0
+    ? `<li class="tl-now">
+      <span class="tl-marker tl-marker--now" aria-hidden="true">&#9679;</span>
+      <div class="tl-body"><p class="tl-now-text">Today &middot; ${plural(sinceDays, 'day', 'days')} since the last release</p></div>
+    </li>`
+    : '';
+
+  let lastYear = null;
+  const rows = dates.map((date, i) => {
+    const entries = byDate.get(date);
+    const type = entries.some((e) => e.type !== 'discontinued')
+      ? (entries.some((e) => e.type === 'launch') ? 'launch' : 'refresh')
+      : 'discontinued';
+    const year = String(date).slice(0, 4);
+    const yearRow = year !== lastYear ? `<li class="tl-year"><span>${year}</span></li>` : '';
+    lastYear = year;
+
+    const nextDate = dates[i + 1];
+    const gap = nextDate ? timelineGapText(nextDate, date) : '';
+    const gapRow = gap ? `<li class="tl-gap"><span class="tl-gap-text">&#8593; ${gap}</span></li>` : '';
+
+    const lines = entries.map((e) => `<p class="tl-entry">
+        <span class="tl-entry-name">${escapeHtml(e.displayName || e.productName)}</span>
+        <span class="tl-entry-type tl-entry-type--${e.type}">${e.label}</span>
+      </p>`).join('');
+
+    return `${yearRow}
+    <li class="tl-item tl-item--${type}">
+      <span class="tl-marker tl-marker--${type}">${TIMELINE_ICONS[type] || TIMELINE_ICONS.refresh}</span>
+      <div class="tl-body">
+        <p class="tl-date">${formatDate(date)}</p>
+        ${lines}
+      </div>
+    </li>${gapRow}`;
+  }).join('\n');
+
+  return `<ol class="tl">
+    ${nowNode}
+    ${rows}
+  </ol>`;
+}
+
 function horizontalTimelineHtml(product, allProducts) {
   const points = categoryTimelinePoints(product, allProducts);
   if (!points.length) return '';
@@ -441,10 +523,14 @@ function badgeDaysInfo(product, statusInfo) {
   return { days: statusInfo.daysSince, suffix: 'since refresh' };
 }
 
+function plural(count, one, many) {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
 function badgeHtml(product, statusInfo) {
   if (!statusInfo) return '';
   const info = badgeDaysInfo(product, statusInfo);
-  return `<span class="badge badge--${statusInfo.status}">${info.days} days ${info.suffix}</span>`;
+  return `<span class="badge badge--${statusInfo.status}">${plural(info.days, 'day', 'days')} ${info.suffix}</span>`;
 }
 
 function productBadge(product, statusInfo) {
@@ -1126,7 +1212,7 @@ function categoryPage({ category, items, siteUrl, supabaseUrl, supabaseAnonKey }
   const timelinePoints = seedProduct ? categoryTimelinePoints(seedProduct, allProductsInCategory) : [];
   const releaseHistorySection = timelinePoints.length
     ? `<h2>Release history</h2>
-  ${horizontalTimelineHtml(seedProduct, allProductsInCategory)}`
+  ${verticalTimelineHtml(seedProduct, allProductsInCategory)}`
     : '';
   const body = `
 <div class="category-page-heading" data-category="${escapeHtml(category)}">${categoryIcon(category, 36)}<h1>${escapeHtml(category)}</h1></div>
@@ -1163,7 +1249,7 @@ function heroStatHtml(product, statusInfo) {
   }
   if (!statusInfo) return '';
   const info = badgeDaysInfo(product, statusInfo);
-  return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> days ${info.suffix}</p>`;
+  return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> ${info.days === 1 ? 'day' : 'days'} ${info.suffix}</p>`;
 }
 
 function externalLinkLabel(product) {
@@ -1178,7 +1264,12 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
 
   const allProducts = productsBySlug ? Object.values(productsBySlug) : [product];
   const timelinePoints = categoryTimelinePoints(product, allProducts);
-  const timelineHtml = horizontalTimelineHtml(product, allProducts);
+  const timelineHtml = verticalTimelineHtml(product, allProducts);
+  // When the timeline above already lists exactly this product's own
+  // dates, a Generations table underneath is the same data twice, unless
+  // it carries announced dates the timeline doesn't show.
+  const timelineCoversOnlyThisProduct = timelinePoints.every((pt) => pt.productName === product.name)
+    && !productGenerations(product).some((g) => g.announced);
 
   const videoBlock = product.video_url
     ? `<video class="product-video" src="${product.video_url}" controls></video>`
@@ -1216,7 +1307,7 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
     launch ? specRow('Launched', formatDate(launch)) : '',
     latest && sortedDates.length > 1 && !product.discontinued ? specRow('Last refreshed', formatDate(latest)) : '',
     sortedDates.length > 1 ? specRow('Times refreshed', String(sortedDates.length - 1)) : '',
-    status && !product.discontinued ? specRow('Typical refresh cycle', `About every ${status.avgCycleDays} days`) : '',
+    status && !product.discontinued ? specRow('Typical refresh cycle', `About every ${plural(status.avgCycleDays, 'day', 'days')}`) : '',
     status && sortedDates.length > 1 && !product.discontinued
       ? specRow('Next refresh expected around', new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }))
       : '',
@@ -1225,7 +1316,7 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
     product.discontinued ? specRow('Apple support status', appleSupportStatus(product)) : '',
     specRow('Starting price', escapeHtml(formatPrice(product.price))),
     sortedDates.length ? specRow('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
-    daysInfo ? specRow('Days counted from', `${daysInfo.days} days (${product.days_basis === 'launch' ? 'Launch' : 'Refresh'})`) : '',
+    daysInfo ? specRow('Days counted from', `${plural(daysInfo.days, 'day', 'days')} (${product.days_basis === 'launch' ? 'first release' : 'latest release'})`) : '',
     specRow('Chip', escapeHtml(product.chip)),
     specRow('Previous model', previousModelHtml),
     specRow('Replaced by', replacedByHtml),
@@ -1238,7 +1329,7 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
     product.specs_url ? specRow('Tech specs', `<a href="${product.specs_url}" target="_blank" rel="noopener">Apple specs &#8599;</a>`) : '',
     product.press_release_url ? specRow('Press release', `<a href="${product.press_release_url}" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>`) : '',
     product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(externalLinkLabel(product))} &#8599;</a>`) : '',
-    product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> people`),
+    product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> ${(product.waiting_count || 0) === 1 ? 'person' : 'people'}`),
   ].filter(Boolean).join('\n');
 
   const releaseHistorySection = timelinePoints.length
@@ -1256,7 +1347,10 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
     <div class="product-info">
       <div class="product-header">
         <div>
-          <h1>${escapeHtml(product.name)}</h1>
+          <div class="product-title-row" data-category="${escapeHtml(product.category || '')}">
+            <span class="product-title-icon">${productIcon(product, 40)}</span>
+            <h1>${escapeHtml(product.name)}</h1>
+          </div>
           ${heroStatHtml(product, status)}
         </div>
         <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
@@ -1274,7 +1368,7 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
 
   ${releaseHistorySection}
 
-  ${generationsSectionHtml(product)}
+  ${timelineCoversOnlyThisProduct ? '' : generationsSectionHtml(product)}
 
   ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note, siteUrl)}</div></div>` : ''}
 
@@ -1287,7 +1381,7 @@ function productPage({ product, status, history, productsBySlug, galleryPhotos, 
   const description = product.discontinued
     ? `${product.name} was discontinued${product.discontinued_date ? ` in ${formatDate(product.discontinued_date)}` : ''}${launch ? `, after launching in ${formatDate(launch)}` : ''}.${successor ? ` It was replaced by the ${successor.name}.` : ''}`
     : status
-    ? `${product.name} was last refreshed ${status.daysSince} days ago. See every generation and the full release history.`
+    ? `${product.name} was last refreshed ${plural(status.daysSince, 'day', 'days')} ago. See every generation and the full release history.`
     : `${product.name} on Apple Sunset.`;
 
   return shell({

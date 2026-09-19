@@ -1407,7 +1407,7 @@
   const galleryForm = document.getElementById('gallery-form');
   const galleryTagsListEl = document.getElementById('gallery-tags-list');
   const galleryImageThumbsEl = document.getElementById('gallery-image-thumbs');
-  const MAX_GALLERY_IMAGES = 8;
+  const MAX_GALLERY_IMAGES = 12;
 
   function showGalleryList() {
     galleryListView.style.display = 'block';
