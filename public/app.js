@@ -1067,10 +1067,24 @@
       if (!(key in activeFilters)) activeFilters[key] = 'all';
       bar.querySelectorAll('.filter-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          if (btn.classList.contains('active')) return;
-          bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
-          btn.classList.add('active');
-          activeFilters[key] = btn.getAttribute('data-filter-value');
+          var value = btn.getAttribute('data-filter-value');
+          // Tapping the family you're already in takes you back to all
+          // of them, since that row has no "All" button of its own.
+          if (btn.classList.contains('active')) {
+            if (key !== 'category' || value === 'all') return;
+            btn.classList.remove('active');
+            activeFilters[key] = 'all';
+          } else {
+            bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            activeFilters[key] = value;
+          }
+          // "All" is the reset for the whole row, not just its own group.
+          if (key === 'status' && value === 'all') {
+            activeFilters.category = 'all';
+            var categoryBar = document.querySelector('.filter-bar[data-filter-key="category"]');
+            if (categoryBar) categoryBar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+          }
           if (searchInput) searchInput.value = '';
           updateStatusBarVisibility();
           applyFilters();

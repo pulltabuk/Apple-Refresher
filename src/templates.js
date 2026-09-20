@@ -1214,12 +1214,10 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
   <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
-<div class="filters-with-everything">
-  <button type="button" id="everything-btn" class="everything-btn">Everything</button>
-  <div class="filter-bars-stack">
-    ${filterBar('category', categories, null, categoryCounts, items.length, true, 'All Products')}
-    <div id="status-bar-wrapper" style="display:none;">${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}</div>
-  </div>
+<div class="filter-row-merged">
+  ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length, true, 'All')}
+  <span class="filter-divider" aria-hidden="true"></span>
+  ${filterBar('category', categories, null, categoryCounts, items.length, false)}
 </div>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="all">

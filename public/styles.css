@@ -1485,3 +1485,12 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card .pill:hover { border-color: var(--accent); color: var(--accent-dark); }
 .filter-bar { gap: 6px; }
 .homepage-category-links { margin-top: 0.5rem; }
+
+/* One filter row: status, a divider, then the families */
+.filter-row-merged { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0.75rem 0 1.5rem; }
+.filter-row-merged .filter-bar { margin: 0; }
+.filter-divider { width: 1px; align-self: stretch; min-height: 26px; background: var(--border); margin: 0 6px; }
+@media (max-width: 600px) {
+  .filter-divider { display: none; }
+  .filter-row-merged { gap: 6px; }
+}
