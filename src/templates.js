@@ -1214,10 +1214,20 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
     ? `${featuredSlotHtml}${heroRest.map((r) => cardHtml(r.product, r.status)).join('\n')}`
     : emptyState('products');
 
+  // Pills on desktop, a native picker on mobile: thirteen families wrap
+  // into five rows on a phone, and a scrolling row would hide most of
+  // them off the edge.
   const categoryLinksHtml = categoryLinks && categoryLinks.length
     ? `<div class="filter-bar homepage-category-links">
   <a class="filter-btn active" href="/products/">All <span class="filter-btn-count">(${totalCount})</span></a>
   ${categoryLinks.map((c) => `<a class="filter-btn" href="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} <span class="filter-btn-count">(${c.count})</span></a>`).join('\n')}
+</div>
+<div class="homepage-category-select">
+  <label class="sr-only" for="category-jump">Browse by family</label>
+  <select id="category-jump" data-category-jump>
+    <option value="/products/">All products (${totalCount})</option>
+    ${categoryLinks.map((c) => `<option value="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} (${c.count})</option>`).join('\n')}
+  </select>
 </div>`
     : '';
 

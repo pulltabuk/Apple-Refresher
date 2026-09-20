@@ -1981,6 +1981,15 @@
 
   // Countdown clock. The server already rendered the number of days, so
   // this only upgrades it to days, hours and minutes and keeps it ticking.
+  // The mobile family picker navigates on choose.
+  (function categoryJump() {
+    var el = document.querySelector('[data-category-jump]');
+    if (!el) return;
+    el.addEventListener('change', function () {
+      if (el.value) window.location.href = el.value;
+    });
+  })();
+
   (function countdown() {
     function unit(value, label, isSeconds) {
       return '<span class="countdown-unit' + (isSeconds ? ' countdown-unit--secs' : '') + '">' +

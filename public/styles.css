@@ -1617,3 +1617,37 @@ body.is-admin .site-search { display: none; }
 }
 /* Several countdowns stack neatly when more than one product is due */
 .countdown + .countdown { margin-top: 10px; }
+
+/* Screen-reader-only label text */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Family navigation: pills on desktop, native picker on mobile, where
+   thirteen pills otherwise wrap into five rows. */
+.homepage-category-select { display: none; margin: 0.5rem 0 1.25rem; }
+.homepage-category-select select {
+  width: 100%;
+  padding: 11px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+@media (max-width: 700px) {
+  .homepage-category-links { display: none; }
+  .homepage-category-select { display: block; }
+
+  /* Two columns of smaller cards instead of one tall column */
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .card-grid .card { padding: 0.7rem; }
+  .card-grid .card-name { font-size: 14px; line-height: 1.25; }
+  .card-grid .badge { font-size: 11px; padding: 5px 8px; }
+  .card-grid .pill { font-size: 9px; padding: 2px 7px; }
+  .card-grid .card-name-row { gap: 5px; }
+  .card-grid .card-name-row svg,
+  .card-grid .card-name-row img { width: 24px; height: 24px; }
+}
