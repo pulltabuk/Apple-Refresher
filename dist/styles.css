@@ -1570,3 +1570,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .admin-publish-status { margin: 6px 0 0; min-height: 1.2em; }
 .admin-publish-status.is-ok { color: var(--fresh-text); }
 .admin-publish-status.is-error { color: var(--overdue-text); }
+
+/* The admin page has its own product search, so hide the public site
+   search there to avoid two search boxes on one screen. */
+body.is-admin .site-search { display: none; }

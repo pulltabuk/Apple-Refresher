@@ -679,6 +679,7 @@ const DEFAULT_SCRIPTS = [
 ];
 
 function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supabaseAnonKey, noindex, scripts, ogImage, ogType, extraJsonLd }) {
+  const bodyClass = path === '/admin/' ? ' class="is-admin"' : '';
   const scriptTags = (scripts || DEFAULT_SCRIPTS).join('\n');
   const fullUrl = `${siteUrl}${path}`;
   const imageUrl = ogImage || `${siteUrl}/logo.png`;
@@ -723,7 +724,7 @@ ${extraJsonLd ? `<script type="application/ld+json">${JSON.stringify(extraJsonLd
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
 </head>
-<body>
+<body${bodyClass}>
 <header class="site-header-bg">
   <div class="site-header">
     <a class="site-title" href="/">
