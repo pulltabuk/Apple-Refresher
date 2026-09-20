@@ -1356,7 +1356,12 @@
     var daysInfo = statusInfo ? badgeDaysInfoJS(product, statusInfo) : null;
     var countHtml = daysInfo
       ? (daysInfo.days < 0
-          ? '<div class="card-featured-count card-featured-count--upcoming"><span class="card-featured-count-suffix">Coming ' + formatDateJS((product.refresh_history || []).slice().sort().pop()) + '</span></div>'
+          ? (function () {
+              var due = (product.refresh_history || []).slice().sort().pop();
+              return '<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="' + due + '">' +
+                '<span class="product-countdown-clock" data-product-countdown-clock></span>' +
+                '<span class="card-featured-count-due">Coming ' + formatDateJS(due) + '</span></div>';
+            })()
           : '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span><span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>')
       : badgeHtmlJS(product, statusInfo);
     var launch = launchDateJS(product);
@@ -1999,6 +2004,42 @@
     }
     tick();
     setInterval(tick, 30000);
+  })();
+
+  // Live countdown on a featured product that has not been released yet.
+  // Re-scanned after any client-side re-render, and ticks every second.
+  (function productCountdown() {
+    function unit(value, label) {
+      return '<span class="countdown-unit"><span class="countdown-value">' + value +
+        '</span><span class="countdown-unit-label">' + label + '</span></span>';
+    }
+    function render(el) {
+      var clock = el.querySelector('[data-product-countdown-clock]');
+      if (!clock) return;
+      var dateStr = el.getAttribute('data-product-countdown');
+      if (!dateStr) return;
+      // Releases are treated as landing at 8am local time, which is when
+      // Apple stores typically open on a launch day.
+      var target = new Date(dateStr + 'T08:00:00').getTime();
+      var left = target - Date.now();
+      if (isNaN(target)) return;
+      if (left <= 0) {
+        clock.innerHTML = '<span class="countdown-unit"><span class="countdown-value">Out now</span></span>';
+        return;
+      }
+      var secs = Math.floor(left / 1000);
+      var days = Math.floor(secs / 86400);
+      var hours = Math.floor((secs % 86400) / 3600);
+      var mins = Math.floor((secs % 3600) / 60);
+      clock.innerHTML = unit(days, days === 1 ? 'day' : 'days') +
+        unit(hours, 'hr') + unit(mins, 'min') + unit(secs % 60, 'sec');
+    }
+    function tickAll() {
+      var els = document.querySelectorAll('[data-product-countdown]');
+      for (var i = 0; i < els.length; i++) render(els[i]);
+    }
+    tickAll();
+    setInterval(tickAll, 1000);
   })();
 
 })();

@@ -995,8 +995,13 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
     ? (daysInfo.days < 0
         ? (function () {
             const due = (product.refresh_history || []).slice().sort().pop();
+            // The clock is filled in and kept ticking by app.js. The
+            // server-rendered day count is the fallback if scripts are off.
             const away = due ? daysUntil(due) : null;
-            return `<div class="card-featured-count card-featured-count--upcoming">${away !== null && away > 0 ? `<span class="card-featured-count-number">${away}</span><span class="card-featured-count-suffix">${away === 1 ? 'day' : 'days'} until release</span>` : '<span class="card-featured-count-suffix">Releasing today</span>'}<span class="card-featured-count-due">Coming ${formatDate(due)}</span></div>`;
+            const fallback = away !== null && away > 0
+              ? `<span class="countdown-unit"><span class="countdown-value">${away}</span><span class="countdown-unit-label">${away === 1 ? 'day' : 'days'}</span></span>`
+              : '<span class="countdown-unit"><span class="countdown-value">Today</span></span>';
+            return `<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="${due}"><span class="product-countdown-clock" data-product-countdown-clock>${fallback}</span><span class="card-featured-count-due">Coming ${formatDate(due)}</span></div>`;
           })()
         : `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span><span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`)
     : productBadge(product, statusInfo);
