@@ -114,6 +114,42 @@
   let galleryLoaded = false;
   let eventLoaded = false;
   let factsLoaded = false;
+  // --- Publish: asks Netlify to rebuild, so admin changes go live.
+  // Pages are generated from Supabase at build time, so saving here
+  // alone does not update the public site.
+
+  const publishBtn = document.getElementById('publish-btn');
+  if (publishBtn) {
+    publishBtn.addEventListener('click', async () => {
+      const statusEl = document.getElementById('publish-status');
+      const setStatus = (text, kind) => {
+        if (!statusEl) return;
+        statusEl.textContent = text;
+        statusEl.className = 'admin-hint admin-publish-status' + (kind ? ' is-' + kind : '');
+      };
+      if (!window.confirm('Publish all saved changes to the live site?\n\nThe rebuild usually takes under a minute.')) return;
+      publishBtn.disabled = true;
+      publishBtn.textContent = 'Publishing…';
+      setStatus('Asking Netlify to rebuild the site…');
+      try {
+        const { data } = await client.auth.getSession();
+        const token = data && data.session ? data.session.access_token : null;
+        if (!token) throw new Error('You are not signed in.');
+        const res = await fetch('/.netlify/functions/publish', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token },
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error || ('Request failed (' + res.status + ').'));
+        setStatus('Rebuild started. Your changes should be live in about a minute, then refresh the page to see them.', 'ok');
+      } catch (err) {
+        setStatus('Could not publish: ' + err.message, 'error');
+      }
+      publishBtn.disabled = false;
+      publishBtn.textContent = 'Publish changes';
+    });
+  }
+
   document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.admin-tab-btn').forEach((b) => b.classList.remove('active'));

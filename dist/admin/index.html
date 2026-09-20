@@ -70,8 +70,12 @@
       <button type="button" class="admin-tab-btn" data-tab="pagetext">Page text</button>
       <button type="button" class="admin-tab-btn" data-tab="about">About page</button>
     </div>
-    <button id="logout-btn" class="admin-btn">Log out</button>
+    <div class="admin-topbar-actions">
+      <button type="button" id="publish-btn" class="admin-btn admin-btn--primary">Publish changes</button>
+      <button id="logout-btn" class="admin-btn">Log out</button>
+    </div>
   </div>
+  <p id="publish-status" class="admin-hint admin-publish-status"></p>
 
   <div id="tab-products" class="admin-tab-panel">
     <div id="product-list-view">

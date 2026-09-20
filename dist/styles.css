@@ -1564,3 +1564,9 @@ label.admin-btn { cursor: pointer; color: #fff; }
 @media (max-width: 600px) {
   .family-admin-actions { margin-left: 0; width: 100%; }
 }
+
+/* Publish changes control in the admin topbar */
+.admin-topbar-actions { display: flex; gap: 8px; align-items: center; }
+.admin-publish-status { margin: 6px 0 0; min-height: 1.2em; }
+.admin-publish-status.is-ok { color: var(--fresh-text); }
+.admin-publish-status.is-error { color: var(--overdue-text); }
