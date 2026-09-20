@@ -579,7 +579,13 @@ label.admin-btn { cursor: pointer; color: #fff; }
   .intro-hero-layout { grid-template-columns: 1fr; }
 }
 @media (max-width: 700px) {
-  .intro-hero-cards { grid-template-columns: 1fr 1fr; }
+  /* Equal-height rows make sense side by side, but once the cards stack
+     every one inherits the tall featured card's height, leaving a lot of
+     empty space. Let each card size to its own content instead. */
+  .intro-hero-cards { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; }
+  .intro-hero-cards .card { height: auto; }
+  .intro-hero-cards .card .card-link { flex: none; }
+  .intro-hero-cards .card > .pill { margin-top: 8px; }
 }
 @media (max-width: 560px) {
   .intro-hero-cards { grid-template-columns: 1fr; }
