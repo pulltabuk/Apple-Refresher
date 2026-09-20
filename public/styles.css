@@ -1398,3 +1398,37 @@ label.admin-btn { cursor: pointer; color: #fff; }
 /* Menu links read as a list, so they align left even with the touch
    sizing rules above. */
 @media (max-width: 860px) { .site-nav a { justify-content: flex-start; } }
+
+/* ---------- Accessibility pass ---------- */
+
+/* White text on the light end of the sunset gradient measured 2.8:1,
+   below the 4.5:1 minimum. The gradient stays; the header bar now sits
+   on a translucent dark panel, which lifts the text to about 5.4:1. */
+.site-header {
+  background: rgba(24, 14, 22, 0.46);
+  border-radius: 16px;
+  margin: 8px auto;
+  backdrop-filter: saturate(120%) blur(2px);
+}
+.site-nav a { opacity: 1; }
+
+/* A visible keyboard focus ring everywhere. Only shown for keyboard
+   users, so mouse and touch are unaffected. */
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.site-header :focus-visible, .site-footer :focus-visible { outline-color: #fff; }
+
+/* Decorative, but it was almost invisible */
+.crumb-sep { color: #7c766e; }
+.tl-marker--now { color: var(--accent-dark); border-color: var(--accent-dark); }
+
+@media (max-width: 860px) {
+  .site-header { margin: 6px 8px; }
+}
+/* The search field cleared its own outline, which left keyboard users
+   with no idea where they were. The ring now lands on the whole pill. */
+.site-search:focus-within { outline: 3px solid #fff; outline-offset: 2px; }
+.site-search input:focus-visible { outline: none; }
