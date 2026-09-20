@@ -934,7 +934,7 @@
 
     // Searching jumps straight to matching products, from either screen.
     if (query) {
-      document.getElementById('family-screen').style.display = '';
+      document.getElementById('family-screen').style.display = 'none';
       document.getElementById('products-screen').style.display = 'none';
       const searchScreen = document.getElementById('search-screen');
       const results = document.getElementById('search-results');
