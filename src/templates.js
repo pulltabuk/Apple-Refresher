@@ -1734,6 +1734,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <div class="admin-topbar">
     <div class="admin-tabs">
       <button type="button" class="admin-tab-btn active" data-tab="products">Products</button>
+      <button type="button" class="admin-tab-btn" data-tab="families">Families</button>
       <button type="button" class="admin-tab-btn" data-tab="gallery">Gallery</button>
       <button type="button" class="admin-tab-btn" data-tab="event">Apple Event</button>
       <button type="button" class="admin-tab-btn" data-tab="facts">Facts</button>
@@ -1936,6 +1937,12 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </div>
       </form>
     </div>
+  </div>
+
+  <div id="tab-families" class="admin-tab-panel" style="display:none;">
+    <h2>Product families</h2>
+    <p class="admin-hint">Every family on the site, with the icon used on cards and category pages. Families come from the products you have added, so a family appears here once at least one product uses it.</p>
+    <div id="family-admin-list" class="family-admin-list">Loading families...</div>
   </div>
 
   <div id="tab-gallery" class="admin-tab-panel" style="display:none;">

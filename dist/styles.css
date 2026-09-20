@@ -1535,3 +1535,32 @@ label.admin-btn { cursor: pointer; color: #fff; }
   .card-grid .card .card-link { flex: none; }
   .card > .pill { margin-top: 0; }
 }
+
+/* Families tab in admin: one row per product family with its icon */
+.family-admin-list { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
+.family-admin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+.family-admin-thumb {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.family-admin-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.family-admin-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 160px; }
+.family-admin-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+@media (max-width: 600px) {
+  .family-admin-actions { margin-left: 0; width: 100%; }
+}

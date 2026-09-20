@@ -120,11 +120,13 @@
       btn.classList.add('active');
       const tab = btn.getAttribute('data-tab');
       document.getElementById('tab-products').style.display = tab === 'products' ? 'block' : 'none';
+      document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
       document.getElementById('tab-gallery').style.display = tab === 'gallery' ? 'block' : 'none';
       document.getElementById('tab-event').style.display = tab === 'event' ? 'block' : 'none';
       document.getElementById('tab-facts').style.display = tab === 'facts' ? 'block' : 'none';
       document.getElementById('tab-pagetext').style.display = tab === 'pagetext' ? 'block' : 'none';
       document.getElementById('tab-about').style.display = tab === 'about' ? 'block' : 'none';
+      if (tab === 'families') renderFamilyAdminList();
       if (tab === 'gallery' && !galleryLoaded) {
         galleryLoaded = true;
         loadGalleryPhotos();
@@ -509,6 +511,146 @@
     wrap.appendChild(img);
     wrap.appendChild(removeBtn);
     thumbEl.appendChild(wrap);
+  }
+
+  // --- Families tab: every family in one place, with its icon.
+
+  function renderFamilyAdminList() {
+    const wrap = document.getElementById('family-admin-list');
+    if (!wrap) return;
+    const families = allFamilyNames();
+    wrap.innerHTML = '';
+    if (!families.length) {
+      wrap.textContent = 'No families yet. Add a product first and its family will appear here.';
+      return;
+    }
+    families.forEach((family) => {
+      const key = family.toLowerCase();
+      const url = cachedCategoryIcons[key];
+      const count = cachedProducts.filter((p) => (p.category || '').trim().toLowerCase() === key).length;
+
+      const row = document.createElement('div');
+      row.className = 'family-admin-row';
+
+      const thumb = document.createElement('div');
+      thumb.className = 'family-admin-thumb';
+      thumb.innerHTML = url ? '' : iconHtml(family, null, 32);
+      if (url) {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = family + ' icon';
+        thumb.appendChild(img);
+      }
+
+      const meta = document.createElement('div');
+      meta.className = 'family-admin-meta';
+      const nameEl = document.createElement('strong');
+      nameEl.textContent = family;
+      const countEl = document.createElement('span');
+      countEl.className = 'admin-hint';
+      countEl.textContent = count + (count === 1 ? ' product' : ' products') + (url ? '' : ' - using the built-in shape');
+      meta.appendChild(nameEl);
+      meta.appendChild(countEl);
+
+      const actions = document.createElement('div');
+      actions.className = 'family-admin-actions';
+
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.className = 'admin-file-input';
+      fileInput.id = 'family-icon-upload-' + key.replace(/[^a-z0-9]+/g, '-');
+
+      const uploadLabel = document.createElement('label');
+      uploadLabel.className = 'admin-btn admin-btn--small admin-btn--primary';
+      uploadLabel.setAttribute('for', fileInput.id);
+      uploadLabel.textContent = url ? 'Replace icon' : 'Upload icon';
+
+      fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const newUrl = await uploadFile(file);
+          await saveFamilyIcon(family, newUrl);
+        } catch (err) {
+          window.alert('Upload failed: ' + err.message);
+        }
+        e.target.value = '';
+      });
+
+      actions.appendChild(uploadLabel);
+      actions.appendChild(fileInput);
+
+      if (url) {
+        const bgBtn = document.createElement('button');
+        bgBtn.type = 'button';
+        bgBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
+        bgBtn.textContent = 'Remove background';
+        bgBtn.addEventListener('click', async () => {
+          bgBtn.disabled = true;
+          const label = bgBtn.textContent;
+          bgBtn.textContent = 'Removing...';
+          try {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = () => reject(new Error('could not load the current icon'));
+              img.src = url + (url.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+            });
+            const canvas = stripIconBackground(img, 24);
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) throw new Error('could not process the image');
+            const newUrl = await uploadFile(new File([blob], 'family-icon-nobg.png', { type: 'image/png' }));
+            await saveFamilyIcon(family, newUrl);
+          } catch (err) {
+            window.alert('Could not remove the background: ' + err.message);
+            bgBtn.disabled = false;
+            bgBtn.textContent = label;
+          }
+        });
+        actions.appendChild(bgBtn);
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
+        delBtn.textContent = 'Remove icon';
+        delBtn.addEventListener('click', async () => {
+          if (!window.confirm('Remove this icon and go back to the built-in shape for ' + family + '?')) return;
+          const { error } = await client.from('category_icons').delete().ilike('category', family);
+          if (error) {
+            window.alert('Failed to remove: ' + error.message);
+            return;
+          }
+          delete cachedCategoryIcons[key];
+          refreshAfterFamilyIconChange();
+        });
+        actions.appendChild(delBtn);
+      }
+
+      row.appendChild(thumb);
+      row.appendChild(meta);
+      row.appendChild(actions);
+      wrap.appendChild(row);
+    });
+  }
+
+  async function saveFamilyIcon(family, url) {
+    const { error } = await client.from('category_icons').upsert({ category: canonicalFamily(family), icon_url: url, updated_at: new Date().toISOString() });
+    if (error) {
+      window.alert('Failed to save the icon: ' + error.message);
+      return;
+    }
+    cachedCategoryIcons[family.toLowerCase()] = url;
+    refreshAfterFamilyIconChange();
+  }
+
+  function refreshAfterFamilyIconChange() {
+    renderFamilyAdminList();
+    updateCategoryIconPreview();
+    renderFamilyPicker();
+    renderProductIconPreview();
+    renderProductList();
   }
 
   document.getElementById('category-icon-upload').addEventListener('change', async (e) => {
