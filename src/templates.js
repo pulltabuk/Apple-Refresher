@@ -112,6 +112,12 @@ function eventSlug(event) {
   return slug || String(event.id);
 }
 
+function readableSlugFallback(value) {
+  // A reference whose product no longer exists under that slug. Showing
+  // the raw slug looks broken, so present it as words instead.
+  return escapeHtml(String(value || '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
+}
+
 function slugify(str) {
   return String(str || '')
     .toLowerCase()
@@ -1513,14 +1519,14 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   const replacedByHtml = successor
     ? `<a href="/products/${successor.slug}/">${escapeHtml(successor.name)}</a>`
     : product.replaced_by
-    ? escapeHtml(product.replaced_by)
+    ? readableSlugFallback(product.replaced_by)
     : '';
 
   const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
   const previousModelHtml = predecessor
     ? `<a href="/products/${predecessor.slug}/">${escapeHtml(predecessor.name)}</a>`
     : product.previous_model
-    ? escapeHtml(product.previous_model)
+    ? readableSlugFallback(product.previous_model)
     : '';
 
   const daysInfo = status ? badgeDaysInfo(product, status) : null;

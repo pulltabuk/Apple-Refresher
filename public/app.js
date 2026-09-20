@@ -32,6 +32,10 @@
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  function readableSlugFallbackJS(value) {
+    return escapeHtmlJS(String(value || '').replace(/-/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); }));
+  }
+
   function slugifyJS(str) {
     return String(str || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '');
   }
@@ -768,12 +772,12 @@
     var successor = product.replaced_by && productsBySlug ? productsBySlug[product.replaced_by] : null;
     var replacedByHtml = successor
       ? '<a href="/products/' + successor.slug + '/">' + escapeHtmlJS(successor.name) + '</a>'
-      : product.replaced_by ? escapeHtmlJS(product.replaced_by) : '';
+      : product.replaced_by ? readableSlugFallbackJS(product.replaced_by) : '';
 
     var predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
     var previousModelHtml = predecessor
       ? '<a href="/products/' + predecessor.slug + '/">' + escapeHtmlJS(predecessor.name) + '</a>'
-      : product.previous_model ? escapeHtmlJS(product.previous_model) : '';
+      : product.previous_model ? readableSlugFallbackJS(product.previous_model) : '';
 
     var daysInfo = status ? badgeDaysInfoJS(product, status) : null;
 

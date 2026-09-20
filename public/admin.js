@@ -1761,6 +1761,17 @@
         if (redirectResult.error) {
           window.alert('The product was saved with its new web address, but the redirect from the old one could not be stored: ' + redirectResult.error.message);
         }
+        // Other products may point at the old slug as their successor or
+        // predecessor. Left alone those references break and show the raw
+        // slug on the page, so repoint them at the new one.
+        const repointed = await Promise.all([
+          client.from('products').update({ replaced_by: slug }).eq('replaced_by', oldSlugToRedirect),
+          client.from('products').update({ previous_model: slug }).eq('previous_model', oldSlugToRedirect),
+        ]);
+        const repointError = repointed.find((r) => r.error);
+        if (repointError) {
+          window.alert('The new web address was saved, but links from other products to this one could not be updated: ' + repointError.error.message);
+        }
       }
       await autoDiscontinuePreviousModel(payload, document.querySelector('input[name="previous_model_action"]:checked').value === 'discontinue');
       await enforceFeaturedExclusivity(payload);
