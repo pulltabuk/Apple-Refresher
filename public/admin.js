@@ -1028,8 +1028,23 @@
     return dates.sort();
   }
 
+  // The countdown option only makes sense while a release date is still
+  // in the future, so it stays hidden otherwise.
+  function updateCountdownOption() {
+    const wrap = document.getElementById('in-countdown-wrap');
+    if (!wrap) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const hasFuture = currentRefreshHistory.some((d) => d > today);
+    wrap.style.display = hasFuture ? '' : 'none';
+    if (!hasFuture) {
+      const box = document.getElementById('in_countdown');
+      if (box) box.checked = false;
+    }
+  }
+
   function renderRefreshHistory() {
     refreshHistoryListEl.innerHTML = '';
+    updateCountdownOption();
     const productName = document.getElementById('name').value.trim();
     const releaseDates = currentRefreshHistory.slice().sort();
     const dates = allEntryDates();
@@ -1516,6 +1531,7 @@
     document.getElementById('apple_url_unavailable').checked = !!p.apple_url_unavailable;
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
+    document.getElementById('in_countdown').checked = !!p.in_countdown;
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     document.getElementById('is_new_launch').checked = !!p.is_new_launch;
     currentRefreshHistory = (p.refresh_history || []).slice().sort();
@@ -1804,6 +1820,7 @@
           return html && html !== '<br>' ? html : null;
         })(),
         featured: document.getElementById('featured').checked,
+        in_countdown: document.getElementById('in_countdown').checked,
         days_basis: document.querySelector('input[name="days_basis"]:checked').value,
         is_new_launch: document.getElementById('is_new_launch').checked,
         previous_model: document.getElementById('previous_model').value || null,
@@ -1820,9 +1837,9 @@
 
       if (result.error) {
         console.error('Save failed:', result.error);
-        const missingColumns = /generation_details|icon_url|specs_url|press_release_url/.test(result.error.message || '');
+        const missingColumns = /generation_details|icon_url|specs_url|press_release_url|in_countdown/.test(result.error.message || '');
         window.alert(missingColumns
-          ? 'Save failed because the database hasn\u2019t been updated yet. Run the latest supabase-schema-update SQL file (19 and 20) in the Supabase SQL editor, then save again.'
+          ? 'Save failed because the database hasn\u2019t been updated yet. Run the latest supabase-schema-update SQL file in the Supabase SQL editor, then save again.'
           : 'Save failed: ' + result.error.message);
         return;
       }

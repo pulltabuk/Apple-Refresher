@@ -187,11 +187,21 @@ async function main() {
   const futureReleases = products
     .flatMap((p) => (p.refresh_history || []).filter((d) => d > today).map((d) => ({ date: d, product: p })))
     .sort((a, b) => (a.date < b.date ? -1 : 1));
-  const countdown = activeEvent && activeEvent.event_date >= today
-    ? { label: activeEvent.heading || 'Apple Event', date: activeEvent.event_date, time: activeEvent.event_time || null, href: '/events/' }
-    : futureReleases[0]
-    ? { label: futureReleases[0].product.name, date: futureReleases[0].date, time: null, href: `/products/${futureReleases[0].product.slug}/` }
-    : null;
+  // Countdowns: an upcoming pinned event, plus every product explicitly
+  // opted in via "Show in the countdown" in admin. Products are only
+  // included while their release date is still ahead, so nothing has to
+  // be unticked afterwards.
+  const countdowns = [];
+  if (activeEvent && activeEvent.event_date >= today) {
+    countdowns.push({ label: activeEvent.heading || 'Apple Event', date: activeEvent.event_date, time: activeEvent.event_time || null, href: '/events/' });
+  }
+  futureReleases
+    .filter((r) => r.product.in_countdown)
+    .forEach((r) => {
+      countdowns.push({ label: r.product.name, date: r.date, time: null, href: `/products/${r.product.slug}/` });
+    });
+  countdowns.sort((a, b) => (a.date < b.date ? -1 : 1));
+  const countdown = countdowns.length ? countdowns : null;
   const galleryPhotos = await loadGalleryPhotos();
 
   const productsBySlug = {};

@@ -123,6 +123,10 @@
           <label>Name<input type="text" id="name" placeholder="e.g. AirPods Pro" autocomplete="off"></label>
           <p id="name-error" class="form-error"></p>
           <label class="checkbox-label checkbox-label--feature"><input type="checkbox" id="featured"> &#9733; Feature this product on the homepage</label>
+          <div id="in-countdown-wrap" style="display:none;">
+            <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
+            <p class="admin-hint">Only for a product whose release date is still ahead. More than one can be counted down at once, and each drops off by itself once its date passes.</p>
+          </div>
           <p class="admin-hint">Only one product can be featured. Choosing this one un-features the current one.</p>
           <div class="admin-subfield">
             <span class="admin-subfield-label">Icon for this product <span class="admin-optional">Optional</span></span>

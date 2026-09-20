@@ -1186,16 +1186,22 @@ function factBoxInnerHtml(fact) {
 // is correct before any script runs; the script only adds the clock.
 function countdownHtml(countdown) {
   if (!countdown) return '';
-  const target = new Date(countdown.date + 'T09:00:00');
-  const days = Math.max(0, Math.ceil((target.getTime() - Date.now()) / 86400000));
-  return `<a class="countdown" href="${countdown.href}" data-countdown="${escapeHtml(countdown.date)}">
+  // Accepts one countdown or several, so more than one upcoming product
+  // can be shown at once.
+  const items = Array.isArray(countdown) ? countdown : [countdown];
+  if (!items.length) return '';
+  return items.map((item) => {
+    const target = new Date(item.date + 'T09:00:00');
+    const days = Math.max(0, Math.ceil((target.getTime() - Date.now()) / 86400000));
+    return `<a class="countdown" href="${item.href}" data-countdown="${escapeHtml(item.date)}">
     <span class="countdown-label">Counting down to</span>
-    <span class="countdown-name">${escapeHtml(countdown.label)}</span>
+    <span class="countdown-name">${escapeHtml(item.label)}</span>
     <span class="countdown-clock" data-countdown-clock>
       <span class="countdown-unit"><span class="countdown-value">${days}</span><span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>
     </span>
-    <span class="countdown-date">${formatDate(countdown.date)}${countdown.time ? ` &middot; ${escapeHtml(countdown.time)}` : ''}</span>
+    <span class="countdown-date">${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}</span>
   </a>`;
+  }).join('\n');
 }
 
 function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, pageContent, countdown, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -1829,6 +1835,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <label>Name<input type="text" id="name" placeholder="e.g. AirPods Pro" autocomplete="off"></label>
           <p id="name-error" class="form-error"></p>
           <label class="checkbox-label checkbox-label--feature"><input type="checkbox" id="featured"> &#9733; Feature this product on the homepage</label>
+          <div id="in-countdown-wrap" style="display:none;">
+            <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
+            <p class="admin-hint">Only for a product whose release date is still ahead. More than one can be counted down at once, and each drops off by itself once its date passes.</p>
+          </div>
           <p class="admin-hint">Only one product can be featured. Choosing this one un-features the current one.</p>
           <div class="admin-subfield">
             <span class="admin-subfield-label">Icon for this product <span class="admin-optional">Optional</span></span>

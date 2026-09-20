@@ -1982,28 +1982,34 @@
   // Countdown clock. The server already rendered the number of days, so
   // this only upgrades it to days, hours and minutes and keeps it ticking.
   (function countdown() {
-    var el = document.querySelector('[data-countdown]');
-    if (!el) return;
-    var clock = el.querySelector('[data-countdown-clock]');
-    var target = new Date(el.getAttribute('data-countdown') + 'T09:00:00').getTime();
-    if (!target || !clock) return;
-    function unit(value, label) {
-      return '<span class="countdown-unit"><span class="countdown-value">' + value + '</span>' +
-        '<span class="countdown-unit-label">' + label + (value === 1 ? '' : 's') + '</span></span>';
+    function unit(value, label, isSeconds) {
+      return '<span class="countdown-unit' + (isSeconds ? ' countdown-unit--secs' : '') + '">' +
+        '<span class="countdown-value">' + value + '</span>' +
+        '<span class="countdown-unit-label">' + label + '</span></span>';
     }
-    function tick() {
+    function render(el) {
+      var clock = el.querySelector('[data-countdown-clock]');
+      if (!clock) return;
+      var target = new Date(el.getAttribute('data-countdown') + 'T09:00:00').getTime();
+      if (!target || isNaN(target)) return;
       var left = target - Date.now();
       if (left <= 0) {
         clock.innerHTML = '<span class="countdown-unit"><span class="countdown-value">Today</span></span>';
         return;
       }
-      var mins = Math.floor(left / 60000);
-      var days = Math.floor(mins / 1440);
-      var hours = Math.floor((mins % 1440) / 60);
-      clock.innerHTML = unit(days, 'day') + unit(hours, 'hour') + unit(mins % 60, 'min');
+      var secs = Math.floor(left / 1000);
+      var days = Math.floor(secs / 86400);
+      var hours = Math.floor((secs % 86400) / 3600);
+      var mins = Math.floor((secs % 3600) / 60);
+      clock.innerHTML = unit(days, days === 1 ? 'day' : 'days') +
+        unit(hours, 'hours') + unit(mins, 'mins') + unit(secs % 60, 'secs', true);
     }
-    tick();
-    setInterval(tick, 30000);
+    function tickAll() {
+      var els = document.querySelectorAll('[data-countdown]');
+      for (var i = 0; i < els.length; i++) render(els[i]);
+    }
+    tickAll();
+    setInterval(tickAll, 1000);
   })();
 
   // Live countdown on a featured product that has not been released yet.
