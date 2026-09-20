@@ -2529,7 +2529,7 @@
   // so these open the right search in a new tab. One tap, then paste.
   const LINK_SEARCHES = {
     apple: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:apple.com ' + name),
-    specs: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:support.apple.com ' + name + ' technical specifications'),
+    specs: (name) => 'https://www.google.com/search?q=' + encodeURIComponent(name + ' apple tech specs'),
     wikipedia: (name) => 'https://en.wikipedia.org/w/index.php?search=' + encodeURIComponent(name),
     newsroom: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:apple.com/newsroom ' + name),
   };

@@ -93,7 +93,7 @@
     <div id="product-form-view" style="display:none;">
       <button type="button" id="back-to-list-btn" class="admin-back-link">&larr; Back to products</button>
       <h2 id="form-title" class="admin-form-title">New product line</h2>
-      <form id="product-form" class="admin-form admin-form--steps" novalidate>
+      <form id="product-form" class="admin-form admin-form--steps" novalidate autocomplete="off">
 
         <section class="admin-step" id="step-family">
           <h3 class="admin-step-title"><span class="admin-step-num">1</span> Family</h3>
@@ -156,7 +156,7 @@
                 <label><input type="radio" name="price_currency" value="&pound;"><span>&pound;</span></label>
                 <label><input type="radio" name="price_currency" value="$" checked><span>$</span></label>
               </div>
-              <input type="text" id="price" placeholder="799" inputmode="decimal">
+              <input type="text" id="price" placeholder="799" inputmode="decimal" autocomplete="off">
             </div>
           </div>
 
@@ -196,9 +196,9 @@
     <label><input type="radio" name="new_refresh_date_precision" value="year"> Year only</label>
   </div>
   <div class="date-precision-row">
-    <input type="date" id="new_refresh_date_day" class="date-precision-input">
+    <input type="date" id="new_refresh_date_day" class="date-precision-input" autocomplete="off">
     <input type="month" id="new_refresh_date_month" class="date-precision-input" style="display:none;">
-    <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
+    <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035" autocomplete="off">
     <button type="button" class="date-precision-clear" data-prefix="new_refresh_date">Clear</button>
   </div>
   
@@ -245,18 +245,18 @@
         <section class="admin-step" id="step-links">
           <h3 class="admin-step-title"><span class="admin-step-num">5</span> Links <span class="admin-optional">All optional</span></h3>
           <p class="admin-hint">Tap a Find button to open a search for this product in a new tab, then paste the address back into the box.</p>
-          <label>Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/airpods-pro/"></label>
+          <label>Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/airpods-pro/" autocomplete="off"></label>
           <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="apple">Find on apple.com</button></div>
           <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> Apple has taken this page down</label>
-          <label>Apple specs page<input type="url" id="specs_url" placeholder="https://support.apple.com/en-gb/111854"></label>
+          <label>Apple specs page<input type="url" id="specs_url" placeholder="https://support.apple.com/en-gb/111854" autocomplete="off"></label>
           <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="specs">Find tech specs</button></div>
-          <label>Wikipedia page<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/AirPods"></label>
+          <label>Wikipedia page<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/AirPods" autocomplete="off"></label>
           <div>
             <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="wikipedia">Find on Wikipedia</button>
             <button type="button" class="admin-btn admin-btn--small admin-btn--primary" id="wikipedia-auto-btn">Fill automatically</button>
           </div>
           <p class="admin-hint" id="wikipedia-auto-status"></p>
-          <label>Press release<input type="url" id="press_release_url" placeholder="https://www.apple.com/newsroom/..."></label>
+          <label>Press release<input type="url" id="press_release_url" placeholder="https://www.apple.com/newsroom/..." autocomplete="off"></label>
           <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="newsroom">Find in Apple Newsroom</button></div>
           <p class="admin-hint">Press releases usually only exist for recent products. Leave it blank otherwise.</p>
         </section>
@@ -297,7 +297,7 @@
           <input type="file" id="gallery-image-upload" accept="image/*" multiple class="admin-file-input">
         </div>
 
-        <label>Caption (optional)<input type="text" id="gallery-caption" placeholder="e.g. iPhone 17 Pro in Cosmic Orange"></label>
+        <label>Caption (optional)<input type="text" id="gallery-caption" placeholder="e.g. iPhone 17 Pro in Cosmic Orange" autocomplete="off"></label>
 
         <div class="admin-subfield" id="gallery_date_taken_field">
   <span class="admin-subfield-label">Date taken</span>
@@ -307,21 +307,21 @@
     <label><input type="radio" name="gallery_date_taken_precision" value="year"> Year only</label>
   </div>
   <div class="date-precision-row">
-    <input type="date" id="gallery_date_taken_day" class="date-precision-input">
+    <input type="date" id="gallery_date_taken_day" class="date-precision-input" autocomplete="off">
     <input type="month" id="gallery_date_taken_month" class="date-precision-input" style="display:none;">
-    <input type="number" id="gallery_date_taken_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
+    <input type="number" id="gallery_date_taken_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035" autocomplete="off">
     <button type="button" class="date-precision-clear" data-prefix="gallery_date_taken">Clear</button>
   </div>
   
 </div>
 
         <label>Location
-          <input type="text" id="gallery-location" list="gallery-location-options" placeholder="e.g. Cardiff">
+          <input type="text" id="gallery-location" list="gallery-location-options" placeholder="e.g. Cardiff" autocomplete="off">
           <datalist id="gallery-location-options"></datalist>
         </label>
 
         <label>Country
-          <input type="text" id="gallery-country" list="gallery-country-options" placeholder="e.g. United Kingdom">
+          <input type="text" id="gallery-country" list="gallery-country-options" placeholder="e.g. United Kingdom" autocomplete="off">
           <datalist id="gallery-country-options"></datalist>
         </label>
 
@@ -329,7 +329,7 @@
           <span class="admin-subfield-label">Tags</span>
           <ul id="gallery-tags-list" class="refresh-history-list"></ul>
           <div class="refresh-history-add">
-            <input type="text" id="new-gallery-tag" placeholder="e.g. iPhone 17, Space Grey">
+            <input type="text" id="new-gallery-tag" placeholder="e.g. iPhone 17, Space Grey" autocomplete="off">
             <button type="button" id="add-gallery-tag-btn" class="admin-btn admin-btn--small">Add tag</button>
           </div>
         </div>
@@ -350,7 +350,7 @@
       <button type="button" id="event-back-to-list-btn" class="admin-back-link">&larr; Back to events</button>
       <h3 id="event-form-title">Add event</h3>
       <form id="event-form" class="admin-form">
-        <label>Title<input type="text" id="event_heading" placeholder="e.g. Apple Event: It's Glowtime"></label>
+        <label>Title<input type="text" id="event_heading" placeholder="e.g. Apple Event: It's Glowtime" autocomplete="off"></label>
         <div class="admin-subfield">
           <span class="admin-subfield-label">Image</span>
           <div id="event-image-thumb" class="admin-thumbs"></div>
@@ -358,16 +358,16 @@
           <input type="file" id="event-image-upload" accept="image/*" class="admin-file-input">
         </div>
         <input type="hidden" id="event_image_url">
-        <label>Event date<input type="date" id="event_date"></label>
+        <label>Event date<input type="date" id="event_date" autocomplete="off"></label>
         <label class="checkbox-label"><input type="checkbox" id="event_featured"> &#9733; Feature this event on the homepage</label>
         <p class="admin-hint">Only one event can be featured. Leave this unticked and the homepage shows the next event by date, as it does now.</p>
-        <label>Event time (optional, your own wording, e.g. "10am PT")<input type="text" id="event_time" placeholder="10am PT"></label>
-        <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/"></label>
+        <label>Event time (optional, your own wording, e.g. "10am PT")<input type="text" id="event_time" placeholder="10am PT" autocomplete="off"></label>
+        <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/" autocomplete="off"></label>
         <div class="admin-subfield">
           <span class="admin-subfield-label">Announced products (optional, add once you know what was revealed)</span>
           <ul id="event-products-list" class="refresh-history-list"></ul>
           <div class="refresh-history-add">
-            <input type="text" id="new-event-product" placeholder="e.g. iPhone 17, Apple Watch Series 11">
+            <input type="text" id="new-event-product" placeholder="e.g. iPhone 17, Apple Watch Series 11" autocomplete="off">
             <button type="button" id="add-event-product-btn" class="admin-btn admin-btn--small">Add</button>
           </div>
         </div>
@@ -442,7 +442,7 @@
 
   <div id="tab-about" class="admin-tab-panel" style="display:none;">
     <form id="about-form" class="admin-form">
-      <label>Heading<input type="text" id="about_heading"></label>
+      <label>Heading<input type="text" id="about_heading" autocomplete="off"></label>
       <label>Body text (leave a blank line between paragraphs)<textarea id="about_body" rows="6"></textarea></label>
       <div class="admin-subfield">
         <span class="admin-subfield-label">Image</span>
