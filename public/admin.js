@@ -13,6 +13,9 @@
   const videoStatusEl = document.getElementById('video-status');
 
   let editingId = null;
+  // An announcement added before any release date exists. It attaches
+  // itself to the first release added, so dates can be entered in any order.
+  let pendingAnnouncedDate = null;
   let editingSlug = null;
   let cachedProducts = [];
   let currentRefreshHistory = [];
@@ -1029,7 +1032,26 @@
     const productName = document.getElementById('name').value.trim();
     const releaseDates = currentRefreshHistory.slice().sort();
     const dates = allEntryDates();
-    if (!dates.length) {
+    // An announcement waiting for its release date to be added.
+    if (pendingAnnouncedDate) {
+      const pend = document.createElement('li');
+      pend.className = 'generation-row generation-row--pending';
+      const label = document.createElement('span');
+      label.innerHTML = '<strong>Announced ' + formatAdminDate(pendingAnnouncedDate) + '</strong> ';
+      const hint = document.createElement('span');
+      hint.className = 'admin-hint';
+      hint.textContent = 'Waiting for a release date. It will attach to the first one you add.';
+      const drop = document.createElement('button');
+      drop.type = 'button';
+      drop.className = 'link-btn';
+      drop.textContent = 'Remove';
+      drop.addEventListener('click', () => { pendingAnnouncedDate = null; renderRefreshHistory(); });
+      pend.appendChild(label);
+      pend.appendChild(hint);
+      pend.appendChild(drop);
+      refreshHistoryListEl.appendChild(pend);
+    }
+    if (!dates.length && !pendingAnnouncedDate) {
       const empty = document.createElement('li');
       empty.className = 'generation-empty';
       empty.textContent = 'No dates yet. Add the launch date below.';
@@ -1229,7 +1251,7 @@
       if (off && input.checked) release.checked = true;
     };
     setState(launch, !!currentOriginalLaunchDate, 'This product already has a launch date');
-    setState(announced, releaseCount === 0, 'Add a release date first, then its announcement');
+    setState(announced, false, '');
     setState(discontinued, hasDiscontinued, 'This product already has a discontinued date');
     if (!currentOriginalLaunchDate && releaseCount === 0) launch.checked = true;
     updateAddPanelForType();
@@ -1243,6 +1265,11 @@
     targetField.style.display = type === 'announced' ? '' : 'none';
     if (type !== 'announced') return;
     const select = document.getElementById('announced_target');
+    const noReleasesYet = currentRefreshHistory.length === 0;
+    targetField.style.display = noReleasesYet ? 'none' : '';
+    const note = document.getElementById('announced-pending-note');
+    if (note) note.style.display = noReleasesYet ? '' : 'none';
+    if (noReleasesYet) return;
     const keep = select.value;
     select.innerHTML = '';
     currentRefreshHistory.slice().sort().reverse().forEach((d) => {
@@ -1354,6 +1381,12 @@
       return;
     }
     if (type === 'announced') {
+      if (currentRefreshHistory.length === 0) {
+        pendingAnnouncedDate = value;
+        resetGenerationPanel();
+        renderRefreshHistory();
+        return;
+      }
       const target = document.getElementById('announced_target').value;
       if (!target) {
         errorEl.textContent = 'Pick which release this announcement was for.';
@@ -1378,6 +1411,10 @@
     // treated as its launch, since there is nothing earlier it could be.
     if (type === 'launch' || (!currentOriginalLaunchDate && currentRefreshHistory.length === 1)) {
       currentOriginalLaunchDate = value;
+    }
+    if (pendingAnnouncedDate) {
+      detailFor(value).announced = pendingAnnouncedDate;
+      pendingAnnouncedDate = null;
     }
     resetGenerationPanel();
     renderRefreshHistory();
@@ -1423,6 +1460,7 @@
     if (!p) return;
     editingId = id;
     editingSlug = p.slug;
+    pendingAnnouncedDate = null;
     clearFormErrors();
     const advancedSection = document.querySelector('.admin-advanced');
     if (advancedSection) advancedSection.open = false;
@@ -1484,6 +1522,7 @@
   function startNewProduct(options) {
     editingId = null;
     editingSlug = null;
+    pendingAnnouncedDate = null;
     clearFormErrors();
     const advancedSectionNew = document.querySelector('.admin-advanced');
     if (advancedSectionNew) advancedSectionNew.open = false;

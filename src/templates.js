@@ -1881,6 +1881,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <div class="admin-subfield" id="announced-target-field" style="display:none;">
               <label>Which release was this the announcement for?<select id="announced_target"></select></label>
             </div>
+            <p class="admin-hint" id="announced-pending-note" style="display:none;">No release date yet, so this announcement will be held and attached to the first release you add.</p>
             <p id="generation-add-error" class="form-error"></p>
           </div>
           <div class="admin-subfield" id="days-basis-wrap">

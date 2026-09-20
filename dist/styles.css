@@ -1574,3 +1574,6 @@ label.admin-btn { cursor: pointer; color: #fff; }
 /* The admin page has its own product search, so hide the public site
    search there to avoid two search boxes on one screen. */
 body.is-admin .site-search { display: none; }
+
+/* An announcement added before its release date exists */
+.generation-row--pending { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; opacity: 0.9; }
