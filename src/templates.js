@@ -1558,7 +1558,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     specRow('Category', categoryPill(product.category)),
     specRow('Status', product.discontinued ? 'Discontinued' : 'Current'),
     product.discontinued ? specRow('Apple support status', appleSupportStatus(product)) : '',
-    sortedDates.length ? specRow('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
+    sortedDates.length ? specRow('Release type', product.is_new_launch ? 'All-new product' : 'Refresh of an existing model') : '',
     daysInfo ? specRow('Days counted from', `${plural(daysInfo.days, 'day', 'days')} (${product.days_basis === 'launch' ? 'first release' : 'latest release'})`) : '',
     specRow('Chip', escapeHtml(product.chip)),
     specRow('Previous model', previousModelHtml),

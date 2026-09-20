@@ -797,7 +797,7 @@
       specRowJS('Category', pillJS(product.category)),
       specRowJS('Status', product.discontinued ? 'Discontinued' : 'Current'),
       product.discontinued ? specRowJS('Apple support status', appleSupportStatusJS(product)) : '',
-      sortedDates.length ? specRowJS('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
+      sortedDates.length ? specRowJS('Release type', product.is_new_launch ? 'All-new product' : 'Refresh of an existing model') : '',
       daysInfo ? specRowJS('Days counted from', pluralJS(daysInfo.days, 'day', 'days') + ' (' + (product.days_basis === 'launch' ? 'first release' : 'latest release') + ')') : '',
       specRowJS('Chip', escapeHtmlJS(product.chip)),
       specRowJS('Previous model', previousModelHtml),
