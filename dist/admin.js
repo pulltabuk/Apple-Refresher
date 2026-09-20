@@ -1643,7 +1643,31 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving…';
 
-      const slug = editingId ? editingSlug : slugify(name);
+      // New products take their slug from the name. When editing, the
+      // slug is deliberately kept so live URLs don't break, but if the
+      // name no longer matches we offer to fix it and leave a redirect
+      // behind so old links and Google results still work.
+      let slug = editingId ? editingSlug : slugify(name);
+      let oldSlugToRedirect = null;
+      if (editingId && slugify(name) !== editingSlug) {
+        const suggested = slugify(name);
+        const clash = cachedProducts.find((p) => p.slug === suggested && p.id !== editingId);
+        if (clash) {
+          window.alert('Cannot update the web address to /products/' + suggested + '/ because "' + clash.name + '" already uses it. Rename or remove that product first.');
+        } else if (window.confirm('This product\u2019s web address is currently:\n\n/products/' + editingSlug + '/\n\nUpdate it to match the name?\n\n/products/' + suggested + '/\n\nThe old address will redirect to the new one, so existing links keep working.')) {
+          slug = suggested;
+          oldSlugToRedirect = editingSlug;
+        }
+      }
+      if (!editingId) {
+        const clash = cachedProducts.find((p) => p.slug === slug);
+        if (clash) {
+          window.alert('A product called "' + clash.name + '" already uses the web address /products/' + slug + '/. Give this product a different name, or edit the existing one instead.');
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save product';
+          return;
+        }
+      }
       const originalLaunchDate = currentOriginalLaunchDate;
       const refreshHistoryWithLaunch = (originalLaunchDate && !currentRefreshHistory.includes(originalLaunchDate)
         ? [...currentRefreshHistory, originalLaunchDate]
@@ -1695,6 +1719,12 @@
           ? 'Save failed because the database hasn\u2019t been updated yet. Run the latest supabase-schema-update SQL file (19 and 20) in the Supabase SQL editor, then save again.'
           : 'Save failed: ' + result.error.message);
         return;
+      }
+      if (oldSlugToRedirect) {
+        const redirectResult = await client.from('product_redirects').upsert({ from_slug: oldSlugToRedirect, to_path: '/products/' + slug + '/' });
+        if (redirectResult.error) {
+          window.alert('The product was saved with its new web address, but the redirect from the old one could not be stored: ' + redirectResult.error.message);
+        }
       }
       await autoDiscontinuePreviousModel(payload, document.querySelector('input[name="previous_model_action"]:checked').value === 'discontinue');
       await enforceFeaturedExclusivity(payload);
