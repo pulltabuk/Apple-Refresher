@@ -1433,3 +1433,15 @@ label.admin-btn { cursor: pointer; color: #fff; }
    with no idea where they were. The ring now lands on the whole pill. */
 .site-search:focus-within { outline: 3px solid #fff; outline-offset: 2px; }
 .site-search input:focus-visible { outline: none; }
+.generation-announced { margin: 4px 0 0 0; font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+.generation-announced .generation-edit { font-size: 11px; padding: 2px 4px; }
+.entry-tag--launch { background: #e6efe6; color: #2f6b3a; }
+.segmented--type label:last-child span { color: var(--discontinued-text); }
+.tl-upcoming { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; background: var(--fresh-bg); color: var(--fresh-text); }
+.admin-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+.tweet-preview { margin: 12px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #fbfaf8; max-width: 560px; }
+.tweet-preview-label { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+.tweet-count { font-weight: 500; text-transform: none; letter-spacing: 0; margin-left: 6px; }
+.tweet-count.is-over { color: var(--overdue-text); font-weight: 700; }
+.tweet-preview-text { width: 100%; font: inherit; font-size: 14px; line-height: 1.5; padding: 10px; border: 1px solid var(--border); border-radius: 8px; resize: vertical; }
+.tweet-preview-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }

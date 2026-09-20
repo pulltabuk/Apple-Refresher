@@ -369,7 +369,13 @@ function verticalTimelineHtml(product, allProducts) {
     const gap = nextDate ? timelineGapText(nextDate, date) : '';
     const gapRow = gap ? `<li class="tl-gap"><span class="tl-gap-text">&#8593; ${gap}</span></li>` : '';
 
-    const lines = entries.map((e) => `<p class="tl-entry">
+    // A product being replaced on the same day as its successor reads
+    // better with the new thing first.
+    const ordered = entries.slice().sort((a, b) => {
+      const rank = (e) => (e.type === 'discontinued' ? 1 : 0);
+      return rank(a) - rank(b);
+    });
+    const lines = ordered.map((e) => `<p class="tl-entry">
         <span class="tl-entry-name">${escapeHtml(e.displayName || e.productName)}</span>
         <span class="tl-entry-type tl-entry-type--${e.type}">${e.label}</span>
       </p>`).join('');
@@ -378,7 +384,7 @@ function verticalTimelineHtml(product, allProducts) {
     <li class="tl-item tl-item--${type}">
       <span class="tl-marker tl-marker--${type}">${TIMELINE_ICONS[type] || TIMELINE_ICONS.refresh}</span>
       <div class="tl-body">
-        <p class="tl-date">${formatDate(date)}</p>
+        <p class="tl-date">${formatDate(date)}${date > new Date().toISOString().slice(0, 10) ? ' <span class="tl-upcoming">Upcoming</span>' : ''}</p>
         ${lines}
       </div>
     </li>${gapRow}`;
@@ -592,10 +598,22 @@ function plural(count, one, many) {
   return `${count} ${count === 1 ? one : many}`;
 }
 
+// The colour compares a product against its own usual cycle, not a
+// fixed number of days, so 365 days can be amber for one product and
+// red for another. The tooltip says which, rather than leaving people
+// to guess.
+function badgeExplanation(statusInfo) {
+  if (!statusInfo) return '';
+  const cycle = `${plural(statusInfo.avgCycleDays, 'day', 'days')}`;
+  if (statusInfo.status === 'overdue') return `Overdue: this one is usually updated every ${cycle}`;
+  if (statusInfo.status === 'aging') return `Getting on: this one is usually updated every ${cycle}`;
+  return `Recently updated: this one is usually updated every ${cycle}`;
+}
+
 function badgeHtml(product, statusInfo) {
   if (!statusInfo) return '';
   const info = badgeDaysInfo(product, statusInfo);
-  return `<span class="badge badge--${statusInfo.status}">${plural(info.days, 'day', 'days')} ${info.suffix}</span>`;
+  return `<span class="badge badge--${statusInfo.status}" title="${escapeHtml(badgeExplanation(statusInfo))}">${plural(info.days, 'day', 'days')} ${info.suffix}</span>`;
 }
 
 function productBadge(product, statusInfo) {
@@ -912,16 +930,20 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
     : productBadge(product, statusInfo);
   const launch = launchDate(product);
   const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
-  const nextExpected = statusInfo && !product.discontinued
-    ? new Date(new Date(statusInfo.lastRefresh).getTime() + statusInfo.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
+  // Once the predicted date has gone by, saying "expected" is wrong: it
+  // was expected, and the product is overdue.
+  const expectedDate = statusInfo && !product.discontinued
+    ? new Date(new Date(statusInfo.lastRefresh).getTime() + statusInfo.avgCycleDays * 86400000)
     : null;
+  const expectedPassed = expectedDate ? expectedDate.getTime() < Date.now() : false;
+  const nextExpected = expectedDate ? expectedDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }) : null;
   const detailRows = [
     product.price ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price</span> ${escapeHtml(formatPrice(product.price))}</div>` : '',
     launch ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ${formatDate(launch)}</div>` : '',
     product.discontinued && product.discontinued_date
       ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ${formatDate(product.discontinued_date)}</div>`
       : nextExpected
-      ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Next refresh expected</span> ${nextExpected}</div>`
+      ? `<div class="card-featured-detail"><span class="card-featured-detail-label">${expectedPassed ? 'Refresh was expected' : 'Next refresh expected'}</span> ${nextExpected}</div>`
       : '',
     predecessor ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ${escapeHtml(predecessor.name)}</div>` : '',
   ].filter(Boolean).join('\n');
@@ -1443,9 +1465,12 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     keyFact('Latest release', latest ? formatDate(latest) : (launch ? formatDate(launch) : null)),
     keyFact('First release', launch && launch !== latest ? formatDate(launch) : null),
     keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}` : null),
-    keyFact('Next expected', status && sortedDates.length > 1 && !product.discontinued
-      ? new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
-      : null),
+    (() => {
+      if (!status || sortedDates.length <= 1 || product.discontinued) return '';
+      const due = new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000);
+      const label = due.getTime() < Date.now() ? 'Was expected' : 'Next expected';
+      return keyFact(label, due.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }));
+    })(),
     keyFact('Discontinued', product.discontinued && product.discontinued_date ? formatDate(product.discontinued_date) : null),
     keyFact('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanText(launch, product.discontinued_date) : null),
     keyFact('Starting price', product.price ? escapeHtml(formatPrice(product.price)) : null),
@@ -1497,7 +1522,10 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
             <h1>${escapeHtml(product.name)}</h1>
           </div>
         </div>
-        <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
+        <div class="admin-tools">
+          <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
+          <button type="button" class="admin-edit-link tweet-btn" data-slug="${product.slug}" style="display:none;">Draft a post for X</button>
+        </div>
       </div>
 
       <div class="product-facts">${heroStatHtml(product, status)}${keyFacts}</div>
@@ -1748,16 +1776,20 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <div class="generation-add" id="generation-add-panel">
             <p class="generation-add-title">Add a date</p>
             <div class="segmented segmented--type" role="radiogroup" aria-label="Type of date">
+              <label><input type="radio" name="entry_type" value="launch"><span>Launch</span></label>
               <label><input type="radio" name="entry_type" value="release" checked><span>Release</span></label>
+              <label><input type="radio" name="entry_type" value="announced"><span>Announced</span></label>
               <label><input type="radio" name="entry_type" value="discontinued"><span>Discontinued</span></label>
             </div>
             <div class="generation-add-row">
               ${datePrecisionFieldHtml('new_refresh_date', 'Date')}
               <button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--primary">+ Add</button>
             </div>
-            <div class="admin-subfield" id="generation-extra-fields">
+            <div class="admin-subfield" id="generation-name-field">
               <label><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
-              ${datePrecisionFieldHtml('new_generation_announced', 'Announced <span class="admin-optional">Optional</span>')}
+            </div>
+            <div class="admin-subfield" id="announced-target-field" style="display:none;">
+              <label>Which release was this the announcement for?<select id="announced_target"></select></label>
             </div>
             <p id="generation-add-error" class="form-error"></p>
           </div>

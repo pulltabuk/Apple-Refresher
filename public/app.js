@@ -248,13 +248,19 @@
       var nextDate = dates[i + 1];
       var gap = nextDate ? timelineGapTextJS(nextDate, date) : '';
       var gapRow = gap ? '<li class="tl-gap"><span class="tl-gap-text">&#8593; ' + gap + '</span></li>' : '';
-      var lines = entries.map(function (e) {
+      var ordered = entries.slice().sort(function (a, b) {
+        var rank = function (e) { return e.type === 'discontinued' ? 1 : 0; };
+        return rank(a) - rank(b);
+      });
+      var lines = ordered.map(function (e) {
         return '<p class="tl-entry"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
           '<span class="tl-entry-type tl-entry-type--' + e.type + '">' + e.label + '</span></p>';
       }).join('');
       return yearRow + '<li class="tl-item tl-item--' + type + '">' +
         '<span class="tl-marker tl-marker--' + type + '">' + (TIMELINE_ICONS_JS[type] || TIMELINE_ICONS_JS.refresh) + '</span>' +
-        '<div class="tl-body"><p class="tl-date">' + formatDateJS(date) + '</p>' + lines + '</div></li>' + gapRow;
+        '<div class="tl-body"><p class="tl-date">' + formatDateJS(date) +
+          (date > new Date().toISOString().slice(0, 10) ? ' <span class="tl-upcoming">Upcoming</span>' : '') +
+        '</p>' + lines + '</div></li>' + gapRow;
     }).join('');
     return '<ol class="tl">' + nowNode + rows + '</ol>';
   }
@@ -404,6 +410,14 @@
   }
   fetchCustomCategoryIconsJS();
 
+  // Every word must appear somewhere, in any order, so "Watch 12" finds
+  // "Apple Watch Series 12". Used by the header dropdown and the filters.
+  function matchesSearchJS(haystack, query) {
+    var words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+    var text = String(haystack || '').toLowerCase();
+    return words.every(function (word) { return text.indexOf(word) !== -1; });
+  }
+
   // --- Site-wide header search dropdown ---
 
   var siteSearchForm = document.querySelector('.site-search');
@@ -463,7 +477,7 @@
         return;
       }
       fetchSearchProducts().then(function (products) {
-        var matches = products.filter(function (p) { return p.name.toLowerCase().indexOf(query) !== -1; });
+        var matches = products.filter(function (p) { return matchesSearchJS(p.name + ' ' + (p.category || ''), query); });
         renderSearchDropdown(matches, query);
       });
     });
@@ -536,6 +550,14 @@
     return { days: statusInfo.daysSince, suffix: 'since refresh' };
   }
 
+  function badgeExplanationJS(statusInfo) {
+    if (!statusInfo) return '';
+    var cycle = pluralJS(statusInfo.avgCycleDays, 'day', 'days');
+    if (statusInfo.status === 'overdue') return 'Overdue: this one is usually updated every ' + cycle;
+    if (statusInfo.status === 'aging') return 'Getting on: this one is usually updated every ' + cycle;
+    return 'Recently updated: this one is usually updated every ' + cycle;
+  }
+
   function badgeHtmlJS(product, statusInfo) {
     if (product.discontinued) {
       var date = product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '';
@@ -543,7 +565,7 @@
     }
     if (!statusInfo) return '';
     var info = badgeDaysInfoJS(product, statusInfo);
-    return '<span class="badge badge--' + statusInfo.status + '">' + info.days + ' days ' + info.suffix + '</span>';
+    return '<span class="badge badge--' + statusInfo.status + '" title="' + escapeHtmlJS(badgeExplanationJS(statusInfo)) + '">' + pluralJS(info.days, 'day', 'days') + ' ' + info.suffix + '</span>';
   }
 
   function cardHtmlJS(product, statusInfo) {
@@ -668,9 +690,11 @@
       keyFactJS('Latest release', latest ? formatDateJS(latest) : (launch ? formatDateJS(launch) : null)),
       keyFactJS('First release', launch && launch !== latest ? formatDateJS(launch) : null),
       keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days') : null),
-      keyFactJS('Next expected', status && sortedDates.length > 1 && !product.discontinued
-        ? new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
-        : null),
+      (function () {
+        if (!status || sortedDates.length <= 1 || product.discontinued) return '';
+        var due = new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000);
+        return keyFactJS(due.getTime() < Date.now() ? 'Was expected' : 'Next expected', due.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }));
+      })(),
       keyFactJS('Discontinued', product.discontinued && product.discontinued_date ? formatDateJS(product.discontinued_date) : null),
       keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanTextJS(launch, product.discontinued_date) : null),
       keyFactJS('Starting price', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
@@ -718,7 +742,10 @@
                 '<h1>' + escapeHtmlJS(product.name) + '</h1>' +
               '</div>' +
             '</div>' +
-            '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
+            '<div class="admin-tools">' +
+              '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
+              '<button type="button" class="admin-edit-link tweet-btn" data-slug="' + product.slug + '" style="display:none;">Draft a post for X</button>' +
+            '</div>' +
           '</div>' +
           '<div class="product-facts">' + heroStatHtmlJS(product, status) + keyFacts + '</div>' +
           '<dl class="spec-list spec-list--secondary">' + specs + '</dl>' +
@@ -834,7 +861,7 @@
           var nameEl = card.querySelector('.card-name, .league-name-link span');
           haystack = nameEl ? nameEl.textContent.toLowerCase() : '';
         }
-        if (haystack.indexOf(query) === -1) show = false;
+        if (!matchesSearchJS(haystack, query)) show = false;
       } else {
         Object.keys(activeFilters).forEach(function (key) {
           var want = activeFilters[key];
@@ -1106,7 +1133,100 @@
     });
   }
 
+  // --- Draft a post for X, admin only ---
+  //
+  // Everything it needs is already on the page, so the text is built
+  // from the rendered facts rather than another request.
+  function tweetTextFor(root) {
+    var name = (root.querySelector('h1') || {}).textContent || '';
+    var number = root.querySelector('.days-hero-number');
+    var suffix = root.querySelector('.days-hero');
+    var facts = {};
+    root.querySelectorAll('.key-fact').forEach(function (f) {
+      var label = (f.querySelector('.key-fact-label') || {}).textContent || '';
+      var value = (f.querySelector('.key-fact-value') || {}).textContent || '';
+      facts[label.trim().toLowerCase()] = value.trim();
+    });
+    var discontinued = facts['discontinued'];
+    var lines = [];
+    if (discontinued) {
+      lines.push(name.trim() + ' was discontinued on ' + discontinued + '.');
+      if (facts['lifespan']) lines.push('It was on sale for ' + facts['lifespan'] + '.');
+    } else if (number) {
+      var days = number.textContent.trim();
+      var latest = facts['latest release'];
+      lines.push(name.trim() + ': ' + days + ' days since Apple last updated it' + (latest ? ' (' + latest + ').' : '.'));
+      if (facts['typical cycle']) lines.push('Typical gap between updates: ' + facts['typical cycle'].toLowerCase().replace('about every ', '') + '.');
+      if (facts['was expected']) lines.push('A refresh was expected around ' + facts['was expected'] + '.');
+      else if (facts['next expected']) lines.push('Next one expected around ' + facts['next expected'] + '.');
+    } else {
+      lines.push(name.trim() + ' on Apple Sunset.');
+    }
+    var url = window.location.origin + window.location.pathname;
+    var body = lines.join('\n\n');
+    // X counts a link as 23 characters whatever its length.
+    var room = 280 - 24;
+    if (body.length > room) body = body.slice(0, room - 1).trim() + '\u2026';
+    return body + '\n' + url;
+  }
+
+  function wireTweetButtons(buttons) {
+    buttons.forEach(function (btn) {
+      if (btn.dataset.wired) return;
+      btn.dataset.wired = '1';
+      btn.addEventListener('click', function () {
+        var text = tweetTextFor(document.querySelector('.product-page') || document);
+        var existing = document.querySelector('.tweet-preview');
+        if (existing) existing.remove();
+        var box = document.createElement('div');
+        box.className = 'tweet-preview';
+        box.innerHTML = '<p class="tweet-preview-label">Draft post <span class="tweet-count"></span></p>';
+        var area = document.createElement('textarea');
+        area.className = 'tweet-preview-text';
+        area.rows = 6;
+        area.value = text;
+        var count = box.querySelector('.tweet-count');
+        var updateCount = function () {
+          var length = area.value.length + 24 - (area.value.split('\n').pop() || '').length;
+          count.textContent = length + ' of 280 characters';
+          count.classList.toggle('is-over', length > 280);
+        };
+        area.addEventListener('input', updateCount);
+        box.appendChild(area);
+        var row = document.createElement('div');
+        row.className = 'tweet-preview-actions';
+        var copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'intro-cta';
+        copy.textContent = 'Copy';
+        copy.addEventListener('click', function () {
+          navigator.clipboard.writeText(area.value).then(function () { copy.textContent = 'Copied'; });
+        });
+        var open = document.createElement('a');
+        open.className = 'intro-cta intro-cta--ghost';
+        open.target = '_blank';
+        open.rel = 'noopener';
+        open.textContent = 'Open X';
+        open.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(area.value);
+        area.addEventListener('input', function () {
+          open.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(area.value);
+        });
+        var close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'intro-cta intro-cta--ghost';
+        close.textContent = 'Close';
+        close.addEventListener('click', function () { box.remove(); });
+        row.appendChild(copy); row.appendChild(open); row.appendChild(close);
+        box.appendChild(row);
+        btn.closest('.admin-tools').insertAdjacentElement('afterend', box);
+        updateCount();
+        area.focus();
+      });
+    });
+  }
+
   revealAdminEditLinks(document.querySelectorAll('.admin-edit-link'));
+  wireTweetButtons(document.querySelectorAll('.tweet-btn'));
   wireWaitButtons(document.querySelectorAll('.wait-btn'));
 
   // --- Live refresh: homepage hero (3 random cards, one featured) and
@@ -1129,16 +1249,18 @@
       : badgeHtmlJS(product, statusInfo);
     var launch = launchDateJS(product);
     var predecessor = product.previous_model && allProducts ? allProducts.filter(function (p) { return p.slug === product.previous_model; })[0] : null;
-    var nextExpected = statusInfo && !product.discontinued
-      ? new Date(new Date(statusInfo.lastRefresh).getTime() + statusInfo.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
+    var expectedDate = statusInfo && !product.discontinued
+      ? new Date(new Date(statusInfo.lastRefresh).getTime() + statusInfo.avgCycleDays * 86400000)
       : null;
+    var expectedPassed = expectedDate ? expectedDate.getTime() < Date.now() : false;
+    var nextExpected = expectedDate ? expectedDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }) : null;
     var detailRows = [];
     if (product.price) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price</span> ' + escapeHtmlJS(formatPriceJS(product.price)) + '</div>');
     if (launch) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ' + formatDateJS(launch) + '</div>');
     if (product.discontinued && product.discontinued_date) {
       detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ' + formatDateJS(product.discontinued_date) + '</div>');
     } else if (nextExpected) {
-      detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Next refresh expected</span> ' + nextExpected + '</div>');
+      detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">' + (expectedPassed ? 'Refresh was expected' : 'Next refresh expected') + '</span> ' + nextExpected + '</div>');
     }
     if (predecessor) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ' + escapeHtmlJS(predecessor.name) + '</div>');
     return '<article class="card card--featured" data-category="' + escapeHtmlJS(product.category) + '">' +

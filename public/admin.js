@@ -99,7 +99,7 @@
     updateDatePrecisionVisibility(prefix);
   }
 
-  const DATE_FIELD_PREFIXES = ['new_refresh_date', 'new_generation_announced', 'gallery_date_taken'];
+  const DATE_FIELD_PREFIXES = ['new_refresh_date', 'gallery_date_taken'];
 
   DATE_FIELD_PREFIXES.forEach(wireDatePrecisionField);
 
@@ -704,8 +704,15 @@
       const results = document.getElementById('search-results');
       searchScreen.style.display = '';
       results.innerHTML = '';
+      // "Watch 12" should find "Apple Watch Series 12": each word has to
+      // appear somewhere in the name or family, in any order, rather than
+      // the whole phrase appearing as typed.
+      const words = query.split(/\s+/).filter(Boolean);
       const matches = cachedProducts
-        .filter((p) => p.name.toLowerCase().includes(query))
+        .filter((p) => {
+          const haystack = ((p.name || '') + ' ' + (p.category || '')).toLowerCase();
+          return words.every((word) => haystack.includes(word));
+        })
         .sort((a, b) => a.name.localeCompare(b.name));
       if (!matches.length) {
         results.textContent = 'No products match your search.';
@@ -768,10 +775,12 @@
   const expandedGenerations = new Set();
 
   function entryTypeFor(date) {
-    return currentDiscontinuedDate === date ? 'discontinued' : 'release';
+    if (currentDiscontinuedDate === date) return 'discontinued';
+    if (currentOriginalLaunchDate === date) return 'launch';
+    return 'release';
   }
 
-  const ENTRY_LABELS = { release: 'Release', discontinued: 'Discontinued' };
+  const ENTRY_LABELS = { launch: 'Launch', release: 'Release', discontinued: 'Discontinued' };
 
   function allEntryDates() {
     const dates = currentRefreshHistory.slice();
@@ -827,18 +836,16 @@
       const isOpen = expandedGenerations.has(date);
       const actions = document.createElement('span');
       actions.className = 'generation-item-actions';
-      if (type !== 'discontinued') {
-        const editBtn = document.createElement('button');
-        editBtn.type = 'button';
-        editBtn.className = 'generation-edit';
-        editBtn.textContent = isOpen ? 'Done' : 'Edit';
-        editBtn.addEventListener('click', () => {
-          if (isOpen) expandedGenerations.delete(date);
-          else expandedGenerations.add(date);
-          renderRefreshHistory();
-        });
-        actions.appendChild(editBtn);
-      }
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'generation-edit';
+      editBtn.textContent = isOpen ? 'Done' : 'Edit';
+      editBtn.addEventListener('click', () => {
+        if (isOpen) expandedGenerations.delete(date);
+        else expandedGenerations.add(date);
+        renderRefreshHistory();
+      });
+      actions.appendChild(editBtn);
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'generation-remove';
@@ -860,44 +867,104 @@
       top.appendChild(actions);
       li.appendChild(top);
 
-      if (isOpen && type !== 'discontinued') {
+      if (type !== 'discontinued' && info.announced) {
+        const ann = document.createElement('p');
+        ann.className = 'generation-announced';
+        ann.textContent = 'Announced ' + formatAdminDate(info.announced) + ' ';
+        const clear = document.createElement('button');
+        clear.type = 'button';
+        clear.className = 'generation-edit';
+        clear.textContent = 'Remove';
+        clear.addEventListener('click', () => {
+          detailFor(date).announced = null;
+          renderRefreshHistory();
+        });
+        ann.appendChild(clear);
+        li.appendChild(ann);
+      }
+
+      if (isOpen) {
         const fields = document.createElement('div');
         fields.className = 'generation-item-fields';
 
-        const nameLabel = document.createElement('label');
-        nameLabel.textContent = 'Name';
-        const nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.value = info.name || '';
-        nameInput.placeholder = autoName;
-        nameInput.addEventListener('input', () => { detailFor(date).name = nameInput.value; });
-        nameLabel.appendChild(nameInput);
-        fields.appendChild(nameLabel);
+        // Editing the date moves the entry, carrying its name and
+        // announced date with it. Nothing has to be removed and retyped.
+        const dateLabel = document.createElement('label');
+        dateLabel.textContent = type === 'discontinued' ? 'Discontinued date' : 'Release date';
+        const dateInput = document.createElement('input');
+        dateInput.type = 'date';
+        dateInput.value = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
+        dateInput.addEventListener('change', () => {
+          const next = dateInput.value;
+          if (!next || next === date) return;
+          if (type === 'discontinued') {
+            currentDiscontinuedDate = next;
+          } else {
+            if (currentRefreshHistory.indexOf(next) !== -1) {
+              window.alert('There is already a date on ' + formatAdminDate(next) + '.');
+              renderRefreshHistory();
+              return;
+            }
+            currentRefreshHistory = currentRefreshHistory.map((d) => (d === date ? next : d)).sort();
+            if (currentGenerationDetails[date]) {
+              currentGenerationDetails[next] = currentGenerationDetails[date];
+              delete currentGenerationDetails[date];
+            }
+            if (currentOriginalLaunchDate === date) currentOriginalLaunchDate = next;
+          }
+          expandedGenerations.delete(date);
+          expandedGenerations.add(next);
+          renderRefreshHistory();
+          updateStatusReadout();
+        });
+        dateLabel.appendChild(dateInput);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          const note = document.createElement('span');
+          note.className = 'admin-hint';
+          note.textContent = 'Stored as ' + formatAdminDate(date) + '. Picking a full date here replaces it.';
+          dateLabel.appendChild(note);
+        }
+        fields.appendChild(dateLabel);
 
-        const annLabel = document.createElement('label');
-        annLabel.textContent = 'Announced';
-        if (!info.announced || /^\d{4}-\d{2}-\d{2}$/.test(info.announced)) {
+        if (type !== 'discontinued') {
+          const nameLabel = document.createElement('label');
+          nameLabel.textContent = 'Name';
+          const nameInput = document.createElement('input');
+          nameInput.type = 'text';
+          nameInput.value = info.name || '';
+          nameInput.placeholder = autoName;
+          nameInput.addEventListener('input', () => { detailFor(date).name = nameInput.value; });
+          nameLabel.appendChild(nameInput);
+          fields.appendChild(nameLabel);
+
+          const annLabel = document.createElement('label');
+          annLabel.textContent = 'Announced';
           const annInput = document.createElement('input');
           annInput.type = 'date';
-          annInput.value = info.announced || '';
+          annInput.value = /^\d{4}-\d{2}-\d{2}$/.test(info.announced || '') ? info.announced : '';
           annInput.addEventListener('change', () => { detailFor(date).announced = annInput.value || null; });
           annLabel.appendChild(annInput);
-        } else {
-          const chip = document.createElement('span');
-          chip.className = 'date-chip';
-          chip.textContent = formatAdminDate(info.announced) + ' ';
-          const clear = document.createElement('button');
-          clear.type = 'button';
-          clear.textContent = '\u00d7';
-          clear.setAttribute('aria-label', 'Clear announced date');
-          clear.addEventListener('click', () => {
-            detailFor(date).announced = null;
+          if (info.announced && !/^\d{4}-\d{2}-\d{2}$/.test(info.announced)) {
+            const note = document.createElement('span');
+            note.className = 'admin-hint';
+            note.textContent = 'Currently ' + formatAdminDate(info.announced) + '.';
+            annLabel.appendChild(note);
+          }
+          fields.appendChild(annLabel);
+
+          const makeLaunch = document.createElement('label');
+          makeLaunch.className = 'checkbox-label';
+          const launchBox = document.createElement('input');
+          launchBox.type = 'checkbox';
+          launchBox.checked = currentOriginalLaunchDate === date;
+          launchBox.addEventListener('change', () => {
+            currentOriginalLaunchDate = launchBox.checked ? date : null;
             renderRefreshHistory();
           });
-          chip.appendChild(clear);
-          annLabel.appendChild(chip);
+          makeLaunch.appendChild(launchBox);
+          makeLaunch.appendChild(document.createTextNode(' This was the first ever launch of this product'));
+          fields.appendChild(makeLaunch);
         }
-        fields.appendChild(annLabel);
         li.appendChild(fields);
       }
       refreshHistoryListEl.appendChild(li);
@@ -910,15 +977,51 @@
 
   // A product can only be discontinued once, so that option greys out
   // once a discontinued date exists. Release is always available.
+  // A product launches once and is discontinued once, so those two grey
+  // out when they are already recorded. Announced needs a release to
+  // attach to, so it greys out until there is one.
   function setEntryTypeAvailability(releaseCount, hasDiscontinued) {
     const release = document.querySelector('input[name="entry_type"][value="release"]');
+    const launch = document.querySelector('input[name="entry_type"][value="launch"]');
+    const announced = document.querySelector('input[name="entry_type"][value="announced"]');
     const discontinued = document.querySelector('input[name="entry_type"][value="discontinued"]');
-    discontinued.disabled = hasDiscontinued;
-    const label = discontinued.closest('label');
-    label.classList.toggle('segmented-option--off', hasDiscontinued);
-    label.title = hasDiscontinued ? 'This product already has a discontinued date' : '';
-    if (hasDiscontinued && discontinued.checked) release.checked = true;
+    const setState = (input, off, why) => {
+      input.disabled = off;
+      const label = input.closest('label');
+      label.classList.toggle('segmented-option--off', off);
+      label.title = off ? why : '';
+      if (off && input.checked) release.checked = true;
+    };
+    setState(launch, !!currentOriginalLaunchDate, 'This product already has a launch date');
+    setState(announced, releaseCount === 0, 'Add a release date first, then its announcement');
+    setState(discontinued, hasDiscontinued, 'This product already has a discontinued date');
+    if (!currentOriginalLaunchDate && releaseCount === 0) launch.checked = true;
+    updateAddPanelForType();
   }
+
+  // The add panel only shows the fields the chosen type needs.
+  function updateAddPanelForType() {
+    const type = selectedEntryType();
+    document.getElementById('generation-name-field').style.display = type === 'launch' || type === 'release' ? '' : 'none';
+    const targetField = document.getElementById('announced-target-field');
+    targetField.style.display = type === 'announced' ? '' : 'none';
+    if (type !== 'announced') return;
+    const select = document.getElementById('announced_target');
+    const keep = select.value;
+    select.innerHTML = '';
+    currentRefreshHistory.slice().sort().reverse().forEach((d) => {
+      const opt = document.createElement('option');
+      opt.value = d;
+      const info = currentGenerationDetails[d] || {};
+      opt.textContent = formatAdminDate(d) + ((info.name || '').trim() ? ' \u2013 ' + info.name.trim() : '') + (info.announced ? ' (already has one)' : '');
+      select.appendChild(opt);
+    });
+    if (keep && Array.from(select.options).some((o) => o.value === keep)) select.value = keep;
+  }
+
+  document.querySelectorAll('input[name="entry_type"]').forEach((radio) => {
+    radio.addEventListener('change', updateAddPanelForType);
+  });
 
   function selectedEntryType() {
     const checked = document.querySelector('input[name="entry_type"]:checked');
@@ -994,7 +1097,6 @@
 
   function resetGenerationPanel() {
     setDatePrecisionValue('new_refresh_date', null);
-    setDatePrecisionValue('new_generation_announced', null);
     document.getElementById('new_generation_name').value = '';
     document.getElementById('generation-add-error').textContent = '';
   }
@@ -1015,18 +1117,32 @@
       updateStatusReadout();
       return;
     }
+    if (type === 'announced') {
+      const target = document.getElementById('announced_target').value;
+      if (!target) {
+        errorEl.textContent = 'Pick which release this announcement was for.';
+        return;
+      }
+      detailFor(target).announced = value;
+      resetGenerationPanel();
+      renderRefreshHistory();
+      return;
+    }
     if (currentRefreshHistory.indexOf(value) !== -1) {
       errorEl.textContent = 'There is already a date on ' + formatAdminDate(value) + '.';
       return;
     }
     const name = document.getElementById('new_generation_name').value.trim();
-    const announced = getDatePrecisionValue('new_generation_announced');
     currentRefreshHistory.push(value);
     currentRefreshHistory.sort();
-    if (name || announced) {
-      currentGenerationDetails[value] = { name: name || null, announced: announced || null };
+    if (name) {
+      detailFor(value).name = name;
     }
-    currentOriginalLaunchDate = currentRefreshHistory[0] || null;
+    // Launch is explicit now. A product's very first date is still
+    // treated as its launch, since there is nothing earlier it could be.
+    if (type === 'launch' || (!currentOriginalLaunchDate && currentRefreshHistory.length === 1)) {
+      currentOriginalLaunchDate = value;
+    }
     resetGenerationPanel();
     renderRefreshHistory();
     updateStatusReadout();
