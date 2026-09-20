@@ -588,8 +588,17 @@ label.admin-btn { cursor: pointer; color: #fff; }
   .intro-hero-cards .card > .pill { margin-top: 8px; }
 }
 @media (max-width: 560px) {
-  .intro-hero-cards { grid-template-columns: 1fr; }
-  .card--featured { grid-column: auto; grid-row: auto; }
+  /* Featured card full width, then the other two share a row, so the
+     hero matches the two-column card grid further down the page. */
+  .intro-hero-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card--featured { grid-column: 1 / -1; grid-row: auto; }
+  .intro-hero-cards .card:not(.card--featured) { padding: 0.7rem; }
+  .intro-hero-cards .card:not(.card--featured) .card-name { font-size: 14px; line-height: 1.25; }
+  .intro-hero-cards .card:not(.card--featured) .badge { font-size: 11px; padding: 5px 8px; }
+  .intro-hero-cards .card:not(.card--featured) .pill { font-size: 9px; padding: 2px 7px; }
+  .intro-hero-cards .card:not(.card--featured) .card-name-row { gap: 5px; }
+  .intro-hero-cards .card:not(.card--featured) .card-name-row svg,
+  .intro-hero-cards .card:not(.card--featured) .card-name-row img { width: 24px; height: 24px; }
 }
 
 /* Cards */
@@ -1629,13 +1638,24 @@ body.is-admin .site-search { display: none; }
 .homepage-category-select { display: none; margin: 0.5rem 0 1.25rem; }
 .homepage-category-select select {
   width: 100%;
-  padding: 11px 12px;
+  padding: 13px 40px 13px 14px;
   font-size: 15px;
+  font-weight: 600;
   font-family: inherit;
-  color: var(--text);
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  color: var(--accent-dark);
+  background-color: var(--accent-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c4009' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 17px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.homepage-category-select select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 @media (max-width: 700px) {
   .homepage-category-links { display: none; }

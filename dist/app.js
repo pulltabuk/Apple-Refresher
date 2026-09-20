@@ -1428,15 +1428,22 @@
       if (!withStatus.length && !activeEvent) return;
 
       var explicitlyFeatured = activeEvent ? null : withStatus.filter(function (i) { return i.product.featured; })[0];
+      // Must match build.js: an unreleased product stays out of the hero
+      // unless it has been deliberately featured.
+      var todayStr = new Date().toISOString().slice(0, 10);
+      var releasedOnly = withStatus.filter(function (i) {
+        var dates = i.product.refresh_history || [];
+        return !dates.length || !dates.every(function (d) { return d > todayStr; });
+      });
       var heroFeatured, heroRest;
       if (activeEvent) {
         heroFeatured = null;
-        heroRest = pickRandomJS(withStatus, 2);
+        heroRest = pickRandomJS(releasedOnly, 2);
       } else if (explicitlyFeatured) {
         heroFeatured = explicitlyFeatured;
-        heroRest = pickRandomJS(withStatus.filter(function (i) { return i !== explicitlyFeatured; }), 2);
+        heroRest = pickRandomJS(releasedOnly.filter(function (i) { return i !== explicitlyFeatured; }), 2);
       } else {
-        var heroPicks = pickRandomJS(withStatus, 3);
+        var heroPicks = pickRandomJS(releasedOnly, 3);
         heroFeatured = heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0];
         heroRest = heroPicks.filter(function (i) { return i !== heroFeatured; });
       }

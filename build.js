@@ -262,14 +262,18 @@ async function main() {
   // JS re-randomises the two non-featured slots on every page load;
   // this build-time pick is just the pre-JS fallback.
   const rankable = withStatus.filter((i) => i.status);
+  // A product still to be released has no refresh to count, so it only
+  // belongs in the hero if it has been deliberately featured. Otherwise
+  // it has the countdown panel to itself.
+  const released = rankable.filter((i) => !(i.product.refresh_history || []).every((d) => d > today));
   const explicitlyFeatured = rankable.find((i) => i.product.featured);
   let heroFeatured;
   let heroRest;
   if (explicitlyFeatured) {
     heroFeatured = explicitlyFeatured;
-    heroRest = pickRandom(rankable.filter((i) => i !== explicitlyFeatured), 2);
+    heroRest = pickRandom(released.filter((i) => i !== explicitlyFeatured), 2);
   } else {
-    const heroPicks = pickRandom(rankable, 3);
+    const heroPicks = pickRandom(released, 3);
     heroFeatured = [...heroPicks].sort((a, b) => b.status.ratio - a.status.ratio)[0] || null;
     heroRest = heroPicks.filter((i) => i !== heroFeatured);
   }
