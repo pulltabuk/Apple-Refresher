@@ -1710,4 +1710,32 @@
     window.requestAnimationFrame(step);
   })();
 
+
+  // The menu button on narrow screens. The nav works without this: the
+  // markup is a plain list of links, and the button is only shown by
+  // CSS on small viewports.
+  (function navToggle() {
+    var btn = document.getElementById('nav-toggle');
+    var nav = document.getElementById('site-nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function () {
+      var open = nav.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    // Tapping a link closes it, and so does Escape.
+    nav.addEventListener('click', function (e) {
+      if (e.target.closest('a')) {
+        nav.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && nav.classList.contains('is-open')) {
+        nav.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.focus();
+      }
+    });
+  })();
+
 })();

@@ -2334,13 +2334,17 @@
 
   async function loadPageContent() {
     const { data, error } = await client.from('page_content').select('*');
-    if (error) {
-      document.getElementById('pagetext-status').textContent = 'Page text needs supabase-schema-update-22.sql running first.';
-      return;
-    }
     pageContentRows = {};
-    (data || []).forEach((row) => { pageContentRows[row.key] = row; });
+    if (!error) {
+      (data || []).forEach((row) => { pageContentRows[row.key] = row; });
+    }
+    // The list of pages comes from the site itself, not the database, so
+    // it is filled either way. Only the saved text needs the table.
     fillPagetextTargets();
+    if (error) {
+      document.getElementById('pagetext-status').textContent =
+        'Saved text can\u2019t be loaded yet: run supabase-schema-update-22.sql and 23 in Supabase. You can still pick a page below.';
+    }
   }
 
   if (pagetextTargetEl) pagetextTargetEl.addEventListener('change', showPagetextRow);

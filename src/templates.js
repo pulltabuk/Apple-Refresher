@@ -662,7 +662,11 @@ ${extraJsonLd ? `<script type="application/ld+json">${JSON.stringify(extraJsonLd
     <a class="site-title" href="/">
       <img src="/logo.png" alt="Apple Sunset" class="site-logo-img">
     </a>
-    <nav class="site-nav">
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+      <span class="nav-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="nav-toggle-text">Menu</span>
+    </button>
+    <nav class="site-nav" id="site-nav">
       <a href="/products/">All products</a>
       <a href="/categories/">Categories</a>
       <a href="/discontinued/">Discontinued</a>
