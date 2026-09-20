@@ -36,6 +36,22 @@
     return String(str || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '');
   }
 
+  // Must stay in step with eventSlug() in src/templates.js, or a card
+  // rendered client-side will link to a page the build never wrote.
+  function eventSlugJS(event) {
+    var heading = slugifyJS(String(event.heading || '').replace(/['\u2019]/g, ''));
+    var datePart = '';
+    if (event.event_date) {
+      var d = new Date(event.event_date);
+      if (!isNaN(d)) {
+        var months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+        datePart = months[d.getUTCMonth()] + '-' + d.getUTCFullYear();
+      }
+    }
+    var slug = [heading, datePart].filter(Boolean).join('-');
+    return slug || String(event.id);
+  }
+
   function datePrecisionJS(str) {
     if (!str) return null;
     if (/^\d{4}$/.test(str)) return 'year';
@@ -526,7 +542,7 @@
         events.forEach(function (ev) {
           var announced = (ev.announced_products || []).map(function (a) { return typeof a === 'string' ? a : a.name; });
           if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' '), query)) return;
-          matches.push({ kind: 'event', label: ev.heading || 'Apple Event', href: '/events/' + ev.id + '/',
+          matches.push({ kind: 'event', label: ev.heading || 'Apple Event', href: '/events/' + eventSlugJS(ev) + '/',
             iconHtml: '<span class="site-search-event-dot" aria-hidden="true"></span>',
             note: ev.event_date ? formatDateJS(ev.event_date) : '' });
         });
@@ -1617,7 +1633,7 @@
     var inner = '<div class="card-image">' + (event.image_url ? '<img src="' + escapeHtmlJS(event.image_url) + '" alt="' + escapeHtmlJS(event.heading) + '">' : '') + '</div>' +
       '<p class="card-name">' + escapeHtmlJS(event.heading) + '</p>' +
       (dateText ? '<p class="card-meta">' + escapeHtmlJS(dateText) + '</p>' : '');
-    return '<article class="card"><a class="card-link" href="/events/' + event.id + '/">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
+    return '<article class="card"><a class="card-link" href="/events/' + eventSlugJS(event) + '/">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
   }
 
   if (gridSection && gridSection.getAttribute('data-mode') === 'events' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {

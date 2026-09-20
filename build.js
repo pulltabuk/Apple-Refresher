@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, notFoundPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, setCustomCategoryIcons, launchDate, slugify, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, notFoundPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -304,8 +304,23 @@ async function main() {
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }));
   write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
   write('facts/index.html', factsPage({ facts, pageContent: pageContent.facts || null, ...opts }));
+  const eventSlugRedirects = [];
+  const usedEventSlugs = new Set();
   for (const event of events) {
-    write(`events/${event.id}/index.html`, eventDetailPage({ event, productsBySlug, ...opts }));
+    let slug = eventSlug(event);
+    // Two events sharing a heading and month would otherwise overwrite
+    // each other's page, so later ones get a numeric suffix.
+    if (usedEventSlugs.has(slug)) {
+      let n = 2;
+      while (usedEventSlugs.has(`${slug}-${n}`)) n++;
+      slug = `${slug}-${n}`;
+    }
+    usedEventSlugs.add(slug);
+    write(`events/${slug}/index.html`, eventDetailPage({ event, productsBySlug, ...opts }));
+    // Old UUID links (shared, bookmarked or already indexed) keep working.
+    if (slug !== String(event.id)) {
+      eventSlugRedirects.push(`/events/${event.id}/* /events/${slug}/ 301!`);
+    }
   }
   for (let i = 0; i < galleryPhotos.length; i++) {
     const photo = galleryPhotos[i];
@@ -384,7 +399,7 @@ ${sitemapUrls.map((u) => `  <url><loc>${SITE_URL}${u.path}</loc>${u.lastmod ? `<
   const redirectLines = redirects
     .filter((r) => r.from_slug && r.to_path && !livePaths.has('/products/' + r.from_slug + '/'))
     .map((r) => `/products/${r.from_slug}/* ${r.to_path} 301!`);
-  const allRedirectLines = hostRedirect.concat(redirectLines);
+  const allRedirectLines = hostRedirect.concat(redirectLines, eventSlugRedirects);
   fs.writeFileSync(path.join(DIST, '_redirects'), allRedirectLines.join('\n') + '\n');
   console.log(`Wrote ${allRedirectLines.length} redirect${allRedirectLines.length === 1 ? '' : 's'} (canonical host: ${canonicalHost}).`);
 

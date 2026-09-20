@@ -75,6 +75,23 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
+function eventSlug(event) {
+  // SEO-friendly event URL: heading plus month and year, e.g.
+  // "surprise-and-shine-september-2026". Falls back to the UUID if an
+  // event somehow has no heading, so a page is always reachable.
+  const heading = slugify(String(event.heading || '').replace(/['\u2019]/g, ''));
+  let datePart = '';
+  if (event.event_date) {
+    const d = new Date(event.event_date);
+    if (!isNaN(d)) {
+      const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+      datePart = months[d.getUTCMonth()] + '-' + d.getUTCFullYear();
+    }
+  }
+  const slug = [heading, datePart].filter(Boolean).join('-');
+  return slug || String(event.id);
+}
+
 function slugify(str) {
   return String(str || '')
     .toLowerCase()
@@ -1011,7 +1028,7 @@ function eventArchiveCardHtml(event, productsBySlug) {
   // well as the event's own title and date.
   const searchText = [event.heading, dateText, ...products.map((p) => p.name)].filter(Boolean).join(' ');
   return `<article class="card" data-search="${escapeHtml(searchText.toLowerCase())}">
-  <a class="card-link" href="/events/${event.id}/">${inner}</a>
+  <a class="card-link" href="/events/${eventSlug(event)}/">${inner}</a>
   ${tags ? `<div class="gallery-tags"><div class="gallery-tags-row">${tags}</div></div>` : ''}
 </article>`;
 }
@@ -1043,7 +1060,7 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
     title: `${event.heading} — Apple Sunset`,
     description: `${event.heading}${dateText ? `, ${dateText}` : ''}. ${sortedProducts.length ? 'Announced: ' + sortedProducts.join(', ') + '.' : ''}`,
     siteUrl,
-    path: `/events/${event.id}/`,
+    path: `/events/${eventSlug(event)}/`,
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
@@ -2101,6 +2118,7 @@ module.exports = {
   cardHtml,
   productBadge,
   slugify,
+  eventSlug,
   rssFeedXml,
   mostRecentActivityDate,
 };
