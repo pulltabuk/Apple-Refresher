@@ -339,6 +339,8 @@
   }
 
   function lifespanTextJS(start, end) {
+    var days = Math.max(0, Math.round((new Date(end) - new Date(start)) / 86400000));
+    if (days < 31) return days + ' day' + (days === 1 ? '' : 's');
     var months = monthsBetweenJS(start, end);
     var years = Math.floor(months / 12), rem = months % 12, parts = [];
     if (years) parts.push(years + ' year' + (years === 1 ? '' : 's'));

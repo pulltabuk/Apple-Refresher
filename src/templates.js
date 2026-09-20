@@ -490,6 +490,8 @@ function appleSupportStatus(product) {
 }
 
 function lifespanText(start, end) {
+  const days = Math.max(0, Math.round((new Date(end) - new Date(start)) / 86400000));
+  if (days < 31) return `${days} day${days === 1 ? '' : 's'}`;
   const months = monthsBetween(start, end);
   const years = Math.floor(months / 12);
   const rem = months % 12;
@@ -1757,6 +1759,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <div id="product-icon-thumb" class="admin-thumbs"></div>
               <label for="product-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload icon</label>
               <input type="file" id="product-icon-upload" accept="image/*" class="admin-file-input">
+              <button type="button" id="product-icon-removebg" class="admin-btn admin-btn--small admin-btn--ghost" style="display:none">Remove background</button>
             </div>
             <p class="admin-hint">Leave blank to use the family icon.</p>
           </div>

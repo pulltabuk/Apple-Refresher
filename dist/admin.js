@@ -556,6 +556,8 @@
       wrap.appendChild(removeBtn);
     }
     thumbEl.appendChild(wrap);
+    const bgBtn = document.getElementById('product-icon-removebg');
+    if (bgBtn) bgBtn.style.display = currentIconUrl ? '' : 'none';
   }
 
   document.getElementById('product-icon-upload').addEventListener('change', async (e) => {
@@ -568,6 +570,62 @@
       window.alert('Upload failed: ' + err.message);
     }
     e.target.value = '';
+  });
+
+  // Makes a flat backdrop transparent by sampling the four corners and
+  // clearing every pixel close to that colour. Works well for the pale
+  // grey/white boxes product icons often arrive with; it is deliberately
+  // conservative so it won't eat the icon itself.
+  function stripIconBackground(img, tolerance) {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imageData.data;
+    const w = canvas.width, h = canvas.height;
+    const cornerAt = (x, y) => {
+      const i = (y * w + x) * 4;
+      return [d[i], d[i + 1], d[i + 2]];
+    };
+    const corners = [cornerAt(0, 0), cornerAt(w - 1, 0), cornerAt(0, h - 1), cornerAt(w - 1, h - 1)];
+    const bg = [0, 1, 2].map((c) => Math.round(corners.reduce((sum, p) => sum + p[c], 0) / corners.length));
+    for (let i = 0; i < d.length; i += 4) {
+      if (Math.abs(d[i] - bg[0]) <= tolerance &&
+          Math.abs(d[i + 1] - bg[1]) <= tolerance &&
+          Math.abs(d[i + 2] - bg[2]) <= tolerance) {
+        d[i + 3] = 0;
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
+  }
+
+  document.getElementById('product-icon-removebg').addEventListener('click', async () => {
+    if (!currentIconUrl) return;
+    const btn = document.getElementById('product-icon-removebg');
+    const originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Removing...';
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error('could not load the current icon'));
+        img.src = currentIconUrl + (currentIconUrl.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+      });
+      const canvas = stripIconBackground(img, 24);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('could not process the image');
+      currentIconUrl = await uploadFile(new File([blob], 'icon-nobg.png', { type: 'image/png' }));
+      renderProductIconPreview();
+    } catch (err) {
+      window.alert('Could not remove the background: ' + err.message);
+    }
+    btn.disabled = false;
+    btn.textContent = originalLabel;
   });
 
   function updateCategoryOptions() {
