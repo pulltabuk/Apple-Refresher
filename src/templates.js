@@ -973,11 +973,31 @@ function emptyState(what) {
   return `<p class="page-intro">No ${what} yet. Add one in <a href="/admin/">/admin/</a> to see it here.</p>`;
 }
 
+function upcomingExtras(product) {
+  // Announcement and pre-order dates live alongside each release in
+  // generation_details, so pull them off the newest release.
+  const newest = (product.refresh_history || []).slice().sort().pop();
+  if (!newest) return {};
+  const info = generationDetails(product)[newest] || {};
+  return { release: newest, announced: info.announced || null, preorder: info.preorder || null };
+}
+
+function daysUntil(dateStr) {
+  const target = new Date(dateStr + 'T00:00:00Z');
+  const today = new Date();
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  return Math.round((target.getTime() - todayUtc) / 86400000);
+}
+
 function featuredCardHtml(product, statusInfo, productsBySlug) {
   const daysInfo = statusInfo ? badgeDaysInfo(product, statusInfo) : null;
   const countHtml = daysInfo
     ? (daysInfo.days < 0
-        ? `<div class="card-featured-count card-featured-count--upcoming"><span class="card-featured-count-suffix">Coming ${formatDate((product.refresh_history || []).slice().sort().pop())}</span></div>`
+        ? (function () {
+            const due = (product.refresh_history || []).slice().sort().pop();
+            const away = due ? daysUntil(due) : null;
+            return `<div class="card-featured-count card-featured-count--upcoming">${away !== null && away > 0 ? `<span class="card-featured-count-number">${away}</span><span class="card-featured-count-suffix">${away === 1 ? 'day' : 'days'} until release</span>` : '<span class="card-featured-count-suffix">Releasing today</span>'}<span class="card-featured-count-due">Coming ${formatDate(due)}</span></div>`;
+          })()
         : `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span><span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`)
     : productBadge(product, statusInfo);
   const launch = launchDate(product);
@@ -989,8 +1009,11 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
     : null;
   const expectedPassed = expectedDate ? expectedDate.getTime() < Date.now() : false;
   const nextExpected = expectedDate ? expectedDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }) : null;
+  const extras = upcomingExtras(product);
   const detailRows = [
     product.price ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price</span> ${escapeHtml(formatPrice(product.price))}</div>` : '',
+    extras.announced ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Announced</span> ${formatDate(extras.announced)}</div>` : '',
+    extras.preorder ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Pre-orders open</span> ${formatDate(extras.preorder)}</div>` : '',
     launch ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ${formatDate(launch)}</div>` : '',
     product.discontinued && product.discontinued_date
       ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ${formatDate(product.discontinued_date)}</div>`
@@ -1869,6 +1892,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <label><input type="radio" name="entry_type" value="launch"><span>Launch</span></label>
               <label><input type="radio" name="entry_type" value="release" checked><span>Release</span></label>
               <label><input type="radio" name="entry_type" value="announced"><span>Announced</span></label>
+              <label><input type="radio" name="entry_type" value="preorder"><span>Pre-order</span></label>
               <label><input type="radio" name="entry_type" value="discontinued"><span>Discontinued</span></label>
             </div>
             <div class="generation-add-row">
@@ -1879,7 +1903,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <label><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
             </div>
             <div class="admin-subfield" id="announced-target-field" style="display:none;">
-              <label>Which release was this the announcement for?<select id="announced_target"></select></label>
+              <label><span id="announced-target-label">Which release was this the announcement for?</span><select id="announced_target"></select></label>
             </div>
             <p class="admin-hint" id="announced-pending-note" style="display:none;">No release date yet, so this announcement will be held and attached to the first release you add.</p>
             <p id="generation-add-error" class="form-error"></p>

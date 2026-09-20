@@ -191,6 +191,7 @@
               <label><input type="radio" name="entry_type" value="launch"><span>Launch</span></label>
               <label><input type="radio" name="entry_type" value="release" checked><span>Release</span></label>
               <label><input type="radio" name="entry_type" value="announced"><span>Announced</span></label>
+              <label><input type="radio" name="entry_type" value="preorder"><span>Pre-order</span></label>
               <label><input type="radio" name="entry_type" value="discontinued"><span>Discontinued</span></label>
             </div>
             <div class="generation-add-row">
@@ -215,7 +216,7 @@
               <label><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
             </div>
             <div class="admin-subfield" id="announced-target-field" style="display:none;">
-              <label>Which release was this the announcement for?<select id="announced_target"></select></label>
+              <label><span id="announced-target-label">Which release was this the announcement for?</span><select id="announced_target"></select></label>
             </div>
             <p class="admin-hint" id="announced-pending-note" style="display:none;">No release date yet, so this announcement will be held and attached to the first release you add.</p>
             <p id="generation-add-error" class="form-error"></p>

@@ -1577,3 +1577,11 @@ body.is-admin .site-search { display: none; }
 
 /* An announcement added before its release date exists */
 .generation-row--pending { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; opacity: 0.9; }
+
+/* Announced and pre-order pills, matching the Launch/Release ones */
+.entry-pill { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; flex-shrink: 0; letter-spacing: 0.02em; }
+.entry-pill--announced { background: #e8eef7; color: #2d4f7c; }
+.entry-pill--preorder { background: #f5ecda; color: #7a5a1e; }
+
+/* Countdown on the featured tile for an upcoming product */
+.card-featured-count-due { display: block; font-size: 13px; color: var(--text-secondary); margin-top: 6px; }

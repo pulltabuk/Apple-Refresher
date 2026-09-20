@@ -16,6 +16,7 @@
   // An announcement added before any release date exists. It attaches
   // itself to the first release added, so dates can be entered in any order.
   let pendingAnnouncedDate = null;
+  let pendingPreorderDate = null;
   let editingSlug = null;
   let cachedProducts = [];
   let currentRefreshHistory = [];
@@ -1125,20 +1126,34 @@
       top.appendChild(actions);
       li.appendChild(top);
 
-      if (type !== 'discontinued' && info.announced) {
-        const ann = document.createElement('p');
-        ann.className = 'generation-announced';
-        ann.textContent = 'Announced ' + formatAdminDate(info.announced) + ' ';
-        const clear = document.createElement('button');
-        clear.type = 'button';
-        clear.className = 'generation-edit';
-        clear.textContent = 'Remove';
-        clear.addEventListener('click', () => {
-          detailFor(date).announced = null;
-          renderRefreshHistory();
+      // Announcement and pre-order sit under their release, each with a
+      // pill so the list reads the same way at a glance.
+      if (type !== 'discontinued') {
+        [
+          { field: 'announced', label: 'Announced' },
+          { field: 'preorder', label: 'Pre-order' },
+        ].forEach(({ field, label }) => {
+          if (!info[field]) return;
+          const row = document.createElement('p');
+          row.className = 'generation-announced';
+          const pill = document.createElement('span');
+          pill.className = 'entry-pill entry-pill--' + field;
+          pill.textContent = label;
+          row.appendChild(pill);
+          const when = document.createElement('span');
+          when.textContent = ' ' + formatAdminDate(info[field]) + ' ';
+          row.appendChild(when);
+          const clear = document.createElement('button');
+          clear.type = 'button';
+          clear.className = 'generation-edit';
+          clear.textContent = 'Remove';
+          clear.addEventListener('click', () => {
+            detailFor(date)[field] = null;
+            renderRefreshHistory();
+          });
+          row.appendChild(clear);
+          li.appendChild(row);
         });
-        ann.appendChild(clear);
-        li.appendChild(ann);
       }
 
       if (isOpen) {
@@ -1262,13 +1277,21 @@
     const type = selectedEntryType();
     document.getElementById('generation-name-field').style.display = type === 'launch' || type === 'release' ? '' : 'none';
     const targetField = document.getElementById('announced-target-field');
-    targetField.style.display = type === 'announced' ? '' : 'none';
-    if (type !== 'announced') return;
+    const isAttached = type === 'announced' || type === 'preorder';
+    targetField.style.display = isAttached ? '' : 'none';
+    const targetLabel = document.getElementById('announced-target-label');
+    if (targetLabel) targetLabel.textContent = type === 'preorder'
+      ? 'Which release do these pre-orders belong to?'
+      : 'Which release was this the announcement for?';
+    if (!isAttached) return;
     const select = document.getElementById('announced_target');
     const noReleasesYet = currentRefreshHistory.length === 0;
     targetField.style.display = noReleasesYet ? 'none' : '';
     const note = document.getElementById('announced-pending-note');
-    if (note) note.style.display = noReleasesYet ? '' : 'none';
+    if (note) {
+      note.style.display = noReleasesYet ? '' : 'none';
+      note.textContent = 'No release date yet, so this will be held and attached to the first release you add.';
+    }
     if (noReleasesYet) return;
     const keep = select.value;
     select.innerHTML = '';
@@ -1380,19 +1403,20 @@
       updateStatusReadout();
       return;
     }
-    if (type === 'announced') {
+    if (type === 'announced' || type === 'preorder') {
+      const field = type === 'preorder' ? 'preorder' : 'announced';
       if (currentRefreshHistory.length === 0) {
-        pendingAnnouncedDate = value;
+        if (field === 'preorder') pendingPreorderDate = value; else pendingAnnouncedDate = value;
         resetGenerationPanel();
         renderRefreshHistory();
         return;
       }
       const target = document.getElementById('announced_target').value;
       if (!target) {
-        errorEl.textContent = 'Pick which release this announcement was for.';
+        errorEl.textContent = 'Pick which release this belongs to.';
         return;
       }
-      detailFor(target).announced = value;
+      detailFor(target)[field] = value;
       resetGenerationPanel();
       renderRefreshHistory();
       return;
@@ -1415,6 +1439,11 @@
     if (pendingAnnouncedDate) {
       detailFor(value).announced = pendingAnnouncedDate;
       pendingAnnouncedDate = null;
+    pendingPreorderDate = null;
+    }
+    if (pendingPreorderDate) {
+      detailFor(value).preorder = pendingPreorderDate;
+      pendingPreorderDate = null;
     }
     resetGenerationPanel();
     renderRefreshHistory();
@@ -1461,6 +1490,7 @@
     editingId = id;
     editingSlug = p.slug;
     pendingAnnouncedDate = null;
+    pendingPreorderDate = null;
     clearFormErrors();
     const advancedSection = document.querySelector('.admin-advanced');
     if (advancedSection) advancedSection.open = false;
@@ -1523,6 +1553,7 @@
     editingId = null;
     editingSlug = null;
     pendingAnnouncedDate = null;
+    pendingPreorderDate = null;
     clearFormErrors();
     const advancedSectionNew = document.querySelector('.admin-advanced');
     if (advancedSectionNew) advancedSectionNew.open = false;
