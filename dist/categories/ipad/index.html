@@ -3,21 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>iPad — Apple Sunset</title>
-<meta name="description" content="Every iPad product on Apple Sunset, current and discontinued, with time since refresh and full release history.">
+<title>iPad: release history and time since the last update | Apple Sunset</title>
+<meta name="description" content="How long since each iPad product was last updated, with release dates, typical refresh cycles and every discontinued model.">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://example.netlify.app/categories/ipad/">
-<meta property="og:title" content="iPad — Apple Sunset">
-<meta property="og:description" content="Every iPad product on Apple Sunset, current and discontinued, with time since refresh and full release history.">
-<meta property="og:url" content="https://example.netlify.app/categories/ipad/">
+<link rel="canonical" href="https://applesunset.com/categories/ipad/">
+<meta property="og:title" content="iPad: release history and time since the last update | Apple Sunset">
+<meta property="og:description" content="How long since each iPad product was last updated, with release dates, typical refresh cycles and every discontinued model.">
+<meta property="og:url" content="https://applesunset.com/categories/ipad/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Apple Sunset">
-<meta property="og:image" content="https://example.netlify.app/logo.png">
+<meta property="og:image" content="https://applesunset.com/logo.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="iPad — Apple Sunset">
-<meta name="twitter:description" content="Every iPad product on Apple Sunset, current and discontinued, with time since refresh and full release history.">
-<meta name="twitter:image" content="https://example.netlify.app/logo.png">
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Apple Sunset","url":"https://example.netlify.app","description":"Tracks how long it's been since every Apple product was last refreshed or discontinued."},{"@type":"Organization","name":"Apple Sunset","url":"https://example.netlify.app","logo":"https://example.netlify.app/logo.png"}]}</script>
+<meta name="twitter:title" content="iPad: release history and time since the last update | Apple Sunset">
+<meta name="twitter:description" content="How long since each iPad product was last updated, with release dates, typical refresh cycles and every discontinued model.">
+<meta name="twitter:image" content="https://applesunset.com/logo.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Apple Sunset","url":"https://applesunset.com","description":"Tracks how long it's been since every Apple product was last refreshed or discontinued."},{"@type":"Organization","name":"Apple Sunset","url":"https://applesunset.com","logo":"https://applesunset.com/logo.png"}]}</script>
 
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
@@ -29,7 +29,11 @@
     <a class="site-title" href="/">
       <img src="/logo.png" alt="Apple Sunset" class="site-logo-img">
     </a>
-    <nav class="site-nav">
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+      <span class="nav-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="nav-toggle-text">Menu</span>
+    </button>
+    <nav class="site-nav" id="site-nav">
       <a href="/products/">All products</a>
       <a href="/categories/">Categories</a>
       <a href="/discontinued/">Discontinued</a>
@@ -44,8 +48,11 @@
 </header>
 <main>
 
+<nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li><a href="/categories/">Categories</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li aria-current="page">iPad</li></ol></nav>
 <div class="category-page-heading" data-category="iPad"><svg class="placeholder-icon" viewBox="0 0 40 40" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="8" width="26" height="24" rx="3"/><line x1="19" y1="27" x2="21" y2="27"/></svg><h1>iPad</h1></div>
 <p class="page-intro">1 current product. Newest first.</p>
+
+<p class="page-stats">Apple refreshes iPad about every 2 years on average. The most recently updated is iPad Air, 192 days ago.</p>
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search iPad…" aria-label="Search">
   <div class="sort-select-wrap">
@@ -69,30 +76,34 @@
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div id="category-timeline-section" style="display:;">
   <h2>Release history</h2>
-  <div class="timeline-horizontal" style="padding-top:100px;padding-bottom:100px;"><div class="timeline-point timeline-point--launch timeline-point--above">
-    
-    <span class="timeline-point-line-half timeline-point-line-half--right"></span>
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">iPad Air</p>
-      <p class="timeline-point-label">Launch</p>
-      <p class="timeline-point-date">15 May 2024</p>
-    </div>
-    </div>
-  </div>
-<div class="timeline-point timeline-point--refresh timeline-point--above">
-    <span class="timeline-point-line-half timeline-point-line-half--left"></span>
-    
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">iPad Air</p>
-      <p class="timeline-point-label">Refresh</p>
-      <p class="timeline-point-date">12 Mar 2026</p>
-    </div>
-    </div>
-  </div></div>
+  <ol class="tl">
+    <li class="tl-now">
+      <span class="tl-marker tl-marker--now" aria-hidden="true">&#9679;</span>
+      <div class="tl-body"><p class="tl-now-text">Today &middot; 192 days since the last release</p></div>
+    </li>
+    <li class="tl-year"><span>2026</span></li>
+    <li class="tl-item tl-item--refresh">
+      <span class="tl-marker tl-marker--refresh"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">12 Mar 2026</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">iPad Air (2nd generation)</span>
+        <span class="tl-entry-type tl-entry-type--refresh">Refresh</span>
+      </p>
+      </div>
+    </li><li class="tl-gap"><span class="tl-gap-text">&#8593; 1 year, 9 months later</span></li>
+<li class="tl-year"><span>2024</span></li>
+    <li class="tl-item tl-item--launch">
+      <span class="tl-marker tl-marker--launch"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2.5 14 13H2z" fill="currentColor"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">15 May 2024</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">iPad Air (1st generation)</span>
+        <span class="tl-entry-type tl-entry-type--launch">Launch</span>
+      </p>
+      </div>
+    </li>
+  </ol>
 </div>
 <table class="league-table" id="grid" data-mode="category" data-category-name="iPad">
   <thead>
@@ -105,15 +116,16 @@
     </tr>
   </thead>
   <tbody>
-    <tr class="league-row" data-href="/products/ipad-air/" data-category="iPad" data-status="current" data-days="187" data-launch="1715731200000" data-discontinued="" data-lifespan="" data-decade="">
+    <tr class="league-row" data-href="/products/ipad-air/" data-category="iPad" data-status="current" data-days="192" data-launch="1715731200000" data-discontinued="" data-lifespan="" data-decade="">
   <td class="league-rank">1</td>
   <td class="league-name"><a href="/products/ipad-air/" class="league-name-link"><svg class="placeholder-icon" viewBox="0 0 40 40" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="8" width="26" height="24" rx="3"/><line x1="19" y1="27" x2="21" y2="27"/></svg><span>iPad Air</span></a></td>
-  <td class="league-status"><span class="badge badge--fresh">187 days since refresh</span></td>
+  <td class="league-status"><span class="badge badge--fresh" title="Recently updated: this one is usually updated every 666 days">192 days since refresh</span></td>
   <td class="league-launch">15 May 2024</td>
   <td class="league-price">£749</td>
 </tr>
   </tbody>
 </table>
+
 </main>
 <footer class="site-footer-bg">
   <div class="site-footer">

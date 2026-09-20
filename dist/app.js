@@ -74,10 +74,84 @@
     return (value || '').trim().toLowerCase();
   }
 
+  // --- Generations: mirrors the helpers in src/templates.js so the live
+  // refresh of a product page shows exactly what the build produced.
+
+  function ordinalJS(n) {
+    var suffixes = ['th', 'st', 'nd', 'rd'];
+    var v = n % 100;
+    return n + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
+  }
+
+  function generationDetailsJS(product) {
+    var d = product && product.generation_details;
+    return d && typeof d === 'object' && !Array.isArray(d) ? d : {};
+  }
+
+  function autoGenerationNameJS(product, index, total) {
+    if (total <= 1) return product.name;
+    return product.name + ' (' + ordinalJS(index + 1) + ' generation)';
+  }
+
+  function storedGenerationNameJS(product, date) {
+    var info = generationDetailsJS(product)[date];
+    return info && info.name && String(info.name).trim() ? String(info.name).trim() : null;
+  }
+
+  function productGenerationsJS(product) {
+    var details = generationDetailsJS(product);
+    var seen = {};
+    var dates = (product.refresh_history || []).filter(function (d) {
+      if (seen[d]) return false;
+      seen[d] = true;
+      return true;
+    }).sort();
+    var today = new Date().toISOString().slice(0, 10);
+    return dates.map(function (date, i) {
+      var info = details[date] || {};
+      var next = dates[i + 1] || null;
+      var end = next || (product.discontinued ? product.discontinued_date || null : today);
+      var stored = storedGenerationNameJS(product, date);
+      return {
+        date: date,
+        name: stored || autoGenerationNameJS(product, i, dates.length),
+        hasStoredDetails: !!(stored || info.announced),
+        announced: info.announced || null,
+        end: end,
+        isCurrent: !next && !product.discontinued,
+      };
+    });
+  }
+
+  function generationsSectionHtmlJS(product) {
+    var gens = productGenerationsJS(product);
+    if (!gens.length) return '';
+    if (gens.length < 2 && !gens.some(function (g) { return g.hasStoredDetails; })) return '';
+    var showAnnounced = gens.some(function (g) { return g.announced; });
+    var rows = gens.slice().reverse().map(function (g) {
+      var onMarket = g.end ? lifespanTextJS(g.date, g.end) + (g.isCurrent ? ' so far' : '') : '\u2013';
+      return '<tr class="generation-row' + (g.isCurrent ? ' generation-row--current' : '') + '">' +
+        '<td class="generation-name">' + escapeHtmlJS(g.name) + (g.isCurrent ? ' <span class="generation-current-pill">Current</span>' : '') + '</td>' +
+        (showAnnounced ? '<td>' + (g.announced ? formatDateJS(g.announced) : '\u2013') + '</td>' : '') +
+        '<td>' + formatDateJS(g.date) + '</td>' +
+        '<td>' + onMarket + '</td>' +
+        '</tr>';
+    }).join('');
+    return '<h2>Generations</h2><div class="generations-table-wrap"><table class="generations-table">' +
+      '<thead><tr><th>Generation</th>' + (showAnnounced ? '<th>Announced</th>' : '') + '<th>Released</th><th>Time on market</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table></div>';
+  }
+
   function categoryTimelinePointsJS(product, allProducts) {
     var groupKey = normaliseGroupKeyJS(product.timeline_name || product.category);
     var sameCategory = (allProducts || []).filter(function (p) { return normaliseGroupKeyJS(p.timeline_name || p.category) === groupKey; });
 
+    var singleLine = sameCategory.length === 1;
+    var pointNameJS = function (p, d) {
+      if (!singleLine) return storedGenerationNameJS(p, d);
+      var gen = productGenerationsJS(p).filter(function (g) { return g.date === d; })[0];
+      return gen ? gen.name : storedGenerationNameJS(p, d);
+    };
     var seenKeys = {};
     var dateEntries = [];
     sameCategory.forEach(function (p) {
@@ -85,7 +159,7 @@
         var key = d + '|' + p.name;
         if (seenKeys[key]) return;
         seenKeys[key] = true;
-        dateEntries.push({ date: d, productName: p.name });
+        dateEntries.push({ date: d, productName: p.name, displayName: pointNameJS(p, d) });
       });
     });
     var sortedEntries = dateEntries.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
@@ -99,14 +173,15 @@
     var launchOwnerName = launchOwnerFromField ? launchOwnerFromField.name : (launchEntry ? launchEntry.productName : null);
 
     var points = [];
-    if (lineLaunch) points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwnerName || product.name });
+    var launchOwner = sameCategory.filter(function (p) { return p.name === (launchOwnerName || product.name); })[0];
+    if (lineLaunch) points.push({ date: lineLaunch, label: 'Launch', type: 'launch', productName: launchOwnerName || product.name, displayName: launchOwner ? pointNameJS(launchOwner, lineLaunch) : null });
     var launchConsumed = false;
     sortedEntries.forEach(function (e) {
       if (!launchConsumed && e.date === lineLaunch && e.productName === (launchOwnerName || product.name)) {
         launchConsumed = true;
         return;
       }
-      points.push({ date: e.date, label: 'Refresh', type: 'refresh', productName: e.productName });
+      points.push({ date: e.date, label: 'Refresh', type: 'refresh', productName: e.productName, displayName: e.displayName });
     });
 
     sameCategory.forEach(function (p) {
@@ -117,6 +192,77 @@
     var typePriority = { discontinued: 0, launch: 1, refresh: 1 };
     points.sort(function (a, b) { return a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]; });
     return points;
+  }
+
+  var TIMELINE_ICONS_JS = {
+    launch: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2.5 14 13H2z" fill="currentColor"/></svg>',
+    refresh: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg>',
+    discontinued: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>'
+  };
+
+  function pluralJS(count, one, many) {
+    return count + ' ' + (count === 1 ? one : many);
+  }
+
+  function timelineGapTextJS(earlier, later) {
+    var days = daysBetweenJS(earlier, later);
+    if (days < 45) return '';
+    var years = Math.round(days / 365.25);
+    if (years >= 1 && Math.abs(days - years * 365.25) <= 45) {
+      return 'about ' + years + ' year' + (years === 1 ? '' : 's') + ' later';
+    }
+    var months = monthsBetweenJS(earlier, later);
+    if (months < 12) return months + ' month' + (months === 1 ? '' : 's') + ' later';
+    return lifespanTextJS(earlier, later) + ' later';
+  }
+
+  // Mirrors verticalTimelineHtml in src/templates.js.
+  function verticalTimelineHtmlJS(product, allProducts) {
+    var points = categoryTimelinePointsJS(product, allProducts);
+    if (!points.length) return '';
+    var byDate = {};
+    var dates = [];
+    points.forEach(function (pt) {
+      if (!byDate[pt.date]) { byDate[pt.date] = []; dates.push(pt.date); }
+      byDate[pt.date].push(pt);
+    });
+    dates.sort().reverse();
+    var today = new Date().toISOString().slice(0, 10);
+    var newestRelease = dates.filter(function (d) {
+      return byDate[d].some(function (pt) { return pt.type !== 'discontinued'; });
+    })[0];
+    var sinceDays = newestRelease ? daysBetweenJS(newestRelease, today) : null;
+    var nowNode = !product.discontinued && sinceDays !== null && sinceDays >= 0
+      ? '<li class="tl-now"><span class="tl-marker tl-marker--now" aria-hidden="true">&#9679;</span>' +
+        '<div class="tl-body"><p class="tl-now-text">Today &middot; ' + pluralJS(sinceDays, 'day', 'days') + ' since the last release</p></div></li>'
+      : '';
+    var lastYear = null;
+    var rows = dates.map(function (date, i) {
+      var entries = byDate[date];
+      var type = entries.some(function (e) { return e.type !== 'discontinued'; })
+        ? (entries.some(function (e) { return e.type === 'launch'; }) ? 'launch' : 'refresh')
+        : 'discontinued';
+      var year = String(date).slice(0, 4);
+      var yearRow = year !== lastYear ? '<li class="tl-year"><span>' + year + '</span></li>' : '';
+      lastYear = year;
+      var nextDate = dates[i + 1];
+      var gap = nextDate ? timelineGapTextJS(nextDate, date) : '';
+      var gapRow = gap ? '<li class="tl-gap"><span class="tl-gap-text">&#8593; ' + gap + '</span></li>' : '';
+      var ordered = entries.slice().sort(function (a, b) {
+        var rank = function (e) { return e.type === 'discontinued' ? 1 : 0; };
+        return rank(a) - rank(b);
+      });
+      var lines = ordered.map(function (e) {
+        return '<p class="tl-entry"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
+          '<span class="tl-entry-type tl-entry-type--' + e.type + '">' + e.label + '</span></p>';
+      }).join('');
+      return yearRow + '<li class="tl-item tl-item--' + type + '">' +
+        '<span class="tl-marker tl-marker--' + type + '">' + (TIMELINE_ICONS_JS[type] || TIMELINE_ICONS_JS.refresh) + '</span>' +
+        '<div class="tl-body"><p class="tl-date">' + formatDateJS(date) +
+          (date > new Date().toISOString().slice(0, 10) ? ' <span class="tl-upcoming">Upcoming</span>' : '') +
+        '</p>' + lines + '</div></li>' + gapRow;
+    }).join('');
+    return '<ol class="tl">' + nowNode + rows + '</ol>';
   }
 
   function horizontalTimelineHtmlJS(product, allProducts) {
@@ -134,7 +280,7 @@
 
     var entryHtmlJS = function (pt) {
       return '<div class="timeline-point-entry">' +
-        '<p class="timeline-point-name">' + escapeHtmlJS(pt.productName) + '</p>' +
+        '<p class="timeline-point-name">' + escapeHtmlJS(pt.displayName || pt.productName) + '</p>' +
         '<p class="timeline-point-label">' + pt.label + '</p>' +
         '<p class="timeline-point-date">' + formatDateJS(pt.date) + '</p>' +
       '</div>';
@@ -264,6 +410,14 @@
   }
   fetchCustomCategoryIconsJS();
 
+  // Every word must appear somewhere, in any order, so "Watch 12" finds
+  // "Apple Watch Series 12". Used by the header dropdown and the filters.
+  function matchesSearchJS(haystack, query) {
+    var words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+    var text = String(haystack || '').toLowerCase();
+    return words.every(function (word) { return text.indexOf(word) !== -1; });
+  }
+
   // --- Site-wide header search dropdown ---
 
   var siteSearchForm = document.querySelector('.site-search');
@@ -276,14 +430,24 @@
 
     function fetchSearchProducts() {
       if (searchProductsPromise) return searchProductsPromise;
+      // Products and events in one request each, so the dropdown can
+      // answer "AirPods" with the family, the products, and the event
+      // where they were announced.
+      var headers = { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY };
       searchProductsPromise = window.SUPABASE_URL && window.SUPABASE_ANON_KEY
-        ? fetch(window.SUPABASE_URL + '/rest/v1/products?select=id,name,slug,category,discontinued', {
-            headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
-          }).then(function (res) { return res.json(); }).then(function (data) {
-            searchProductsCache = Array.isArray(data) ? data : [];
+        ? Promise.all([
+            fetch(window.SUPABASE_URL + '/rest/v1/products?select=id,name,slug,category,icon_url,discontinued', { headers })
+              .then(function (res) { return res.json(); }).catch(function () { return []; }),
+            fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=id,heading,event_date,announced_products', { headers })
+              .then(function (res) { return res.json(); }).catch(function () { return []; }),
+          ]).then(function (both) {
+            searchProductsCache = {
+              products: Array.isArray(both[0]) ? both[0] : [],
+              events: Array.isArray(both[1]) ? both[1] : [],
+            };
             return searchProductsCache;
-          }).catch(function () { return []; })
-        : Promise.resolve([]);
+          })
+        : Promise.resolve({ products: [], events: [] });
       return searchProductsPromise;
     }
 
@@ -305,10 +469,19 @@
         empty.textContent = query ? 'No products match "' + query + '"' : 'Start typing a product name';
         dropdown.appendChild(empty);
       } else {
-        matches.slice(0, 8).forEach(function (p) {
+        var lastKind = null;
+        matches.slice(0, 10).forEach(function (m) {
+          if (m.kind !== lastKind) {
+            var head = document.createElement('p');
+            head.className = 'site-search-dropdown-head';
+            head.textContent = m.kind === 'product' ? 'Products' : m.kind === 'category' ? 'Families' : 'Apple Events';
+            dropdown.appendChild(head);
+            lastKind = m.kind;
+          }
           var link = document.createElement('a');
-          link.href = '/products/' + p.slug + '/';
-          link.innerHTML = categoryIconJS(p.category, 22) + '<span>' + escapeHtmlJS(p.name) + '</span>';
+          link.href = m.href;
+          link.innerHTML = m.iconHtml + '<span>' + escapeHtmlJS(m.label) + '</span>' +
+            (m.note ? '<span class="site-search-note">' + escapeHtmlJS(m.note) + '</span>' : '');
           dropdown.appendChild(link);
         });
       }
@@ -322,8 +495,40 @@
         closeSearchDropdown();
         return;
       }
-      fetchSearchProducts().then(function (products) {
-        var matches = products.filter(function (p) { return p.name.toLowerCase().indexOf(query) !== -1; });
+      fetchSearchProducts().then(function (data) {
+        var products = data.products || [];
+        var events = data.events || [];
+        var matches = [];
+
+        // Families first: one row that covers every product in it.
+        var families = {};
+        products.forEach(function (p) {
+          var name = (p.category || '').trim();
+          if (name) families[name.toLowerCase()] = name;
+        });
+        Object.keys(families).sort().forEach(function (key) {
+          var name = families[key];
+          if (!matchesSearchJS(name, query)) return;
+          var count = products.filter(function (p) { return (p.category || '').toLowerCase() === key; }).length;
+          matches.push({ kind: 'category', label: name, href: '/categories/' + slugifyJS(name) + '/',
+            iconHtml: categoryIconJS(name, 22), note: count + (count === 1 ? ' product' : ' products') });
+        });
+
+        products.filter(function (p) { return matchesSearchJS(p.name + ' ' + (p.category || ''), query); })
+          .forEach(function (p) {
+            matches.push({ kind: 'product', label: p.name, href: '/products/' + p.slug + '/',
+              iconHtml: productIconJS(p, 22), note: p.discontinued ? 'Discontinued' : '' });
+          });
+
+        // An event matches on its title or on anything announced there.
+        events.forEach(function (ev) {
+          var announced = (ev.announced_products || []).map(function (a) { return typeof a === 'string' ? a : a.name; });
+          if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' '), query)) return;
+          matches.push({ kind: 'event', label: ev.heading || 'Apple Event', href: '/events/' + ev.id + '/',
+            iconHtml: '<span class="site-search-event-dot" aria-hidden="true"></span>',
+            note: ev.event_date ? formatDateJS(ev.event_date) : '' });
+        });
+
         renderSearchDropdown(matches, query);
       });
     });
@@ -371,6 +576,16 @@
     return '<svg class="placeholder-icon" viewBox="0 0 40 40" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + shape + '</svg>';
   }
 
+  // Mirrors productIcon in src/templates.js: a product line's own icon,
+  // falling back to its family (category) icon.
+  function productIconJS(product, size) {
+    if (product && product.icon_url) {
+      var s = size || 40;
+      return '<img class="placeholder-icon placeholder-icon--product" src="' + escapeHtmlJS(String(product.icon_url).replace(/"/g, '%22')) + '" alt="" width="' + s + '" height="' + s + '" style="object-fit:contain;">';
+    }
+    return categoryIconJS(product && product.category, size);
+  }
+
   function pillJS(category) {
     return '<a class="pill" href="/categories/' + slugifyJS(category) + '/">' + escapeHtmlJS(category) + '</a>';
   }
@@ -386,6 +601,14 @@
     return { days: statusInfo.daysSince, suffix: 'since refresh' };
   }
 
+  function badgeExplanationJS(statusInfo) {
+    if (!statusInfo) return '';
+    var cycle = pluralJS(statusInfo.avgCycleDays, 'day', 'days');
+    if (statusInfo.status === 'overdue') return 'Overdue: this one is usually updated every ' + cycle;
+    if (statusInfo.status === 'aging') return 'Getting on: this one is usually updated every ' + cycle;
+    return 'Recently updated: this one is usually updated every ' + cycle;
+  }
+
   function badgeHtmlJS(product, statusInfo) {
     if (product.discontinued) {
       var date = product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '';
@@ -393,7 +616,11 @@
     }
     if (!statusInfo) return '';
     var info = badgeDaysInfoJS(product, statusInfo);
-    return '<span class="badge badge--' + statusInfo.status + '">' + info.days + ' days ' + info.suffix + '</span>';
+    if (info.days < 0) {
+      var upcoming = (product.refresh_history || []).slice().sort().pop();
+      return '<span class="badge badge--upcoming">Coming ' + (upcoming ? formatDateJS(upcoming) : 'soon') + '</span>';
+    }
+    return '<span class="badge badge--' + statusInfo.status + '" title="' + escapeHtmlJS(badgeExplanationJS(statusInfo)) + '">' + pluralJS(info.days, 'day', 'days') + ' ' + info.suffix + '</span>';
   }
 
   function cardHtmlJS(product, statusInfo) {
@@ -410,7 +637,7 @@
     return (
       '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<a class="card-link" href="/products/' + product.slug + '/">' +
-          '<div class="card-name-row">' + categoryIconJS(product.category, 36) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
+          '<div class="card-name-row">' + productIconJS(product, 36) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
           badgeHtmlJS(product, statusInfo) +
           meta +
         '</a>' +
@@ -430,12 +657,16 @@
     return (
       '<tr class="league-row' + (status === 'discontinued' ? ' league-row--discontinued' : '') + '" data-href="/products/' + product.slug + '/" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<td class="league-rank">' + rank + '</td>' +
-        '<td class="league-name"><a href="/products/' + product.slug + '/" class="league-name-link">' + categoryIconJS(product.category, 24) + '<span>' + escapeHtmlJS(product.name) + '</span></a></td>' +
+        '<td class="league-name"><a href="/products/' + product.slug + '/" class="league-name-link">' + productIconJS(product, 24) + '<span>' + escapeHtmlJS(product.name) + '</span></a></td>' +
         '<td class="league-status">' + badgeHtmlJS(product, statusInfo) + '</td>' +
         '<td class="league-launch">' + (launch ? formatDateJS(launch) : '\u2014') + '</td>' +
         '<td class="league-price">' + (product.price ? escapeHtmlJS(formatPriceJS(product.price)) : '\u2014') + '</td>' +
       '</tr>'
     );
+  }
+
+  function keyFactJS(label, value) {
+    return value ? '<div class="key-fact"><p class="key-fact-label">' + label + '</p><p class="key-fact-value">' + value + '</p></div>' : '';
   }
 
   function specRowJS(label, valueHtml) {
@@ -482,7 +713,11 @@
     }
     if (!statusInfo) return '';
     var info = badgeDaysInfoJS(product, statusInfo);
-    return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> days ' + info.suffix + '</p>';
+    if (info.days < 0) {
+      var due = (product.refresh_history || []).slice().sort().pop();
+      return '<p class="days-hero days-hero--upcoming"><span class="days-hero-label">Coming</span> <span class="days-hero-soon">' + (due ? formatDateJS(due) : 'soon') + '</span></p>';
+    }
+    return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> ' + (info.days === 1 ? 'day' : 'days') + ' ' + info.suffix + '</p>';
   }
 
   function productBodyHtmlJS(product, status, productsBySlug, galleryPhotos) {
@@ -509,22 +744,28 @@
 
     var daysInfo = status ? badgeDaysInfoJS(product, status) : null;
 
+    // Mirrors the key facts grid plus secondary list in src/templates.js.
+    var keyFacts = [
+      keyFactJS('Latest release', latest ? formatDateJS(latest) : (launch ? formatDateJS(launch) : null)),
+      keyFactJS('First release', launch && launch !== latest ? formatDateJS(launch) : null),
+      keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days') : null),
+      (function () {
+        if (!status || sortedDates.length <= 1 || product.discontinued) return '';
+        var due = new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000);
+        return keyFactJS(due.getTime() < Date.now() ? 'Was expected' : 'Next expected', due.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }));
+      })(),
+      keyFactJS('Discontinued', product.discontinued && product.discontinued_date ? formatDateJS(product.discontinued_date) : null),
+      keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanTextJS(launch, product.discontinued_date) : null),
+      keyFactJS('Starting price', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
+      keyFactJS('Releases so far', sortedDates.length > 1 ? String(sortedDates.length) : null)
+    ].filter(Boolean).slice(0, 6).join('');
+
     var specs = [
       specRowJS('Category', pillJS(product.category)),
       specRowJS('Status', product.discontinued ? 'Discontinued' : 'Current'),
-      launch ? specRowJS('Launched', formatDateJS(launch)) : '',
-      latest && sortedDates.length > 1 && !product.discontinued ? specRowJS('Last refreshed', formatDateJS(latest)) : '',
-      sortedDates.length > 1 ? specRowJS('Times refreshed', String(sortedDates.length - 1)) : '',
-      status && !product.discontinued ? specRowJS('Typical refresh cycle', 'About every ' + status.avgCycleDays + ' days') : '',
-      status && sortedDates.length > 1 && !product.discontinued
-        ? specRowJS('Next refresh expected around', new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }))
-        : '',
-      product.discontinued && product.discontinued_date ? specRowJS('Discontinued', formatDateJS(product.discontinued_date)) : '',
-      launch && product.discontinued && product.discontinued_date ? specRowJS('Lifespan', lifespanTextJS(launch, product.discontinued_date)) : '',
       product.discontinued ? specRowJS('Apple support status', appleSupportStatusJS(product)) : '',
-      specRowJS('Starting price', escapeHtmlJS(formatPriceJS(product.price))),
       sortedDates.length ? specRowJS('Update type', product.is_new_launch ? 'New launch' : 'Refresh') : '',
-      daysInfo ? specRowJS('Days counted from', daysInfo.days + ' days (' + (product.days_basis === 'launch' ? 'Launch' : 'Refresh') + ')') : '',
+      daysInfo ? specRowJS('Days counted from', pluralJS(daysInfo.days, 'day', 'days') + ' (' + (product.days_basis === 'launch' ? 'first release' : 'latest release') + ')') : '',
       specRowJS('Chip', escapeHtmlJS(product.chip)),
       specRowJS('Previous model', previousModelHtml),
       specRowJS('Replaced by', replacedByHtml),
@@ -534,28 +775,46 @@
         : product.apple_url
         ? specRowJS('Official Apple page', '<a href="' + product.apple_url + '" target="_blank" rel="noopener">apple.com &#8599;</a>')
         : '',
+      product.specs_url ? specRowJS('Tech specs', '<a href="' + product.specs_url + '" target="_blank" rel="noopener">Apple specs &#8599;</a>') : '',
+      product.press_release_url ? specRowJS('Press release', '<a href="' + product.press_release_url + '" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>') : '',
       product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
-      product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> people'),
+      product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> ' + ((product.waiting_count || 0) === 1 ? 'person' : 'people')),
     ].filter(Boolean).join('');
 
     var allProducts = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
     var timelinePoints = categoryTimelinePointsJS(product, allProducts);
-    var releaseHistorySection = timelinePoints.length ? '<h2>Release history</h2>' + horizontalTimelineHtmlJS(product, allProducts) : '';
+    var releaseHistorySection = timelinePoints.length ? '<h2>Release history</h2>' + verticalTimelineHtmlJS(product, allProducts) : '';
 
     return (
-      '<p><a href="/products/" class="gallery-nav-link">&larr; All products</a></p>' +
+      '<nav class="breadcrumbs" aria-label="Breadcrumb"><ol>' +
+        '<li><a href="/">Home</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li>' +
+        '<li><a href="/categories/' + slugifyJS(product.category || 'other') + '/">' + escapeHtmlJS(product.category || 'Products') + '</a></li>' +
+        '<li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li aria-current="page">' + escapeHtmlJS(product.name) + '</li>' +
+      '</ol></nav>' +
       '<div class="product-top' + (product.video_url ? '' : ' product-top--no-media') + '">' +
         (product.video_url ? '<div class="product-media">' + videoBlock + '</div>' : '') +
         '<div class="product-info">' +
           '<div class="product-header">' +
-            '<div>' + '<h1>' + escapeHtmlJS(product.name) + '</h1>' + heroStatHtmlJS(product, status) + '</div>' +
-            '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
+            '<div>' +
+              '<div class="product-title-row" data-category="' + escapeHtmlJS(product.category || '') + '">' +
+                '<span class="product-title-icon">' + productIconJS(product, 40) + '</span>' +
+                '<h1>' + escapeHtmlJS(product.name) + '</h1>' +
+              '</div>' +
+            '</div>' +
+            '<div class="admin-tools">' +
+              '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
+              '<button type="button" class="admin-edit-link tweet-btn" data-slug="' + product.slug + '" style="display:none;">Draft a post for X</button>' +
+            '</div>' +
           '</div>' +
-          '<dl class="spec-list">' + specs + '</dl>' +
+          '<div class="product-facts">' + heroStatHtmlJS(product, status) + keyFacts + '</div>' +
+          '<dl class="spec-list spec-list--secondary">' + specs + '</dl>' +
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
         '</div>' +
       '</div>' +
       releaseHistorySection +
+      (timelinePoints.every(function (pt) { return pt.productName === product.name; })
+        && !productGenerationsJS(product).some(function (g) { return g.announced; })
+        ? '' : generationsSectionHtmlJS(product)) +
       (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
       (relatedPhotos.length ? '<h2>From the gallery</h2><div class="gallery-strip">' + relatedPhotos.map(galleryStripItemHtmlJS).join('') + '</div>' : '')
     );
@@ -661,7 +920,7 @@
           var nameEl = card.querySelector('.card-name, .league-name-link span');
           haystack = nameEl ? nameEl.textContent.toLowerCase() : '';
         }
-        if (haystack.indexOf(query) === -1) show = false;
+        if (!matchesSearchJS(haystack, query)) show = false;
       } else {
         Object.keys(activeFilters).forEach(function (key) {
           var want = activeFilters[key];
@@ -808,10 +1067,24 @@
       if (!(key in activeFilters)) activeFilters[key] = 'all';
       bar.querySelectorAll('.filter-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          if (btn.classList.contains('active')) return;
-          bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
-          btn.classList.add('active');
-          activeFilters[key] = btn.getAttribute('data-filter-value');
+          var value = btn.getAttribute('data-filter-value');
+          // Tapping the family you're already in takes you back to all
+          // of them, since that row has no "All" button of its own.
+          if (btn.classList.contains('active')) {
+            if (key !== 'category' || value === 'all') return;
+            btn.classList.remove('active');
+            activeFilters[key] = 'all';
+          } else {
+            bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            activeFilters[key] = value;
+          }
+          // "All" is the reset for the whole row, not just its own group.
+          if (key === 'status' && value === 'all') {
+            activeFilters.category = 'all';
+            var categoryBar = document.querySelector('.filter-bar[data-filter-key="category"]');
+            if (categoryBar) categoryBar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+          }
           if (searchInput) searchInput.value = '';
           updateStatusBarVisibility();
           applyFilters();
@@ -933,7 +1206,100 @@
     });
   }
 
+  // --- Draft a post for X, admin only ---
+  //
+  // Everything it needs is already on the page, so the text is built
+  // from the rendered facts rather than another request.
+  function tweetTextFor(root) {
+    var name = (root.querySelector('h1') || {}).textContent || '';
+    var number = root.querySelector('.days-hero-number');
+    var suffix = root.querySelector('.days-hero');
+    var facts = {};
+    root.querySelectorAll('.key-fact').forEach(function (f) {
+      var label = (f.querySelector('.key-fact-label') || {}).textContent || '';
+      var value = (f.querySelector('.key-fact-value') || {}).textContent || '';
+      facts[label.trim().toLowerCase()] = value.trim();
+    });
+    var discontinued = facts['discontinued'];
+    var lines = [];
+    if (discontinued) {
+      lines.push(name.trim() + ' was discontinued on ' + discontinued + '.');
+      if (facts['lifespan']) lines.push('It was on sale for ' + facts['lifespan'] + '.');
+    } else if (number) {
+      var days = number.textContent.trim();
+      var latest = facts['latest release'];
+      lines.push(name.trim() + ': ' + days + ' days since Apple last updated it' + (latest ? ' (' + latest + ').' : '.'));
+      if (facts['typical cycle']) lines.push('Typical gap between updates: ' + facts['typical cycle'].toLowerCase().replace('about every ', '') + '.');
+      if (facts['was expected']) lines.push('A refresh was expected around ' + facts['was expected'] + '.');
+      else if (facts['next expected']) lines.push('Next one expected around ' + facts['next expected'] + '.');
+    } else {
+      lines.push(name.trim() + ' on Apple Sunset.');
+    }
+    var url = window.location.origin + window.location.pathname;
+    var body = lines.join('\n\n');
+    // X counts a link as 23 characters whatever its length.
+    var room = 280 - 24;
+    if (body.length > room) body = body.slice(0, room - 1).trim() + '\u2026';
+    return body + '\n' + url;
+  }
+
+  function wireTweetButtons(buttons) {
+    buttons.forEach(function (btn) {
+      if (btn.dataset.wired) return;
+      btn.dataset.wired = '1';
+      btn.addEventListener('click', function () {
+        var text = tweetTextFor(document.querySelector('.product-page') || document);
+        var existing = document.querySelector('.tweet-preview');
+        if (existing) existing.remove();
+        var box = document.createElement('div');
+        box.className = 'tweet-preview';
+        box.innerHTML = '<p class="tweet-preview-label">Draft post <span class="tweet-count"></span></p>';
+        var area = document.createElement('textarea');
+        area.className = 'tweet-preview-text';
+        area.rows = 6;
+        area.value = text;
+        var count = box.querySelector('.tweet-count');
+        var updateCount = function () {
+          var length = area.value.length + 24 - (area.value.split('\n').pop() || '').length;
+          count.textContent = length + ' of 280 characters';
+          count.classList.toggle('is-over', length > 280);
+        };
+        area.addEventListener('input', updateCount);
+        box.appendChild(area);
+        var row = document.createElement('div');
+        row.className = 'tweet-preview-actions';
+        var copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'intro-cta';
+        copy.textContent = 'Copy';
+        copy.addEventListener('click', function () {
+          navigator.clipboard.writeText(area.value).then(function () { copy.textContent = 'Copied'; });
+        });
+        var open = document.createElement('a');
+        open.className = 'intro-cta intro-cta--ghost';
+        open.target = '_blank';
+        open.rel = 'noopener';
+        open.textContent = 'Open X';
+        open.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(area.value);
+        area.addEventListener('input', function () {
+          open.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(area.value);
+        });
+        var close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'intro-cta intro-cta--ghost';
+        close.textContent = 'Close';
+        close.addEventListener('click', function () { box.remove(); });
+        row.appendChild(copy); row.appendChild(open); row.appendChild(close);
+        box.appendChild(row);
+        btn.closest('.admin-tools').insertAdjacentElement('afterend', box);
+        updateCount();
+        area.focus();
+      });
+    });
+  }
+
   revealAdminEditLinks(document.querySelectorAll('.admin-edit-link'));
+  wireTweetButtons(document.querySelectorAll('.tweet-btn'));
   wireWaitButtons(document.querySelectorAll('.wait-btn'));
 
   // --- Live refresh: homepage hero (3 random cards, one featured) and
@@ -952,26 +1318,30 @@
   function featuredCardHtmlJS(product, statusInfo, allProducts) {
     var daysInfo = statusInfo ? badgeDaysInfoJS(product, statusInfo) : null;
     var countHtml = daysInfo
-      ? '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span><span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>'
+      ? (daysInfo.days < 0
+          ? '<div class="card-featured-count card-featured-count--upcoming"><span class="card-featured-count-suffix">Coming ' + formatDateJS((product.refresh_history || []).slice().sort().pop()) + '</span></div>'
+          : '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span><span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>')
       : badgeHtmlJS(product, statusInfo);
     var launch = launchDateJS(product);
     var predecessor = product.previous_model && allProducts ? allProducts.filter(function (p) { return p.slug === product.previous_model; })[0] : null;
-    var nextExpected = statusInfo && !product.discontinued
-      ? new Date(new Date(statusInfo.lastRefresh).getTime() + statusInfo.avgCycleDays * 86400000).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
+    var expectedDate = statusInfo && !product.discontinued
+      ? new Date(new Date(statusInfo.lastRefresh).getTime() + statusInfo.avgCycleDays * 86400000)
       : null;
+    var expectedPassed = expectedDate ? expectedDate.getTime() < Date.now() : false;
+    var nextExpected = expectedDate ? expectedDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }) : null;
     var detailRows = [];
     if (product.price) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price</span> ' + escapeHtmlJS(formatPriceJS(product.price)) + '</div>');
     if (launch) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ' + formatDateJS(launch) + '</div>');
     if (product.discontinued && product.discontinued_date) {
       detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ' + formatDateJS(product.discontinued_date) + '</div>');
     } else if (nextExpected) {
-      detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Next refresh expected</span> ' + nextExpected + '</div>');
+      detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">' + (expectedPassed ? 'Refresh was expected' : 'Next refresh expected') + '</span> ' + nextExpected + '</div>');
     }
     if (predecessor) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ' + escapeHtmlJS(predecessor.name) + '</div>');
     return '<article class="card card--featured" data-category="' + escapeHtmlJS(product.category) + '">' +
       '<a class="card-link" href="/products/' + product.slug + '/">' +
         '<span class="card-featured-label">Featured</span>' +
-        '<div class="card-name-row">' + categoryIconJS(product.category, 42) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
+        '<div class="card-name-row">' + productIconJS(product, 42) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
         countHtml +
         (detailRows.length ? '<div class="card-featured-details">' + detailRows.join('') + '</div>' : '') +
       '</a>' +
@@ -1123,12 +1493,13 @@
 
         var timelineSection = document.getElementById('category-timeline-section');
         if (timelineSection) {
-          var categoryProducts = items.map(function (i) { return i.product; });
+          // Family page: every line together, whatever each product page shows.
+          var categoryProducts = items.map(function (i) { return Object.assign({}, i.product, { timeline_name: null }); });
           var seedProduct = categoryProducts[0];
           var points = seedProduct ? categoryTimelinePointsJS(seedProduct, categoryProducts) : [];
           if (points.length) {
             timelineSection.style.display = '';
-            timelineSection.innerHTML = '<h2>Release history</h2>' + horizontalTimelineHtmlJS(seedProduct, categoryProducts);
+            timelineSection.innerHTML = '<h2>Release history</h2>' + verticalTimelineHtmlJS(seedProduct, categoryProducts);
           } else {
             timelineSection.style.display = 'none';
             timelineSection.innerHTML = '';
@@ -1493,4 +1864,103 @@
       })
       .catch(function () {});
   }
+
+  // --- Two small enhancements, both skipped when they can't help ---
+
+  // Start fetching a product page as soon as the pointer lands on its
+  // link, so the click feels instant. Each URL is only ever queued once,
+  // and it is skipped on slow or metered connections.
+  (function prefetchOnHover() {
+    var conn = navigator.connection;
+    if (conn && (conn.saveData || /2g/.test(conn.effectiveType || ''))) return;
+    var done = {};
+    document.addEventListener('pointerover', function (e) {
+      var link = e.target.closest && e.target.closest('a[href^="/products/"], a[href^="/categories/"]');
+      if (!link || done[link.href] || link.origin !== window.location.origin) return;
+      done[link.href] = true;
+      var hint = document.createElement('link');
+      hint.rel = 'prefetch';
+      hint.href = link.href;
+      document.head.appendChild(hint);
+    }, { passive: true });
+  })();
+
+  // Count the headline number up on arrival. Purely decorative: the real
+  // number is already in the HTML, so it is correct before this runs and
+  // if this never runs at all.
+  (function countUpHeroNumber() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var el = document.querySelector('.days-hero-number');
+    if (!el) return;
+    var target = parseInt(el.textContent.replace(/[^0-9]/g, ''), 10);
+    if (!target || target < 10) return;
+    var duration = 650;
+    var start = null;
+    function step(now) {
+      if (start === null) start = now;
+      var progress = Math.min((now - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = String(Math.round(target * eased));
+      if (progress < 1) window.requestAnimationFrame(step);
+      else el.textContent = String(target);
+    }
+    window.requestAnimationFrame(step);
+  })();
+
+
+  // The menu button on narrow screens. The nav works without this: the
+  // markup is a plain list of links, and the button is only shown by
+  // CSS on small viewports.
+  (function navToggle() {
+    var btn = document.getElementById('nav-toggle');
+    var nav = document.getElementById('site-nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function () {
+      var open = nav.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    // Tapping a link closes it, and so does Escape.
+    nav.addEventListener('click', function (e) {
+      if (e.target.closest('a')) {
+        nav.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && nav.classList.contains('is-open')) {
+        nav.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.focus();
+      }
+    });
+  })();
+
+
+  // Countdown clock. The server already rendered the number of days, so
+  // this only upgrades it to days, hours and minutes and keeps it ticking.
+  (function countdown() {
+    var el = document.querySelector('[data-countdown]');
+    if (!el) return;
+    var clock = el.querySelector('[data-countdown-clock]');
+    var target = new Date(el.getAttribute('data-countdown') + 'T09:00:00').getTime();
+    if (!target || !clock) return;
+    function unit(value, label) {
+      return '<span class="countdown-unit"><span class="countdown-value">' + value + '</span>' +
+        '<span class="countdown-unit-label">' + label + (value === 1 ? '' : 's') + '</span></span>';
+    }
+    function tick() {
+      var left = target - Date.now();
+      if (left <= 0) {
+        clock.innerHTML = '<span class="countdown-unit"><span class="countdown-value">Today</span></span>';
+        return;
+      }
+      var mins = Math.floor(left / 60000);
+      var days = Math.floor(mins / 1440);
+      var hours = Math.floor((mins % 1440) / 60);
+      clock.innerHTML = unit(days, 'day') + unit(hours, 'hour') + unit(mins % 60, 'min');
+    }
+    tick();
+    setInterval(tick, 30000);
+  })();
+
 })();

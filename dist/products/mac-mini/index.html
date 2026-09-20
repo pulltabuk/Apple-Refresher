@@ -3,22 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mac mini — Apple Sunset</title>
-<meta name="description" content="Mac mini was last refreshed 31 days ago. See the full release history and whether now is a good time to buy.">
+<title>Mac mini: 36 days since the last update | Apple Sunset</title>
+<meta name="description" content="Mac mini was last refreshed 36 days ago. See every generation and the full release history.">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://example.netlify.app/products/mac-mini/">
-<meta property="og:title" content="Mac mini — Apple Sunset">
-<meta property="og:description" content="Mac mini was last refreshed 31 days ago. See the full release history and whether now is a good time to buy.">
-<meta property="og:url" content="https://example.netlify.app/products/mac-mini/">
+<link rel="canonical" href="https://applesunset.com/products/mac-mini/">
+<meta property="og:title" content="Mac mini: 36 days since the last update | Apple Sunset">
+<meta property="og:description" content="Mac mini was last refreshed 36 days ago. See every generation and the full release history.">
+<meta property="og:url" content="https://applesunset.com/products/mac-mini/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Apple Sunset">
-<meta property="og:image" content="https://example.netlify.app/logo.png">
+<meta property="og:image" content="https://applesunset.com/share/mac-mini.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Mac mini — Apple Sunset">
-<meta name="twitter:description" content="Mac mini was last refreshed 31 days ago. See the full release history and whether now is a good time to buy.">
-<meta name="twitter:image" content="https://example.netlify.app/logo.png">
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Apple Sunset","url":"https://example.netlify.app","description":"Tracks how long it's been since every Apple product was last refreshed or discontinued."},{"@type":"Organization","name":"Apple Sunset","url":"https://example.netlify.app","logo":"https://example.netlify.app/logo.png"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Product","name":"Mac mini","category":"Mac","releaseDate":"2023-10-30","url":"https://example.netlify.app/products/mac-mini/","brand":{"@type":"Brand","name":"Apple"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"All products","item":"https://example.netlify.app/products/"},{"@type":"ListItem","position":2,"name":"Mac","item":"https://example.netlify.app/categories/mac/"},{"@type":"ListItem","position":3,"name":"Mac mini","item":"https://example.netlify.app/products/mac-mini/"}]}]}</script>
+<meta name="twitter:title" content="Mac mini: 36 days since the last update | Apple Sunset">
+<meta name="twitter:description" content="Mac mini was last refreshed 36 days ago. See every generation and the full release history.">
+<meta name="twitter:image" content="https://applesunset.com/share/mac-mini.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Apple Sunset","url":"https://applesunset.com","description":"Tracks how long it's been since every Apple product was last refreshed or discontinued."},{"@type":"Organization","name":"Apple Sunset","url":"https://applesunset.com","logo":"https://applesunset.com/logo.png"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Product","name":"Mac mini","category":"Mac","releaseDate":"2023-10-30","url":"https://applesunset.com/products/mac-mini/","brand":{"@type":"Brand","name":"Apple"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"All products","item":"https://applesunset.com/products/"},{"@type":"ListItem","position":2,"name":"Mac","item":"https://applesunset.com/categories/mac/"},{"@type":"ListItem","position":3,"name":"Mac mini","item":"https://applesunset.com/products/mac-mini/"}]}]}</script>
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -29,7 +29,11 @@
     <a class="site-title" href="/">
       <img src="/logo.png" alt="Apple Sunset" class="site-logo-img">
     </a>
-    <nav class="site-nav">
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+      <span class="nav-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="nav-toggle-text">Menu</span>
+    </button>
+    <nav class="site-nav" id="site-nav">
       <a href="/products/">All products</a>
       <a href="/categories/">Categories</a>
       <a href="/discontinued/">Discontinued</a>
@@ -45,29 +49,35 @@
 <main>
 
 <article class="product-page">
-  <p><a href="/products/" class="gallery-nav-link">&larr; All products</a></p>
+  <nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li><a href="/categories/mac/">Mac</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li aria-current="page">Mac mini</li></ol></nav>
   <div class="product-top product-top--no-media">
     
     <div class="product-info">
       <div class="product-header">
         <div>
-          <h1>Mac mini</h1>
-          <p class="days-hero days-hero--fresh"><span class="days-hero-number">31</span> days since refresh</p>
+          <div class="product-title-row" data-category="Mac">
+            <span class="product-title-icon"><svg class="placeholder-icon" viewBox="0 0 40 40" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="9" width="24" height="16" rx="1.5"/><path d="M5 30h30l-2.5-3h-25z"/></svg></span>
+            <h1>Mac mini</h1>
+          </div>
         </div>
-        <a href="/admin/?edit=sample-mac-mini" class="admin-edit-link" style="display:none;">Edit this product</a>
+        <div class="admin-tools">
+          <a href="/admin/?edit=sample-mac-mini" class="admin-edit-link" style="display:none;">Edit this product</a>
+          <button type="button" class="admin-edit-link tweet-btn" data-slug="mac-mini" style="display:none;">Draft a post for X</button>
+        </div>
       </div>
 
-      <dl class="spec-list">
+      <div class="product-facts"><p class="days-hero days-hero--fresh"><span class="days-hero-number">36</span> days since refresh</p><div class="key-fact"><p class="key-fact-label">Latest release</p><p class="key-fact-value">15 Aug 2026</p></div>
+<div class="key-fact"><p class="key-fact-label">First release</p><p class="key-fact-value">30 Oct 2023</p></div>
+<div class="key-fact"><p class="key-fact-label">Typical cycle</p><p class="key-fact-value">About every 1020 days</p></div>
+<div class="key-fact"><p class="key-fact-label">Next expected</p><p class="key-fact-value">May 2029</p></div>
+<div class="key-fact"><p class="key-fact-label">Starting price</p><p class="key-fact-value">£599</p></div>
+<div class="key-fact"><p class="key-fact-label">Releases so far</p><p class="key-fact-value">2</p></div></div>
+
+      <dl class="spec-list spec-list--secondary">
         <div class="spec-row"><dt>Category</dt><dd><a class="pill" href="/categories/mac/">Mac</a></dd></div>
 <div class="spec-row"><dt>Status</dt><dd>Current</dd></div>
-<div class="spec-row"><dt>Launched</dt><dd>30 Oct 2023</dd></div>
-<div class="spec-row"><dt>Last refreshed</dt><dd>15 Aug 2026</dd></div>
-<div class="spec-row"><dt>Times refreshed</dt><dd>1</dd></div>
-<div class="spec-row"><dt>Typical refresh cycle</dt><dd>About every 1020 days</dd></div>
-<div class="spec-row"><dt>Next refresh expected around</dt><dd>May 2029</dd></div>
-<div class="spec-row"><dt>Starting price</dt><dd>£599</dd></div>
 <div class="spec-row"><dt>Update type</dt><dd>Refresh</dd></div>
-<div class="spec-row"><dt>Days counted from</dt><dd>31 days (Refresh)</dd></div>
+<div class="spec-row"><dt>Days counted from</dt><dd>36 days (latest release)</dd></div>
 <div class="spec-row"><dt>Chip</dt><dd>M5</dd></div>
 <div class="spec-row"><dt>Waiting for a refresh</dt><dd><span class="wait-count-value">12</span> people</dd></div>
       </dl>
@@ -79,114 +89,151 @@
   </div>
 
   <h2>Release history</h2>
-  <div class="timeline-rows"><div class="timeline-horizontal timeline-horizontal--continues" style="padding-top:100px;padding-bottom:100px;"><div class="timeline-point timeline-point--launch timeline-point--above">
+  <ol class="tl">
+    <li class="tl-now">
+      <span class="tl-marker tl-marker--now" aria-hidden="true">&#9679;</span>
+      <div class="tl-body"><p class="tl-now-text">Today &middot; 36 days since the last release</p></div>
+    </li>
+    <li class="tl-year"><span>2026</span></li>
+    <li class="tl-item tl-item--refresh">
+      <span class="tl-marker tl-marker--refresh"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">15 Aug 2026</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">Mac mini</span>
+        <span class="tl-entry-type tl-entry-type--refresh">Refresh</span>
+      </p>
+      </div>
+    </li><li class="tl-gap"><span class="tl-gap-text">&#8593; 1 year, 5 months later</span></li>
+<li class="tl-year"><span>2025</span></li>
+    <li class="tl-item tl-item--refresh">
+      <span class="tl-marker tl-marker--refresh"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">4 Mar 2025</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">MacBook Air</span>
+        <span class="tl-entry-type tl-entry-type--refresh">Refresh</span>
+      </p>
+      </div>
+    </li><li class="tl-gap"><span class="tl-gap-text">&#8593; about 1 year later</span></li>
+<li class="tl-year"><span>2024</span></li>
+    <li class="tl-item tl-item--refresh">
+      <span class="tl-marker tl-marker--refresh"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">4 Mar 2024</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">MacBook Air</span>
+        <span class="tl-entry-type tl-entry-type--refresh">Refresh</span>
+      </p>
+      </div>
+    </li><li class="tl-gap"><span class="tl-gap-text">&#8593; 4 months later</span></li>
+<li class="tl-year"><span>2023</span></li>
+    <li class="tl-item tl-item--refresh">
+      <span class="tl-marker tl-marker--refresh"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">30 Oct 2023</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">Mac mini</span>
+        <span class="tl-entry-type tl-entry-type--refresh">Refresh</span>
+      </p>
+      </div>
+    </li><li class="tl-gap"><span class="tl-gap-text">&#8593; 4 months later</span></li>
+
+    <li class="tl-item tl-item--refresh">
+      <span class="tl-marker tl-marker--refresh"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">5 Jun 2023</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">MacBook Air</span>
+        <span class="tl-entry-type tl-entry-type--refresh">Refresh</span>
+      </p>
+      </div>
+    </li><li class="tl-gap"><span class="tl-gap-text">&#8593; about 4 years later</span></li>
+<li class="tl-year"><span>2019</span></li>
+    <li class="tl-item tl-item--discontinued">
+      <span class="tl-marker tl-marker--discontinued"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">9 Jul 2019</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">MacBook (12-inch)</span>
+        <span class="tl-entry-type tl-entry-type--discontinued">Discontinued</span>
+      </p>
+      </div>
+    </li><li class="tl-gap"><span class="tl-gap-text">&#8593; about 2 years later</span></li>
+<li class="tl-year"><span>2017</span></li>
+    <li class="tl-item tl-item--refresh">
+      <span class="tl-marker tl-marker--refresh"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">5 Jun 2017</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">MacBook (12-inch)</span>
+        <span class="tl-entry-type tl-entry-type--refresh">Refresh</span>
+      </p>
+      </div>
+    </li><li class="tl-gap"><span class="tl-gap-text">&#8593; 1 year, 2 months later</span></li>
+<li class="tl-year"><span>2016</span></li>
+    <li class="tl-item tl-item--refresh">
+      <span class="tl-marker tl-marker--refresh"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">Apr 2016</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">MacBook (12-inch)</span>
+        <span class="tl-entry-type tl-entry-type--refresh">Refresh</span>
+      </p>
+      </div>
+    </li><li class="tl-gap"><span class="tl-gap-text">&#8593; 1 year, 3 months later</span></li>
+<li class="tl-year"><span>2015</span></li>
+    <li class="tl-item tl-item--launch">
+      <span class="tl-marker tl-marker--launch"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2.5 14 13H2z" fill="currentColor"/></svg></span>
+      <div class="tl-body">
+        <p class="tl-date">2015</p>
+        <p class="tl-entry">
+        <span class="tl-entry-name">MacBook (12-inch)</span>
+        <span class="tl-entry-type tl-entry-type--launch">Launch</span>
+      </p>
+      </div>
+    </li>
+  </ol>
+
+  <h2>Generations</h2>
+  <div class="generations-table-wrap">
+  <table class="generations-table">
+    <thead><tr><th>Generation</th><th>Released</th><th>Time on market</th></tr></thead>
+    <tbody>
+  <tr class="generation-row generation-row--current">
+    <td class="generation-name">Mac mini (2nd generation) <span class="generation-current-pill">Current</span></td>
     
-    <span class="timeline-point-line-half timeline-point-line-half--right"></span>
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">MacBook (12-inch)</p>
-      <p class="timeline-point-label">Launch</p>
-      <p class="timeline-point-date">2015</p>
-    </div>
-    </div>
-  </div>
-<div class="timeline-point timeline-point--refresh timeline-point--above">
-    <span class="timeline-point-line-half timeline-point-line-half--left"></span>
-    <span class="timeline-point-line-half timeline-point-line-half--right"></span>
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">MacBook (12-inch)</p>
-      <p class="timeline-point-label">Refresh</p>
-      <p class="timeline-point-date">Apr 2016</p>
-    </div>
-    </div>
-  </div>
-<div class="timeline-point timeline-point--refresh timeline-point--above">
-    <span class="timeline-point-line-half timeline-point-line-half--left"></span>
-    <span class="timeline-point-line-half timeline-point-line-half--right"></span>
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">MacBook (12-inch)</p>
-      <p class="timeline-point-label">Refresh</p>
-      <p class="timeline-point-date">5 Jun 2017</p>
-    </div>
-    </div>
-  </div>
-<div class="timeline-point timeline-point--discontinued timeline-point--below">
-    <span class="timeline-point-line-half timeline-point-line-half--left"></span>
+    <td>15 Aug 2026</td>
+    <td>1 month so far</td>
+  </tr>
+<tr class="generation-row">
+    <td class="generation-name">Mac mini (1st generation)</td>
     
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">MacBook (12-inch)</p>
-      <p class="timeline-point-label">Discontinued</p>
-      <p class="timeline-point-date">9 Jul 2019</p>
-    </div>
-    </div>
-  </div></div>
-<div class="timeline-horizontal timeline-horizontal--continues" style="padding-top:100px;padding-bottom:100px;"><div class="timeline-point timeline-point--refresh timeline-point--above">
-    
-    <span class="timeline-point-line-half timeline-point-line-half--right"></span>
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">MacBook Air</p>
-      <p class="timeline-point-label">Refresh</p>
-      <p class="timeline-point-date">5 Jun 2023</p>
-    </div>
-    </div>
+    <td>30 Oct 2023</td>
+    <td>2 years, 9 months</td>
+  </tr>
+    </tbody>
+  </table>
   </div>
-<div class="timeline-point timeline-point--refresh timeline-point--above">
-    <span class="timeline-point-line-half timeline-point-line-half--left"></span>
-    <span class="timeline-point-line-half timeline-point-line-half--right"></span>
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">Mac mini</p>
-      <p class="timeline-point-label">Refresh</p>
-      <p class="timeline-point-date">30 Oct 2023</p>
-    </div>
-    </div>
-  </div>
-<div class="timeline-point timeline-point--refresh timeline-point--above">
-    <span class="timeline-point-line-half timeline-point-line-half--left"></span>
-    <span class="timeline-point-line-half timeline-point-line-half--right"></span>
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">MacBook Air</p>
-      <p class="timeline-point-label">Refresh</p>
-      <p class="timeline-point-date">4 Mar 2024</p>
-    </div>
-    </div>
-  </div>
-<div class="timeline-point timeline-point--refresh timeline-point--above">
-    <span class="timeline-point-line-half timeline-point-line-half--left"></span>
-    
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">MacBook Air</p>
-      <p class="timeline-point-label">Refresh</p>
-      <p class="timeline-point-date">4 Mar 2025</p>
-    </div>
-    </div>
-  </div></div>
-<div class="timeline-horizontal" style="padding-top:100px;padding-bottom:100px;"><div class="timeline-point timeline-point--refresh timeline-point--above">
-    
-    
-    <span class="timeline-dot"></span>
-    <div class="timeline-point-content">
-      <div class="timeline-point-entry">
-      <p class="timeline-point-name">Mac mini</p>
-      <p class="timeline-point-label">Refresh</p>
-      <p class="timeline-point-date">15 Aug 2026</p>
-    </div>
-    </div>
-  </div></div></div>
+
+  <section class="related-section">
+    <h2>More in Mac</h2>
+    <div class="related-grid"><a class="related-card" href="/products/macbook-air/">
+      <span class="related-card-icon"><svg class="placeholder-icon" viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="9" width="24" height="16" rx="1.5"/><path d="M5 30h30l-2.5-3h-25z"/></svg></span>
+      <span class="related-card-text">
+        <span class="related-card-name">MacBook Air</span>
+        <span class="related-card-line">565 days since refresh</span>
+      </span>
+    </a>
+<a class="related-card" href="/products/macbook-12-inch/">
+      <span class="related-card-icon"><svg class="placeholder-icon" viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="9" width="24" height="16" rx="1.5"/><path d="M5 30h30l-2.5-3h-25z"/></svg></span>
+      <span class="related-card-text">
+        <span class="related-card-name">MacBook (12-inch)</span>
+        <span class="related-card-line">Discontinued 9 Jul 2019</span>
+      </span>
+    </a></div>
+    <p class="see-all"><a class="intro-cta" href="/categories/mac/">All Mac &rarr;</a></p>
+  </section>
 
   <div class="callout"><p class="callout-label">Notes</p><div class="callout-body">Just refreshed, next update not expected for a while.</div></div>
 

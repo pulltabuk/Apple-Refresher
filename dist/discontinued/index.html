@@ -6,18 +6,18 @@
 <title>Discontinued Apple products — Apple Sunset</title>
 <meta name="description" content="An archive of the Apple products that have been discontinued: when they launched, when they went, how long they lasted, and what replaced them.">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://example.netlify.app/discontinued/">
+<link rel="canonical" href="https://applesunset.com/discontinued/">
 <meta property="og:title" content="Discontinued Apple products — Apple Sunset">
 <meta property="og:description" content="An archive of the Apple products that have been discontinued: when they launched, when they went, how long they lasted, and what replaced them.">
-<meta property="og:url" content="https://example.netlify.app/discontinued/">
+<meta property="og:url" content="https://applesunset.com/discontinued/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Apple Sunset">
-<meta property="og:image" content="https://example.netlify.app/logo.png">
+<meta property="og:image" content="https://applesunset.com/logo.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Discontinued Apple products — Apple Sunset">
 <meta name="twitter:description" content="An archive of the Apple products that have been discontinued: when they launched, when they went, how long they lasted, and what replaced them.">
-<meta name="twitter:image" content="https://example.netlify.app/logo.png">
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Apple Sunset","url":"https://example.netlify.app","description":"Tracks how long it's been since every Apple product was last refreshed or discontinued."},{"@type":"Organization","name":"Apple Sunset","url":"https://example.netlify.app","logo":"https://example.netlify.app/logo.png"}]}</script>
+<meta name="twitter:image" content="https://applesunset.com/logo.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Apple Sunset","url":"https://applesunset.com","description":"Tracks how long it's been since every Apple product was last refreshed or discontinued."},{"@type":"Organization","name":"Apple Sunset","url":"https://applesunset.com","logo":"https://applesunset.com/logo.png"}]}</script>
 
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
@@ -29,7 +29,11 @@
     <a class="site-title" href="/">
       <img src="/logo.png" alt="Apple Sunset" class="site-logo-img">
     </a>
-    <nav class="site-nav">
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+      <span class="nav-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="nav-toggle-text">Menu</span>
+    </button>
+    <nav class="site-nav" id="site-nav">
       <a href="/products/">All products</a>
       <a href="/categories/">Categories</a>
       <a href="/discontinued/">Discontinued</a>
@@ -46,6 +50,7 @@
 
 <h1>Discontinued products</h1>
 <p class="page-intro">The products Apple no longer sells, when they launched, when they went, and what took their place.</p>
+
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search discontinued products…" aria-label="Search discontinued products">
   <div class="sort-select-wrap">

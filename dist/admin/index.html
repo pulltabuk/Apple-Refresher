@@ -6,18 +6,18 @@
 <title>Admin — Apple Sunset</title>
 <meta name="description" content="Manage products and site content.">
 <meta name="robots" content="noindex">
-<link rel="canonical" href="https://example.netlify.app/admin/">
+<link rel="canonical" href="https://applesunset.com/admin/">
 <meta property="og:title" content="Admin — Apple Sunset">
 <meta property="og:description" content="Manage products and site content.">
-<meta property="og:url" content="https://example.netlify.app/admin/">
+<meta property="og:url" content="https://applesunset.com/admin/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Apple Sunset">
-<meta property="og:image" content="https://example.netlify.app/logo.png">
+<meta property="og:image" content="https://applesunset.com/logo.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Admin — Apple Sunset">
 <meta name="twitter:description" content="Manage products and site content.">
-<meta name="twitter:image" content="https://example.netlify.app/logo.png">
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Apple Sunset","url":"https://example.netlify.app","description":"Tracks how long it's been since every Apple product was last refreshed or discontinued."},{"@type":"Organization","name":"Apple Sunset","url":"https://example.netlify.app","logo":"https://example.netlify.app/logo.png"}]}</script>
+<meta name="twitter:image" content="https://applesunset.com/logo.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Apple Sunset","url":"https://applesunset.com","description":"Tracks how long it's been since every Apple product was last refreshed or discontinued."},{"@type":"Organization","name":"Apple Sunset","url":"https://applesunset.com","logo":"https://applesunset.com/logo.png"}]}</script>
 
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
@@ -29,7 +29,11 @@
     <a class="site-title" href="/">
       <img src="/logo.png" alt="Apple Sunset" class="site-logo-img">
     </a>
-    <nav class="site-nav">
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+      <span class="nav-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="nav-toggle-text">Menu</span>
+    </button>
+    <nav class="site-nav" id="site-nav">
       <a href="/products/">All products</a>
       <a href="/categories/">Categories</a>
       <a href="/discontinued/">Discontinued</a>
@@ -62,6 +66,7 @@
       <button type="button" class="admin-tab-btn" data-tab="gallery">Gallery</button>
       <button type="button" class="admin-tab-btn" data-tab="event">Apple Event</button>
       <button type="button" class="admin-tab-btn" data-tab="facts">Facts</button>
+      <button type="button" class="admin-tab-btn" data-tab="pagetext">Page text</button>
       <button type="button" class="admin-tab-btn" data-tab="about">About page</button>
     </div>
     <button id="logout-btn" class="admin-btn">Log out</button>
@@ -69,106 +74,94 @@
 
   <div id="tab-products" class="admin-tab-panel">
     <div id="product-list-view">
-      <button id="new-product-btn" class="admin-btn admin-btn--primary">Add new product</button>
-      <input type="search" id="product-search-input" class="admin-search-input" placeholder="Search products by name…" aria-label="Search products">
-      <div id="product-list" class="admin-list"></div>
+      <div id="family-screen">
+        <h2 class="admin-screen-title"><span class="admin-step-num">1</span> Pick a family</h2>
+        <input type="search" id="product-search-input" class="admin-search-input" placeholder="Or search every product by name…" aria-label="Search products">
+        <div id="family-tiles" class="family-tiles" aria-label="Families"></div>
+      </div>
+      <div id="products-screen" style="display:none;">
+        <button type="button" id="back-to-families-btn" class="admin-back-link">&larr; All families</button>
+        <h2 class="admin-screen-title"><span class="admin-step-num">2</span> Pick a product <span id="products-screen-family" class="admin-screen-family"></span></h2>
+        <div id="product-list" class="line-card-grid"></div>
+      </div>
+      <div id="search-screen" style="display:none;">
+        <div id="search-results" class="line-card-grid"></div>
+      </div>
+      <button type="button" id="new-product-btn" hidden></button>
     </div>
 
     <div id="product-form-view" style="display:none;">
       <button type="button" id="back-to-list-btn" class="admin-back-link">&larr; Back to products</button>
-      <h3 id="form-title">Add product</h3>
-      <form id="product-form" class="admin-form">
-        <h3 class="admin-form-section">Product details</h3>
-        <label>Name<input type="text" id="name" required></label>
-        <label>Category
-          <input type="text" id="category" list="category-options" placeholder="e.g. iPhone, Vision Pro">
-          <datalist id="category-options"></datalist>
-        </label>
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Icon for this category</span>
-          <div id="category-icon-thumb" class="admin-thumbs"></div>
-          <label for="category-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload icon</label>
-          <input type="file" id="category-icon-upload" accept="image/*" class="admin-file-input">
-          <p class="admin-hint">Optional. Uploading replaces the built-in shape for every product in this category, everywhere it appears on the site.</p>
-        </div>
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Starting price</span>
-          <div class="price-currency-row">
-            <label class="checkbox-label"><input type="radio" name="price_currency" value="£"> £</label>
-            <label class="checkbox-label"><input type="radio" name="price_currency" value="$" checked> $</label>
-            <input type="text" id="price" placeholder="799">
+      <h2 id="form-title" class="admin-form-title">New product line</h2>
+      <form id="product-form" class="admin-form admin-form--steps" novalidate>
+
+        <section class="admin-step" id="step-family">
+          <h3 class="admin-step-title"><span class="admin-step-num">1</span> Family</h3>
+          <div id="family-picker" class="family-picker" role="radiogroup" aria-label="Family"></div>
+          <div id="new-family-wrap" class="admin-subfield" style="display:none;">
+            <label>New family name<input type="text" id="category" placeholder="e.g. Vision Pro" autocomplete="off"></label>
           </div>
-        </div>
-
-        <h3 class="admin-form-section">Launch / Release / Refresh Date</h3>
-        <p class="admin-hint">Pick a date below, then click what kind of date it is. Most products just need a Refresh Date, that covers a brand new product too, it's what the day-count badge is calculated from. Only use Launch Date if this is a true origin point for its timeline (e.g. the very first iPhone, or a new line like iPhone Air debuting within the existing iPhone timeline), a timeline can have more than one Launch if it's genuinely got more than one origin. Discontinued Date also marks the product as discontinued.</p>
-        <div class="admin-subfield">
-          <span class="admin-subfield-label">Refresh history</span>
-          <ul id="refresh-history-list" class="refresh-history-list"></ul>
-        </div>
-        <div class="admin-subfield" id="launch-date-display-wrap" style="display:none;">
-          <span class="admin-subfield-label">Original launch date</span>
-          <p class="date-chip" id="launch-date-display"></p>
-        </div>
-        <div class="admin-subfield" id="discontinued-date-display-wrap" style="display:none;">
-          <span class="admin-subfield-label">Discontinued date</span>
-          <p class="date-chip" id="discontinued-date-display"></p>
-        </div>
-        <div class="date-precision-radios">
-          <label><input type="radio" name="new_refresh_date_precision" value="day" checked> Full date</label>
-          <label><input type="radio" name="new_refresh_date_precision" value="month"> Month &amp; year</label>
-          <label><input type="radio" name="new_refresh_date_precision" value="year"> Year only</label>
-        </div>
-        <div class="refresh-history-add">
-          <input type="date" id="new_refresh_date_day" class="date-precision-input">
-          <input type="month" id="new_refresh_date_month" class="date-precision-input" style="display:none;">
-          <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
-        </div>
-        <div class="unified-date-buttons">
-          <button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--small admin-btn--primary">Refresh Date</button>
-          <button type="button" id="add-as-launch-btn" class="admin-btn admin-btn--small">Launch Date</button>
-          <button type="button" id="add-as-discontinued-btn" class="admin-btn admin-btn--small">Discontinued Date</button>
-        </div>
-
-        <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
-
-        <details class="admin-advanced">
-          <summary>More options (product line, video, links, notes, featured, discontinued)</summary>
-
           <div class="admin-subfield">
-            <span class="admin-subfield-label">Badge shows</span>
-            <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked> Days since refresh</label>
-            <label class="checkbox-label"><input type="radio" name="days_basis" id="days_basis_launch" value="launch"> Days since launch</label>
+            <span class="admin-subfield-label">Family icon <span class="admin-optional">Optional</span></span>
+            <div class="admin-icon-row">
+              <div id="category-icon-thumb" class="admin-thumbs"></div>
+              <label for="category-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload family icon</label>
+              <input type="file" id="category-icon-upload" accept="image/*" class="admin-file-input">
+            </div>
+            <p class="admin-hint">Replaces the built-in shape for every product in this family.</p>
+          </div>
+          <p id="family-error" class="form-error"></p>
+        </section>
+
+        <section class="admin-step" id="step-line">
+          <h3 class="admin-step-title"><span class="admin-step-num">2</span> Product</h3>
+          <label>Name<input type="text" id="name" placeholder="e.g. AirPods Pro" autocomplete="off"></label>
+          <p id="name-error" class="form-error"></p>
+          <label class="checkbox-label checkbox-label--feature"><input type="checkbox" id="featured"> &#9733; Feature this product on the homepage</label>
+          <p class="admin-hint">Only one product can be featured. Choosing this one un-features the current one.</p>
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Icon for this product <span class="admin-optional">Optional</span></span>
+            <div class="admin-icon-row">
+              <div id="product-icon-thumb" class="admin-thumbs"></div>
+              <label for="product-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload icon</label>
+              <input type="file" id="product-icon-upload" accept="image/*" class="admin-file-input">
+            </div>
+            <p class="admin-hint">Leave blank to use the family icon.</p>
+          </div>
+          <div class="admin-subfield">
+            <span class="admin-subfield-label">Release history on this product&rsquo;s page</span>
+            <div class="choice-cards" role="radiogroup" aria-label="Release history shown">
+              <label class="choice-card">
+                <input type="radio" name="timeline_mode" value="own" checked>
+                <span class="choice-card-body">
+                  <span class="choice-card-title">This product only</span>
+                  <span class="choice-card-note" id="timeline-own-example">Shows the dates below and nothing else.</span>
+                </span>
+              </label>
+              <label class="choice-card">
+                <input type="radio" name="timeline_mode" value="family">
+                <span class="choice-card-body">
+                  <span class="choice-card-title">Everything in this family</span>
+                  <span class="choice-card-note" id="timeline-family-example">Shows the dates below plus the other products in this family.</span>
+                </span>
+              </label>
+            </div>
+            <p class="admin-hint" id="timeline-group-note" style="display:none;"></p>
           </div>
 
-          <h3 class="admin-form-section">Product line</h3>
-          <p class="admin-hint">Optional: only needed if this product is part of a series with others already on the site (e.g. every iPhone model). Skip this whole section for a one-off product.</p>
           <div class="admin-subfield">
-            <span class="admin-subfield-label">Timeline group</span>
-            <input type="text" id="timeline_name" list="timeline-name-options" placeholder="e.g. iPhone">
-            <datalist id="timeline-name-options"></datalist>
-          </div>
-          <p class="admin-hint">Give every product that should share one continuous history the exact same value here, start typing and existing ones you've already used will show up to pick from. Two products with this set to "iPhone" show each other's launches on the same timeline; leave it blank and this product won't be linked to anything.</p>
-          <label>Previous model (pick a product, or leave blank)
-            <input type="text" id="previous_model" list="product-options-by-category" placeholder="Start typing a product name">
-          </label>
-          <p class="admin-hint">If this product replaces one already on the site, picking it here automatically marks that one Discontinued and fills in its "Replaced by" for you.</p>
-
-          <h3 class="admin-form-section">Video</h3>
-          <div class="admin-subfield">
-            <span class="admin-subfield-label">Video</span>
-            <div id="video-status" class="admin-video-status">No video uploaded.</div>
-            <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label>
-            <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
+            <span class="admin-subfield-label">Starting price <span class="admin-optional">Optional</span></span>
+            <div class="price-currency-row">
+              <div class="segmented segmented--small" role="radiogroup" aria-label="Currency">
+                <label><input type="radio" name="price_currency" value="&pound;"><span>&pound;</span></label>
+                <label><input type="radio" name="price_currency" value="$" checked><span>$</span></label>
+              </div>
+              <input type="text" id="price" placeholder="799" inputmode="decimal">
+            </div>
           </div>
 
-          <h3 class="admin-form-section">More information</h3>
-          <label>Official Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/uk/iphone-17-pro/"></label>
-          <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> No longer available on Apple's website</label>
-          <label>External link (e.g. a Wikipedia page)<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/..."></label>
-
           <div class="admin-subfield">
-            <span class="admin-subfield-label">Notes</span>
+            <span class="admin-subfield-label">Notes <span class="admin-optional">Optional, shown on the product page</span></span>
             <div class="richtext-toolbar">
               <button type="button" data-cmd="bold"><b>B</b></button>
               <button type="button" data-cmd="italic"><i>I</i></button>
@@ -180,22 +173,109 @@
             </div>
             <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
           </div>
+        </section>
 
-          <h3 class="admin-form-section">Homepage</h3>
-          <label class="checkbox-label"><input type="checkbox" id="featured"> Featured on homepage</label>
-          <p class="admin-hint">Only one product can be featured at a time, choosing this one will automatically un-feature whichever product currently holds it.</p>
+        <section class="admin-step" id="step-generations">
+          <h3 class="admin-step-title"><span class="admin-step-num">3</span> Dates</h3>
+          <p class="admin-hint">Every release or refresh, plus the day it was discontinued if it has been. The earliest one is marked as its first release automatically.</p>
+          <ul id="refresh-history-list" class="generation-list"></ul>
+          <div class="generation-add" id="generation-add-panel">
+            <p class="generation-add-title">Add a date</p>
+            <div class="segmented segmented--type" role="radiogroup" aria-label="Type of date">
+              <label><input type="radio" name="entry_type" value="launch"><span>Launch</span></label>
+              <label><input type="radio" name="entry_type" value="release" checked><span>Release</span></label>
+              <label><input type="radio" name="entry_type" value="announced"><span>Announced</span></label>
+              <label><input type="radio" name="entry_type" value="discontinued"><span>Discontinued</span></label>
+            </div>
+            <div class="generation-add-row">
+              <div class="admin-subfield" id="new_refresh_date_field">
+  <span class="admin-subfield-label">Date</span>
+  <div class="date-precision-radios">
+    <label><input type="radio" name="new_refresh_date_precision" value="day" checked> Full date</label>
+    <label><input type="radio" name="new_refresh_date_precision" value="month"> Month &amp; year</label>
+    <label><input type="radio" name="new_refresh_date_precision" value="year"> Year only</label>
+  </div>
+  <div class="date-precision-row">
+    <input type="date" id="new_refresh_date_day" class="date-precision-input">
+    <input type="month" id="new_refresh_date_month" class="date-precision-input" style="display:none;">
+    <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035">
+    <button type="button" class="date-precision-clear" data-prefix="new_refresh_date">Clear</button>
+  </div>
+  
+</div>
+              <button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--primary">+ Add</button>
+            </div>
+            <div class="admin-subfield" id="generation-name-field">
+              <label><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
+            </div>
+            <div class="admin-subfield" id="announced-target-field" style="display:none;">
+              <label>Which release was this the announcement for?<select id="announced_target"></select></label>
+            </div>
+            <p id="generation-add-error" class="form-error"></p>
+          </div>
+          <div class="admin-subfield" id="days-basis-wrap">
+            <span class="admin-subfield-label">The big number on this product counts days since</span>
+            <div class="segmented segmented--small" role="radiogroup" aria-label="Badge basis">
+              <label><input type="radio" name="days_basis" id="days_basis_refresh" value="refresh" checked><span>Latest date</span></label>
+              <label><input type="radio" name="days_basis" id="days_basis_launch" value="launch"><span>First launch</span></label>
+            </div>
+          </div>
+        </section>
 
-          <h3 class="admin-form-section">Discontinued</h3>
-          <label class="checkbox-label"><input type="checkbox" id="discontinued"> Discontinued</label>
-          <p class="admin-hint">Set automatically when you click "Discontinued Date" above, but you can also check this on its own if you don't have an exact date.</p>
-          <label>Replaced by (pick a product, or leave blank)
-            <input type="text" id="replaced_by" list="product-options-by-category" placeholder="Start typing a product name">
-            <datalist id="product-options-by-category"></datalist>
-          </label>
-          <label>Why it went (only if there's more to it than "Replaced by" already says, e.g. a design flaw, price problem, or how it was received, leave blank otherwise)<textarea id="discontinued_reason" rows="2"></textarea></label>
-        </details>
+        <section class="admin-step" id="step-status">
+          <h3 class="admin-step-title"><span class="admin-step-num">4</span> Replacement <span class="admin-optional">Optional</span></h3>
+          <p class="admin-status-readout" id="status-readout"></p>
+          <input type="checkbox" id="discontinued" hidden>
+          <p id="discontinued-error" class="form-error"></p>
+          <label><span class="admin-label-row">This product replaces <span class="admin-optional">Optional</span></span><select id="previous_model"></select></label>
+          <div id="previous-model-choice" class="admin-subfield" style="display:none;">
+            <span class="admin-subfield-label">Is that older product still on sale?</span>
+            <div class="segmented segmented--small" role="radiogroup" aria-label="Older product status">
+              <label><input type="radio" name="previous_model_action" value="keep" checked><span>Still on sale, leave it</span></label>
+              <label><input type="radio" name="previous_model_action" value="discontinue"><span>Mark it discontinued</span></label>
+            </div>
+            <p class="admin-hint">&ldquo;Mark it discontinued&rdquo; sets its discontinued date to this product&rsquo;s first release date and points it here.</p>
+          </div>
+          <div id="discontinued-fields" class="admin-discontinued-fields" style="display:none;">
+            <label><span class="admin-label-row">Replaced by <span class="admin-optional">Optional</span></span><select id="replaced_by"></select></label>
+            <label><span class="admin-label-row">Why it went <span class="admin-optional">Optional</span></span><textarea id="discontinued_reason" rows="2"></textarea></label>
+          </div>
+        </section>
 
-        <button type="submit" class="admin-btn admin-btn--primary">Save product</button>
+        <section class="admin-step" id="step-links">
+          <h3 class="admin-step-title"><span class="admin-step-num">5</span> Links <span class="admin-optional">All optional</span></h3>
+          <p class="admin-hint">Tap a Find button to open a search for this product in a new tab, then paste the address back into the box.</p>
+          <label>Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/airpods-pro/"></label>
+          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="apple">Find on apple.com</button></div>
+          <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> Apple has taken this page down</label>
+          <label>Apple specs page<input type="url" id="specs_url" placeholder="https://support.apple.com/en-gb/111854"></label>
+          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="specs">Find tech specs</button></div>
+          <label>Wikipedia page<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/AirPods"></label>
+          <div>
+            <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="wikipedia">Find on Wikipedia</button>
+            <button type="button" class="admin-btn admin-btn--small admin-btn--primary" id="wikipedia-auto-btn">Fill automatically</button>
+          </div>
+          <p class="admin-hint" id="wikipedia-auto-status"></p>
+          <label>Press release<input type="url" id="press_release_url" placeholder="https://www.apple.com/newsroom/..."></label>
+          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="newsroom">Find in Apple Newsroom</button></div>
+          <p class="admin-hint">Press releases usually only exist for recent products. Leave it blank otherwise.</p>
+        </section>
+
+        <section class="admin-step" id="step-extras">
+          <h3 class="admin-step-title"><span class="admin-step-num">6</span> Video <span class="admin-optional">Optional</span></h3>
+          <div id="video-status" class="admin-video-status">No video uploaded.</div>
+          <div>
+            <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label>
+            <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
+          </div>
+          <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
+        </section>
+
+        <div class="admin-save-bar">
+          <button type="submit" id="save-product-btn" class="admin-btn admin-btn--primary">Save product</button>
+          <button type="button" id="cancel-product-btn" class="admin-btn admin-btn--ghost">Cancel</button>
+          <button type="button" id="delete-product-btn" class="admin-btn admin-btn--danger" style="display:none;">Delete</button>
+        </div>
       </form>
     </div>
   </div>
@@ -279,6 +359,8 @@
         </div>
         <input type="hidden" id="event_image_url">
         <label>Event date<input type="date" id="event_date"></label>
+        <label class="checkbox-label"><input type="checkbox" id="event_featured"> &#9733; Feature this event on the homepage</label>
+        <p class="admin-hint">Only one event can be featured. Leave this unticked and the homepage shows the next event by date, as it does now.</p>
         <label>Event time (optional, your own wording, e.g. "10am PT")<input type="text" id="event_time" placeholder="10am PT"></label>
         <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/"></label>
         <div class="admin-subfield">
@@ -302,6 +384,60 @@
 
     <h3 class="admin-form-section">Published facts</h3>
     <div id="published-facts" class="admin-fact-list"></div>
+  </div>
+
+  <div id="tab-pagetext" class="admin-tab-panel" style="display:none;">
+    <h2 class="admin-screen-title">Page text</h2>
+    <p class="admin-hint">Words on the homepage and family pages. This is what Google reads, so a few plain sentences about what the page covers is worth more than anything else you can add.</p>
+    <form id="pagetext-form" class="admin-form admin-form--steps">
+      <section class="admin-step">
+        <h3 class="admin-step-title">Which page?</h3>
+        <label>Page<select id="pagetext_target"></select></label>
+        <p class="admin-hint" id="pagetext-preview-link"></p>
+      </section>
+
+      <section class="admin-step">
+        <h3 class="admin-step-title">Heading and first line</h3>
+        <label><span class="admin-label-row">Heading <span class="admin-optional">Leave blank to keep the standard one</span></span><input type="text" id="pagetext_heading" autocomplete="off"></label>
+        <label><span class="admin-label-row">Line under the heading <span class="admin-optional">Leave blank to keep the standard one</span></span><input type="text" id="pagetext_subheading" autocomplete="off"></label>
+        <label class="checkbox-label"><input type="checkbox" id="pagetext_hide_default_line"> Hide that line completely</label>
+      </section>
+
+      <section class="admin-step">
+        <h3 class="admin-step-title">Intro <span class="admin-optional">Shown under the heading, above the products</span></h3>
+        <div class="richtext-toolbar">
+          <button type="button" data-cmd="bold" data-editor="pagetext_intro"><b>B</b></button>
+          <button type="button" data-cmd="italic" data-editor="pagetext_intro"><i>I</i></button>
+          <button type="button" data-cmd="insertParagraph" data-editor="pagetext_intro">&para;</button>
+          <button type="button" data-link-for="pagetext_intro">&#128279;</button>
+        </div>
+        <div id="pagetext_intro" class="richtext-editor" contenteditable="true"></div>
+        <p class="admin-hint">Two or three sentences is plenty. Say what the page covers in the words someone would search for.</p>
+      </section>
+
+      <section class="admin-step" id="pagetext-stats-step">
+        <h3 class="admin-step-title">Automatic stats line</h3>
+        <label class="checkbox-label"><input type="checkbox" id="pagetext_show_stats" checked> Add a sentence built from this family&rsquo;s own dates</label>
+        <p class="admin-hint">For example: &ldquo;Apple refreshes iPhone about every year on average. The most recently updated is iPhone 17 Pro, 365 days ago.&rdquo; It rewrites itself on every build, so it never goes stale.</p>
+      </section>
+
+      <section class="admin-step">
+        <h3 class="admin-step-title">Extra text <span class="admin-optional">Shown at the bottom, below the products</span></h3>
+        <div class="richtext-toolbar">
+          <button type="button" data-cmd="bold" data-editor="pagetext_footer"><b>B</b></button>
+          <button type="button" data-cmd="italic" data-editor="pagetext_footer"><i>I</i></button>
+          <button type="button" data-cmd="insertParagraph" data-editor="pagetext_footer">&para;</button>
+          <button type="button" data-link-for="pagetext_footer">&#128279;</button>
+        </div>
+        <div id="pagetext_footer" class="richtext-editor" contenteditable="true"></div>
+        <p class="admin-hint">Room for the longer explanation: how Apple has handled this family over the years, what to expect next. Keeps the products at the top where people want them.</p>
+      </section>
+
+      <div class="admin-save-bar">
+        <button type="submit" class="admin-btn admin-btn--primary">Save page text</button>
+        <span id="pagetext-status" class="admin-hint"></span>
+      </div>
+    </form>
   </div>
 
   <div id="tab-about" class="admin-tab-panel" style="display:none;">
