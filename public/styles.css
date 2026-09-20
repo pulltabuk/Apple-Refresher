@@ -1702,3 +1702,35 @@ body.is-admin .site-search { display: none; }
   }
   .intro-hero-cards .card:not(.card--featured) > .pill { margin-top: auto; }
 }
+
+/* iOS Safari zooms the page whenever a focused input has a font size
+   below 16px. Bumping form controls to 16px on small screens stops the
+   zoom without changing how anything looks on desktop. */
+@media (max-width: 700px) {
+  .search-input,
+  .sort-select,
+  .admin-search-input,
+  .homepage-category-select select,
+  input[type="text"],
+  input[type="search"],
+  input[type="url"],
+  input[type="number"],
+  input[type="date"],
+  input[type="email"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Keep the controls inside the screen rather than running off the
+     right edge, which also removes the sideways scroll. */
+  .search-input,
+  .sort-select,
+  .sort-select-wrap {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .controls-row { flex-direction: column; align-items: stretch; }
+}
