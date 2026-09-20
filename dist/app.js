@@ -38,6 +38,21 @@
 
   // Must stay in step with eventSlug() in src/templates.js, or a card
   // rendered client-side will link to a page the build never wrote.
+  // Must stay in step with galleryPhotoSlug() in src/templates.js.
+  function galleryPhotoSlugJS(photo) {
+    var base = photo.caption || (photo.tags && photo.tags[0]) || '';
+    var slug = slugifyJS(String(base).replace(/['\u2019]/g, ''));
+    if (slug.length > 70) slug = slug.slice(0, 70).replace(/-[^-]*$/, '');
+    if (photo.date_taken && !/\d{4}/.test(slug)) {
+      var d = new Date(photo.date_taken);
+      if (!isNaN(d)) {
+        var months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+        slug = [slug, months[d.getUTCMonth()] + '-' + d.getUTCFullYear()].filter(Boolean).join('-');
+      }
+    }
+    return slug || String(photo.id);
+  }
+
   function eventSlugJS(event) {
     var heading = slugifyJS(String(event.heading || '').replace(/['\u2019]/g, ''));
     var datePart = '';
@@ -1579,7 +1594,7 @@
   function galleryStripItemHtmlJS(photo) {
     var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
     var images = galleryPhotoImagesJS(photo);
-    return '<a class="gallery-strip-item" href="/gallery/' + photo.id + '/">' + (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</a>';
+    return '<a class="gallery-strip-item" href="/gallery/' + galleryPhotoSlugJS(photo) + '/">' + (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</a>';
   }
 
   function galleryTagLinkJS(value, extraClass) {
@@ -1611,7 +1626,7 @@
     var tagsHtml = galleryTagsHtmlJS(photo);
     var footer = (tagsHtml || photoCountPill) ? '<div class="gallery-card-footer">' + tagsHtml + photoCountPill + '</div>' : '';
     return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-created="' + dateToTimestampJS(photo.created_at) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
-      '<a class="card-link" href="/gallery/' + photo.id + '/">' +
+      '<a class="card-link" href="/gallery/' + galleryPhotoSlugJS(photo) + '/">' +
         '<div class="card-image">' +
           (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') +
         '</div>' +
@@ -1779,7 +1794,8 @@
       .then(function (res) { return res.json(); })
       .then(function (photos) {
         if (!Array.isArray(photos)) return;
-        var index = photos.findIndex(function (p) { return p.id === idFromUrl; });
+        var index = photos.findIndex(function (p) { return galleryPhotoSlugJS(p) === idFromUrl; });
+        if (index === -1) index = photos.findIndex(function (p) { return p.id === idFromUrl; });
         var photo = photos[index];
         if (!photo) return;
         var prevPhoto = index > 0 ? photos[index - 1] : null;
@@ -1803,9 +1819,9 @@
             '<a class="intro-cta" href="' + mailtoHref + '">Request to use photo</a>' +
           '</div>' +
           '<div class="gallery-photo-nav">' +
-            (prevPhoto ? '<a href="/gallery/' + prevPhoto.id + '/" class="gallery-nav-link">&larr; Previous</a>' : '<span></span>') +
+            (prevPhoto ? '<a href="/gallery/' + galleryPhotoSlugJS(prevPhoto) + '/" class="gallery-nav-link">&larr; Previous</a>' : '<span></span>') +
             '<a href="/gallery/" class="gallery-nav-link">Full Gallery</a>' +
-            (nextPhoto ? '<a href="/gallery/' + nextPhoto.id + '/" class="gallery-nav-link">Next &rarr;</a>' : '<span></span>') +
+            (nextPhoto ? '<a href="/gallery/' + galleryPhotoSlugJS(nextPhoto) + '/" class="gallery-nav-link">Next &rarr;</a>' : '<span></span>') +
           '</div>';
         document.title = displayName + ' \u2014 Apple Sunset Gallery';
         revealAdminEditLinks(galleryPhotoPageEl.querySelectorAll('.admin-edit-link'));

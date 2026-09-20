@@ -75,6 +75,26 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
+function galleryPhotoSlug(photo) {
+  // SEO-friendly gallery URL built from the caption, so the address says
+  // what the photo actually shows. Falls back to the UUID if there is
+  // nothing to build from, and appends month and year unless the caption
+  // already carries a year.
+  const base = photo.caption || (photo.tags && photo.tags[0]) || '';
+  let slug = slugify(String(base).replace(/['\u2019]/g, ''));
+  if (slug.length > 70) {
+    slug = slug.slice(0, 70).replace(/-[^-]*$/, '');
+  }
+  if (photo.date_taken && !/\d{4}/.test(slug)) {
+    const d = new Date(photo.date_taken);
+    if (!isNaN(d)) {
+      const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+      slug = [slug, months[d.getUTCMonth()] + '-' + d.getUTCFullYear()].filter(Boolean).join('-');
+    }
+  }
+  return slug || String(photo.id);
+}
+
 function eventSlug(event) {
   // SEO-friendly event URL: heading plus month and year, e.g.
   // "surprise-and-shine-september-2026". Falls back to the UUID if an
@@ -857,7 +877,7 @@ function galleryPhotoCardHtml(photo) {
   const tagsHtml = galleryTagsHtml(photo);
   const footer = (tagsHtml || photoCountPill) ? `<div class="gallery-card-footer">${tagsHtml}${photoCountPill}</div>` : '';
   return `<article class="card" data-date="${dateToTimestamp(photo.date_taken)}" data-created="${dateToTimestamp(photo.created_at)}" data-search="${escapeHtml(searchText.toLowerCase())}">
-  <a class="card-link" href="/gallery/${photo.id}/">
+  <a class="card-link" href="/gallery/${galleryPhotoSlug(photo)}/">
     <div class="card-image">
       ${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}
     </div>
@@ -872,7 +892,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const images = galleryPhotoImages(photo);
   const imagesHtml = images.map((url) => `<img src="${escapeHtml(url)}" alt="${escapeHtml(displayName)}">`).join('\n');
-  const pageUrl = `${siteUrl}/gallery/${photo.id}/`;
+  const pageUrl = `${siteUrl}/gallery/${galleryPhotoSlug(photo)}/`;
   const mailtoHref = `mailto:infoswiper@yahoo.com?subject=${encodeURIComponent(`Can I use this photo? — ${displayName}`)}&body=${encodeURIComponent(`Hi, I'd like to ask about using this photo:\n${pageUrl}`)}`;
   const body = `
 <article class="gallery-photo-page">
@@ -890,16 +910,16 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
     <a class="intro-cta" href="${mailtoHref}">Request to use photo</a>
   </div>
   <div class="gallery-photo-nav">
-    ${prevPhoto ? `<a href="/gallery/${prevPhoto.id}/" class="gallery-nav-link">&larr; Previous</a>` : '<span></span>'}
+    ${prevPhoto ? `<a href="/gallery/${galleryPhotoSlug(prevPhoto)}/" class="gallery-nav-link">&larr; Previous</a>` : '<span></span>'}
     <a href="/gallery/" class="gallery-nav-link">Full Gallery</a>
-    ${nextPhoto ? `<a href="/gallery/${nextPhoto.id}/" class="gallery-nav-link">Next &rarr;</a>` : '<span></span>'}
+    ${nextPhoto ? `<a href="/gallery/${galleryPhotoSlug(nextPhoto)}/" class="gallery-nav-link">Next &rarr;</a>` : '<span></span>'}
   </div>
 </article>`;
   return shell({
     title: `${escapeHtml(displayName)} — Apple Sunset Gallery`,
     description: `A photo from the Apple Sunset gallery${photo.location ? `, taken in ${photo.location}` : ''}.`,
     siteUrl,
-    path: `/gallery/${photo.id}/`,
+    path: `/gallery/${galleryPhotoSlug(photo)}/`,
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
@@ -986,7 +1006,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
 function galleryStripItemHtml(photo) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const images = galleryPhotoImages(photo);
-  return `<a class="gallery-strip-item" href="/gallery/${photo.id}/">${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}</a>`;
+  return `<a class="gallery-strip-item" href="/gallery/${galleryPhotoSlug(photo)}/">${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}</a>`;
 }
 
 function eventCardHtml(event) {
@@ -2119,6 +2139,7 @@ module.exports = {
   productBadge,
   slugify,
   eventSlug,
+  galleryPhotoSlug,
   rssFeedXml,
   mostRecentActivityDate,
 };

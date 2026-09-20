@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, notFoundPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, notFoundPage, adminPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -322,11 +322,26 @@ async function main() {
       eventSlugRedirects.push(`/events/${event.id}/* /events/${slug}/ 301!`);
     }
   }
+  const gallerySlugRedirects = [];
+  const usedPhotoSlugs = new Set();
   for (let i = 0; i < galleryPhotos.length; i++) {
     const photo = galleryPhotos[i];
     const prevPhoto = i > 0 ? galleryPhotos[i - 1] : null;
     const nextPhoto = i < galleryPhotos.length - 1 ? galleryPhotos[i + 1] : null;
-    write(`gallery/${photo.id}/index.html`, galleryPhotoPage({ photo, prevPhoto, nextPhoto, ...opts }));
+    let slug = galleryPhotoSlug(photo);
+    // Two photos sharing a caption and month would otherwise overwrite
+    // each other's page, so later ones get a numeric suffix.
+    if (usedPhotoSlugs.has(slug)) {
+      let n = 2;
+      while (usedPhotoSlugs.has(`${slug}-${n}`)) n++;
+      slug = `${slug}-${n}`;
+    }
+    usedPhotoSlugs.add(slug);
+    write(`gallery/${slug}/index.html`, galleryPhotoPage({ photo, prevPhoto, nextPhoto, ...opts }));
+    // Old UUID links keep working and pass their ranking value across.
+    if (slug !== String(photo.id)) {
+      gallerySlugRedirects.push(`/gallery/${photo.id}/* /gallery/${slug}/ 301!`);
+    }
   }
   write('admin/index.html', adminPage(opts));
 
@@ -399,7 +414,7 @@ ${sitemapUrls.map((u) => `  <url><loc>${SITE_URL}${u.path}</loc>${u.lastmod ? `<
   const redirectLines = redirects
     .filter((r) => r.from_slug && r.to_path && !livePaths.has('/products/' + r.from_slug + '/'))
     .map((r) => `/products/${r.from_slug}/* ${r.to_path} 301!`);
-  const allRedirectLines = hostRedirect.concat(redirectLines, eventSlugRedirects);
+  const allRedirectLines = hostRedirect.concat(redirectLines, eventSlugRedirects, gallerySlugRedirects);
   fs.writeFileSync(path.join(DIST, '_redirects'), allRedirectLines.join('\n') + '\n');
   console.log(`Wrote ${allRedirectLines.length} redirect${allRedirectLines.length === 1 ? '' : 's'} (canonical host: ${canonicalHost}).`);
 
