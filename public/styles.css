@@ -1445,3 +1445,43 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .tweet-count.is-over { color: var(--overdue-text); font-weight: 700; }
 .tweet-preview-text { width: 100%; font: inherit; font-size: 14px; line-height: 1.5; padding: 10px; border: 1px solid var(--border); border-radius: 8px; resize: vertical; }
 .tweet-preview-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+/* ---------- Hero countdown ---------- */
+.countdown {
+  display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px;
+  margin: 0 0 1.25rem; padding: 14px 18px; border-radius: 14px;
+  background: var(--accent-bg); color: var(--accent-dark); text-decoration: none; border: 1px solid #f0d9c4;
+}
+.countdown:hover { border-color: var(--accent); }
+.countdown-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.85; flex: 0 0 100%; }
+.countdown-name { font-size: 17px; font-weight: 800; }
+.countdown-clock { display: inline-flex; gap: 12px; }
+.countdown-unit { display: inline-flex; align-items: baseline; gap: 4px; }
+.countdown-value { font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.countdown-unit-label { font-size: 12px; font-weight: 600; opacity: 0.8; }
+.countdown-date { font-size: 13px; font-weight: 600; opacity: 0.85; }
+.pill--link { text-decoration: none; }
+.pill--link:hover { border-color: var(--accent); background: var(--accent-bg); }
+@media (max-width: 600px) {
+  .countdown { width: 100%; }
+  .countdown-value { font-size: 20px; }
+}
+.site-search-dropdown-head { margin: 8px 12px 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
+.site-search-note { margin-left: auto; font-size: 11px; color: var(--text-secondary); }
+.site-search-event-dot { width: 22px; height: 22px; border-radius: 6px; background: var(--accent-bg); border: 1px solid #f0d9c4; display: inline-block; flex-shrink: 0; }
+
+/* ---------- Products still to arrive ---------- */
+.badge--upcoming, .card-featured-count--upcoming, .days-hero--upcoming { background: var(--fresh-bg); color: var(--fresh-text); }
+.days-hero--upcoming { font-size: 15px; }
+.days-hero-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; }
+.days-hero-soon { font-size: 26px; font-weight: 800; }
+
+/* ---------- All products: calmer cards ---------- */
+.card-grid .card { display: flex; flex-direction: column; }
+.card-grid .card .card-link { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.card-name-row { align-items: center; min-height: 44px; }
+.card .badge { align-self: flex-start; white-space: nowrap; font-size: 12px; padding: 6px 12px; }
+.card .pill { font-size: 10px; padding: 3px 9px; border-color: #e6e1d8; color: var(--text-secondary); }
+.card .pill:hover { border-color: var(--accent); color: var(--accent-dark); }
+.filter-bar { gap: 6px; }
+.homepage-category-links { margin-top: 0.5rem; }

@@ -179,7 +179,19 @@ async function main() {
   const latestFact = facts[0] || null;
   const today = new Date().toISOString().slice(0, 10);
   const upcomingEvents = events.filter((e) => e.event_date >= today).sort((a, b) => (a.event_date < b.event_date ? -1 : 1));
-  const activeEvent = upcomingEvents[0] || null;
+  // A pinned event wins; otherwise the next one by date, as before.
+  const activeEvent = events.find((e) => e.featured) || upcomingEvents[0] || null;
+
+  // The hero countdown: the featured event if it is still to come,
+  // otherwise the nearest future release date across every product.
+  const futureReleases = products
+    .flatMap((p) => (p.refresh_history || []).filter((d) => d > today).map((d) => ({ date: d, product: p })))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  const countdown = activeEvent && activeEvent.event_date >= today
+    ? { label: activeEvent.heading || 'Apple Event', date: activeEvent.event_date, time: activeEvent.event_time || null, href: '/events/' }
+    : futureReleases[0]
+    ? { label: futureReleases[0].product.name, date: futureReleases[0].date, time: null, href: `/products/${futureReleases[0].product.slug}/` }
+    : null;
   const galleryPhotos = await loadGalleryPhotos();
 
   const productsBySlug = {};
@@ -283,13 +295,14 @@ async function main() {
     activeEvent,
     latestFact,
     pageContent: pageContent.home || null,
+    countdown,
     ...opts,
   }));
   write('products/index.html', allProductsPage({ items: productsPageItems, pageContent: pageContent.products || null, ...opts }));
   write('discontinued/index.html', discontinuedPage({ items: discontinued, pageContent: pageContent.discontinued || null, ...opts }));
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }));
-  write('events/index.html', eventsPage({ events, pageContent: pageContent.events || null, ...opts }));
+  write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
   write('facts/index.html', factsPage({ facts, pageContent: pageContent.facts || null, ...opts }));
   for (const event of events) {
     write(`events/${event.id}/index.html`, eventDetailPage({ event, productsBySlug, ...opts }));

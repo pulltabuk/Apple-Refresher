@@ -155,7 +155,7 @@ const products = [
   {
     id: 'sample-airpods-pro', slug: 'airpods-pro', name: 'AirPods Pro', category: 'AirPods', price: '$249',
     image_urls: [], video_url: null,
-    refresh_history: ['2019-10-30', '2022-09-23', '2025-09-19'],
+    refresh_history: ['2019-10-30', '2022-09-23', '2025-09-19', '2026-10-23'],
     generation_details: {},
     timeline_name: 'AirPods Pro',
     apple_url: 'https://www.apple.com/airpods-pro/',

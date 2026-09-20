@@ -2024,6 +2024,7 @@
     document.getElementById('event_date').value = event.event_date || '';
     document.getElementById('event_time').value = event.event_time || '';
     document.getElementById('event_url').value = event.event_url || '';
+    document.getElementById('event_featured').checked = !!event.featured;
     currentEventProducts = (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p));
     renderEventImageThumb();
     renderEventProducts();
@@ -2063,6 +2064,7 @@
       event_date: document.getElementById('event_date').value || null,
       event_time: document.getElementById('event_time').value.trim() || null,
       event_url: document.getElementById('event_url').value.trim() || null,
+      featured: document.getElementById('event_featured').checked,
       announced_products: currentEventProducts,
     };
     if (!payload.heading || !payload.image_url || !payload.event_date) {
@@ -2074,8 +2076,18 @@
         ? await client.from('apple_events').update(payload).eq('id', editingEventId)
         : await client.from('apple_events').insert(payload);
       if (result.error) {
-        window.alert('Save failed: ' + result.error.message);
+        window.alert(/featured/.test(result.error.message || '')
+          ? 'Save failed: run supabase-schema-update-24.sql in Supabase first.'
+          : 'Save failed: ' + result.error.message);
         return;
+      }
+      // Only one event can hold the homepage slot.
+      if (payload.featured) {
+        const others = cachedEvents.filter((ev) => ev.featured && ev.id !== editingEventId);
+        for (const other of others) {
+          const clear = await client.from('apple_events').update({ featured: false }).eq('id', other.id);
+          if (clear.error) console.error('Could not un-feature an event:', clear.error);
+        }
       }
       eventForm.reset();
       editingEventId = null;
@@ -2508,6 +2520,58 @@
       pageContentRows[key] = payload;
       fillPagetextTargets();
       statusEl.textContent = 'Saved. It appears on the site after the next build, a minute or two.';
+    });
+  }
+
+  // --- Finding links ---
+  //
+  // A browser can't read another site's search results from this page,
+  // so these open the right search in a new tab. One tap, then paste.
+  const LINK_SEARCHES = {
+    apple: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:apple.com ' + name),
+    specs: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:support.apple.com ' + name + ' technical specifications'),
+    wikipedia: (name) => 'https://en.wikipedia.org/w/index.php?search=' + encodeURIComponent(name),
+    newsroom: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:apple.com/newsroom ' + name),
+  };
+
+  document.querySelectorAll('[data-find-link]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const name = document.getElementById('name').value.trim();
+      if (!name) {
+        window.alert('Give the product a name first, in step 2.');
+        return;
+      }
+      window.open(LINK_SEARCHES[btn.getAttribute('data-find-link')](name), '_blank', 'noopener');
+    });
+  });
+
+  // Wikipedia has an open API that allows requests from other sites, so
+  // this one can be filled in without leaving admin.
+  const wikipediaBtn = document.getElementById('wikipedia-auto-btn');
+  if (wikipediaBtn) {
+    wikipediaBtn.addEventListener('click', async () => {
+      const status = document.getElementById('wikipedia-auto-status');
+      const name = document.getElementById('name').value.trim();
+      if (!name) {
+        status.textContent = 'Give the product a name first, in step 2.';
+        return;
+      }
+      status.textContent = 'Searching Wikipedia\u2026';
+      try {
+        const url = 'https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=' +
+          encodeURIComponent(name) + '&srlimit=1&format=json&origin=*';
+        const res = await fetch(url);
+        const data = await res.json();
+        const hit = data && data.query && data.query.search && data.query.search[0];
+        if (!hit) {
+          status.textContent = 'Nothing found. Try the Find button instead.';
+          return;
+        }
+        document.getElementById('external_link').value = 'https://en.wikipedia.org/wiki/' + encodeURIComponent(hit.title.replace(/ /g, '_'));
+        status.textContent = 'Filled in "' + hit.title + '". Check it is the right page before saving.';
+      } catch (err) {
+        status.textContent = 'Wikipedia could not be reached. Use the Find button instead.';
+      }
     });
   }
 

@@ -430,14 +430,24 @@
 
     function fetchSearchProducts() {
       if (searchProductsPromise) return searchProductsPromise;
+      // Products and events in one request each, so the dropdown can
+      // answer "AirPods" with the family, the products, and the event
+      // where they were announced.
+      var headers = { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY };
       searchProductsPromise = window.SUPABASE_URL && window.SUPABASE_ANON_KEY
-        ? fetch(window.SUPABASE_URL + '/rest/v1/products?select=id,name,slug,category,discontinued', {
-            headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
-          }).then(function (res) { return res.json(); }).then(function (data) {
-            searchProductsCache = Array.isArray(data) ? data : [];
+        ? Promise.all([
+            fetch(window.SUPABASE_URL + '/rest/v1/products?select=id,name,slug,category,icon_url,discontinued', { headers })
+              .then(function (res) { return res.json(); }).catch(function () { return []; }),
+            fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=id,heading,event_date,announced_products', { headers })
+              .then(function (res) { return res.json(); }).catch(function () { return []; }),
+          ]).then(function (both) {
+            searchProductsCache = {
+              products: Array.isArray(both[0]) ? both[0] : [],
+              events: Array.isArray(both[1]) ? both[1] : [],
+            };
             return searchProductsCache;
-          }).catch(function () { return []; })
-        : Promise.resolve([]);
+          })
+        : Promise.resolve({ products: [], events: [] });
       return searchProductsPromise;
     }
 
@@ -459,10 +469,19 @@
         empty.textContent = query ? 'No products match "' + query + '"' : 'Start typing a product name';
         dropdown.appendChild(empty);
       } else {
-        matches.slice(0, 8).forEach(function (p) {
+        var lastKind = null;
+        matches.slice(0, 10).forEach(function (m) {
+          if (m.kind !== lastKind) {
+            var head = document.createElement('p');
+            head.className = 'site-search-dropdown-head';
+            head.textContent = m.kind === 'product' ? 'Products' : m.kind === 'category' ? 'Families' : 'Apple Events';
+            dropdown.appendChild(head);
+            lastKind = m.kind;
+          }
           var link = document.createElement('a');
-          link.href = '/products/' + p.slug + '/';
-          link.innerHTML = productIconJS(p, 22) + '<span>' + escapeHtmlJS(p.name) + '</span>';
+          link.href = m.href;
+          link.innerHTML = m.iconHtml + '<span>' + escapeHtmlJS(m.label) + '</span>' +
+            (m.note ? '<span class="site-search-note">' + escapeHtmlJS(m.note) + '</span>' : '');
           dropdown.appendChild(link);
         });
       }
@@ -476,8 +495,40 @@
         closeSearchDropdown();
         return;
       }
-      fetchSearchProducts().then(function (products) {
-        var matches = products.filter(function (p) { return matchesSearchJS(p.name + ' ' + (p.category || ''), query); });
+      fetchSearchProducts().then(function (data) {
+        var products = data.products || [];
+        var events = data.events || [];
+        var matches = [];
+
+        // Families first: one row that covers every product in it.
+        var families = {};
+        products.forEach(function (p) {
+          var name = (p.category || '').trim();
+          if (name) families[name.toLowerCase()] = name;
+        });
+        Object.keys(families).sort().forEach(function (key) {
+          var name = families[key];
+          if (!matchesSearchJS(name, query)) return;
+          var count = products.filter(function (p) { return (p.category || '').toLowerCase() === key; }).length;
+          matches.push({ kind: 'category', label: name, href: '/categories/' + slugifyJS(name) + '/',
+            iconHtml: categoryIconJS(name, 22), note: count + (count === 1 ? ' product' : ' products') });
+        });
+
+        products.filter(function (p) { return matchesSearchJS(p.name + ' ' + (p.category || ''), query); })
+          .forEach(function (p) {
+            matches.push({ kind: 'product', label: p.name, href: '/products/' + p.slug + '/',
+              iconHtml: productIconJS(p, 22), note: p.discontinued ? 'Discontinued' : '' });
+          });
+
+        // An event matches on its title or on anything announced there.
+        events.forEach(function (ev) {
+          var announced = (ev.announced_products || []).map(function (a) { return typeof a === 'string' ? a : a.name; });
+          if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' '), query)) return;
+          matches.push({ kind: 'event', label: ev.heading || 'Apple Event', href: '/events/' + ev.id + '/',
+            iconHtml: '<span class="site-search-event-dot" aria-hidden="true"></span>',
+            note: ev.event_date ? formatDateJS(ev.event_date) : '' });
+        });
+
         renderSearchDropdown(matches, query);
       });
     });
@@ -565,6 +616,10 @@
     }
     if (!statusInfo) return '';
     var info = badgeDaysInfoJS(product, statusInfo);
+    if (info.days < 0) {
+      var upcoming = (product.refresh_history || []).slice().sort().pop();
+      return '<span class="badge badge--upcoming">Coming ' + (upcoming ? formatDateJS(upcoming) : 'soon') + '</span>';
+    }
     return '<span class="badge badge--' + statusInfo.status + '" title="' + escapeHtmlJS(badgeExplanationJS(statusInfo)) + '">' + pluralJS(info.days, 'day', 'days') + ' ' + info.suffix + '</span>';
   }
 
@@ -658,7 +713,11 @@
     }
     if (!statusInfo) return '';
     var info = badgeDaysInfoJS(product, statusInfo);
-    return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> days ' + info.suffix + '</p>';
+    if (info.days < 0) {
+      var due = (product.refresh_history || []).slice().sort().pop();
+      return '<p class="days-hero days-hero--upcoming"><span class="days-hero-label">Coming</span> <span class="days-hero-soon">' + (due ? formatDateJS(due) : 'soon') + '</span></p>';
+    }
+    return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> ' + (info.days === 1 ? 'day' : 'days') + ' ' + info.suffix + '</p>';
   }
 
   function productBodyHtmlJS(product, status, productsBySlug, galleryPhotos) {
@@ -1245,7 +1304,9 @@
   function featuredCardHtmlJS(product, statusInfo, allProducts) {
     var daysInfo = statusInfo ? badgeDaysInfoJS(product, statusInfo) : null;
     var countHtml = daysInfo
-      ? '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span><span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>'
+      ? (daysInfo.days < 0
+          ? '<div class="card-featured-count card-featured-count--upcoming"><span class="card-featured-count-suffix">Coming ' + formatDateJS((product.refresh_history || []).slice().sort().pop()) + '</span></div>'
+          : '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span><span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>')
       : badgeHtmlJS(product, statusInfo);
     var launch = launchDateJS(product);
     var predecessor = product.previous_model && allProducts ? allProducts.filter(function (p) { return p.slug === product.previous_model; })[0] : null;
@@ -1858,6 +1919,34 @@
         btn.focus();
       }
     });
+  })();
+
+
+  // Countdown clock. The server already rendered the number of days, so
+  // this only upgrades it to days, hours and minutes and keeps it ticking.
+  (function countdown() {
+    var el = document.querySelector('[data-countdown]');
+    if (!el) return;
+    var clock = el.querySelector('[data-countdown-clock]');
+    var target = new Date(el.getAttribute('data-countdown') + 'T09:00:00').getTime();
+    if (!target || !clock) return;
+    function unit(value, label) {
+      return '<span class="countdown-unit"><span class="countdown-value">' + value + '</span>' +
+        '<span class="countdown-unit-label">' + label + (value === 1 ? '' : 's') + '</span></span>';
+    }
+    function tick() {
+      var left = target - Date.now();
+      if (left <= 0) {
+        clock.innerHTML = '<span class="countdown-unit"><span class="countdown-value">Today</span></span>';
+        return;
+      }
+      var mins = Math.floor(left / 60000);
+      var days = Math.floor(mins / 1440);
+      var hours = Math.floor((mins % 1440) / 60);
+      clock.innerHTML = unit(days, 'day') + unit(hours, 'hour') + unit(mins % 60, 'min');
+    }
+    tick();
+    setInterval(tick, 30000);
   })();
 
 })();

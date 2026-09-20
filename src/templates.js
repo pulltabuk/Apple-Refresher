@@ -613,6 +613,10 @@ function badgeExplanation(statusInfo) {
 function badgeHtml(product, statusInfo) {
   if (!statusInfo) return '';
   const info = badgeDaysInfo(product, statusInfo);
+  if (info.days < 0) {
+    const due = (product.refresh_history || []).slice().sort().pop();
+    return `<span class="badge badge--upcoming">Coming ${due ? formatDate(due) : 'soon'}</span>`;
+  }
   return `<span class="badge badge--${statusInfo.status}" title="${escapeHtml(badgeExplanation(statusInfo))}">${plural(info.days, 'day', 'days')} ${info.suffix}</span>`;
 }
 
@@ -926,7 +930,9 @@ function emptyState(what) {
 function featuredCardHtml(product, statusInfo, productsBySlug) {
   const daysInfo = statusInfo ? badgeDaysInfo(product, statusInfo) : null;
   const countHtml = daysInfo
-    ? `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span><span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`
+    ? (daysInfo.days < 0
+        ? `<div class="card-featured-count card-featured-count--upcoming"><span class="card-featured-count-suffix">Coming ${formatDate((product.refresh_history || []).slice().sort().pop())}</span></div>`
+        : `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span><span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`)
     : productBadge(product, statusInfo);
   const launch = launchDate(product);
   const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
@@ -979,18 +985,30 @@ function normalizedAnnouncedProducts(event) {
   return (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p));
 }
 
-function eventArchiveCardHtml(event) {
+function eventArchiveCardHtml(event, productsBySlug) {
   const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
   const products = normalizedAnnouncedProducts(event);
   const featured = products.filter((p) => p.featured).sort((a, b) => a.name.localeCompare(b.name));
   const rest = products.filter((p) => !p.featured).sort((a, b) => a.name.localeCompare(b.name));
   const shown = featured.concat(rest).slice(0, 10);
   const remaining = products.length - shown.length;
-  const tags = shown.map((p) => `<span class="pill">${escapeHtml(p.name)}</span>`).join('') + (remaining > 0 ? `<span class="pill pill--muted">+${remaining} more</span>` : '');
+  // A pill for a product we track links straight to it, which also
+  // means the event page is no longer a dead end.
+  const productByName = {};
+  Object.values(productsBySlug || {}).forEach((p) => { productByName[p.name.toLowerCase()] = p; });
+  const tags = shown.map((p) => {
+    const match = productByName[p.name.toLowerCase()];
+    return match
+      ? `<a class="pill pill--link" href="/products/${match.slug}/">${escapeHtml(p.name)}</a>`
+      : `<span class="pill">${escapeHtml(p.name)}</span>`;
+  }).join('') + (remaining > 0 ? `<span class="pill pill--muted">+${remaining} more</span>` : '');
   const inner = `<div class="card-image">${event.image_url ? `<img src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}</div>
     <p class="card-name">${escapeHtml(event.heading)}</p>
     ${dateText ? `<p class="card-meta">${escapeHtml(dateText)}</p>` : ''}`;
-  return `<article class="card">
+  // data-search lets the page filter match the announced products as
+  // well as the event's own title and date.
+  const searchText = [event.heading, dateText, ...products.map((p) => p.name)].filter(Boolean).join(' ');
+  return `<article class="card" data-search="${escapeHtml(searchText.toLowerCase())}">
   <a class="card-link" href="/events/${event.id}/">${inner}</a>
   ${tags ? `<div class="gallery-tags"><div class="gallery-tags-row">${tags}</div></div>` : ''}
 </article>`;
@@ -1030,7 +1048,7 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
   });
 }
 
-function eventsPage({ events, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function eventsPage({ events, productsBySlug, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const body = `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Apple Events')}</h1>
@@ -1040,7 +1058,7 @@ ${pageStandardLine(pageContent, `<p class="page-intro">A running record of every
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <p id="no-events" class="page-intro" style="display:${events.length ? 'none' : ''};">No events yet. Add one in <a href="/admin/">/admin/</a>.</p>
 <div class="card-grid" id="grid" data-mode="events">
-  ${events.map(eventArchiveCardHtml).join('\n')}
+  ${events.map((event) => eventArchiveCardHtml(event, productsBySlug)).join('\n')}
 </div>`;
   return shell({
     title: 'Apple Events — Apple Sunset',
@@ -1089,7 +1107,24 @@ function factBoxInnerHtml(fact) {
     <a href="/facts/" class="fact-more-link">More facts &rarr;</a>`;
 }
 
-function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+// A live countdown to whatever is next: a pinned Apple Event, or the
+// nearest future release date. The days are rendered here so the page
+// is correct before any script runs; the script only adds the clock.
+function countdownHtml(countdown) {
+  if (!countdown) return '';
+  const target = new Date(countdown.date + 'T09:00:00');
+  const days = Math.max(0, Math.ceil((target.getTime() - Date.now()) / 86400000));
+  return `<a class="countdown" href="${countdown.href}" data-countdown="${escapeHtml(countdown.date)}">
+    <span class="countdown-label">Counting down to</span>
+    <span class="countdown-name">${escapeHtml(countdown.label)}</span>
+    <span class="countdown-clock" data-countdown-clock>
+      <span class="countdown-unit"><span class="countdown-value">${days}</span><span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>
+    </span>
+    <span class="countdown-date">${formatDate(countdown.date)}${countdown.time ? ` &middot; ${escapeHtml(countdown.time)}` : ''}</span>
+  </a>`;
+}
+
+function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, pageContent, countdown, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const featuredSlotHtml = activeEvent
     ? eventCardHtml(activeEvent)
     : heroFeatured
@@ -1136,6 +1171,7 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
   <div class="intro-hero-layout">
     <div class="intro-hero-text">
       <h1 class="intro-heading">${pageHeading(pageContent, 'Apple Sunset')}</h1>
+      ${countdownHtml(countdown)}
       ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
       <a class="intro-cta" href="/products/">Browse all products</a>
@@ -1406,6 +1442,10 @@ function heroStatHtml(product, statusInfo) {
   }
   if (!statusInfo) return '';
   const info = badgeDaysInfo(product, statusInfo);
+  if (info.days < 0) {
+    const due = (product.refresh_history || []).slice().sort().pop();
+    return `<p class="days-hero days-hero--upcoming"><span class="days-hero-label">Coming</span> <span class="days-hero-soon">${due ? formatDate(due) : 'soon'}</span></p>`;
+  }
   return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> ${info.days === 1 ? 'day' : 'days'} ${info.suffix}</p>`;
 }
 
@@ -1824,11 +1864,20 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         <section class="admin-step" id="step-links">
           <h3 class="admin-step-title"><span class="admin-step-num">5</span> Links <span class="admin-optional">All optional</span></h3>
+          <p class="admin-hint">Tap a Find button to open a search for this product in a new tab, then paste the address back into the box.</p>
           <label>Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/airpods-pro/"></label>
+          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="apple">Find on apple.com</button></div>
           <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> Apple has taken this page down</label>
           <label>Apple specs page<input type="url" id="specs_url" placeholder="https://support.apple.com/en-gb/111854"></label>
+          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="specs">Find tech specs</button></div>
           <label>Wikipedia page<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/AirPods"></label>
+          <div>
+            <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="wikipedia">Find on Wikipedia</button>
+            <button type="button" class="admin-btn admin-btn--small admin-btn--primary" id="wikipedia-auto-btn">Fill automatically</button>
+          </div>
+          <p class="admin-hint" id="wikipedia-auto-status"></p>
           <label>Press release<input type="url" id="press_release_url" placeholder="https://www.apple.com/newsroom/..."></label>
+          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="newsroom">Find in Apple Newsroom</button></div>
           <p class="admin-hint">Press releases usually only exist for recent products. Leave it blank otherwise.</p>
         </section>
 
@@ -1916,6 +1965,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </div>
         <input type="hidden" id="event_image_url">
         <label>Event date<input type="date" id="event_date"></label>
+        <label class="checkbox-label"><input type="checkbox" id="event_featured"> &#9733; Feature this event on the homepage</label>
+        <p class="admin-hint">Only one event can be featured. Leave this unticked and the homepage shows the next event by date, as it does now.</p>
         <label>Event time (optional, your own wording, e.g. "10am PT")<input type="text" id="event_time" placeholder="10am PT"></label>
         <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/"></label>
         <div class="admin-subfield">
