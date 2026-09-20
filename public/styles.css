@@ -1481,8 +1481,9 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card-grid .card .card-link { flex: 1; display: flex; flex-direction: column; gap: 8px; }
 .card-name-row { align-items: center; min-height: 44px; }
 .card .badge { align-self: stretch; white-space: normal; max-width: 100%; box-sizing: border-box; line-height: 1.3; font-size: 12px; padding: 6px 12px; }
-.card .pill { font-size: 10px; padding: 3px 9px; border-color: #e6e1d8; color: var(--text-secondary); }
-.card .pill:hover { border-color: var(--accent); color: var(--accent-dark); }
+.card .pill:not(.pill--location) { font-size: 10px; padding: 3px 9px; border-color: #e6e1d8; color: var(--text-secondary); }
+.card .pill:not(.pill--location):hover { border-color: var(--accent); color: var(--accent-dark); }
+.card .pill--location { font-size: 10px; padding: 3px 9px; }
 .filter-bar { gap: 6px; }
 .homepage-category-links { margin-top: 0.5rem; }
 
