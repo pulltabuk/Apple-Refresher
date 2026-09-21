@@ -1246,93 +1246,190 @@
 
   // --- Draft a post for X, admin only ---
   //
-  // Everything it needs is already on the page, so the text is built
-  // from the rendered facts rather than another request.
-  function tweetTextFor(root) {
-    var name = (root.querySelector('h1') || {}).textContent || '';
-    var number = root.querySelector('.days-hero-number');
-    var suffix = root.querySelector('.days-hero');
+  // Builds several ready-to-post angles from what is already on the page,
+  // then shows them in a pop-up styled like a real post so it is easy to
+  // judge how each will look before posting.
+
+  function readProductFacts(root) {
+    var text = function (sel) { var el = root.querySelector(sel); return el ? el.textContent.trim() : ''; };
     var facts = {};
     root.querySelectorAll('.key-fact').forEach(function (f) {
       var label = (f.querySelector('.key-fact-label') || {}).textContent || '';
       var value = (f.querySelector('.key-fact-value') || {}).textContent || '';
       facts[label.trim().toLowerCase()] = value.trim();
     });
-    var discontinued = facts['discontinued'];
-    var lines = [];
-    if (discontinued) {
-      lines.push(name.trim() + ' was discontinued on ' + discontinued + '.');
-      if (facts['lifespan']) lines.push('It was on sale for ' + facts['lifespan'] + '.');
-    } else if (number) {
-      var days = number.textContent.trim();
-      var latest = facts['latest release'];
-      lines.push(name.trim() + ': ' + days + ' days since Apple last updated it' + (latest ? ' (' + latest + ').' : '.'));
-      if (facts['typical cycle']) lines.push('Typical gap between updates: ' + facts['typical cycle'].toLowerCase().replace('about every ', '') + '.');
-      if (facts['was expected']) lines.push('A refresh was expected around ' + facts['was expected'] + '.');
-      else if (facts['next expected']) lines.push('Next one expected around ' + facts['next expected'] + '.');
-    } else {
-      lines.push(name.trim() + ' on Apple Sunset.');
+    var hero = root.querySelector('.days-hero');
+    var status = 'current';
+    if (hero) {
+      if (hero.className.indexOf('overdue') > -1) status = 'overdue';
+      else if (hero.className.indexOf('aging') > -1) status = 'aging';
+      else if (hero.className.indexOf('fresh') > -1) status = 'fresh';
+      else if (hero.className.indexOf('upcoming') > -1) status = 'upcoming';
     }
-    var url = window.location.origin + window.location.pathname;
-    var body = lines.join('\n\n');
-    // X counts a link as 23 characters whatever its length.
+    if (facts['discontinued']) status = 'discontinued';
+    var crumbs = root.querySelectorAll('.breadcrumbs a, nav[aria-label="Breadcrumb"] a');
+    var category = crumbs.length > 1 ? crumbs[1].textContent.trim() : '';
+    var days = text('.days-hero-number').replace(/[^0-9]/g, '');
+    return {
+      name: text('h1'),
+      days: days ? Number(days) : null,
+      status: status,
+      facts: facts,
+      category: category,
+      fact: text('.did-you-know-text'),
+    };
+  }
+
+  function hashtag(word) {
+    var clean = String(word || '').replace(/[^A-Za-z0-9]/g, '');
+    return clean ? '#' + clean : '';
+  }
+
+  // Up to three angles per product, chosen to suit its situation.
+  function postAngles(d) {
+    var n = d.days !== null ? d.days.toLocaleString('en-US') : null;
+    var tags = ['#Apple', hashtag(d.category)].filter(function (t, i, a) { return t && a.indexOf(t) === i; }).join(' ');
+    var cycle = d.facts['typical cycle'] ? d.facts['typical cycle'].toLowerCase() : '';
+    var latest = d.facts['latest release'] || '';
+    var angles = [];
+
+    if (d.status === 'discontinued') {
+      angles.push(d.name + ' was discontinued on ' + d.facts['discontinued'] + (d.facts['lifespan'] ? ', after ' + d.facts['lifespan'] + ' on sale.' : '.') + '\n\nHere\u2019s its full story, from launch to retirement.');
+      if (d.fact) angles.push('Did you know? ' + d.fact + '\n\nThe full history of the ' + d.name + ' is here.');
+      angles.push('Remember the ' + d.name + '?\n\nIt left Apple\u2019s line-up on ' + d.facts['discontinued'] + '. Here\u2019s what replaced it.');
+    } else if (d.status === 'upcoming') {
+      angles.push('The ' + d.name + ' is almost here. \u23F3\n\nEverything we know so far, including the release date and price.');
+      if (d.fact) angles.push('Did you know? ' + d.fact + '\n\nThe ' + d.name + ' arrives soon.');
+      angles.push('Counting down to the ' + d.name + '. \uD83D\uDC40\n\nRelease date, price and what\u2019s new, all in one place.');
+    } else if (d.status === 'fresh') {
+      angles.push('Fresh from Apple: the ' + d.name + (n ? ', updated just ' + n + (d.days === 1 ? ' day' : ' days') + ' ago.' : '.') + '\n\nHere\u2019s what changed.');
+      if (d.fact) angles.push('Did you know? ' + d.fact + '\n\nMore on the ' + d.name + ' here.');
+      angles.push('Thinking about a new ' + (d.category || d.name) + '?\n\nThe ' + d.name + ' is Apple\u2019s newest, so now is a good time to buy.');
+    } else {
+      var late = d.status === 'overdue';
+      angles.push(n + ' days.\n\nThat\u2019s how long the ' + d.name + ' has gone without an update' + (late ? ', and it\u2019s now past its usual refresh window.' : '.') + '\n\nIs a new one on the way? \uD83D\uDC40');
+      angles.push('When did Apple last update the ' + d.name + '?\n\n' + (latest ? latest + '. ' : '') + 'That\u2019s ' + n + ' days ago, and counting.' + (late ? '\n\nIt\u2019s overdue.' : ''));
+      if (d.fact) angles.push('Did you know? ' + d.fact + '\n\n' + d.name + ': ' + n + ' days since its last update.');
+      else if (cycle) angles.push('Apple usually refreshes the ' + d.name + ' ' + cycle.replace(/^about /, 'about ') + '.\n\nIt\u2019s now been ' + n + ' days. ' + (late ? 'Time for a new one?' : 'Worth waiting?'));
+    }
+    return angles.map(function (body) { return { body: body, tags: tags }; });
+  }
+
+  // X counts any link as 23 characters, plus a line break before it.
+  function assemblePost(angle, url) {
     var room = 280 - 24;
-    if (body.length > room) body = body.slice(0, room - 1).trim() + '\u2026';
+    var body = angle.body;
+    var withTags = angle.tags ? body + '\n\n' + angle.tags : body;
+    if (withTags.length <= room) body = withTags;
+    else if (body.length > room) body = body.slice(0, room - 1).trim() + '\u2026';
     return body + '\n' + url;
+  }
+
+  function postLength(text) {
+    var lines = text.split('\n');
+    var last = lines[lines.length - 1];
+    var isUrl = /^https?:\/\//.test(last);
+    return isUrl ? text.length - last.length + 23 : text.length;
+  }
+
+  function openPostComposer() {
+    var root = document.querySelector('.product-page') || document;
+    var data = readProductFacts(root);
+    var angles = postAngles(data);
+    var url = window.location.origin + window.location.pathname;
+    var index = 0;
+
+    var existing = document.querySelector('.post-composer');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.className = 'post-composer';
+    overlay.innerHTML =
+      '<div class="post-composer-card" role="dialog" aria-modal="true" aria-labelledby="post-composer-title">' +
+        '<div class="post-composer-head">' +
+          '<h2 id="post-composer-title">Draft a post for X</h2>' +
+          '<button type="button" class="post-composer-close" aria-label="Close">\u00D7</button>' +
+        '</div>' +
+        '<div class="post-composer-angles" role="tablist"></div>' +
+        '<div class="post-preview">' +
+          '<div class="post-preview-avatar"><img src="/logo.png" alt=""></div>' +
+          '<div class="post-preview-main">' +
+            '<p class="post-preview-who"><strong>Apple Sunset</strong> <span>@applesunset</span></p>' +
+            '<textarea class="post-preview-text" rows="7" aria-label="Post text"></textarea>' +
+          '</div>' +
+        '</div>' +
+        '<div class="post-composer-meter"><div class="post-composer-meter-bar"></div></div>' +
+        '<p class="post-composer-count"></p>' +
+        '<div class="post-composer-actions">' +
+          '<button type="button" class="intro-cta intro-cta--ghost post-copy">Copy text</button>' +
+          '<a class="intro-cta post-open" target="_blank" rel="noopener">Post on X</a>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    var area = overlay.querySelector('.post-preview-text');
+    var tabs = overlay.querySelector('.post-composer-angles');
+    var bar = overlay.querySelector('.post-composer-meter-bar');
+    var count = overlay.querySelector('.post-composer-count');
+    var openBtn = overlay.querySelector('.post-open');
+    var copyBtn = overlay.querySelector('.post-copy');
+
+    var refresh = function () {
+      var len = postLength(area.value);
+      var pct = Math.min(100, Math.round((len / 280) * 100));
+      bar.style.width = pct + '%';
+      bar.classList.toggle('is-near', len > 250 && len <= 280);
+      bar.classList.toggle('is-over', len > 280);
+      count.textContent = len + ' / 280' + (len > 280 ? ' \u2013 too long for X' : '');
+      count.classList.toggle('is-over', len > 280);
+      openBtn.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(area.value);
+      copyBtn.textContent = 'Copy text';
+    };
+
+    var show = function (i) {
+      index = i;
+      area.value = assemblePost(angles[i], url);
+      tabs.querySelectorAll('button').forEach(function (b, j) {
+        b.classList.toggle('is-active', j === i);
+        b.setAttribute('aria-selected', j === i ? 'true' : 'false');
+      });
+      refresh();
+    };
+
+    var labels = ['Headline', 'Question', 'Did you know', 'Angle 4'];
+    angles.forEach(function (a, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('role', 'tab');
+      b.textContent = labels[i] || 'Angle ' + (i + 1);
+      b.addEventListener('click', function () { show(i); });
+      tabs.appendChild(b);
+    });
+    if (angles.length < 2) tabs.style.display = 'none';
+
+    area.addEventListener('input', refresh);
+    copyBtn.addEventListener('click', function () {
+      navigator.clipboard.writeText(area.value).then(function () { copyBtn.textContent = 'Copied \u2713'; });
+    });
+
+    var close = function () {
+      overlay.remove();
+      document.removeEventListener('keydown', onKey);
+    };
+    var onKey = function (e) { if (e.key === 'Escape') close(); };
+    overlay.querySelector('.post-composer-close').addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onKey);
+
+    show(0);
+    area.focus();
   }
 
   function wireTweetButtons(buttons) {
     buttons.forEach(function (btn) {
       if (btn.dataset.wired) return;
       btn.dataset.wired = '1';
-      btn.addEventListener('click', function () {
-        var text = tweetTextFor(document.querySelector('.product-page') || document);
-        var existing = document.querySelector('.tweet-preview');
-        if (existing) existing.remove();
-        var box = document.createElement('div');
-        box.className = 'tweet-preview';
-        box.innerHTML = '<p class="tweet-preview-label">Draft post <span class="tweet-count"></span></p>';
-        var area = document.createElement('textarea');
-        area.className = 'tweet-preview-text';
-        area.rows = 6;
-        area.value = text;
-        var count = box.querySelector('.tweet-count');
-        var updateCount = function () {
-          var length = area.value.length + 24 - (area.value.split('\n').pop() || '').length;
-          count.textContent = length + ' of 280 characters';
-          count.classList.toggle('is-over', length > 280);
-        };
-        area.addEventListener('input', updateCount);
-        box.appendChild(area);
-        var row = document.createElement('div');
-        row.className = 'tweet-preview-actions';
-        var copy = document.createElement('button');
-        copy.type = 'button';
-        copy.className = 'intro-cta';
-        copy.textContent = 'Copy';
-        copy.addEventListener('click', function () {
-          navigator.clipboard.writeText(area.value).then(function () { copy.textContent = 'Copied'; });
-        });
-        var open = document.createElement('a');
-        open.className = 'intro-cta intro-cta--ghost';
-        open.target = '_blank';
-        open.rel = 'noopener';
-        open.textContent = 'Open X';
-        open.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(area.value);
-        area.addEventListener('input', function () {
-          open.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(area.value);
-        });
-        var close = document.createElement('button');
-        close.type = 'button';
-        close.className = 'intro-cta intro-cta--ghost';
-        close.textContent = 'Close';
-        close.addEventListener('click', function () { box.remove(); });
-        row.appendChild(copy); row.appendChild(open); row.appendChild(close);
-        box.appendChild(row);
-        btn.closest('.admin-tools').insertAdjacentElement('afterend', box);
-        updateCount();
-        area.focus();
-      });
+      btn.addEventListener('click', openPostComposer);
     });
   }
 
