@@ -1431,7 +1431,15 @@
     var openBtn = overlay.querySelector('.post-open');
     var copyBtn = overlay.querySelector('.post-copy');
 
+    // Grow the box to fit the whole post, so nothing has to be scrolled
+    // to read it before posting.
+    var fit = function () {
+      area.style.height = 'auto';
+      area.style.height = area.scrollHeight + 'px';
+    };
+
     var refresh = function () {
+      fit();
       var len = postLength(area.value);
       var pct = Math.min(100, Math.round((len / 280) * 100));
       bar.style.width = pct + '%';
@@ -1479,7 +1487,11 @@
     document.addEventListener('keydown', onKey);
 
     show(0);
-    area.focus();
+    // Focusing on a phone throws the keyboard up over half the preview,
+    // so only do it where there is a mouse and room to spare.
+    if (window.matchMedia && window.matchMedia('(pointer: fine)').matches) area.focus();
+    // Fonts can settle a moment after opening; re-measure once they have.
+    setTimeout(fit, 60);
   }
 
   function wireTweetButtons(buttons) {
