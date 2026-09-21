@@ -2198,6 +2198,51 @@
     });
   })();
 
+  // Works out the exact moment to count down to. An event's time is typed
+  // as free text such as "10am PT", so read the hour and time zone from it
+  // and convert to a real instant; every visitor then sees the countdown
+  // in their own local time. Products, and anything without a readable
+  // time, land at 8am local, when stores open on a launch day.
+  var ZONES = {
+    PT: 'America/Los_Angeles', PST: 'America/Los_Angeles', PDT: 'America/Los_Angeles',
+    MT: 'America/Denver', MST: 'America/Denver', MDT: 'America/Denver',
+    CT: 'America/Chicago', CST: 'America/Chicago', CDT: 'America/Chicago',
+    ET: 'America/New_York', EST: 'America/New_York', EDT: 'America/New_York',
+    UK: 'Europe/London', BST: 'Europe/London', GMT: 'UTC', UTC: 'UTC',
+    CET: 'Europe/Paris', CEST: 'Europe/Paris'
+  };
+  function zoneOffsetMs(zone, utcMs) {
+    var parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }).formatToParts(new Date(utcMs));
+    var v = {};
+    parts.forEach(function (p) { v[p.type] = p.value; });
+    var asUtc = Date.UTC(+v.year, +v.month - 1, +v.day, +v.hour % 24, +v.minute, +v.second);
+    return asUtc - utcMs;
+  }
+  function countdownTarget(dateStr, timeText) {
+    if (!dateStr) return NaN;
+    var bits = dateStr.split('-').map(Number);
+    var m = timeText && String(timeText).replace(/\./g, '').match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*([A-Za-z]{2,4})?/i);
+    if (m) {
+      var hour = +m[1], min = +(m[2] || 0), ampm = (m[3] || '').toLowerCase();
+      if (ampm === 'pm' && hour < 12) hour += 12;
+      if (ampm === 'am' && hour === 12) hour = 0;
+      var zone = m[4] ? ZONES[m[4].toUpperCase()] : null;
+      if (hour <= 23 && min <= 59) {
+        if (!zone) return new Date(bits[0], bits[1] - 1, bits[2], hour, min).getTime();
+        try {
+          var guess = Date.UTC(bits[0], bits[1] - 1, bits[2], hour, min);
+          var first = guess - zoneOffsetMs(zone, guess);
+          // Re-check once in case the date sits on a clock change.
+          return guess - zoneOffsetMs(zone, first);
+        } catch (e) { /* unknown zone: fall through */ }
+      }
+    }
+    return new Date(bits[0], bits[1] - 1, bits[2], 8, 0).getTime();
+  }
+
   (function countdown() {
     function unit(value, label, isSeconds) {
       return '<span class="countdown-unit' + (isSeconds ? ' countdown-unit--secs' : '') + '">' +
@@ -2207,7 +2252,7 @@
     function render(el) {
       var clock = el.querySelector('[data-countdown-clock]');
       if (!clock) return;
-      var target = new Date(el.getAttribute('data-countdown') + 'T09:00:00').getTime();
+      var target = countdownTarget(el.getAttribute('data-countdown'), el.getAttribute('data-countdown-time'));
       if (!target || isNaN(target)) return;
       var left = target - Date.now();
       if (left <= 0) {

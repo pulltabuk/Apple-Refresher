@@ -1214,7 +1214,7 @@ function countdownHtml(countdown) {
   return items.map((item) => {
     const target = new Date(item.date + 'T09:00:00');
     const days = Math.max(0, Math.ceil((target.getTime() - Date.now()) / 86400000));
-    return `<a class="countdown" href="${item.href}" data-countdown="${escapeHtml(item.date)}">
+    return `<a class="countdown" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''}>
     <span class="countdown-label">Counting down to</span>
     <span class="countdown-name">${escapeHtml(item.label)}</span>
     <span class="countdown-clock" data-countdown-clock>
