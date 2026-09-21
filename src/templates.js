@@ -1705,13 +1705,13 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     </div>
   </div>
 
+  ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note, siteUrl)}</div></div>` : ''}
+
   ${releaseHistorySection}
 
   ${timelineCoversOnlyThisProduct ? '' : generationsSectionHtml(product)}
 
   ${relatedProductsHtml(product, productsBySlug, statusBySlug)}
-
-  ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note, siteUrl)}</div></div>` : ''}
 
   ${relatedPhotos.length ? `<h2>From the gallery</h2>
   <div class="gallery-strip">

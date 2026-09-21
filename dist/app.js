@@ -757,6 +757,36 @@
     return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> ' + (info.days === 1 ? 'day' : 'days') + ' ' + info.suffix + '</p>';
   }
 
+  // Must stay in step with relatedProductsHtml() in src/templates.js.
+  // Without this the live refresh wiped the family section off the page.
+  function relatedProductsHtmlJS(product, productsBySlug) {
+    if (!productsBySlug) return '';
+    var siblings = Object.keys(productsBySlug)
+      .map(function (k) { return productsBySlug[k]; })
+      .filter(function (p) { return p.slug !== product.slug && (p.category || '') === (product.category || ''); })
+      .sort(function (a, b) {
+        if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, 6);
+    if (!siblings.length) return '';
+    var cards = siblings.map(function (p) {
+      var st = p.discontinued ? null : computeStatusJS(p);
+      var line = p.discontinued
+        ? 'Discontinued' + (p.discontinued_date ? ' ' + formatDateJS(p.discontinued_date) : '')
+        : st ? pluralJS(st.daysSince, 'day', 'days') + ' since refresh' : '';
+      return '<a class="related-card" href="/products/' + p.slug + '/">' +
+        '<span class="related-card-icon">' + productIconJS(p, 28) + '</span>' +
+        '<span class="related-card-text"><span class="related-card-name">' + escapeHtmlJS(p.name) + '</span>' +
+        (line ? '<span class="related-card-line">' + line + '</span>' : '') + '</span></a>';
+    }).join('');
+    var cat = product.category || 'this family';
+    return '<section class="related-section"><h2>More in ' + escapeHtmlJS(cat) + '</h2>' +
+      '<div class="related-grid">' + cards + '</div>' +
+      '<p class="see-all"><a class="intro-cta" href="/categories/' + slugifyJS(product.category || 'other') + '/">All ' +
+      escapeHtmlJS(product.category || 'products') + ' &rarr;</a></p></section>';
+  }
+
   function productBodyHtmlJS(product, status, productsBySlug, galleryPhotos) {
     var sortedDates = sortedHistoryJS(product);
     var launch = product.original_launch_date || sortedDates[0] || null;
@@ -851,11 +881,12 @@
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
         '</div>' +
       '</div>' +
+      (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
       releaseHistorySection +
       (timelinePoints.every(function (pt) { return pt.productName === product.name; })
         && !productGenerationsJS(product).some(function (g) { return g.announced; })
         ? '' : generationsSectionHtmlJS(product)) +
-      (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
+      relatedProductsHtmlJS(product, productsBySlug) +
       (relatedPhotos.length ? '<h2>From the gallery</h2><div class="gallery-strip">' + relatedPhotos.map(galleryStripItemHtmlJS).join('') + '</div>' : '')
     );
   }
