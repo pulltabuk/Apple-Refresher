@@ -1406,7 +1406,10 @@ label.admin-btn { cursor: pointer; color: #fff; }
     display: inline-flex; align-items: center; justify-content: center;
   }
   .site-nav a, .intro-cta, .admin-btn, .sort-select, .generation-edit, .generation-remove { min-height: 44px; }
-  .pill { min-height: 40px; padding-top: 6px; padding-bottom: 6px; }
+  /* Pills stay slim to look at, but an invisible margin around each one
+     still catches a finger, so they remain easy to tap. */
+  .pill { min-height: 26px; padding-top: 4px; padding-bottom: 4px; position: relative; }
+  .pill::before { content: ''; position: absolute; inset: -8px -4px; }
   .generation-edit, .generation-remove { padding: 10px 8px; }
   .admin-btn { padding-top: 11px; padding-bottom: 11px; }
 }
