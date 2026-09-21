@@ -598,18 +598,39 @@ function pageIntroHtml(pageContent, siteUrl, position) {
 // A sentence built from the family's own data. It costs nothing to
 // maintain because every build works it out again from the dates.
 function categoryStatsSentence(category, items) {
-  const withStatus = items.filter((i) => i.status && !i.product.discontinued);
-  const cycles = withStatus.map((i) => i.status.avgCycleDays).filter((d) => d > 0);
-  if (!cycles.length) return '';
-  const avg = Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length);
-  const cycleText = avg >= 330
-    ? `about every ${Math.round(avg / 365.25) === 1 ? 'year' : Math.round(avg / 365.25) + ' years'}`
-    : `about every ${Math.round(avg / 30.4)} months`;
-  const longest = withStatus.slice().sort((a, b) => b.status.daysSince - a.status.daysSince)[0];
-  const newest = withStatus.slice().sort((a, b) => a.status.daysSince - b.status.daysSince)[0];
-  const parts = [`Apple refreshes ${escapeHtml(category)} ${cycleText} on average.`];
-  if (newest) parts.push(`The most recently updated is ${escapeHtml(newest.product.name)}, ${plural(newest.status.daysSince, 'day', 'days')} ago.`);
-  if (longest && longest !== newest) parts.push(`${escapeHtml(longest.product.name)} has waited longest, at ${plural(longest.status.daysSince, 'day', 'days')}.`);
+  // Measured across the whole family, since that is where the real
+  // history lives: one product usually has a single release date, and a
+  // single date has no gap to measure. Earlier this fell back to a
+  // built-in default and presented it as fact, which could claim yearly
+  // updates on a line that had waited years.
+  const dates = Array.from(new Set(
+    items.flatMap((i) => i.product.refresh_history || [])
+  )).sort();
+  const today = new Date().toISOString().slice(0, 10);
+  const past = dates.filter((d) => d <= today);
+  if (past.length < 2) return '';
+
+  const toDays = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
+  const avg = Math.round(toDays(past[0], past[past.length - 1]) / (past.length - 1));
+  const sinceLast = toDays(past[past.length - 1], today);
+  // Half-year precision reads naturally ("every 3½ years") without
+  // rounding 3.5 up to a misleading 4.
+  const cadence = (d) => {
+    if (d < 330) return `roughly every ${Math.max(1, Math.round(d / 30.4))} months`;
+    const years = Math.round((d / 365.25) * 2) / 2;
+    if (years === 1) return 'about once a year';
+    const whole = Math.floor(years);
+    return `roughly every ${years % 1 ? whole + '\u00bd' : whole} years`;
+  };
+
+  const parts = [`Across ${past.length} releases, Apple has updated ${escapeHtml(category)} ${cadence(avg)}.`];
+  if (sinceLast > avg * 1.25) {
+    parts.push(`It has now been ${plural(sinceLast, 'day', 'days')} since the last one, well past the usual gap.`);
+  } else if (sinceLast > avg) {
+    parts.push(`It has now been ${plural(sinceLast, 'day', 'days')}, a little beyond the usual gap.`);
+  } else {
+    parts.push(`The last update was ${plural(sinceLast, 'day', 'days')} ago, so the next is not due yet.`);
+  }
   return `<p class="page-stats">${parts.join(' ')}</p>`;
 }
 
@@ -1658,6 +1679,8 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
 
       <div class="product-facts">${heroStatHtml(product, status)}${keyFacts}</div>
 
+      ${product.did_you_know ? `<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><p class="did-you-know-text">${escapeHtml(product.did_you_know)}</p></aside>` : ''}
+
       <dl class="spec-list spec-list--secondary">
         ${specs}
       </dl>
@@ -1890,6 +1913,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               </div>
               <input type="text" id="price" placeholder="799" inputmode="decimal" autocomplete="off">
             </div>
+          </div>
+
+          <div class="admin-subfield">
+            <label><span class="admin-label-row">Did you know? <span class="admin-optional">Optional, shown near the top of the product page</span></span><textarea id="did_you_know" rows="2" maxlength="320" placeholder="One short, surprising fact about this product."></textarea></label>
           </div>
 
           <div class="admin-subfield">

@@ -1734,3 +1734,21 @@ body.is-admin .site-search { display: none; }
   }
   .controls-row { flex-direction: column; align-items: stretch; }
 }
+
+/* "Did you know?" callout near the top of a product page */
+.did-you-know {
+  margin: 1.25rem 0;
+  padding: 14px 18px;
+  border-left: 4px solid var(--accent);
+  background: var(--accent-bg);
+  border-radius: 0 10px 10px 0;
+}
+.did-you-know-label {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-dark);
+}
+.did-you-know-text { margin: 0; font-size: 16px; line-height: 1.5; color: var(--text); }

@@ -1532,6 +1532,7 @@
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
     document.getElementById('in_countdown').checked = !!p.in_countdown;
+    document.getElementById('did_you_know').value = p.did_you_know || '';
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     document.getElementById('is_new_launch').checked = !!p.is_new_launch;
     currentRefreshHistory = (p.refresh_history || []).slice().sort();
@@ -1821,6 +1822,7 @@
         })(),
         featured: document.getElementById('featured').checked,
         in_countdown: document.getElementById('in_countdown').checked,
+        did_you_know: document.getElementById('did_you_know').value.trim() || null,
         days_basis: document.querySelector('input[name="days_basis"]:checked').value,
         is_new_launch: document.getElementById('is_new_launch').checked,
         previous_model: document.getElementById('previous_model').value || null,
@@ -1837,7 +1839,7 @@
 
       if (result.error) {
         console.error('Save failed:', result.error);
-        const missingColumns = /generation_details|icon_url|specs_url|press_release_url|in_countdown/.test(result.error.message || '');
+        const missingColumns = /generation_details|icon_url|specs_url|press_release_url|in_countdown|did_you_know/.test(result.error.message || '');
         window.alert(missingColumns
           ? 'Save failed because the database hasn\u2019t been updated yet. Run the latest supabase-schema-update SQL file in the Supabase SQL editor, then save again.'
           : 'Save failed: ' + result.error.message);

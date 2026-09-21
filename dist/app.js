@@ -844,6 +844,7 @@
             '</div>' +
           '</div>' +
           '<div class="product-facts">' + heroStatHtmlJS(product, status) + keyFacts + '</div>' +
+          (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><p class="did-you-know-text">' + escapeHtmlJS(product.did_you_know) + '</p></aside>' : '') +
           '<dl class="spec-list spec-list--secondary">' + specs + '</dl>' +
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
         '</div>' +
@@ -1869,6 +1870,9 @@
         productPageEl.innerHTML = productBodyHtmlJS(product, status, bySlug, galleryPhotos);
         wireWaitButtons(productPageEl.querySelectorAll('.wait-btn'));
         revealAdminEditLinks(productPageEl.querySelectorAll('.admin-edit-link'));
+        // The re-render replaces the button, so its click handler must be
+        // attached again or it shows but does nothing.
+        wireTweetButtons(productPageEl.querySelectorAll('.tweet-btn'));
         document.title = product.name + ' \u2014 Apple Sunset';
       })
       .catch(function () {});
