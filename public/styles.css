@@ -1511,37 +1511,6 @@ label.admin-btn { cursor: pointer; color: #fff; }
   .filter-row-merged { gap: 6px; }
 }
 
-/* Family/decade pills are secondary to the status pills, so they read
-   quieter and sit on one scrollable row instead of wrapping into a
-   second dense block. Markup and filter JS are unchanged, this is
-   purely visual. */
-.filter-row-merged .filter-bar[data-filter-key="category"],
-.filter-bar[data-filter-key="decade"] {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  -webkit-overflow-scrolling: touch;
-}
-.filter-row-merged .filter-bar[data-filter-key="category"] .filter-btn,
-.filter-bar[data-filter-key="decade"] .filter-btn {
-  flex-shrink: 0;
-  background: transparent;
-  border-color: var(--border);
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-.filter-row-merged .filter-bar[data-filter-key="category"] .filter-btn:hover,
-.filter-bar[data-filter-key="decade"] .filter-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent-dark);
-  background: var(--accent-bg);
-}
-.filter-row-merged .filter-bar[data-filter-key="category"] .filter-btn.active,
-.filter-bar[data-filter-key="decade"] .filter-btn.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
 @media (max-width: 600px) {
   .controls-row { margin-top: 0.75rem; gap: 8px; }
 }
@@ -1817,3 +1786,74 @@ body.is-admin .site-search { display: none; }
   .post-composer-actions .intro-cta { flex: 1; text-align: center; }
 }
 @media (prefers-reduced-motion: reduce) { .post-composer { animation: none; } }
+
+/* All Products / Discontinued filters.
+   Two labelled groups in brand colours. Every chip is visible at once,
+   wrapping onto a second line when needed rather than hiding off the
+   edge of the screen. On phones the families become a single picker. */
+.filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 1rem 0 1.5rem;
+  padding: 16px 18px;
+  background: var(--accent-bg);
+  border: 1px solid #efd9c7;
+  border-radius: 14px;
+}
+.filter-group { display: flex; align-items: flex-start; gap: 12px; }
+.filter-group-label {
+  flex: 0 0 64px;
+  padding-top: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-dark);
+}
+.filter-panel .filter-bar { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
+.filter-panel .filter-btn {
+  background: #fff;
+  border: 1px solid var(--accent);
+  color: var(--accent-dark);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 13px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.filter-panel .filter-btn:hover { background: var(--accent); color: #fff; }
+.filter-panel .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.filter-panel .filter-btn.active .filter-btn-count,
+.filter-panel .filter-btn:hover .filter-btn-count { color: rgba(255, 255, 255, 0.85); }
+.filter-panel .filter-btn-count { color: var(--accent); font-weight: 500; }
+.filter-panel .filter-btn:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
+
+.family-select-wrap { display: none; flex: 1; }
+.family-select {
+  width: 100%;
+  padding: 11px 40px 11px 14px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-dark);
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c4009' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 17px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* The decade filter on the Discontinued page gets the same treatment */
+.filter-bar[data-filter-key="decade"] { display: flex; flex-wrap: wrap; gap: 7px; }
+
+@media (max-width: 700px) {
+  .filter-panel { padding: 14px; gap: 10px; }
+  .filter-group { flex-direction: column; gap: 6px; }
+  .filter-group-label { flex: none; padding-top: 0; }
+  .filter-panel .filter-bar[data-filter-key="category"] { display: none; }
+  .family-select-wrap { display: block; width: 100%; }
+}

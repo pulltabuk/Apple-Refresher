@@ -844,6 +844,8 @@
             '</div>' +
           '</div>' +
           '<div class="product-facts">' + heroStatHtmlJS(product, status) + keyFacts + '</div>' +
+          (product.discontinued ? '' : familyCadenceJS(product.category || 'this family',
+            allProducts.filter(function (p) { return (p.category || '') === (product.category || ''); }))) +
           (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><p class="did-you-know-text">' + escapeHtmlJS(product.did_you_know) + '</p></aside>' : '') +
           '<dl class="spec-list spec-list--secondary">' + specs + '</dl>' +
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
@@ -856,6 +858,34 @@
       (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
       (relatedPhotos.length ? '<h2>From the gallery</h2><div class="gallery-strip">' + relatedPhotos.map(galleryStripItemHtmlJS).join('') + '</div>' : '')
     );
+  }
+
+  // Must stay in step with categoryStatsSentence() in src/templates.js.
+  function familyCadenceJS(category, familyProducts) {
+    var seen = {}, dates = [];
+    familyProducts.forEach(function (p) {
+      (p.refresh_history || []).forEach(function (d) { if (!seen[d]) { seen[d] = 1; dates.push(d); } });
+    });
+    dates.sort();
+    var today = new Date().toISOString().slice(0, 10);
+    var past = dates.filter(function (d) { return d <= today; });
+    if (past.length < 2) return '';
+    var toDays = function (a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); };
+    var avg = Math.round(toDays(past[0], past[past.length - 1]) / (past.length - 1));
+    var sinceLast = toDays(past[past.length - 1], today);
+    var cadence = function (d) {
+      if (d < 330) return 'roughly every ' + Math.max(1, Math.round(d / 30.4)) + ' months';
+      var years = Math.round((d / 365.25) * 2) / 2;
+      if (years === 1) return 'about once a year';
+      var whole = Math.floor(years);
+      return 'roughly every ' + (years % 1 ? whole + '\u00bd' : whole) + ' years';
+    };
+    var plural = function (n) { return n + (n === 1 ? ' day' : ' days'); };
+    var text = 'Across ' + past.length + ' releases, Apple has updated ' + escapeHtmlJS(category) + ' ' + cadence(avg) + '. ';
+    if (sinceLast > avg * 1.25) text += 'It has now been ' + plural(sinceLast) + ' since the last one, well past the usual gap.';
+    else if (sinceLast > avg) text += 'It has now been ' + plural(sinceLast) + ', a little beyond the usual gap.';
+    else text += 'The last update was ' + plural(sinceLast) + ' ago, so the next is not due yet.';
+    return '<p class="page-stats">' + text + '</p>';
   }
 
   function fetchAllProductsJS() {
@@ -1133,6 +1163,33 @@
   }
 
   wireFilterBars();
+
+  // The mobile family picker drives the same buttons the desktop chips
+  // use, so there is one source of truth for what is filtered.
+  (function familySelect() {
+    var select = document.querySelector('[data-family-select]');
+    var bar = document.querySelector('.filter-bar[data-filter-key="category"]');
+    if (!select || !bar) return;
+    select.addEventListener('change', function () {
+      var active = bar.querySelector('.filter-btn.active');
+      if (!select.value) {
+        if (active) active.click();
+        return;
+      }
+      var target = Array.prototype.find.call(bar.querySelectorAll('.filter-btn'), function (b) {
+        return b.getAttribute('data-filter-value') === select.value;
+      });
+      if (target && !target.classList.contains('active')) target.click();
+    });
+    // Keep the picker in step when a chip or the status "All" resets it.
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest || !e.target.closest('.filter-btn')) return;
+      setTimeout(function () {
+        var active = bar.querySelector('.filter-btn.active');
+        select.value = active ? active.getAttribute('data-filter-value') : '';
+      }, 0);
+    });
+  })();
   var everythingBtn = document.getElementById('everything-btn');
   if (everythingBtn) {
     everythingBtn.addEventListener('click', function () {

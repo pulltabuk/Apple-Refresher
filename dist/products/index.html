@@ -66,14 +66,18 @@
     <button type="button" id="sort-reset-btn" class="sort-reset-btn" aria-label="Reset sort order" title="Reset to default order" style="display:none;">&times;</button>
   </div>
 </div>
-<div class="filter-row-merged">
-  <div class="filter-bar" data-filter-key="status">
+<div class="filter-panel">
+  <div class="filter-group">
+    <span class="filter-group-label">Show</span>
+    <div class="filter-bar" data-filter-key="status">
   <button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">(11)</span></button>
   <button class="filter-btn" data-filter-value="current">Current <span class="filter-btn-count">(8)</span></button>
 <button class="filter-btn" data-filter-value="discontinued">Discontinued <span class="filter-btn-count">(3)</span></button>
 </div>
-  <span class="filter-divider" aria-hidden="true"></span>
-  <div class="filter-bar" data-filter-key="category">
+  </div>
+  <div class="filter-group">
+    <span class="filter-group-label">Family</span>
+    <div class="filter-bar" data-filter-key="category">
   
   <button class="filter-btn" data-filter-value="AirPods">AirPods <span class="filter-btn-count">(3)</span></button>
 <button class="filter-btn" data-filter-value="Apple Watch">Apple Watch <span class="filter-btn-count">(1)</span></button>
@@ -82,6 +86,18 @@
 <button class="filter-btn" data-filter-value="Mac">Mac <span class="filter-btn-count">(3)</span></button>
 <button class="filter-btn" data-filter-value="Other">Other <span class="filter-btn-count">(2)</span></button>
 </div>
+    <div class="family-select-wrap">
+      <select class="family-select" data-family-select aria-label="Filter by family">
+        <option value="">All families</option>
+        <option value="AirPods">AirPods (3)</option>
+        <option value="Apple Watch">Apple Watch (1)</option>
+        <option value="iPad">iPad (1)</option>
+        <option value="iPhone">iPhone (1)</option>
+        <option value="Mac">Mac (3)</option>
+        <option value="Other">Other (2)</option>
+      </select>
+    </div>
+  </div>
 </div>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="all">

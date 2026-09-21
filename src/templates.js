@@ -1325,10 +1325,21 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
   <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
-<div class="filter-row-merged">
-  ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length, true, 'All')}
-  <span class="filter-divider" aria-hidden="true"></span>
-  ${filterBar('category', categories, null, categoryCounts, items.length, false)}
+<div class="filter-panel">
+  <div class="filter-group">
+    <span class="filter-group-label">Show</span>
+    ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length, true, 'All')}
+  </div>
+  <div class="filter-group">
+    <span class="filter-group-label">Family</span>
+    ${filterBar('category', categories, null, categoryCounts, items.length, false)}
+    <div class="family-select-wrap">
+      <select class="family-select" data-family-select aria-label="Filter by family">
+        <option value="">All families</option>
+        ${categories.map((c, i) => `<option value="${escapeHtml(c)}">${escapeHtml(c)} (${categoryCounts[i]})</option>`).join('\n        ')}
+      </select>
+    </div>
+  </div>
 </div>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="all">
@@ -1678,6 +1689,9 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
       </div>
 
       <div class="product-facts">${heroStatHtml(product, status)}${keyFacts}</div>
+
+      ${product.discontinued ? '' : categoryStatsSentence(product.category || 'this family',
+          allProducts.filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })))}
 
       ${product.did_you_know ? `<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><p class="did-you-know-text">${escapeHtml(product.did_you_know)}</p></aside>` : ''}
 
