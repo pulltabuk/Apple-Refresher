@@ -14,7 +14,20 @@ const DEFAULT_ABOUT = {
 // sitemap and RSS is built from this, so it must be the real domain and
 // never the netlify.app address, or Google treats the two as rival
 // copies of the same site and may rank neither.
-const SITE_URL = (process.env.SITE_URL || 'https://applesunset.com').replace(/\/+$/, '');
+// The public domain every canonical tag, share link and sitemap entry
+// points at. A netlify.app address is never the right answer here, since
+// that host only exists to redirect to the real one, so it is ignored
+// even if the SITE_URL variable still holds it.
+const CANONICAL_DOMAIN = 'https://applesunset.com';
+const SITE_URL = (() => {
+  const fromEnv = (process.env.SITE_URL || '').trim().replace(/\/+$/, '');
+  if (!fromEnv) return CANONICAL_DOMAIN;
+  if (/\.netlify\.app$/i.test(fromEnv.replace(/^https?:\/\//, ''))) {
+    console.warn(`SITE_URL is set to ${fromEnv}, which only redirects. Using ${CANONICAL_DOMAIN} instead.`);
+    return CANONICAL_DOMAIN;
+  }
+  return fromEnv;
+})();
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
