@@ -167,9 +167,9 @@
       var onMarket = g.end ? lifespanTextJS(g.date, g.end) + (g.isCurrent ? ' so far' : '') : '\u2013';
       return '<tr class="generation-row' + (g.isCurrent ? ' generation-row--current' : '') + '">' +
         '<td class="generation-name">' + escapeHtmlJS(g.name) + (g.isCurrent ? ' <span class="generation-current-pill">Current</span>' : '') + '</td>' +
-        (showAnnounced ? '<td>' + (g.announced ? formatDateJS(g.announced) : '\u2013') + '</td>' : '') +
-        '<td>' + formatDateJS(g.date) + '</td>' +
-        '<td>' + onMarket + '</td>' +
+        (showAnnounced ? '<td data-label="Announced">' + (g.announced ? formatDateJS(g.announced) : '\u2013') + '</td>' : '') +
+        '<td data-label="Released">' + formatDateJS(g.date) + '</td>' +
+        '<td data-label="Time on market">' + onMarket + '</td>' +
         '</tr>';
     }).join('');
     return '<h2>Generations</h2><div class="generations-table-wrap"><table class="generations-table">' +
@@ -758,6 +758,13 @@
     return product.name + (isWiki ? ' (Wiki)' : '');
   }
 
+  // Must stay in step with heroCycle() in src/templates.js.
+  function heroCycleJS(product, status, sortedDates, allProducts) {
+    if (sortedDates.length > 1 && status) return { days: status.avgCycleDays, family: null };
+    var avg = familyAvgCycleJS((allProducts || []).filter(function (p) { return (p.category || '') === (product.category || ''); }));
+    return avg ? { days: avg, family: product.category || null } : null;
+  }
+
   function heroStatHtmlJS(product, statusInfo, cycleDays) {
     if (product.discontinued) {
       var date = product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '';
@@ -770,12 +777,14 @@
       return '<p class="days-hero days-hero--upcoming"><span class="days-hero-label">Coming</span> <span class="days-hero-soon">' + (due ? formatDateJS(due) : 'soon') + '</span></p>';
     }
     var bar = '';
-    if (cycleDays && cycleDays > 0) {
-      var pct = Math.max(2, Math.min(100, Math.round((info.days / cycleDays) * 100)));
-      var over = info.days > cycleDays;
+    if (cycleDays && cycleDays.days > 0) {
+      var gap = cycleDays.days;
+      var pct = Math.max(2, Math.min(100, Math.round((info.days / gap) * 100)));
+      var over = info.days > gap;
+      var whose = cycleDays.family ? 'the ' + escapeHtmlJS(cycleDays.family) + " line's usual" : 'its usual';
       var caption = over
-        ? pluralJS(info.days - cycleDays, 'day', 'days') + ' past its usual ' + pluralJS(cycleDays, 'day', 'days') + ' between updates'
-        : 'about ' + pluralJS(cycleDays - info.days, 'day', 'days') + ' until its usual ' + pluralJS(cycleDays, 'day', 'days') + ' between updates';
+        ? pluralJS(info.days - gap, 'day', 'days') + ' past ' + whose + ' ' + pluralJS(gap, 'day', 'days') + ' between updates'
+        : 'about ' + pluralJS(gap - info.days, 'day', 'days') + ' until ' + whose + ' ' + pluralJS(gap, 'day', 'days') + ' between updates';
       bar = '<span class="days-hero-track" role="img" aria-label="' + escapeHtmlJS(caption) + '">' +
         '<span class="days-hero-fill' + (over ? ' is-over' : '') + '" style="width:' + pct + '%"></span></span>' +
         '<span class="days-hero-caption">' + caption + '</span>';
@@ -899,7 +908,7 @@
               '<button type="button" class="admin-edit-link tweet-btn" data-slug="' + product.slug + '" style="display:none;">Draft a post for X</button>' +
             '</div>' +
           '</div>' +
-          '<div class="product-facts">' + heroStatHtmlJS(product, status, (sortedDates.length > 1 && status) ? status.avgCycleDays : null) + keyFacts + '</div>' +
+          '<div class="product-facts">' + heroStatHtmlJS(product, status, heroCycleJS(product, status, sortedDates, allProducts)) + keyFacts + '</div>' +
           (product.discontinued ? '' : familyCadenceJS(product.category || 'this family',
             allProducts.filter(function (p) { return (p.category || '') === (product.category || ''); }))) +
           (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><p class="did-you-know-text">' + escapeHtmlJS(product.did_you_know) + '</p></aside>' : '') +
@@ -1863,10 +1872,11 @@
     var place = [photo.location, photo.country].filter(Boolean).map(function (t) {
       return '<span class="pill pill--location">' + escapeHtmlJS(t) + '</span>';
     }).join('');
-    var count = images.length > 1 ? '<span class="pill pill--count">' + images.length + ' photos</span>' : '';
-    return '<a class="gallery-strip-item" href="/gallery/' + galleryPhotoSlugJS(photo) + '/">' + media +
+    var count = images.length > 1 ? '<span class="gallery-strip-count">' + images.length + ' photos</span>' : '';
+    return '<a class="gallery-strip-item" href="/gallery/' + galleryPhotoSlugJS(photo) + '/">' +
+      '<span class="gallery-strip-media">' + media + count + '</span>' +
       '<span class="gallery-strip-caption">' + escapeHtmlJS(displayName) + '</span>' +
-      (place || count ? '<span class="gallery-strip-pills">' + place + count + '</span>' : '') + '</a>';
+      (place ? '<span class="gallery-strip-pills">' + place + '</span>' : '') + '</a>';
   }
 
   function galleryTagLinkJS(value, extraClass) {

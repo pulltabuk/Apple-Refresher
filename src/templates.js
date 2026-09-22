@@ -255,9 +255,9 @@ function generationsSectionHtml(product) {
     const onMarket = g.end ? `${lifespanText(g.date, g.end)}${g.isCurrent ? ' so far' : ''}` : '\u2013';
     return `<tr class="generation-row${g.isCurrent ? ' generation-row--current' : ''}">
     <td class="generation-name">${escapeHtml(g.name)}${g.isCurrent ? ' <span class="generation-current-pill">Current</span>' : ''}</td>
-    ${showAnnounced ? `<td>${g.announced ? formatDate(g.announced) : '\u2013'}</td>` : ''}
-    <td>${formatDate(g.date)}</td>
-    <td>${onMarket}</td>
+    ${showAnnounced ? `<td data-label="Announced">${g.announced ? formatDate(g.announced) : '\u2013'}</td>` : ''}
+    <td data-label="Released">${formatDate(g.date)}</td>
+    <td data-label="Time on market">${onMarket}</td>
   </tr>`;
   }).join('\n');
   return `<h2>Generations</h2>
@@ -1191,11 +1191,11 @@ function galleryStripItemHtml(photo) {
     : `<span class="gallery-strip-single">${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}</span>`;
   const place = [photo.location, photo.country].filter(Boolean)
     .map((t) => `<span class="pill pill--location">${escapeHtml(t)}</span>`).join('');
-  const count = images.length > 1 ? `<span class="pill pill--count">${images.length} photos</span>` : '';
+  const count = images.length > 1 ? `<span class="gallery-strip-count">${images.length} photos</span>` : '';
   return `<a class="gallery-strip-item" href="/gallery/${galleryPhotoSlug(photo)}/">
-    ${media}
+    <span class="gallery-strip-media">${media}${count}</span>
     <span class="gallery-strip-caption">${escapeHtml(displayName)}</span>
-    ${place || count ? `<span class="gallery-strip-pills">${place}${count}</span>` : ''}
+    ${place ? `<span class="gallery-strip-pills">${place}</span>` : ''}
   </a>`;
 }
 
@@ -1689,6 +1689,15 @@ function specRow(label, valueHtml) {
   return valueHtml ? `<div class="spec-row"><dt>${label}</dt><dd>${valueHtml}</dd></div>` : '';
 }
 
+function heroCycle(product, status, sortedDates, allProducts) {
+  // The product's own gaps when it has enough history, otherwise the
+  // family's real gaps, labelled so it is clear which is being shown.
+  // Never the built-in category default, which is a guess.
+  if (sortedDates.length > 1 && status) return { days: status.avgCycleDays, family: null };
+  const fam = familyCadence((allProducts || []).filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })));
+  return fam ? { days: fam.avg, family: product.category || null } : null;
+}
+
 function heroStatHtml(product, statusInfo, cycleDays) {
   if (product.discontinued) {
     const date = product.discontinued_date ? ` ${formatDate(product.discontinued_date)}` : '';
@@ -1704,13 +1713,14 @@ function heroStatHtml(product, statusInfo, cycleDays) {
   // gives the big number something to be measured against, and uses the
   // space the number alone leaves empty.
   let bar = '';
-  if (cycleDays && cycleDays > 0) {
-    const pct = Math.max(2, Math.min(100, Math.round((info.days / cycleDays) * 100)));
-    const over = info.days > cycleDays;
-    const left = cycleDays - info.days;
+  if (cycleDays && cycleDays.days > 0) {
+    const gap = cycleDays.days;
+    const pct = Math.max(2, Math.min(100, Math.round((info.days / gap) * 100)));
+    const over = info.days > gap;
+    const whose = cycleDays.family ? `the ${escapeHtml(cycleDays.family)} line's usual` : 'its usual';
     const caption = over
-      ? `${plural(info.days - cycleDays, 'day', 'days')} past its usual ${plural(cycleDays, 'day', 'days')} between updates`
-      : `about ${plural(left, 'day', 'days')} until its usual ${plural(cycleDays, 'day', 'days')} between updates`;
+      ? `${plural(info.days - gap, 'day', 'days')} past ${whose} ${plural(gap, 'day', 'days')} between updates`
+      : `about ${plural(gap - info.days, 'day', 'days')} until ${whose} ${plural(gap, 'day', 'days')} between updates`;
     bar = `<span class="days-hero-track" role="img" aria-label="${escapeHtml(caption)}"><span class="days-hero-fill${over ? ' is-over' : ''}" style="width:${pct}%"></span></span>
       <span class="days-hero-caption">${caption}</span>`;
   }
@@ -1836,7 +1846,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
         </div>
       </div>
 
-      <div class="product-facts">${heroStatHtml(product, status, sortedDates.length > 1 && status ? status.avgCycleDays : null)}${keyFacts}</div>
+      <div class="product-facts">${heroStatHtml(product, status, heroCycle(product, status, sortedDates, allProducts))}${keyFacts}</div>
 
       ${product.discontinued ? '' : categoryStatsSentence(product.category || 'this family',
           allProducts.filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })))}
