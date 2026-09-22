@@ -758,7 +758,7 @@
     return product.name + (isWiki ? ' (Wiki)' : '');
   }
 
-  function heroStatHtmlJS(product, statusInfo) {
+  function heroStatHtmlJS(product, statusInfo, cycleDays) {
     if (product.discontinued) {
       var date = product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '';
       return '<p class="days-hero days-hero--discontinued">Discontinued' + date + '</p>';
@@ -769,7 +769,18 @@
       var due = (product.refresh_history || []).slice().sort().pop();
       return '<p class="days-hero days-hero--upcoming"><span class="days-hero-label">Coming</span> <span class="days-hero-soon">' + (due ? formatDateJS(due) : 'soon') + '</span></p>';
     }
-    return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> ' + (info.days === 1 ? 'day' : 'days') + ' ' + info.suffix + '</p>';
+    var bar = '';
+    if (cycleDays && cycleDays > 0) {
+      var pct = Math.max(2, Math.min(100, Math.round((info.days / cycleDays) * 100)));
+      var over = info.days > cycleDays;
+      var caption = over
+        ? pluralJS(info.days - cycleDays, 'day', 'days') + ' past its usual ' + pluralJS(cycleDays, 'day', 'days') + ' between updates'
+        : 'about ' + pluralJS(cycleDays - info.days, 'day', 'days') + ' until its usual ' + pluralJS(cycleDays, 'day', 'days') + ' between updates';
+      bar = '<span class="days-hero-track" role="img" aria-label="' + escapeHtmlJS(caption) + '">' +
+        '<span class="days-hero-fill' + (over ? ' is-over' : '') + '" style="width:' + pct + '%"></span></span>' +
+        '<span class="days-hero-caption">' + caption + '</span>';
+    }
+    return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> ' + (info.days === 1 ? 'day' : 'days') + ' ' + info.suffix + bar + '</p>';
   }
 
   // Must stay in step with relatedProductsHtml() in src/templates.js.
@@ -888,7 +899,7 @@
               '<button type="button" class="admin-edit-link tweet-btn" data-slug="' + product.slug + '" style="display:none;">Draft a post for X</button>' +
             '</div>' +
           '</div>' +
-          '<div class="product-facts">' + heroStatHtmlJS(product, status) + keyFacts + '</div>' +
+          '<div class="product-facts">' + heroStatHtmlJS(product, status, (sortedDates.length > 1 && status) ? status.avgCycleDays : null) + keyFacts + '</div>' +
           (product.discontinued ? '' : familyCadenceJS(product.category || 'this family',
             allProducts.filter(function (p) { return (p.category || '') === (product.category || ''); }))) +
           (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><p class="did-you-know-text">' + escapeHtmlJS(product.did_you_know) + '</p></aside>' : '') +
@@ -910,6 +921,18 @@
   }
 
   // Must stay in step with categoryStatsSentence() in src/templates.js.
+  function familyAvgCycleJS(familyProducts) {
+    var seen = {}, dates = [];
+    familyProducts.forEach(function (p) {
+      (p.refresh_history || []).forEach(function (d) { if (!seen[d]) { seen[d] = 1; dates.push(d); } });
+    });
+    dates.sort();
+    var today = new Date().toISOString().slice(0, 10);
+    var past = dates.filter(function (d) { return d <= today; });
+    if (past.length < 2) return null;
+    return Math.round((new Date(past[past.length - 1]) - new Date(past[0])) / 86400000 / (past.length - 1));
+  }
+
   function familyCadenceJS(category, familyProducts) {
     var seen = {}, dates = [];
     familyProducts.forEach(function (p) {
@@ -1831,7 +1854,19 @@
   function galleryStripItemHtmlJS(photo) {
     var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
     var images = galleryPhotoImagesJS(photo);
-    return '<a class="gallery-strip-item" href="/gallery/' + galleryPhotoSlugJS(photo) + '/">' + (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</a>';
+    // Must stay in step with galleryStripItemHtml() in src/templates.js.
+    var media = images.length > 1
+      ? '<span class="gallery-strip-mosaic"><span class="gallery-strip-main"><img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '"></span><span class="gallery-strip-side">' +
+        images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb"><img src="' + escapeHtmlJS(u) + '" alt=""></span>'; }).join('') +
+        (images.length > 3 ? '<span class="gallery-strip-more">+' + (images.length - 3) + '</span>' : '') + '</span></span>'
+      : '<span class="gallery-strip-single">' + (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</span>';
+    var place = [photo.location, photo.country].filter(Boolean).map(function (t) {
+      return '<span class="pill pill--location">' + escapeHtmlJS(t) + '</span>';
+    }).join('');
+    var count = images.length > 1 ? '<span class="pill pill--count">' + images.length + ' photos</span>' : '';
+    return '<a class="gallery-strip-item" href="/gallery/' + galleryPhotoSlugJS(photo) + '/">' + media +
+      '<span class="gallery-strip-caption">' + escapeHtmlJS(displayName) + '</span>' +
+      (place || count ? '<span class="gallery-strip-pills">' + place + count + '</span>' : '') + '</a>';
   }
 
   function galleryTagLinkJS(value, extraClass) {

@@ -619,6 +619,21 @@ function pageIntroHtml(pageContent, siteUrl, position) {
 
 // A sentence built from the family's own data. It costs nothing to
 // maintain because every build works it out again from the dates.
+function familyCadence(items) {
+  // Real gaps between releases across a whole family. One product often
+  // has a single date, which tells us nothing about cadence.
+  const dates = Array.from(new Set(items.flatMap((i) => (i.product || i).refresh_history || []))).sort();
+  const today = new Date().toISOString().slice(0, 10);
+  const past = dates.filter((d) => d <= today);
+  if (past.length < 2) return null;
+  const toDays = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
+  return {
+    releases: past.length,
+    avg: Math.round(toDays(past[0], past[past.length - 1]) / (past.length - 1)),
+    sinceLast: toDays(past[past.length - 1], today),
+  };
+}
+
 function categoryStatsSentence(category, items) {
   // Measured across the whole family, since that is where the real
   // history lives: one product usually has a single release date, and a
@@ -1163,7 +1178,25 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
 function galleryStripItemHtml(photo) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const images = galleryPhotoImages(photo);
-  return `<a class="gallery-strip-item" href="/gallery/${galleryPhotoSlug(photo)}/">${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}</a>`;
+  // An album shows one large photo with two smaller ones beside it, so
+  // it reads as a set at a glance rather than a single picture.
+  const media = images.length > 1
+    ? `<span class="gallery-strip-mosaic">
+        <span class="gallery-strip-main"><img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}"></span>
+        <span class="gallery-strip-side${images.length === 2 ? ' gallery-strip-side--one' : ''}">
+          ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb"><img src="${escapeHtml(url)}" alt=""></span>`).join('')}
+          ${images.length > 3 ? `<span class="gallery-strip-more">+${images.length - 3}</span>` : ''}
+        </span>
+      </span>`
+    : `<span class="gallery-strip-single">${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}</span>`;
+  const place = [photo.location, photo.country].filter(Boolean)
+    .map((t) => `<span class="pill pill--location">${escapeHtml(t)}</span>`).join('');
+  const count = images.length > 1 ? `<span class="pill pill--count">${images.length} photos</span>` : '';
+  return `<a class="gallery-strip-item" href="/gallery/${galleryPhotoSlug(photo)}/">
+    ${media}
+    <span class="gallery-strip-caption">${escapeHtml(displayName)}</span>
+    ${place || count ? `<span class="gallery-strip-pills">${place}${count}</span>` : ''}
+  </a>`;
 }
 
 function eventCardHtml(event) {
@@ -1656,7 +1689,7 @@ function specRow(label, valueHtml) {
   return valueHtml ? `<div class="spec-row"><dt>${label}</dt><dd>${valueHtml}</dd></div>` : '';
 }
 
-function heroStatHtml(product, statusInfo) {
+function heroStatHtml(product, statusInfo, cycleDays) {
   if (product.discontinued) {
     const date = product.discontinued_date ? ` ${formatDate(product.discontinued_date)}` : '';
     return `<p class="days-hero days-hero--discontinued">Discontinued${date}</p>`;
@@ -1667,7 +1700,21 @@ function heroStatHtml(product, statusInfo) {
     const due = (product.refresh_history || []).slice().sort().pop();
     return `<p class="days-hero days-hero--upcoming"><span class="days-hero-label">Coming</span> <span class="days-hero-soon">${due ? formatDate(due) : 'soon'}</span></p>`;
   }
-  return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> ${info.days === 1 ? 'day' : 'days'} ${info.suffix}</p>`;
+  // A bar showing how far through the family's usual gap this product is
+  // gives the big number something to be measured against, and uses the
+  // space the number alone leaves empty.
+  let bar = '';
+  if (cycleDays && cycleDays > 0) {
+    const pct = Math.max(2, Math.min(100, Math.round((info.days / cycleDays) * 100)));
+    const over = info.days > cycleDays;
+    const left = cycleDays - info.days;
+    const caption = over
+      ? `${plural(info.days - cycleDays, 'day', 'days')} past its usual ${plural(cycleDays, 'day', 'days')} between updates`
+      : `about ${plural(left, 'day', 'days')} until its usual ${plural(cycleDays, 'day', 'days')} between updates`;
+    bar = `<span class="days-hero-track" role="img" aria-label="${escapeHtml(caption)}"><span class="days-hero-fill${over ? ' is-over' : ''}" style="width:${pct}%"></span></span>
+      <span class="days-hero-caption">${caption}</span>`;
+  }
+  return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> ${info.days === 1 ? 'day' : 'days'} ${info.suffix}${bar}</p>`;
 }
 
 function externalLinkLabel(product) {
@@ -1789,7 +1836,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
         </div>
       </div>
 
-      <div class="product-facts">${heroStatHtml(product, status)}${keyFacts}</div>
+      <div class="product-facts">${heroStatHtml(product, status, sortedDates.length > 1 && status ? status.avgCycleDays : null)}${keyFacts}</div>
 
       ${product.discontinued ? '' : categoryStatsSentence(product.category || 'this family',
           allProducts.filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })))}
