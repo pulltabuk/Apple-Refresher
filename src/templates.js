@@ -1181,7 +1181,7 @@ function galleryStripItemHtml(photo) {
   // An album shows one large photo with two smaller ones beside it, so
   // it reads as a set at a glance rather than a single picture.
   const media = images.length > 1
-    ? `<span class="gallery-strip-mosaic">
+    ? `<span class="gallery-strip-mosaic${images.length === 2 ? ' gallery-strip-mosaic--two' : ''}">
         <span class="gallery-strip-main"><img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}"></span>
         <span class="gallery-strip-side${images.length === 2 ? ' gallery-strip-side--one' : ''}">
           ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb"><img src="${escapeHtml(url)}" alt=""></span>`).join('')}

@@ -587,16 +587,20 @@ label.admin-btn { cursor: pointer; color: #fff; }
   font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
 }
 /* An album: one large photo with two smaller ones alongside */
-.gallery-strip-mosaic { display: grid; grid-template-columns: 2fr 1fr; gap: 3px; }
-.gallery-strip-main { display: block; overflow: hidden; }
-.gallery-strip-side { display: grid; grid-template-rows: 1fr 1fr; gap: 3px; position: relative; }
+.gallery-strip-mosaic { display: grid; grid-template-columns: 2fr 1fr; gap: 4px; background: #fff; padding: 0; }
+/* Two photos: an even split down the middle rather than one large and
+   one small, since neither is more important than the other */
+.gallery-strip-mosaic--two { grid-template-columns: 1fr 1fr; }
+.gallery-strip-main { display: block; overflow: hidden; border: 1px solid #d8d4ca; border-radius: 6px; }
+.gallery-strip-side { display: grid; grid-template-rows: 1fr 1fr; gap: 4px; position: relative; }
 /* Two photos: the single thumbnail fills the column, no empty square */
 .gallery-strip-side--one { grid-template-rows: 1fr; }
-.gallery-strip-thumb { display: block; overflow: hidden; }
+.gallery-strip-thumb { display: block; overflow: hidden; border: 1px solid #d8d4ca; border-radius: 6px; }
 .gallery-strip-more {
   position: absolute; right: 0; bottom: 0; left: 0;
   display: flex; align-items: center; justify-content: center;
-  height: calc(50% - 1.5px);
+  height: calc(50% - 2px);
+  border-radius: 6px;
   background: rgba(30, 22, 16, 0.62); color: #fff;
   font-size: 13px; font-weight: 700;
 }
