@@ -1861,3 +1861,11 @@ body.is-admin .site-search { display: none; }
   .filter-panel .filter-bar[data-filter-key="category"] { display: none; }
   .family-select-wrap { display: block; width: 100%; }
 }
+
+/* The first group needs no rule above it, and Current reads as the live
+   set, so it takes the brand colour while Discontinued stays muted. */
+.products-status-divider--current { margin-top: 0; padding-top: 0; border-top: none; }
+.products-status-divider--current .products-status-divider-label { color: var(--accent-dark); }
+
+/* Green "Current" tag marking the model still on sale in a timeline */
+.tl-entry-type--current { background: var(--fresh-bg); color: var(--fresh-text); }

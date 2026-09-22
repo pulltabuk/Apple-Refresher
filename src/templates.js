@@ -346,6 +346,18 @@ function categoryTimelinePoints(product, allProducts) {
       points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name });
     }
   });
+  // Mark the newest released entry of each product still on sale, so the
+  // timeline shows at a glance which model is the current one.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  sameCategory.forEach((p) => {
+    if (p.discontinued) return;
+    const mine = points
+      .filter((pt) => pt.productName === p.name && pt.type !== 'discontinued' && pt.date <= todayStr)
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+    const newest = mine[mine.length - 1];
+    if (newest) newest.isCurrent = true;
+  });
+
   const typePriority = { discontinued: 0, launch: 1, refresh: 1 };
   points.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]));
   return points;
@@ -421,6 +433,7 @@ function verticalTimelineHtml(product, allProducts) {
     const lines = ordered.map((e) => `<p class="tl-entry">
         <span class="tl-entry-name">${escapeHtml(e.displayName || e.productName)}</span>
         <span class="tl-entry-type tl-entry-type--${e.type}">${e.label}</span>
+        ${e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : ''}
       </p>`).join('');
 
     return `${yearRow}

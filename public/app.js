@@ -224,6 +224,17 @@
         points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name });
       }
     });
+    // Must stay in step with categoryTimelinePoints() in src/templates.js.
+    var todayStr = new Date().toISOString().slice(0, 10);
+    sameCategory.forEach(function (p) {
+      if (p.discontinued) return;
+      var mine = points.filter(function (pt) {
+        return pt.productName === p.name && pt.type !== 'discontinued' && pt.date <= todayStr;
+      }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+      var newest = mine[mine.length - 1];
+      if (newest) newest.isCurrent = true;
+    });
+
     var typePriority = { discontinued: 0, launch: 1, refresh: 1 };
     points.sort(function (a, b) { return a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]; });
     return points;
@@ -289,7 +300,8 @@
       });
       var lines = ordered.map(function (e) {
         return '<p class="tl-entry"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
-          '<span class="tl-entry-type tl-entry-type--' + e.type + '">' + e.label + '</span></p>';
+          '<span class="tl-entry-type tl-entry-type--' + e.type + '">' + e.label + '</span>' +
+          (e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '') + '</p>';
       }).join('');
       return yearRow + '<li class="tl-item tl-item--' + type + '">' +
         '<span class="tl-marker tl-marker--' + type + '">' + (TIMELINE_ICONS_JS[type] || TIMELINE_ICONS_JS.refresh) + '</span>' +
@@ -1045,8 +1057,7 @@
   function updateStatusDivider() {
     var grid = document.getElementById('grid');
     if (!grid || grid.getAttribute('data-mode') !== 'all') return;
-    var existingDivider = grid.querySelector('.products-status-divider');
-    if (existingDivider) existingDivider.remove();
+    grid.querySelectorAll('.products-status-divider').forEach(function (d) { d.remove(); });
 
     var visibleCards = Array.prototype.slice.call(grid.querySelectorAll('.card')).filter(function (c) { return c.style.display !== 'none'; });
     var firstDiscontinuedIndex = visibleCards.findIndex(function (c) { return c.getAttribute('data-status') === 'discontinued'; });
@@ -1055,10 +1066,16 @@
       && visibleCards.slice(firstDiscontinuedIndex).every(function (c) { return c.getAttribute('data-status') === 'discontinued'; });
     if (!isGrouped) return;
 
-    var divider = document.createElement('div');
-    divider.className = 'products-status-divider';
-    divider.innerHTML = '<span class="products-status-divider-label">Discontinued</span>';
-    grid.insertBefore(divider, visibleCards[firstDiscontinuedIndex]);
+    var makeDivider = function (label, kind) {
+      var d = document.createElement('div');
+      d.className = 'products-status-divider products-status-divider--' + kind;
+      d.innerHTML = '<span class="products-status-divider-label">' + label + '</span>';
+      return d;
+    };
+    // Both groups are labelled, so "Discontinued" no longer looks like the
+    // only heading on the page.
+    grid.insertBefore(makeDivider('Current', 'current'), visibleCards[0]);
+    grid.insertBefore(makeDivider('Discontinued', 'discontinued'), visibleCards[firstDiscontinuedIndex]);
   }
 
   function applyPagination() {
