@@ -430,11 +430,20 @@ function verticalTimelineHtml(product, allProducts) {
       const rank = (e) => (e.type === 'discontinued' ? 1 : 0);
       return rank(a) - rank(b);
     });
-    const lines = ordered.map((e) => `<p class="tl-entry">
+    // Every entry here is a release, so a "Refresh" pill only repeats what
+    // the timeline already says. Launch, Discontinued and Current each
+    // tell you something the date alone does not, so they stay. Tags are
+    // grouped so they wrap together instead of splitting across lines.
+    const lines = ordered.map((e) => {
+      const tags = [
+        e.type === 'refresh' ? '' : `<span class="tl-entry-type tl-entry-type--${e.type}">${e.label}</span>`,
+        e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '',
+      ].filter(Boolean).join('');
+      return `<p class="tl-entry">
         <span class="tl-entry-name">${escapeHtml(e.displayName || e.productName)}</span>
-        <span class="tl-entry-type tl-entry-type--${e.type}">${e.label}</span>
-        ${e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : ''}
-      </p>`).join('');
+        ${tags ? `<span class="tl-entry-tags">${tags}</span>` : ''}
+      </p>`;
+    }).join('');
 
     return `${yearRow}
     <li class="tl-item tl-item--${type}">

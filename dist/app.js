@@ -300,8 +300,11 @@
       });
       var lines = ordered.map(function (e) {
         return '<p class="tl-entry"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
-          '<span class="tl-entry-type tl-entry-type--' + e.type + '">' + e.label + '</span>' +
-          (e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '') + '</p>';
+          (function () {
+            var tags = (e.type === 'refresh' ? '' : '<span class="tl-entry-type tl-entry-type--' + e.type + '">' + e.label + '</span>') +
+              (e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '');
+            return tags ? '<span class="tl-entry-tags">' + tags + '</span>' : '';
+          })() + '</p>';
       }).join('');
       return yearRow + '<li class="tl-item tl-item--' + type + '">' +
         '<span class="tl-marker tl-marker--' + type + '">' + (TIMELINE_ICONS_JS[type] || TIMELINE_ICONS_JS.refresh) + '</span>' +

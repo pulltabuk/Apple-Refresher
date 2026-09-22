@@ -1869,3 +1869,7 @@ body.is-admin .site-search { display: none; }
 
 /* Green "Current" tag marking the model still on sale in a timeline */
 .tl-entry-type--current { background: var(--fresh-bg); color: var(--fresh-text); }
+
+/* Keep a timeline entry's tags together so they stay on one line,
+   wrapping as a group under a long product name rather than splitting */
+.tl-entry-tags { display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
