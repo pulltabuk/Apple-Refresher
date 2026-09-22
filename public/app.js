@@ -896,6 +896,9 @@
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
         '</div>' +
       '</div>' +
+      '<p class="report-line"><a class="report-link" href="/contact/?topic=Correction&page=' +
+        encodeURIComponent(product.name) + '&url=' + encodeURIComponent('/products/' + product.slug + '/') +
+        '">Something not right on this page? Tell us</a></p>' +
       (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
       releaseHistorySection +
       (timelinePoints.every(function (pt) { return pt.productName === product.name; })
@@ -2262,6 +2265,34 @@
     }
     return new Date(bits[0], bits[1] - 1, bits[2], 8, 0).getTime();
   }
+
+  // Carries the page details across from a "Something not right" link.
+  (function contactPrefill() {
+    var form = document.querySelector('.contact-form');
+    if (!form) return;
+    var params = new URLSearchParams(window.location.search);
+    var topic = params.get('topic');
+    var page = params.get('page');
+    var url = params.get('url');
+    var topicEl = document.getElementById('contact-topic');
+    if (topic && topicEl) {
+      Array.prototype.forEach.call(topicEl.options, function (o) {
+        if (o.value.toLowerCase() === topic.toLowerCase()) topicEl.value = o.value;
+      });
+    }
+    if (page) {
+      var wrap = document.getElementById('contact-about-page');
+      var nameEl = document.getElementById('contact-page');
+      var urlEl = document.getElementById('contact-page-url');
+      if (wrap && nameEl) {
+        wrap.hidden = false;
+        nameEl.value = page;
+        if (urlEl) urlEl.value = url ? window.location.origin + url : '';
+      }
+      var msg = document.getElementById('contact-message');
+      if (msg) msg.focus();
+    }
+  })();
 
   (function countdown() {
     function unit(value, label, isSeconds) {

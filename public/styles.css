@@ -1873,3 +1873,53 @@ body.is-admin .site-search { display: none; }
 /* Keep a timeline entry's tags together so they stay on one line,
    wrapping as a group under a long product name rather than splitting */
 .tl-entry-tags { display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+
+/* Contact page */
+.page-narrow { max-width: 640px; }
+.contact-form { margin-top: 1.75rem; display: flex; flex-direction: column; gap: 18px; }
+.contact-field { display: flex; flex-direction: column; gap: 6px; }
+/* A class-based display rule beats the browser's own [hidden] styling,
+   so restore it or the prefilled page field shows on a direct visit. */
+.contact-field[hidden] { display: none; }
+.contact-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.contact-field input[type="text"],
+.contact-field input[type="email"],
+.contact-field select,
+.contact-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid #d8d4ca;
+  border-radius: 10px;
+}
+.contact-field textarea { resize: vertical; min-height: 150px; line-height: 1.5; }
+.contact-field input:focus, .contact-field select:focus, .contact-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+.contact-field input[readonly] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-dark); font-weight: 600; }
+.contact-help { margin: 0; font-size: 12px; color: var(--text-secondary); }
+.contact-submit { align-self: flex-start; border: none; cursor: pointer; font-size: 15px; }
+/* Honeypot: hidden from people, visible to bots that fill everything in */
+.contact-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+/* "Something not right" link on product pages */
+.report-line { margin: 1.5rem 0 0; }
+.report-link {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--border);
+  padding-bottom: 1px;
+}
+.report-link:hover { color: var(--accent-dark); border-bottom-color: var(--accent); }

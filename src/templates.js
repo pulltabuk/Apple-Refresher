@@ -721,6 +721,84 @@ const DEFAULT_SCRIPTS = [
   '<script src="/app.js" defer></script>',
 ];
 
+
+function contactPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
+  // Handled by Netlify Forms: the form is detected in the built HTML at
+  // deploy time, so there is no server code. The honeypot field catches
+  // most bots without putting a puzzle in front of real people.
+  const body = `<nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li aria-current="page">Contact</li></ol></nav>
+
+  <h1>Get in touch</h1>
+  <p class="page-intro">Spotted something wrong, know a date we have missed, or want to suggest a product? Send us a note and we will read every one.</p>
+
+  <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/contact/thanks/" class="contact-form">
+    <input type="hidden" name="form-name" value="contact">
+    <p class="contact-hp"><label>Leave this empty <input name="bot-field"></label></p>
+
+    <div class="contact-field">
+      <label for="contact-name">Your name</label>
+      <input id="contact-name" name="name" type="text" autocomplete="name" required>
+    </div>
+
+    <div class="contact-field">
+      <label for="contact-email">Email address</label>
+      <input id="contact-email" name="email" type="email" autocomplete="email" required>
+      <p class="contact-help">Only used to reply to you. Never shared or added to a list.</p>
+    </div>
+
+    <div class="contact-field">
+      <label for="contact-topic">What is this about?</label>
+      <select id="contact-topic" name="topic">
+        <option value="Correction">A correction to a page</option>
+        <option value="Missing product">A product or date that is missing</option>
+        <option value="General question">A general question</option>
+        <option value="Feedback">Feedback about the site</option>
+        <option value="Something else">Something else</option>
+      </select>
+    </div>
+
+    <div class="contact-field" id="contact-about-page" hidden>
+      <label for="contact-page">Page you are writing about</label>
+      <input id="contact-page" name="page" type="text" readonly>
+      <input type="hidden" id="contact-page-url" name="page_url">
+      <p class="contact-help">Filled in automatically from the page you came from.</p>
+    </div>
+
+    <div class="contact-field">
+      <label for="contact-message">Your message</label>
+      <textarea id="contact-message" name="message" rows="7" required placeholder="The more detail the better. If it is a correction, a link to a source really helps."></textarea>
+    </div>
+
+    <button type="submit" class="intro-cta contact-submit">Send message</button>
+  </form>`;
+
+  return shell({
+    title: 'Contact us — Apple Sunset',
+    description: 'Get in touch with Apple Sunset to report a correction, suggest a product or ask a question.',
+    siteUrl,
+    path: '/contact/',
+    bodyHtml: `<div class="page-narrow">${body}</div>`,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
+}
+
+function contactThanksPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const body = `<h1>Thanks, that has been sent</h1>
+  <p class="page-intro">We read everything that comes in. If your note needs a reply, we will get back to you by email.</p>
+  <p><a class="intro-cta" href="/products/">Back to all products</a></p>`;
+  return shell({
+    title: 'Thanks — Apple Sunset',
+    description: 'Your message has been sent.',
+    siteUrl,
+    path: '/contact/thanks/',
+    bodyHtml: `<div class="page-narrow">${body}</div>`,
+    supabaseUrl,
+    supabaseAnonKey,
+    noindex: true,
+  });
+}
+
 function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supabaseAnonKey, noindex, scripts, ogImage, ogType, extraJsonLd }) {
   const bodyClass = path === '/admin/' ? ' class="is-admin"' : '';
   const scriptTags = (scripts || DEFAULT_SCRIPTS).join('\n');
@@ -800,6 +878,7 @@ ${bodyHtml}
       <a href="/events/">Apple Events</a>
       <a href="/facts/">Facts</a>
       <a href="/about/">About us</a>
+      <a href="/contact/">Contact</a>
       <a href="/feed.xml">RSS Feed</a>
       <a href="/admin/">Admin</a>
     </nav>
@@ -1727,6 +1806,8 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     </div>
   </div>
 
+  <p class="report-line"><a class="report-link" href="/contact/?topic=Correction&amp;page=${encodeURIComponent(product.name)}&amp;url=${encodeURIComponent(`/products/${product.slug}/`)}">Something not right on this page? Tell us</a></p>
+
   ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note, siteUrl)}</div></div>` : ''}
 
   ${releaseHistorySection}
@@ -2264,6 +2345,8 @@ module.exports = {
   categoryPage,
   productPage,
   aboutPage,
+  contactPage,
+  contactThanksPage,
   notFoundPage,
   adminPage,
   cardHtml,
