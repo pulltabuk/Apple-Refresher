@@ -569,13 +569,17 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .homepage-section h2 { font-size: 18px; margin: 0 0 1rem; }
 
 .gallery-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
-.gallery-strip-item { display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; }
+.gallery-strip-item {
+  display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit;
+  padding: 10px; background: #fff;
+  border: 1px solid #d8d4ca; border-radius: 12px;
+  transition: border-color 0.15s ease;
+}
 .gallery-strip-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .gallery-strip-media { position: relative; display: block; }
 .gallery-strip-single, .gallery-strip-mosaic {
-  display: block; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden;
+  display: block; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden;
   background: #f6f5f1;
-  border: 1px solid #d8d4ca;
   box-sizing: border-box;
 }
 /* Count sits on the photo, so it can never look like it belongs to the
@@ -605,8 +609,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
   font-size: 13px; font-weight: 700;
 }
 .gallery-strip-item { height: 100%; }
-.gallery-strip-item:hover .gallery-strip-single,
-.gallery-strip-item:hover .gallery-strip-mosaic { border-color: var(--accent); }
+.gallery-strip-item:hover { border-color: var(--accent); }
 .gallery-strip-caption {
   display: block; font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--text);
   min-height: 2.6em;
