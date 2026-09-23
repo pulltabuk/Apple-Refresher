@@ -1785,7 +1785,7 @@ body.is-admin .site-search { display: none; }
   text-transform: uppercase;
   color: var(--accent-dark);
 }
-.did-you-know-text { margin: 0; font-size: 16px; line-height: 1.5; color: var(--text); }
+.did-you-know-text { margin: 0; color: var(--text); font-size: 16px; line-height: 1.6; }
 
 /* Draft-a-post composer: a pop-up styled like a real post */
 .post-composer {
@@ -2055,6 +2055,8 @@ body.is-admin .site-search { display: none; }
 #did-you-know-count.is-over { color: var(--overdue-text); font-weight: 600; }
 
 /* Formatting inside the Did you know callout */
-.did-you-know-text p { margin: 0 0 0.5rem; }
-.did-you-know-text p:last-child { margin-bottom: 0; }
-.did-you-know-text a { color: var(--accent-dark); }
+/* Matches .callout-body so Notes and this fact read identically */
+.did-you-know-text p { margin: 0 0 0.75rem; }
+.did-you-know-text p:last-child { margin: 0; }
+.did-you-know-text a { color: var(--text); text-decoration: underline; }
+.did-you-know-text b, .did-you-know-text strong { font-weight: 700; }

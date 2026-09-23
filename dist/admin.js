@@ -1471,6 +1471,15 @@
     richTextEditor.innerHTML = paragraphs.map((para) => '<p>' + escapeText(para) + '</p>').join('');
   });
 
+  document.getElementById('did-you-know-clear-all-btn').addEventListener('click', () => {
+    const editor = document.getElementById('did_you_know_editor');
+    if (!editor.textContent.trim()) return;
+    if (!window.confirm('Remove all formatting from this fact? This keeps the text but clears bold, italic, and links.')) return;
+    const escapeText = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    editor.innerHTML = extractParagraphs(editor).map((para) => '<p>' + escapeText(para) + '</p>').join('');
+    updateDidYouKnowCount();
+  });
+
   function resetGenerationPanel() {
     setDatePrecisionValue('new_refresh_date', null);
     document.getElementById('new_generation_name').value = '';
