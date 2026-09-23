@@ -200,9 +200,11 @@
     var sortedEntries = dateEntries.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
 
     var launchCandidates = sameCategory.map(function (p) { return p.original_launch_date; }).filter(Boolean);
+    // Must stay in step with categoryTimelinePoints() in src/templates.js:
+    // no launch is assumed when none has been recorded.
     var lineLaunch = launchCandidates.length
       ? launchCandidates.reduce(function (earliest, d) { return d < earliest ? d : earliest; })
-      : (sortedEntries.length ? sortedEntries[0].date : null);
+      : null;
     var launchOwnerFromField = sameCategory.filter(function (p) { return p.original_launch_date === lineLaunch; })[0];
     var launchEntry = sortedEntries.filter(function (e) { return e.date === lineLaunch; })[0];
     var launchOwnerName = launchOwnerFromField ? launchOwnerFromField.name : (launchEntry ? launchEntry.productName : null);

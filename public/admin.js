@@ -1212,6 +1212,23 @@
         renderRefreshHistory();
         updateStatusReadout();
       });
+      // One click to say whether this date is the start of the line, so it
+      // does not have to be found inside Edit.
+      if (type === 'launch' || type === 'release') {
+        const launchToggle = document.createElement('button');
+        launchToggle.type = 'button';
+        launchToggle.className = 'generation-edit';
+        launchToggle.textContent = currentOriginalLaunchDate === date ? 'Not the first release' : 'Mark as first release';
+        launchToggle.title = currentOriginalLaunchDate === date
+          ? 'Treat this as an ordinary release, for when earlier models exist that are not listed yet'
+          : 'Mark this as the first ever release of this line';
+        launchToggle.addEventListener('click', () => {
+          currentOriginalLaunchDate = currentOriginalLaunchDate === date ? null : date;
+          renderRefreshHistory();
+          updateStatusReadout();
+        });
+        actions.insertBefore(launchToggle, actions.firstChild);
+      }
       actions.appendChild(removeBtn);
       top.appendChild(actions);
       li.appendChild(top);
@@ -1532,7 +1549,10 @@
     }
     // Launch is explicit now. A product's very first date is still
     // treated as its launch, since there is nothing earlier it could be.
-    if (type === 'launch' || (!currentOriginalLaunchDate && currentRefreshHistory.length === 1)) {
+    // Only a date added as a Launch becomes the first release. Adding a
+    // Release stays a release, so a product whose earlier models are not
+    // logged yet is not wrongly presented as the start of the line.
+    if (type === 'launch') {
       currentOriginalLaunchDate = value;
     }
     if (pendingAnnouncedDate) {

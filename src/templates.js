@@ -328,11 +328,10 @@ function categoryTimelinePoints(product, allProducts) {
       points.push({ date: p.original_launch_date, label: 'Launch', type: 'launch', productName: p.name, displayName: pointName(p, p.original_launch_date) });
       consumedKeys.add(p.original_launch_date + '|' + p.name);
     });
-  } else if (sortedEntries.length) {
-    const first = sortedEntries[0];
-    points.push({ date: first.date, label: 'Launch', type: 'launch', productName: first.productName, displayName: first.displayName });
-    consumedKeys.add(first.date + '|' + first.productName);
   }
+  // No fallback here on purpose: without a recorded launch date the
+  // earliest entry we hold may not be the start of the line at all,
+  // so it is shown as an ordinary release rather than a launch.
 
   sortedEntries.forEach((e) => {
     if (consumedKeys.has(e.date + '|' + e.productName)) {
