@@ -1734,8 +1734,17 @@ function heroStatHtml(product, statusInfo, cycleDays) {
   // Nothing to measure against: say so plainly rather than leave the box
   // half empty or invent a cycle.
   if (!bar) {
+    // With only one release recorded there is no cycle to measure. How
+    // that reads depends on age: a week-old product is simply new, while
+    // one sitting untouched for years is a genuine wait. Neither claims
+    // Apple has skipped an update, since earlier releases may just not be
+    // recorded here yet.
     const first = (product.refresh_history || []).slice().sort()[0];
-    bar = `<span class="days-hero-caption">Apple has not updated this since it ${first ? `arrived on ${formatDate(first)}` : 'launched'}, so there is no refresh pattern to compare against yet.</span>`;
+    const when = first ? formatDate(first) : null;
+    const text = info.days < 365
+      ? `Released ${when || 'recently'}. This is the only release recorded here, so there is nothing yet to measure a refresh cycle against.`
+      : `${when ? `Released ${when}, and no` : 'No'} update has been recorded since, so there is nothing yet to measure a refresh cycle against.`;
+    bar = `<span class="days-hero-caption">${text}</span>`;
   }
   return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> ${info.days === 1 ? 'day' : 'days'} ${info.suffix}${bar}</p>`;
 }

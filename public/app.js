@@ -792,10 +792,13 @@
         '<span class="days-hero-caption">' + caption + '</span>';
     }
     if (!bar) {
+      // Must stay in step with heroStatHtml() in src/templates.js.
       var first = (product.refresh_history || []).slice().sort()[0];
-      bar = '<span class="days-hero-caption">Apple has not updated this since it ' +
-        (first ? 'arrived on ' + formatDateJS(first) : 'launched') +
-        ', so there is no refresh pattern to compare against yet.</span>';
+      var when = first ? formatDateJS(first) : null;
+      var text = info.days < 365
+        ? 'Released ' + (when || 'recently') + '. This is the only release recorded here, so there is nothing yet to measure a refresh cycle against.'
+        : (when ? 'Released ' + when + ', and no' : 'No') + ' update has been recorded since, so there is nothing yet to measure a refresh cycle against.';
+      bar = '<span class="days-hero-caption">' + text + '</span>';
     }
     return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> ' + (info.days === 1 ? 'day' : 'days') + ' ' + info.suffix + bar + '</p>';
   }
