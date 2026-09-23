@@ -1883,7 +1883,7 @@
     var images = galleryPhotoImagesJS(photo);
     // Must stay in step with galleryStripItemHtml() in src/templates.js.
     var media = images.length > 1
-      ? '<span class="gallery-strip-mosaic' + (images.length === 2 ? ' gallery-strip-mosaic--two' : '') + '"><span class="gallery-strip-main"><img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '"></span><span class="gallery-strip-side">' +
+      ? '<span class="gallery-strip-mosaic' + (images.length === 2 ? ' gallery-strip-mosaic--two' : '') + '"><span class="gallery-strip-main"><img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '"></span><span class="gallery-strip-side' + (images.length === 2 ? ' gallery-strip-side--one' : '') + '">' +
         images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb"><img src="' + escapeHtmlJS(u) + '" alt=""></span>'; }).join('') +
         (images.length > 3 ? '<span class="gallery-strip-more">+' + (images.length - 3) + '</span>' : '') + '</span></span>'
       : '<span class="gallery-strip-single">' + (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</span>';
