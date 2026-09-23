@@ -2349,8 +2349,13 @@
         nameEl.value = page;
         if (urlEl) urlEl.value = url ? window.location.origin + url : '';
       }
+      // Put the cursor in the message box without letting the browser
+      // scroll down to it, so the page still opens at the top.
       var msg = document.getElementById('contact-message');
-      if (msg) msg.focus();
+      if (msg) {
+        try { msg.focus({ preventScroll: true }); } catch (e) { /* older browsers */ }
+        window.scrollTo(0, 0);
+      }
     }
   })();
 
