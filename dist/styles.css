@@ -2080,3 +2080,18 @@ body.is-admin .site-search { display: none; }
 .did-you-know-text p:last-child { margin: 0; }
 .did-you-know-text a { color: var(--text); text-decoration: underline; }
 .did-you-know-text b, .did-you-know-text strong { font-weight: 700; }
+
+
+/* Footer and breadcrumb links are small text. Padding them directly is
+   more reliable than an invisible overlay, which neighbouring rows can
+   sit on top of. Only on touch devices, so the desktop look is unchanged. */
+@media (pointer: coarse) {
+  .footer-nav a, .breadcrumbs a, .breadcrumbs li[aria-current],
+  .spec-row dd a, .gallery-admin-link a {
+    display: inline-block;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .footer-nav { row-gap: 2px; }
+  .breadcrumbs ol { row-gap: 0; }
+}

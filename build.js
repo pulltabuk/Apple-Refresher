@@ -40,7 +40,11 @@ function write(relPath, content, lastmod) {
   const fullPath = path.join(DIST, relPath);
   fs.mkdirSync(path.dirname(fullPath), { recursive: true });
   fs.writeFileSync(fullPath, content);
-  if (relPath.endsWith('index.html') && !relPath.startsWith('admin/')) {
+  // Pages marked noindex must stay out of the sitemap: submitting one
+  // tells Google to index a page that also tells it not to, which it
+  // reports as an error.
+  const isNoIndex = /<meta name="robots" content="[^"]*noindex/.test(content);
+  if (relPath.endsWith('index.html') && !relPath.startsWith('admin/') && !isNoIndex) {
     const urlPath = '/' + relPath.replace(/index\.html$/, '');
     sitemapUrls.push({ path: urlPath, lastmod: lastmod || null });
   }
