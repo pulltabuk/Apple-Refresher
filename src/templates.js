@@ -747,7 +747,7 @@ function contactPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
   <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/contact/thanks/" class="contact-form">
     <input type="hidden" name="form-name" value="contact">
-    <p class="contact-hp"><label>Leave this empty <input name="bot-field"></label></p>
+    <p class="contact-hp" aria-hidden="true"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
 
     <div class="contact-field">
       <label for="contact-name">Your name</label>
