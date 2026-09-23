@@ -857,7 +857,7 @@
     // Mirrors the key facts grid plus secondary list in src/templates.js.
     var keyFacts = [
       keyFactJS('Latest release', latest ? formatDateJS(latest) : (launch ? formatDateJS(launch) : null)),
-      keyFactJS('First release', launch && launch !== latest ? formatDateJS(launch) : null),
+      keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null),
       keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days') : null),
       (function () {
         if (!status || sortedDates.length <= 1 || product.discontinued) return '';
@@ -867,7 +867,7 @@
       keyFactJS('Discontinued', product.discontinued && product.discontinued_date ? formatDateJS(product.discontinued_date) : null),
       keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanTextJS(launch, product.discontinued_date) : null),
       keyFactJS('Starting price', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
-      keyFactJS('Releases so far', sortedDates.length > 1 ? String(sortedDates.length) : null)
+      keyFactJS('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null)
     ].filter(Boolean).slice(0, 6).join('');
 
     var specs = [
@@ -970,7 +970,7 @@
       return 'roughly every ' + (years % 1 ? whole + '\u00bd' : whole) + ' years';
     };
     var plural = function (n) { return n + (n === 1 ? ' day' : ' days'); };
-    var text = 'Across ' + past.length + ' releases, Apple has updated ' + escapeHtmlJS(category) + ' ' + cadence(avg) + '. ';
+    var text = 'Across the ' + past.length + ' releases recorded here, Apple has updated ' + escapeHtmlJS(category) + ' ' + cadence(avg) + '. ';
     if (sinceLast > avg * 1.25) text += 'It has now been ' + plural(sinceLast) + ' since the last one, well past the usual gap.';
     else if (sinceLast > avg) text += 'It has now been ' + plural(sinceLast) + ', a little beyond the usual gap.';
     else text += 'The last update was ' + plural(sinceLast) + ' ago, so the next is not due yet.';

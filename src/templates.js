@@ -659,7 +659,7 @@ function categoryStatsSentence(category, items) {
     return `roughly every ${years % 1 ? whole + '\u00bd' : whole} years`;
   };
 
-  const parts = [`Across ${past.length} releases, Apple has updated ${escapeHtml(category)} ${cadence(avg)}.`];
+  const parts = [`Across the ${past.length} releases recorded here, Apple has updated ${escapeHtml(category)} ${cadence(avg)}.`];
   if (sinceLast > avg * 1.25) {
     parts.push(`It has now been ${plural(sinceLast, 'day', 'days')} since the last one, well past the usual gap.`);
   } else if (sinceLast > avg) {
@@ -1794,7 +1794,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   // longer gives "Days counted from" the same weight as the price.
   const keyFacts = [
     keyFact('Latest release', latest ? formatDate(latest) : (launch ? formatDate(launch) : null)),
-    keyFact('First release', launch && launch !== latest ? formatDate(launch) : null),
+    keyFact('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDate(product.original_launch_date) : null),
     keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}` : null),
     (() => {
       if (!status || sortedDates.length <= 1 || product.discontinued) return '';
@@ -1805,7 +1805,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     keyFact('Discontinued', product.discontinued && product.discontinued_date ? formatDate(product.discontinued_date) : null),
     keyFact('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanText(launch, product.discontinued_date) : null),
     keyFact('Starting price', product.price ? escapeHtml(formatPrice(product.price)) : null),
-    keyFact('Releases so far', sortedDates.length > 1 ? String(sortedDates.length) : null),
+    keyFact('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null),
   ].filter(Boolean).slice(0, 6).join('\n');
 
   const specs = [
