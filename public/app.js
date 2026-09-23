@@ -924,7 +924,9 @@
               '<button type="button" class="admin-edit-link tweet-btn" data-slug="' + product.slug + '" style="display:none;">Draft a post for X</button>' +
             '</div>' +
           '</div>' +
-          '<div class="product-facts">' + heroStatHtmlJS(product, status, heroCycleJS(product, status, sortedDates, allProducts)) + keyFacts + '</div>' +
+          '<div class="product-facts">' + heroStatHtmlJS(product, status, heroCycleJS(product, status, sortedDates, allProducts)) +
+            '<div class="key-facts-row" data-facts="' + (keyFacts.match(/key-fact-label/g) || []).length + '">' + keyFacts + '</div>' +
+          '</div>' +
           (product.discontinued ? '' : familyCadenceJS(product.category || 'this family',
             allProducts.filter(function (p) { return (p.category || '') === (product.category || ''); }))) +
           (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">' + sanitizeRichTextJS(product.did_you_know) + '</div></aside>' : '') +

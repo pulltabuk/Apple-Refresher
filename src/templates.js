@@ -1877,7 +1877,9 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
         </div>
       </div>
 
-      <div class="product-facts">${heroStatHtml(product, status, heroCycle(product, status, sortedDates, allProducts))}${keyFacts}</div>
+      <div class="product-facts">${heroStatHtml(product, status, heroCycle(product, status, sortedDates, allProducts))}
+        <div class="key-facts-row" data-facts="${(keyFacts.match(/key-fact-label/g) || []).length}">${keyFacts}</div>
+      </div>
 
       ${product.discontinued ? '' : categoryStatsSentence(product.category || 'this family',
           allProducts.filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })))}
