@@ -524,6 +524,8 @@
     const currentCategory = (document.getElementById('category').value || '').trim().toLowerCase();
     const url = cachedCategoryIcons[currentCategory];
     thumbEl.innerHTML = '';
+    const bgBtn = document.getElementById('category-icon-removebg');
+    if (bgBtn) bgBtn.style.display = url ? '' : 'none';
     if (!url) {
       thumbEl.textContent = currentCategory ? 'No custom icon for this family yet, the built-in shape is used.' : 'Pick a family above first.';
       return;
@@ -694,6 +696,40 @@
     renderProductList();
   }
 
+  // Strip the background from the family icon already in place.
+  document.getElementById('category-icon-removebg').addEventListener('click', async () => {
+    const btn = document.getElementById('category-icon-removebg');
+    const currentCategory = canonicalFamily(document.getElementById('category').value);
+    const url = cachedCategoryIcons[(currentCategory || '').toLowerCase()];
+    if (!currentCategory || !url) return;
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Removing...';
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error('could not load the current icon'));
+        img.src = url + (url.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+      });
+      const canvas = stripIconBackground(img, 24);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('could not process the image');
+      const newUrl = await uploadFile(new File([blob], 'family-icon-nobg.png', { type: 'image/png' }));
+      const { error } = await client.from('category_icons').upsert({ category: currentCategory, icon_url: newUrl, updated_at: new Date().toISOString() });
+      if (error) throw new Error(error.message);
+      cachedCategoryIcons[currentCategory.toLowerCase()] = newUrl;
+      updateCategoryIconPreview();
+      renderFamilyPicker();
+      if (typeof renderFamilyAdminList === 'function') renderFamilyAdminList();
+    } catch (err) {
+      window.alert('Could not remove the background: ' + err.message);
+    }
+    btn.disabled = false;
+    btn.textContent = label;
+  });
+
   document.getElementById('category-icon-upload').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -704,7 +740,8 @@
       return;
     }
     try {
-      const url = await uploadFile(file);
+      const toUpload = autoRemoveBgOn() ? await fileWithoutBackground(file) : file;
+      const url = await uploadFile(toUpload);
       const { error } = await client.from('category_icons').upsert({ category: currentCategory, icon_url: url, updated_at: new Date().toISOString() });
       if (error) {
         window.alert('Failed to save the icon: ' + error.message);
@@ -1570,7 +1607,8 @@
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     document.getElementById('featured').checked = !!p.featured;
     document.getElementById('in_countdown').checked = !!p.in_countdown;
-    document.getElementById('did_you_know').value = p.did_you_know || '';
+    document.getElementById('did_you_know_editor').innerHTML = p.did_you_know || '';
+    updateDidYouKnowCount();
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     document.getElementById('is_new_launch').checked = !!p.is_new_launch;
     currentRefreshHistory = (p.refresh_history || []).slice().sort();
@@ -1621,6 +1659,8 @@
     document.getElementById('category').value = preset;
     document.getElementById('new-family-wrap').style.display = wantsNewFamily ? '' : 'none';
     document.getElementById('rumor_note_editor').innerHTML = '';
+    document.getElementById('did_you_know_editor').innerHTML = '';
+    updateDidYouKnowCount();
     currentOriginalLaunchDate = null;
     currentRefreshHistory = [];
     currentGenerationDetails = {};
@@ -1860,7 +1900,7 @@
         })(),
         featured: document.getElementById('featured').checked,
         in_countdown: document.getElementById('in_countdown').checked,
-        did_you_know: document.getElementById('did_you_know').value.trim() || null,
+        did_you_know: (() => { const h = document.getElementById('did_you_know_editor').innerHTML.trim(); return h && h !== '<br>' ? h : null; })(),
         days_basis: document.querySelector('input[name="days_basis"]:checked').value,
         is_new_launch: document.getElementById('is_new_launch').checked,
         previous_model: document.getElementById('previous_model').value || null,
@@ -2880,6 +2920,21 @@
   }
 
   if (pagetextTargetEl) pagetextTargetEl.addEventListener('change', showPagetextRow);
+
+  // Counts the words a reader sees, not the formatting tags around them.
+  function updateDidYouKnowCount() {
+    const editor = document.getElementById('did_you_know_editor');
+    const out = document.getElementById('did-you-know-count');
+    if (!editor || !out) return;
+    const len = (editor.textContent || '').trim().length;
+    out.textContent = len ? len + ' / 320 characters' : '';
+    out.classList.toggle('is-over', len > 320);
+  }
+  (function wireDidYouKnowCount() {
+    const editor = document.getElementById('did_you_know_editor');
+    if (!editor) return;
+    editor.addEventListener('input', updateDidYouKnowCount);
+  })();
 
   document.querySelectorAll('.richtext-toolbar [data-editor]').forEach((btn) => {
     btn.addEventListener('click', () => {

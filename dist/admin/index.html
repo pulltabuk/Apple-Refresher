@@ -112,6 +112,7 @@
               <div id="category-icon-thumb" class="admin-thumbs"></div>
               <label for="category-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload family icon</label>
               <input type="file" id="category-icon-upload" accept="image/*" class="admin-file-input">
+              <button type="button" id="category-icon-removebg" class="admin-btn admin-btn--small admin-btn--ghost" style="display:none">Remove background</button>
             </div>
             <p class="admin-hint">Replaces the built-in shape for every product in this family.</p>
           </div>
@@ -172,7 +173,16 @@
           </div>
 
           <div class="admin-subfield">
-            <label><span class="admin-label-row">Did you know? <span class="admin-optional">Optional, shown near the top of the product page</span></span><textarea id="did_you_know" rows="2" maxlength="320" placeholder="One short, surprising fact about this product."></textarea></label>
+            <span class="admin-subfield-label">Did you know? <span class="admin-optional">Optional, shown near the top of the product page</span></span>
+            <div class="richtext-toolbar">
+              <button type="button" data-editor="did_you_know_editor" data-cmd="bold"><b>B</b></button>
+              <button type="button" data-editor="did_you_know_editor" data-cmd="italic"><i>I</i></button>
+              <button type="button" data-editor="did_you_know_editor" data-cmd="underline"><u>U</u></button>
+              <button type="button" data-link-for="did_you_know_editor">&#128279;</button>
+              <button type="button" data-editor="did_you_know_editor" data-cmd="removeFormat" class="richtext-clear">&times;</button>
+            </div>
+            <div id="did_you_know_editor" class="richtext-editor richtext-editor--short" contenteditable="true" data-placeholder="One short, surprising fact about this product."></div>
+            <p class="admin-hint" id="did-you-know-count"></p>
           </div>
 
           <div class="admin-subfield">

@@ -917,7 +917,7 @@
           '<div class="product-facts">' + heroStatHtmlJS(product, status, heroCycleJS(product, status, sortedDates, allProducts)) + keyFacts + '</div>' +
           (product.discontinued ? '' : familyCadenceJS(product.category || 'this family',
             allProducts.filter(function (p) { return (p.category || '') === (product.category || ''); }))) +
-          (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><p class="did-you-know-text">' + escapeHtmlJS(product.did_you_know) + '</p></aside>' : '') +
+          (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">' + sanitizeRichTextJS(product.did_you_know) + '</div></aside>' : '') +
           '<dl class="spec-list spec-list--secondary">' + specs + '</dl>' +
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
         '</div>' +

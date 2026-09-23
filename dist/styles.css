@@ -2045,3 +2045,16 @@ body.is-admin .site-search { display: none; }
 }
 .card-image .gallery-strip-main,
 .card-image .gallery-strip-thumb { border-radius: 4px; }
+
+/* Shorter rich text box for the Did you know fact */
+.richtext-editor--short { min-height: 90px; }
+.richtext-editor--short:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-secondary);
+}
+#did-you-know-count.is-over { color: var(--overdue-text); font-weight: 600; }
+
+/* Formatting inside the Did you know callout */
+.did-you-know-text p { margin: 0 0 0.5rem; }
+.did-you-know-text p:last-child { margin-bottom: 0; }
+.did-you-know-text a { color: var(--accent-dark); }
