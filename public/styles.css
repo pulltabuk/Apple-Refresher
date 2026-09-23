@@ -1377,7 +1377,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 
 /* ---------- Breadcrumbs ---------- */
-.breadcrumbs { margin: 0 0 1rem; font-size: 13px; }
+/* A little breathing room under the nav bar before the trail starts */
+.breadcrumbs { margin: 1.25rem 0 1rem; font-size: 13px; }
 .breadcrumbs ol { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 0; }
 .breadcrumbs a { color: var(--accent-dark); font-weight: 600; text-decoration: none; }
 .breadcrumbs a:hover { text-decoration: underline; }
