@@ -924,16 +924,16 @@
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
         '</div>' +
       '</div>' +
-      '<p class="report-line"><a class="report-link" href="/contact/?topic=Correction&page=' +
-        encodeURIComponent(product.name) + '&url=' + encodeURIComponent('/products/' + product.slug + '/') +
-        '">Something not right on this page? Tell us</a></p>' +
       (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
       releaseHistorySection +
       (timelinePoints.every(function (pt) { return pt.productName === product.name; })
         && !productGenerationsJS(product).some(function (g) { return g.announced; })
         ? '' : generationsSectionHtmlJS(product)) +
       relatedProductsHtmlJS(product, productsBySlug) +
-      (relatedPhotos.length ? '<h2>From the gallery</h2><div class="gallery-strip">' + relatedPhotos.map(galleryStripItemHtmlJS).join('') + '</div>' : '')
+      (relatedPhotos.length ? '<h2>From the gallery</h2><div class="gallery-strip">' + relatedPhotos.map(galleryStripItemHtmlJS).join('') + '</div>' : '') +
+      '<p class="report-line"><a class="report-link" href="/contact/?topic=Correction&page=' +
+        encodeURIComponent(product.name) + '&url=' + encodeURIComponent('/products/' + product.slug + '/') +
+        '">Something not right on this page? Tell us</a></p>'
     );
   }
 

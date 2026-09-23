@@ -1876,8 +1876,6 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     </div>
   </div>
 
-  <p class="report-line"><a class="report-link" href="/contact/?topic=Correction&amp;page=${encodeURIComponent(product.name)}&amp;url=${encodeURIComponent(`/products/${product.slug}/`)}">Something not right on this page? Tell us</a></p>
-
   ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note, siteUrl)}</div></div>` : ''}
 
   ${releaseHistorySection}
@@ -1890,6 +1888,8 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   <div class="gallery-strip">
     ${relatedPhotos.map(galleryStripItemHtml).join('\n')}
   </div>` : ''}
+
+  <p class="report-line"><a class="report-link" href="/contact/?topic=Correction&amp;page=${encodeURIComponent(product.name)}&amp;url=${encodeURIComponent(`/products/${product.slug}/`)}">Something not right on this page? Tell us</a></p>
 </article>`;
 
   const description = product.discontinued
