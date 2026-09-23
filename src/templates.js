@@ -1724,6 +1724,12 @@ function heroStatHtml(product, statusInfo, cycleDays) {
     bar = `<span class="days-hero-track" role="img" aria-label="${escapeHtml(caption)}"><span class="days-hero-fill${over ? ' is-over' : ''}" style="width:${pct}%"></span></span>
       <span class="days-hero-caption">${caption}</span>`;
   }
+  // Nothing to measure against: say so plainly rather than leave the box
+  // half empty or invent a cycle.
+  if (!bar) {
+    const first = (product.refresh_history || []).slice().sort()[0];
+    bar = `<span class="days-hero-caption">Apple has not updated this since it ${first ? `arrived on ${formatDate(first)}` : 'launched'}, so there is no refresh pattern to compare against yet.</span>`;
+  }
   return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> ${info.days === 1 ? 'day' : 'days'} ${info.suffix}${bar}</p>`;
 }
 
@@ -2054,6 +2060,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <label for="product-icon-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload icon</label>
               <input type="file" id="product-icon-upload" accept="image/*" class="admin-file-input">
               <button type="button" id="product-icon-removebg" class="admin-btn admin-btn--small admin-btn--ghost" style="display:none">Remove background</button>
+              <label class="checkbox-label icon-autobg"><input type="checkbox" id="icon-auto-removebg"> Remove the background automatically when I upload an icon</label>
             </div>
             <p class="admin-hint">Leave blank to use the family icon.</p>
           </div>

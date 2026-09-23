@@ -610,7 +610,8 @@
         const file = e.target.files[0];
         if (!file) return;
         try {
-          const newUrl = await uploadFile(file);
+          const toUpload = autoRemoveBgOn() ? await fileWithoutBackground(file) : file;
+          const newUrl = await uploadFile(toUpload);
           await saveFamilyIcon(family, newUrl);
         } catch (err) {
           window.alert('Upload failed: ' + err.message);
@@ -742,11 +743,48 @@
     if (bgBtn) bgBtn.style.display = currentIconUrl ? '' : 'none';
   }
 
+  // Remembered between visits, so the choice sticks until changed.
+  const AUTO_BG_KEY = 'apple-sunset-auto-removebg';
+  function autoRemoveBgOn() {
+    const box = document.getElementById('icon-auto-removebg');
+    return !!(box && box.checked);
+  }
+  (function initAutoBg() {
+    const box = document.getElementById('icon-auto-removebg');
+    if (!box) return;
+    try { box.checked = window.localStorage.getItem(AUTO_BG_KEY) === '1'; } catch (e) { /* storage blocked */ }
+    box.addEventListener('change', () => {
+      try { window.localStorage.setItem(AUTO_BG_KEY, box.checked ? '1' : '0'); } catch (e) { /* storage blocked */ }
+    });
+  })();
+
+  // Runs the uploaded file through the same background removal used by
+  // the button, before it is stored.
+  async function fileWithoutBackground(file) {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error('could not read the file'));
+      r.readAsDataURL(file);
+    });
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('could not open the image'));
+      img.src = dataUrl;
+    });
+    const canvas = stripIconBackground(img, 24);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('could not process the image');
+    return new File([blob], (file.name || 'icon').replace(/\.[^.]+$/, '') + '-nobg.png', { type: 'image/png' });
+  }
+
   document.getElementById('product-icon-upload').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      currentIconUrl = await uploadFile(file);
+      const toUpload = autoRemoveBgOn() ? await fileWithoutBackground(file) : file;
+      currentIconUrl = await uploadFile(toUpload);
       renderProductIconPreview();
     } catch (err) {
       window.alert('Upload failed: ' + err.message);

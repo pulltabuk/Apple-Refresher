@@ -789,6 +789,12 @@
         '<span class="days-hero-fill' + (over ? ' is-over' : '') + '" style="width:' + pct + '%"></span></span>' +
         '<span class="days-hero-caption">' + caption + '</span>';
     }
+    if (!bar) {
+      var first = (product.refresh_history || []).slice().sort()[0];
+      bar = '<span class="days-hero-caption">Apple has not updated this since it ' +
+        (first ? 'arrived on ' + formatDateJS(first) : 'launched') +
+        ', so there is no refresh pattern to compare against yet.</span>';
+    }
     return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> ' + (info.days === 1 ? 'day' : 'days') + ' ' + info.suffix + bar + '</p>';
   }
 

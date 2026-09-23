@@ -2027,3 +2027,6 @@ body.is-admin .site-search { display: none; }
   }
   .generations-table td[data-label] { font-weight: 600; }
 }
+
+/* Auto background-removal option under the icon upload */
+.icon-autobg { display: block; margin-top: 10px; font-size: 13px; color: var(--text-secondary); }
