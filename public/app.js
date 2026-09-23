@@ -1910,14 +1910,21 @@
     var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
     var searchText = [photo.caption, photo.location, photo.country].concat(photo.tags || []).filter(Boolean).join(' ').toLowerCase();
     var images = galleryPhotoImagesJS(photo);
-    var photoCountPill = images.length > 1 ? '<span class="pill pill--count">' + images.length + ' photos</span>' : '';
     var tagsHtml = galleryTagsHtmlJS(photo);
-    var footer = (tagsHtml || photoCountPill) ? '<div class="gallery-card-footer">' + tagsHtml + photoCountPill + '</div>' : '';
+    var footer = tagsHtml ? '<div class="gallery-card-footer">' + tagsHtml + '</div>' : '';
+    // Must stay in step with galleryPhotoCardHtml() in src/templates.js.
+    var media = images.length > 1
+      ? '<span class="gallery-strip-mosaic' + (images.length === 2 ? ' gallery-strip-mosaic--two' : '') + '">' +
+          '<span class="gallery-strip-main"><img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '"></span>' +
+          '<span class="gallery-strip-side' + (images.length === 2 ? ' gallery-strip-side--one' : '') + '">' +
+            images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb"><img src="' + escapeHtmlJS(u) + '" alt=""></span>'; }).join('') +
+            (images.length > 3 ? '<span class="gallery-strip-more">+' + (images.length - 3) + '</span>' : '') +
+          '</span></span>' +
+          '<span class="gallery-strip-count">' + images.length + ' photos</span>'
+      : (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '');
     return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-created="' + dateToTimestampJS(photo.created_at) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
       '<a class="card-link" href="/gallery/' + galleryPhotoSlugJS(photo) + '/">' +
-        '<div class="card-image">' +
-          (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') +
-        '</div>' +
+        '<div class="card-image">' + media + '</div>' +
         '<p class="card-name">' + escapeHtmlJS(displayName) + '</p>' +
         (photo.date_taken ? '<p class="card-meta">' + formatDateJS(photo.date_taken) + '</p>' : '') +
       '</a>' +

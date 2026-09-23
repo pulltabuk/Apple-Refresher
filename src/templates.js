@@ -1017,13 +1017,21 @@ function galleryPhotoCardHtml(photo) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const searchText = [photo.caption, photo.location, photo.country, ...(photo.tags || [])].filter(Boolean).join(' ');
   const images = galleryPhotoImages(photo);
-  const photoCountPill = images.length > 1 ? `<span class="pill pill--count">${images.length} photos</span>` : '';
   const tagsHtml = galleryTagsHtml(photo);
-  const footer = (tagsHtml || photoCountPill) ? `<div class="gallery-card-footer">${tagsHtml}${photoCountPill}</div>` : '';
+  const footer = tagsHtml ? `<div class="gallery-card-footer">${tagsHtml}</div>` : '';
   return `<article class="card" data-date="${dateToTimestamp(photo.date_taken)}" data-created="${dateToTimestamp(photo.created_at)}" data-search="${escapeHtml(searchText.toLowerCase())}">
   <a class="card-link" href="/gallery/${galleryPhotoSlug(photo)}/">
     <div class="card-image">
-      ${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}
+      ${images.length > 1
+        ? `<span class="gallery-strip-mosaic${images.length === 2 ? ' gallery-strip-mosaic--two' : ''}">
+            <span class="gallery-strip-main"><img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}"></span>
+            <span class="gallery-strip-side${images.length === 2 ? ' gallery-strip-side--one' : ''}">
+              ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb"><img src="${escapeHtml(url)}" alt=""></span>`).join('')}
+              ${images.length > 3 ? `<span class="gallery-strip-more">+${images.length - 3}</span>` : ''}
+            </span>
+          </span>`
+        : images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}
+      ${images.length > 1 ? `<span class="gallery-strip-count">${images.length} photos</span>` : ''}
     </div>
     <p class="card-name">${escapeHtml(displayName)}</p>
     ${photo.date_taken ? `<p class="card-meta">${formatDate(photo.date_taken)}</p>` : ''}

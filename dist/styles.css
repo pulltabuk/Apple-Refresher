@@ -2031,3 +2031,11 @@ body.is-admin .site-search { display: none; }
 
 /* Auto background-removal option under the icon upload */
 .icon-autobg { display: block; margin-top: 10px; font-size: 13px; color: var(--text-secondary); }
+
+/* Album mosaic inside a gallery card, which is 4:3 rather than square */
+.card-image .gallery-strip-mosaic {
+  width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0;
+  background: transparent; padding: 4px; box-sizing: border-box;
+}
+.card-image .gallery-strip-main,
+.card-image .gallery-strip-thumb { border-radius: 4px; }
