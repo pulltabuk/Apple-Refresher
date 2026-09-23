@@ -641,8 +641,9 @@
               img.onerror = () => reject(new Error('could not load the current icon'));
               img.src = url + (url.includes('?') ? '&' : '?') + 'cb=' + Date.now();
             });
-            const canvas = stripIconBackground(img, 24);
-            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+            const result = stripIconBackground(img, 24);
+            if (!result.changed) { window.alert(backgroundResultMessage(result.reason)); throw new Error('__handled__'); }
+            const blob = await new Promise((resolve) => result.canvas.toBlob(resolve, 'image/png'));
             if (!blob) throw new Error('could not process the image');
             const newUrl = await uploadFile(new File([blob], 'family-icon-nobg.png', { type: 'image/png' }));
             await saveFamilyIcon(family, newUrl);
@@ -713,8 +714,9 @@
         img.onerror = () => reject(new Error('could not load the current icon'));
         img.src = url + (url.includes('?') ? '&' : '?') + 'cb=' + Date.now();
       });
-      const canvas = stripIconBackground(img, 24);
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      const result = stripIconBackground(img, 24);
+      if (!result.changed) { window.alert(backgroundResultMessage(result.reason)); throw new Error('__handled__'); }
+      const blob = await new Promise((resolve) => result.canvas.toBlob(resolve, 'image/png'));
       if (!blob) throw new Error('could not process the image');
       const newUrl = await uploadFile(new File([blob], 'family-icon-nobg.png', { type: 'image/png' }));
       const { error } = await client.from('category_icons').upsert({ category: currentCategory, icon_url: newUrl, updated_at: new Date().toISOString() });
@@ -724,7 +726,7 @@
       renderFamilyPicker();
       if (typeof renderFamilyAdminList === 'function') renderFamilyAdminList();
     } catch (err) {
-      window.alert('Could not remove the background: ' + err.message);
+      if (err.message !== '__handled__') window.alert('Could not remove the background: ' + err.message);
     }
     btn.disabled = false;
     btn.textContent = label;
@@ -810,8 +812,10 @@
       img.onerror = () => reject(new Error('could not open the image'));
       img.src = dataUrl;
     });
-    const canvas = stripIconBackground(img, 24);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    const result = stripIconBackground(img, 24);
+    // Nothing to strip: upload the original untouched rather than fail.
+    if (!result.changed) return file;
+    const blob = await new Promise((resolve) => result.canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('could not process the image');
     return new File([blob], (file.name || 'icon').replace(/\.[^.]+$/, '') + '-nobg.png', { type: 'image/png' });
   }
@@ -833,6 +837,20 @@
   // clearing every pixel close to that colour. Works well for the pale
   // grey/white boxes product icons often arrive with; it is deliberately
   // conservative so it won't eat the icon itself.
+  // Makes a flat backdrop transparent by sampling the four corners and
+  // clearing pixels close to that colour. Three safeguards, learned the
+  // hard way: an already-transparent corner is not a colour to match (or
+  // dark line art on a transparent background gets erased entirely);
+  // pixels that are already transparent are left alone; and if the result
+  // would wipe out most of the image, nothing is changed at all.
+  // Explains why an icon was left alone, rather than silently doing nothing.
+  function backgroundResultMessage(reason) {
+    if (reason === 'transparent') return 'This icon already has a transparent background, so there was nothing to remove.';
+    if (reason === 'all') return 'The background could not be told apart from the icon itself, so it has been left unchanged. This usually means the icon is already transparent, or the artwork reaches the edges.';
+    if (reason === 'none') return 'No background colour was found around the edges, so the icon has been left unchanged.';
+    return '';
+  }
+
   function stripIconBackground(img, tolerance) {
     const canvas = document.createElement('canvas');
     canvas.width = img.naturalWidth;
@@ -842,22 +860,40 @@
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const d = imageData.data;
     const w = canvas.width, h = canvas.height;
+
     const cornerAt = (x, y) => {
       const i = (y * w + x) * 4;
-      return [d[i], d[i + 1], d[i + 2]];
+      return { r: d[i], g: d[i + 1], b: d[i + 2], a: d[i + 3] };
     };
-    const corners = [cornerAt(0, 0), cornerAt(w - 1, 0), cornerAt(0, h - 1), cornerAt(w - 1, h - 1)];
-    const bg = [0, 1, 2].map((c) => Math.round(corners.reduce((sum, p) => sum + p[c], 0) / corners.length));
+    // Only corners that are actually opaque describe a background.
+    const corners = [cornerAt(0, 0), cornerAt(w - 1, 0), cornerAt(0, h - 1), cornerAt(w - 1, h - 1)]
+      .filter((c) => c.a > 200);
+    if (!corners.length) return { canvas, changed: false, reason: 'transparent' };
+
+    const bg = ['r', 'g', 'b'].map((k) => Math.round(corners.reduce((sum, c) => sum + c[k], 0) / corners.length));
+
+    let opaque = 0;
+    let wouldClear = 0;
+    const hits = [];
     for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] === 0) continue;
+      opaque++;
       if (Math.abs(d[i] - bg[0]) <= tolerance &&
           Math.abs(d[i + 1] - bg[1]) <= tolerance &&
           Math.abs(d[i + 2] - bg[2]) <= tolerance) {
-        d[i + 3] = 0;
+        wouldClear++;
+        hits.push(i);
       }
     }
+    // Nothing recognisable left means the sample was the artwork, not a
+    // backdrop, so leave the image exactly as it was.
+    if (opaque && wouldClear / opaque > 0.9) return { canvas, changed: false, reason: 'all' };
+
+    hits.forEach((i) => { d[i + 3] = 0; });
     ctx.putImageData(imageData, 0, 0);
-    return canvas;
+    return { canvas, changed: wouldClear > 0, reason: wouldClear ? 'ok' : 'none' };
   }
+
 
   document.getElementById('product-icon-removebg').addEventListener('click', async () => {
     if (!currentIconUrl) return;
@@ -873,13 +909,14 @@
         img.onerror = () => reject(new Error('could not load the current icon'));
         img.src = currentIconUrl + (currentIconUrl.includes('?') ? '&' : '?') + 'cb=' + Date.now();
       });
-      const canvas = stripIconBackground(img, 24);
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      const result = stripIconBackground(img, 24);
+      if (!result.changed) { window.alert(backgroundResultMessage(result.reason)); throw new Error('__handled__'); }
+      const blob = await new Promise((resolve) => result.canvas.toBlob(resolve, 'image/png'));
       if (!blob) throw new Error('could not process the image');
       currentIconUrl = await uploadFile(new File([blob], 'icon-nobg.png', { type: 'image/png' }));
       renderProductIconPreview();
     } catch (err) {
-      window.alert('Could not remove the background: ' + err.message);
+      if (err.message !== '__handled__') window.alert('Could not remove the background: ' + err.message);
     }
     btn.disabled = false;
     btn.textContent = originalLabel;
