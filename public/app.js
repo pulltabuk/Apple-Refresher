@@ -860,6 +860,11 @@
     // Mirrors the key facts grid plus secondary list in src/templates.js.
     var keyFacts = [
       keyFactJS('Latest release', latest ? formatDateJS(latest) : (launch ? formatDateJS(launch) : null)),
+      (function () {
+        var info = latest ? (generationDetailsJS(product)[latest] || {}) : {};
+        return (info.announced ? keyFactJS('Announced', formatDateJS(info.announced)) : '') +
+               (info.preorder ? keyFactJS('Pre-orders opened', formatDateJS(info.preorder)) : '');
+      })(),
       keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null),
       keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days') : null),
       (function () {

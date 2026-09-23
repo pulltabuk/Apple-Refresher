@@ -1803,6 +1803,15 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   // longer gives "Days counted from" the same weight as the price.
   const keyFacts = [
     keyFact('Latest release', latest ? formatDate(latest) : (launch ? formatDate(launch) : null)),
+    // Announcement and pre-order dates are already recorded against the
+    // newest release, so show them rather than leave the grid half empty.
+    (() => {
+      const info = latest ? (generationDetails(product)[latest] || {}) : {};
+      return [
+        info.announced ? keyFact('Announced', formatDate(info.announced)) : '',
+        info.preorder ? keyFact('Pre-orders opened', formatDate(info.preorder)) : '',
+      ].join('');
+    })(),
     keyFact('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDate(product.original_launch_date) : null),
     keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}` : null),
     (() => {

@@ -1332,7 +1332,12 @@ label.admin-btn { cursor: pointer; color: #fff; }
 
 /* ---------- Key facts grid ---------- */
 .key-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 1.25rem; }
-.key-fact { padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: #fff; }
+/* Tiles stretch to match the tall day-count box beside them, so centre
+   their contents rather than leaving the text stranded at the top. */
+.key-fact {
+  padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: #fff;
+  display: flex; flex-direction: column; justify-content: center;
+}
 .key-fact-label { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); }
 .key-fact-value { margin: 7px 0 0; font-size: 17px; font-weight: 700; line-height: 1.3; }
 .spec-list--secondary .spec-row dt { font-size: 12px; }
