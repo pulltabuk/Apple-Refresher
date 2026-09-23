@@ -1812,6 +1812,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
         info.preorder ? keyFact('Pre-orders opened', formatDate(info.preorder)) : '',
       ].join('');
     })(),
+    keyFact('Launch price', product.price ? escapeHtml(formatPrice(product.price)) : null),
     keyFact('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDate(product.original_launch_date) : null),
     keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}` : null),
     (() => {
@@ -1822,7 +1823,6 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     })(),
     keyFact('Discontinued', product.discontinued && product.discontinued_date ? formatDate(product.discontinued_date) : null),
     keyFact('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanText(launch, product.discontinued_date) : null),
-    keyFact('Launch price', product.price ? escapeHtml(formatPrice(product.price)) : null),
     keyFact('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null),
   ].filter(Boolean).slice(0, 6).join('\n');
 

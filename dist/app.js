@@ -865,6 +865,7 @@
         return (info.announced ? keyFactJS('Announced', formatDateJS(info.announced)) : '') +
                (info.preorder ? keyFactJS('Pre-orders opened', formatDateJS(info.preorder)) : '');
       })(),
+      keyFactJS('Launch price', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
       keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null),
       keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days') : null),
       (function () {
@@ -874,7 +875,6 @@
       })(),
       keyFactJS('Discontinued', product.discontinued && product.discontinued_date ? formatDateJS(product.discontinued_date) : null),
       keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanTextJS(launch, product.discontinued_date) : null),
-      keyFactJS('Launch price', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
       keyFactJS('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null)
     ].filter(Boolean).slice(0, 6).join('');
 
