@@ -1822,7 +1822,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     })(),
     keyFact('Discontinued', product.discontinued && product.discontinued_date ? formatDate(product.discontinued_date) : null),
     keyFact('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanText(launch, product.discontinued_date) : null),
-    keyFact('Starting price', product.price ? escapeHtml(formatPrice(product.price)) : null),
+    keyFact('Launch price', product.price ? escapeHtml(formatPrice(product.price)) : null),
     keyFact('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null),
   ].filter(Boolean).slice(0, 6).join('\n');
 
@@ -2114,7 +2114,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
 
           <div class="admin-subfield">
-            <span class="admin-subfield-label">Starting price <span class="admin-optional">Optional</span></span>
+            <span class="admin-subfield-label">Launch price <span class="admin-optional">Optional, the price this version launched at</span></span>
             <div class="price-currency-row">
               <div class="segmented segmented--small" role="radiogroup" aria-label="Currency">
                 <label><input type="radio" name="price_currency" value="&pound;"><span>&pound;</span></label>

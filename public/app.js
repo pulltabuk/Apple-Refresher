@@ -874,7 +874,7 @@
       })(),
       keyFactJS('Discontinued', product.discontinued && product.discontinued_date ? formatDateJS(product.discontinued_date) : null),
       keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanTextJS(launch, product.discontinued_date) : null),
-      keyFactJS('Starting price', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
+      keyFactJS('Launch price', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
       keyFactJS('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null)
     ].filter(Boolean).slice(0, 6).join('');
 
