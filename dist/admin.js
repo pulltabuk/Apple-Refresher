@@ -1476,7 +1476,11 @@
     document.execCommand('defaultParagraphSeparator', false, 'p');
   }
 
-  document.querySelectorAll('.richtext-toolbar [data-cmd]').forEach((btn) => {
+  // :not([data-editor]) matters: buttons that name their own editor are
+  // handled further down. Without it they were caught here too and this
+  // handler focused the Notes editor, losing the other field's selection.
+  document.querySelectorAll('.richtext-toolbar [data-cmd]:not([data-editor])').forEach((btn) => {
+    btn.addEventListener('mousedown', (e) => e.preventDefault());
     btn.addEventListener('click', () => {
       richTextEditor.focus();
       document.execCommand(btn.getAttribute('data-cmd'));
@@ -3003,6 +3007,9 @@
   })();
 
   document.querySelectorAll('.richtext-toolbar [data-editor]').forEach((btn) => {
+    // Stops the click stealing focus, which would clear the highlight
+    // before the command runs.
+    btn.addEventListener('mousedown', (e) => e.preventDefault());
     btn.addEventListener('click', () => {
       document.getElementById(btn.getAttribute('data-editor')).focus();
       document.execCommand(btn.getAttribute('data-cmd'));
@@ -3010,6 +3017,7 @@
   });
 
   document.querySelectorAll('.richtext-toolbar [data-link-for]').forEach((btn) => {
+    btn.addEventListener('mousedown', (e) => e.preventDefault());
     btn.addEventListener('click', () => {
       const url = window.prompt('Link URL (include https://)');
       if (!url) return;
