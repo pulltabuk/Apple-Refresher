@@ -631,8 +631,14 @@ label.admin-btn { cursor: pointer; color: #fff; }
   .gallery-strip-caption { font-size: 13px; }
 }
 
-.see-all { margin-top: 1rem; font-size: 14px; text-align: center; }
-.see-all .intro-cta { font-size: 11px; padding: 7px 16px; }
+/* More room above it, and sized and cased to match the pills elsewhere */
+.see-all { margin-top: 2rem; font-size: 14px; text-align: center; }
+.see-all .intro-cta {
+  font-size: 13px;
+  padding: 9px 19px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
 @media (max-width: 900px) {
   .intro-hero-layout { grid-template-columns: 1fr; }
