@@ -1304,7 +1304,9 @@
       empty.textContent = 'No dates yet. Add the launch date below.';
       refreshHistoryListEl.appendChild(empty);
     }
-    dates.slice().reverse().forEach((date) => {
+    // Oldest first, so the list reads the way the product's life ran:
+    // launch, then each release, then the day it was discontinued.
+    dates.forEach((date) => {
       const type = entryTypeFor(date);
       const index = releaseDates.indexOf(date);
       const info = currentGenerationDetails[date] || {};
