@@ -2087,7 +2087,7 @@ body.is-admin .site-search { display: none; }
    sit on top of. Only on touch devices, so the desktop look is unchanged. */
 @media (pointer: coarse) {
   .footer-nav a, .breadcrumbs a, .breadcrumbs li[aria-current],
-  .spec-row dd a, .gallery-admin-link a {
+  .spec-row dd a, .gallery-admin-link a, .page-intro a {
     display: inline-block;
     padding-top: 5px;
     padding-bottom: 5px;
