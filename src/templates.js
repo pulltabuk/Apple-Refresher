@@ -2205,8 +2205,9 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             </div>
             <p class="admin-hint">&ldquo;Mark it discontinued&rdquo; sets its discontinued date to this product&rsquo;s first release date and points it here.</p>
           </div>
+          <label><span class="admin-label-row">Replaced by <span class="admin-optional">Optional</span></span><select id="replaced_by"></select></label>
+          <p class="admin-hint">Setting this also tells the newer product that this one came before it, so there is no need to go and edit that one too. A product can be replaced while still on sale, so this is here whatever its status.</p>
           <div id="discontinued-fields" class="admin-discontinued-fields" style="display:none;">
-            <label><span class="admin-label-row">Replaced by <span class="admin-optional">Optional</span></span><select id="replaced_by"></select></label>
             <label><span class="admin-label-row">Why it went <span class="admin-optional">Optional</span></span><textarea id="discontinued_reason" rows="2"></textarea></label>
           </div>
         </section>
