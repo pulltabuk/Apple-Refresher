@@ -1767,8 +1767,11 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   // When the timeline above already lists exactly this product's own
   // dates, a Generations table underneath is the same data twice, unless
   // it carries announced dates the timeline doesn't show.
-  const timelineCoversOnlyThisProduct = timelinePoints.every((pt) => pt.productName === product.name)
-    && !productGenerations(product).some((g) => g.announced);
+  // The table used to be the only place an announced date appeared, so it
+  // was shown for single-generation products too. Announced and pre-order
+  // now have their own tiles, so with one generation the table only
+  // repeats what is already above it and in the timeline.
+  const timelineCoversOnlyThisProduct = productGenerations(product).length < 2;
 
   const videoBlock = product.video_url
     ? `<video class="product-video" src="${product.video_url}" controls></video>`
@@ -1804,7 +1807,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   // in a smaller list underneath. Nothing is hidden, but the page no
   // longer gives "Days counted from" the same weight as the price.
   const keyFacts = [
-    keyFact('Latest release', latest ? formatDate(latest) : (launch ? formatDate(launch) : null)),
+    keyFact(sortedDates.length > 1 ? 'Latest release' : 'Released', latest ? formatDate(latest) : (launch ? formatDate(launch) : null)),
     // Announcement and pre-order dates are already recorded against the
     // newest release, so show them rather than leave the grid half empty.
     (() => {

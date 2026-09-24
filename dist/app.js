@@ -861,7 +861,7 @@
 
     // Mirrors the key facts grid plus secondary list in src/templates.js.
     var keyFacts = [
-      keyFactJS('Latest release', latest ? formatDateJS(latest) : (launch ? formatDateJS(launch) : null)),
+      keyFactJS(sortedDates.length > 1 ? 'Latest release' : 'Released', latest ? formatDateJS(latest) : (launch ? formatDateJS(launch) : null)),
       (function () {
         var info = latest ? (generationDetailsJS(product)[latest] || {}) : {};
         return (info.announced ? keyFactJS('Announced', formatDateJS(info.announced)) : '') +
@@ -938,9 +938,9 @@
       '</div>' +
       (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
       releaseHistorySection +
-      (timelinePoints.every(function (pt) { return pt.productName === product.name; })
-        && !productGenerationsJS(product).some(function (g) { return g.announced; })
-        ? '' : generationsSectionHtmlJS(product)) +
+      // Must stay in step with src/templates.js: one generation means the
+      // table only repeats the tiles and the timeline.
+      (productGenerationsJS(product).length < 2 ? '' : generationsSectionHtmlJS(product)) +
       relatedProductsHtmlJS(product, productsBySlug) +
       (relatedPhotos.length ? '<h2>From the gallery</h2><div class="gallery-strip">' + relatedPhotos.map(galleryStripItemHtmlJS).join('') + '</div>' : '') +
       '<p class="report-line"><a class="report-link" href="/contact/?topic=Correction&page=' +
