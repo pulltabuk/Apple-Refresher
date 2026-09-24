@@ -118,6 +118,98 @@
   let galleryLoaded = false;
   let eventLoaded = false;
   let factsLoaded = false;
+  // --- Icon library ---
+  //
+  // Every icon already uploaded, gathered from the products and families
+  // using them, so the same artwork can be reused without uploading it
+  // again. Each icon appears once however many products share it.
+
+  function iconLibrary() {
+    const byUrl = new Map();
+    const add = (url, label) => {
+      if (!url) return;
+      if (byUrl.has(url)) {
+        const entry = byUrl.get(url);
+        if (entry.users.length < 3 && !entry.users.includes(label)) entry.users.push(label);
+        return;
+      }
+      byUrl.set(url, { url, users: [label] });
+    };
+    cachedProducts.forEach((p) => add(p.icon_url, p.name));
+    Object.keys(cachedCategoryIcons).forEach((key) => {
+      const family = (cachedProducts.find((p) => (p.category || '').toLowerCase() === key) || {}).category || key;
+      add(cachedCategoryIcons[key], family + ' (family)');
+    });
+    return [...byUrl.values()].sort((a, b) => a.users[0].localeCompare(b.users[0]));
+  }
+
+  function openIconLibrary(onPick) {
+    const icons = iconLibrary();
+    const existing = document.querySelector('.icon-library');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'icon-library';
+    overlay.innerHTML =
+      '<div class="icon-library-card" role="dialog" aria-modal="true" aria-label="Choose an icon">' +
+        '<div class="icon-library-head"><h2>Choose an icon</h2>' +
+        '<button type="button" class="icon-library-close" aria-label="Close">\u00D7</button></div>' +
+        (icons.length
+          ? '<div class="icon-library-grid"></div>'
+          : '<p class="admin-hint">No icons uploaded yet. Upload one and it will appear here for reuse.</p>') +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    const grid = overlay.querySelector('.icon-library-grid');
+    if (grid) {
+      icons.forEach((icon) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'icon-library-item';
+        btn.title = 'Used by ' + icon.users.join(', ');
+        const img = document.createElement('img');
+        img.src = icon.url;
+        img.alt = '';
+        const cap = document.createElement('span');
+        cap.textContent = icon.users[0];
+        btn.appendChild(img);
+        btn.appendChild(cap);
+        btn.addEventListener('click', () => { close(); onPick(icon.url); });
+        grid.appendChild(btn);
+      });
+    }
+
+    function close() {
+      overlay.remove();
+      document.removeEventListener('keydown', onKey);
+    }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    overlay.querySelector('.icon-library-close').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onKey);
+  }
+
+  document.querySelectorAll('[data-icon-library]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const which = btn.getAttribute('data-icon-library');
+      if (which === 'product') {
+        openIconLibrary((url) => { currentIconUrl = url; renderProductIconPreview(); });
+        return;
+      }
+      const family = canonicalFamily(document.getElementById('category').value);
+      if (!family) { window.alert('Pick a family first.'); return; }
+      openIconLibrary(async (url) => {
+        const { error } = await client.from('category_icons')
+          .upsert({ category: family, icon_url: url, updated_at: new Date().toISOString() });
+        if (error) { window.alert('Could not set the family icon: ' + error.message); return; }
+        cachedCategoryIcons[family.toLowerCase()] = url;
+        updateCategoryIconPreview();
+        renderFamilyPicker();
+        if (typeof renderFamilyAdminList === 'function') renderFamilyAdminList();
+      });
+    });
+  });
+
   // --- Publish: asks Netlify to rebuild, so admin changes go live.
   // Pages are generated from Supabase at build time, so saving here
   // alone does not update the public site.
