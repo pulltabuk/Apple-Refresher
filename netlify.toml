@@ -5,3 +5,8 @@
 
 [build.environment]
   NODE_VERSION = "22"
+
+# Rebuild every morning so day counters stay accurate and a finished
+# countdown clears itself. 06:10 UTC, a quiet time for the site.
+[functions."daily-build"]
+  schedule = "10 6 * * *"
