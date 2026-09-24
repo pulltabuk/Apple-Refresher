@@ -275,14 +275,12 @@
 
         <section class="admin-step" id="step-links">
           <h3 class="admin-step-title"><span class="admin-step-num">5</span> Links <span class="admin-optional">All optional</span></h3>
-          <p class="admin-hint">Try Fill automatically first: it looks up the page and drops the address straight in. The Find buttons open a search instead, if the lookup comes back empty. All links point at Apple's US site.</p>
+          <p class="admin-hint">Tap a Find button to open a search for this product in a new tab, then paste the address back into the box. Searches are set to Apple's US site. Wikipedia can still fill itself in automatically.</p>
           <label>Apple product page<input type="url" id="apple_url" placeholder="https://www.apple.com/airpods-pro/" autocomplete="off"></label>
-          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="apple">Find on apple.com</button><button type="button" class="admin-btn admin-btn--small admin-btn--primary" data-auto-link="apple" data-target="apple_url">Fill automatically</button></div>
-          <p class="admin-hint" data-auto-status="apple"></p>
+          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="apple">Find on apple.com</button></div>
           <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> Apple has taken this page down</label>
           <label>Apple specs page<input type="url" id="specs_url" placeholder="https://support.apple.com/en-us/111854" autocomplete="off"></label>
-          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="specs">Find tech specs</button><button type="button" class="admin-btn admin-btn--small admin-btn--primary" data-auto-link="specs" data-target="specs_url">Fill automatically</button></div>
-          <p class="admin-hint" data-auto-status="specs"></p>
+          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="specs">Find tech specs</button></div>
           <label>Wikipedia page<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/AirPods" autocomplete="off"></label>
           <div>
             <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="wikipedia">Find on Wikipedia</button>
@@ -290,8 +288,7 @@
           </div>
           <p class="admin-hint" id="wikipedia-auto-status"></p>
           <label>Press release<input type="url" id="press_release_url" placeholder="https://www.apple.com/newsroom/..." autocomplete="off"></label>
-          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="newsroom">Find in Apple Newsroom</button><button type="button" class="admin-btn admin-btn--small admin-btn--primary" data-auto-link="newsroom" data-target="press_release_url">Fill automatically</button></div>
-          <p class="admin-hint" data-auto-status="newsroom"></p>
+          <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="newsroom">Find in Apple Newsroom</button></div>
           <p class="admin-hint">Press releases usually only exist for recent products. Leave it blank otherwise.</p>
         </section>
 

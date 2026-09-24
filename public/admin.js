@@ -3208,54 +3208,6 @@
 
   // Wikipedia has an open API that allows requests from other sites, so
   // this one can be filled in without leaving admin.
-  // Fill automatically: asks the site's own helper to find the page, so
-  // there is nothing to search for and paste back by hand.
-  document.querySelectorAll('[data-auto-link]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const kind = btn.getAttribute('data-auto-link');
-      const target = document.getElementById(btn.getAttribute('data-target'));
-      const status = document.querySelector('[data-auto-status="' + kind + '"]');
-      const name = document.getElementById('name').value.trim();
-      const say = (msg) => { if (status) status.textContent = msg; };
-
-      if (!name) { say('Give the product a name first, in step 2.'); return; }
-      const label = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = 'Looking\u2026';
-      say('Looking for the page\u2026');
-      try {
-        const res = await fetch('/.netlify/functions/suggest-link?kind=' + encodeURIComponent(kind) +
-          '&name=' + encodeURIComponent(name));
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(body.error || 'lookup failed');
-        if (!body.url) {
-          const why = {
-            blocked: 'Apple would not let us look this time. Try again in a minute, or use the Find button.',
-            unreachable: 'Could not reach Apple just now. Try again, or use the Find button.',
-            not_found: kind === 'newsroom'
-              ? 'No matching press release in Apple\u2019s recent announcements. Older products usually have none, so leaving this blank is fine.'
-              : 'No page found at the addresses we tried. Use the Find button and paste the address in.',
-          };
-          say(why[body.reason] || 'Nothing found. Use the Find button and paste the address in.');
-        } else if (target.value.trim() && target.value.trim() !== body.url) {
-          if (window.confirm('Replace the address already in this box?\n\nCurrent:\n' + target.value + '\n\nFound:\n' + body.url)) {
-            target.value = body.url;
-            say('Filled in. Open it to check it is the right page before saving.');
-          } else {
-            say('Left as it was.');
-          }
-        } else {
-          target.value = body.url;
-          say('Filled in. Open it to check it is the right page before saving.');
-        }
-      } catch (err) {
-        say('Could not look it up: ' + err.message + '. Use the Find button instead.');
-      }
-      btn.disabled = false;
-      btn.textContent = label;
-    });
-  });
-
   const wikipediaBtn = document.getElementById('wikipedia-auto-btn');
   if (wikipediaBtn) {
     wikipediaBtn.addEventListener('click', async () => {
