@@ -1389,10 +1389,10 @@
       }
       actions.appendChild(removeBtn);
       top.appendChild(actions);
-      li.appendChild(top);
 
-      // Announcement and pre-order sit under their release, each with a
-      // pill so the list reads the same way at a glance.
+      // Announcement and pre-order come before the release they belong to,
+      // because that is the order they happened in: announced, then open
+      // for pre-order, then shipped. They stay grouped with their release.
       if (type !== 'discontinued') {
         [
           { field: 'announced', label: 'Announced' },
@@ -1420,6 +1420,7 @@
           li.appendChild(row);
         });
       }
+      li.appendChild(top);
 
       if (isOpen) {
         const fields = document.createElement('div');
