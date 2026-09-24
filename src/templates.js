@@ -2207,6 +2207,14 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
           <label><span class="admin-label-row">Replaced by <span class="admin-optional">Optional</span></span><select id="replaced_by"></select></label>
           <p class="admin-hint">Setting this also tells the newer product that this one came before it, so there is no need to go and edit that one too. A product can be replaced while still on sale, so this is here whatever its status.</p>
+          <div id="replaced-by-choice" class="admin-subfield" style="display:none;">
+            <span class="admin-subfield-label">Is this product still on sale?</span>
+            <div class="segmented segmented--small" role="radiogroup" aria-label="This product's status">
+              <label><input type="radio" name="replaced_by_action" value="keep" checked><span>Still on sale, leave it</span></label>
+              <label><input type="radio" name="replaced_by_action" value="discontinue"><span>Retire it</span></label>
+            </div>
+            <p class="admin-hint" id="replaced-by-choice-hint"></p>
+          </div>
           <div id="discontinued-fields" class="admin-discontinued-fields" style="display:none;">
             <label><span class="admin-label-row">Why it went <span class="admin-optional">Optional</span></span><textarea id="discontinued_reason" rows="2"></textarea></label>
           </div>

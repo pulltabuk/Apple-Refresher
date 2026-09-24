@@ -502,6 +502,32 @@
 
   // A new product doesn't always end the old one: both can be on sale
   // together, so discontinuing the older one is an explicit choice.
+  // Mirror of updatePreviousModelChoice: when you name the product that
+  // replaced this one, offer to retire this one on that product's release
+  // date, so backfilling older models does not mean editing dates by hand.
+  function updateReplacedByChoice() {
+    const picked = document.getElementById('replaced_by').value;
+    const wrap = document.getElementById('replaced-by-choice');
+    if (!wrap) return;
+    const next = cachedProducts.find((p) => p.slug === picked);
+    const when = next ? successorReleaseDate(next) : null;
+    const show = !!picked && !currentDiscontinuedDate && !!when;
+    wrap.style.display = show ? '' : 'none';
+    if (!show) {
+      const keep = document.querySelector('input[name="replaced_by_action"][value="keep"]');
+      if (keep) keep.checked = true;
+      return;
+    }
+    const hint = document.getElementById('replaced-by-choice-hint');
+    if (hint) hint.textContent = 'Retiring it sets its discontinued date to ' + formatAdminDate(when) +
+      ', the day ' + next.name + ' arrived.';
+  }
+
+  function successorReleaseDate(product) {
+    const dates = (product.refresh_history || []).slice().sort();
+    return product.original_launch_date || dates[0] || null;
+  }
+
   function updatePreviousModelChoice() {
     const picked = document.getElementById('previous_model').value;
     const wrap = document.getElementById('previous-model-choice');
@@ -511,6 +537,7 @@
   }
 
   document.getElementById('previous_model').addEventListener('change', updatePreviousModelChoice);
+  document.getElementById('replaced_by').addEventListener('change', updateReplacedByChoice);
 
   // --- Timeline group dropdown: "Same as family" (blank), any group
   // already in use, or "+ New group" to type one. Typed names still
@@ -1784,6 +1811,8 @@
     fillProductSelect(document.getElementById('replaced_by'), p.replaced_by || '');
     fillProductSelect(document.getElementById('previous_model'), p.previous_model || '');
     document.querySelector('input[name="previous_model_action"][value="keep"]').checked = true;
+    const rk = document.querySelector('input[name="replaced_by_action"][value="keep"]');
+    if (rk) rk.checked = true;
     updatePreviousModelChoice();
     document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
     currentDiscontinuedDate = p.discontinued ? (p.discontinued_date || null) : null;
@@ -1834,6 +1863,8 @@
     fillProductSelect(document.getElementById('replaced_by'), '');
     fillProductSelect(document.getElementById('previous_model'), '');
     document.querySelector('input[name="previous_model_action"][value="keep"]').checked = true;
+    const rk = document.querySelector('input[name="replaced_by_action"][value="keep"]');
+    if (rk) rk.checked = true;
     updatePreviousModelChoice();
     currentDiscontinuedDate = null;
     expandedGenerations.clear();
@@ -2011,6 +2042,15 @@
     try {
       const name = document.getElementById('name').value.trim();
       const category = canonicalFamily(document.getElementById('category').value);
+      // If a successor was named and "Retire it" chosen, retire this product
+      // on the day that successor arrived.
+      const retireEl = document.querySelector('input[name="replaced_by_action"]:checked');
+      const successorSlug = document.getElementById('replaced_by').value;
+      if (!currentDiscontinuedDate && successorSlug && retireEl && retireEl.value === 'discontinue') {
+        const next = cachedProducts.find((p) => p.slug === successorSlug);
+        const when = next ? successorReleaseDate(next) : null;
+        if (when) currentDiscontinuedDate = when;
+      }
       const isDiscontinued = !!currentDiscontinuedDate;
       const discontinuedDate = currentDiscontinuedDate;
 
@@ -2098,7 +2138,9 @@
         previous_model: document.getElementById('previous_model').value || null,
         discontinued: isDiscontinued,
         discontinued_date: isDiscontinued ? discontinuedDate : null,
-        replaced_by: isDiscontinued ? (document.getElementById('replaced_by').value || null) : null,
+        // Was only saved for discontinued products, so setting a successor
+        // on a product still on sale was silently thrown away.
+        replaced_by: document.getElementById('replaced_by').value || null,
         discontinued_reason: isDiscontinued ? (document.getElementById('discontinued_reason').value.trim() || null) : null,
         video_url: currentVideoUrl,
       };
