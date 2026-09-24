@@ -435,7 +435,9 @@ function verticalTimelineHtml(product, allProducts) {
     // grouped so they wrap together instead of splitting across lines.
     const lines = ordered.map((e) => {
       const tags = [
-        e.type === 'refresh' ? '' : `<span class="tl-entry-type tl-entry-type--${e.type}">${e.label}</span>`,
+        // Every entry carries a label, so the column reads consistently.
+        // "Released" rather than "Refresh": it says what happened that day.
+        `<span class="tl-entry-type tl-entry-type--${e.type}">${e.type === 'refresh' ? 'Released' : e.label}</span>`,
         e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '',
       ].filter(Boolean).join('');
       return `<p class="tl-entry">

@@ -303,7 +303,9 @@
       var lines = ordered.map(function (e) {
         return '<p class="tl-entry"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
           (function () {
-            var tags = (e.type === 'refresh' ? '' : '<span class="tl-entry-type tl-entry-type--' + e.type + '">' + e.label + '</span>') +
+            // Must stay in step with src/templates.js.
+            var tags = '<span class="tl-entry-type tl-entry-type--' + e.type + '">' +
+              (e.type === 'refresh' ? 'Released' : e.label) + '</span>' +
               (e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '');
             return tags ? '<span class="tl-entry-tags">' + tags + '</span>' : '';
           })() + '</p>';
