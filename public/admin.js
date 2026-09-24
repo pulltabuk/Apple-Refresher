@@ -1852,6 +1852,33 @@
     }
   }
 
+  // Keeps the two halves of a relationship in step. Setting "previous
+  // model" on a new product fills in that older product's "replaced by",
+  // and setting "replaced by" on an older product fills in the newer
+  // one's "previous model". Only fills a blank: an existing answer is
+  // never overwritten, since that would be guessing at your intent.
+  async function mirrorRelationships(payload) {
+    const notes = [];
+    const pairs = [
+      { mine: payload.previous_model, theirField: 'replaced_by' },
+      { mine: payload.replaced_by, theirField: 'previous_model' },
+    ];
+    for (const { mine, theirField } of pairs) {
+      if (!mine) continue;
+      const other = cachedProducts.find((p) => p.slug === mine);
+      if (!other || other.slug === payload.slug) continue;
+      if (other[theirField]) continue;
+      const res = await client.from('products').update({ [theirField]: payload.slug }).eq('id', other.id);
+      if (res.error) {
+        console.error('Could not link ' + other.name + ':', res.error);
+      } else {
+        other[theirField] = payload.slug;
+        notes.push(other.name);
+      }
+    }
+    return notes;
+  }
+
   async function autoDiscontinuePreviousModel(payload, shouldDiscontinue) {
     if (!payload.previous_model || !shouldDiscontinue) return;
     const prev = cachedProducts.find((p) => p.slug === payload.previous_model);
@@ -1877,7 +1904,10 @@
       if (!info) return;
       const name = (info.name || '').trim();
       const announced = info.announced || null;
-      if (name || announced) out[date] = { name: name || null, announced };
+      const preorder = info.preorder || null;
+      // preorder was missing here, so every pre-order date typed in was
+      // thrown away on save without a word.
+      if (name || announced || preorder) out[date] = { name: name || null, announced, preorder };
     });
     return out;
   }
@@ -2011,6 +2041,10 @@
         }
       }
       await autoDiscontinuePreviousModel(payload, document.querySelector('input[name="previous_model_action"]:checked').value === 'discontinue');
+      const linked = await mirrorRelationships({ ...payload, slug });
+      if (linked.length) {
+        window.alert('Also updated ' + linked.join(' and ') + ' so the two link to each other. Publish when you are ready for that to show on the site.');
+      }
       await enforceFeaturedExclusivity(payload);
       selectedFamily = category;
       editingId = null;
@@ -3103,7 +3137,14 @@
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body.error || 'lookup failed');
         if (!body.url) {
-          say('Nothing found. Use the Find button and paste the address in.');
+          const why = {
+            blocked: 'Apple would not let us look this time. Try again in a minute, or use the Find button.',
+            unreachable: 'Could not reach Apple just now. Try again, or use the Find button.',
+            not_found: kind === 'newsroom'
+              ? 'No matching press release in Apple\u2019s recent announcements. Older products usually have none, so leaving this blank is fine.'
+              : 'No page found at the addresses we tried. Use the Find button and paste the address in.',
+          };
+          say(why[body.reason] || 'Nothing found. Use the Find button and paste the address in.');
         } else if (target.value.trim() && target.value.trim() !== body.url) {
           if (window.confirm('Replace the address already in this box?\n\nCurrent:\n' + target.value + '\n\nFound:\n' + body.url)) {
             target.value = body.url;

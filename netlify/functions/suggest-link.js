@@ -1,61 +1,88 @@
 // Suggests a URL for a product's Apple links. The admin page cannot do
-// this itself: browsers block reading other sites' pages, so the lookup
-// happens here instead.
+// this itself: browsers block reading other sites, so the lookup happens
+// here. Everything returned points at Apple's US site.
 //
-// Everything returned points at Apple's US site.
+// Earlier versions scraped Apple's newsroom and support search pages.
+// Those are built by JavaScript, so the HTML arriving here held no
+// results and the lookup always came back empty. This version only uses
+// sources readable as plain text:
+//
+//   apple    a real page at apple.com/<slug>/, checked by fetching it
+//   specs    the /specs/ page beneath that same product page
+//   newsroom Apple's newsroom RSS feed, which is plain XML
+//
+// Every answer says why it failed, so the panel can tell the difference
+// between "no such page" and "Apple would not let us look".
 
-const UA = { 'User-Agent': 'AppleSunset/1.0 (link suggester)' };
+const HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36',
+  'Accept-Language': 'en-US,en;q=0.9',
+};
 
-// Turns "MacBook Air (M5)" into candidate apple.com paths, most likely first.
-function candidates(name) {
+function reply(url, reason) {
+  return { statusCode: 200, body: JSON.stringify({ url: url || null, reason: reason || null }) };
+}
+
+// "MacBook Air (M4)" -> ["macbook-air", "macbook"]
+function slugCandidates(name) {
   const base = String(name || '')
     .toLowerCase()
-    .replace(/\(.*?\)/g, ' ')            // drop "(M5)", "(2nd generation)"
-    .replace(/\b(m\d(\s?(pro|max|ultra))?|a\d{2}\w*)\b/g, ' ') // drop chip names
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/\bm\d(\s+(pro|max|ultra))?\b/g, ' ')
+    .replace(/\ba\d{2}\w*\b/g, ' ')
     .replace(/\b(1st|2nd|3rd|\d+th)\b/g, ' ')
     .replace(/\bgeneration\b/g, ' ')
-    .replace(/\b(19|20)\d{2}\b/g, ' ')   // drop years
+    .replace(/\b(19|20)\d{2}\b/g, ' ')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
-
   const words = base.split(' ').filter(Boolean);
-  const out = new Set();
-  if (words.length) {
-    out.add(words.join('-'));                     // macbook-air
-    if (words.length > 1) out.add(words.slice(0, -1).join('-')); // macbook
-    out.add(words.join(''));                      // macbookair
+  if (!words.length) return [];
+  const out = [words.join('-')];
+  if (words.length > 1) out.push(words.slice(0, -1).join('-'));
+  return [...new Set(out)];
+}
+
+async function get(url) {
+  try {
+    const res = await fetch(url, { redirect: 'follow', headers: HEADERS });
+    if (res.status === 403 || res.status === 429) return { blocked: true };
+    if (!res.ok) return { missing: true };
+    return { ok: true, url: res.url, text: await res.text() };
+  } catch (e) {
+    return { unreachable: true };
   }
-  return [...out];
 }
 
-async function head(url) {
-  try {
-    const res = await fetch(url, { method: 'GET', redirect: 'follow', headers: UA });
-    return res.ok ? res.url : null;
-  } catch (e) { return null; }
+function keywords(name) {
+  return String(name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 1);
 }
 
-// Apple's newsroom has a search page we can read server-side.
-async function newsroomSearch(name) {
-  try {
-    const res = await fetch('https://www.apple.com/newsroom/search/?q=' + encodeURIComponent(name), { headers: UA });
-    if (!res.ok) return null;
-    const html = await res.text();
-    const m = html.match(/href="(\/newsroom\/\d{4}\/\d{2}\/[^"]+)"/);
-    return m ? 'https://www.apple.com' + m[1] : null;
-  } catch (e) { return null; }
-}
+async function findNewsroom(name) {
+  const feed = await get('https://www.apple.com/newsroom/rss-feed.rss');
+  if (feed.blocked) return { reason: 'blocked' };
+  if (!feed.ok) return { reason: 'unreachable' };
 
-// support.apple.com specs documents are found through Apple's own search.
-async function specsSearch(name) {
-  try {
-    const res = await fetch('https://support.apple.com/kb/index?page=search&locale=en_US&q=' +
-      encodeURIComponent(name + ' technical specifications'), { headers: UA });
-    if (!res.ok) return null;
-    const html = await res.text();
-    const m = html.match(/href="(https:\/\/support\.apple\.com\/en-us\/\d+)"/);
-    return m ? m[1] : null;
-  } catch (e) { return null; }
+  const items = [...feed.text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => m[1]);
+  const words = keywords(name);
+  let best = null;
+  let bestScore = 0;
+
+  for (const item of items) {
+    const title = (item.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/) || [])[1] || '';
+    const link = (item.match(/<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/) || [])[1] || '';
+    if (!link) continue;
+    const haystack = title.toLowerCase();
+    const score = words.filter((w) => haystack.includes(w)).length;
+    if (score > bestScore) { bestScore = score; best = link.trim(); }
+  }
+
+  // At least two matching words, so an unrelated story is never offered.
+  if (best && bestScore >= 2) return { url: best };
+  return { reason: 'not_found' };
 }
 
 exports.handler = async (event) => {
@@ -65,26 +92,27 @@ exports.handler = async (event) => {
   if (!name) return { statusCode: 400, body: JSON.stringify({ error: 'No product name given.' }) };
 
   try {
-    let url = null;
-
-    if (kind === 'apple') {
-      for (const slug of candidates(name)) {
-        url = await head('https://www.apple.com/' + slug + '/');
-        if (url) break;
+    if (kind === 'apple' || kind === 'specs') {
+      const tail = kind === 'specs' ? 'specs/' : '';
+      let sawBlock = false;
+      for (const slug of slugCandidates(name)) {
+        const res = await get('https://www.apple.com/' + slug + '/' + tail);
+        if (res.blocked) { sawBlock = true; continue; }
+        if (res.ok) {
+          let url = res.url.replace('://www.apple.com/uk/', '://www.apple.com/');
+          if (!url.endsWith('/')) url += '/';
+          return reply(url, null);
+        }
       }
-    } else if (kind === 'newsroom') {
-      url = await newsroomSearch(name);
-    } else if (kind === 'specs') {
-      url = await specsSearch(name);
-    } else {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Unknown link type.' }) };
+      return reply(null, sawBlock ? 'blocked' : 'not_found');
     }
 
-    if (!url) return { statusCode: 200, body: JSON.stringify({ url: null }) };
-    // Never hand back a localised page.
-    url = url.replace('://www.apple.com/uk/', '://www.apple.com/')
-             .replace('/en-gb/', '/en-us/');
-    return { statusCode: 200, body: JSON.stringify({ url }) };
+    if (kind === 'newsroom') {
+      const found = await findNewsroom(name);
+      return reply(found.url, found.reason);
+    }
+
+    return { statusCode: 400, body: JSON.stringify({ error: 'Unknown link type.' }) };
   } catch (err) {
     return { statusCode: 502, body: JSON.stringify({ error: err.message }) };
   }
