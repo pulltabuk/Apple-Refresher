@@ -3060,11 +3060,13 @@
   //
   // A browser can't read another site's search results from this page,
   // so these open the right search in a new tab. One tap, then paste.
+  // gl=us&hl=en keeps results on Apple's US site rather than apple.com/uk
+  const US = '&gl=us&hl=en';
   const LINK_SEARCHES = {
-    apple: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:apple.com ' + name),
-    specs: (name) => 'https://www.google.com/search?q=' + encodeURIComponent(name + ' apple tech specs'),
+    apple: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:apple.com ' + name) + US,
+    specs: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:support.apple.com/en-us ' + name + ' technical specifications') + US,
     wikipedia: (name) => 'https://en.wikipedia.org/w/index.php?search=' + encodeURIComponent(name),
-    newsroom: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:apple.com/newsroom ' + name),
+    newsroom: (name) => 'https://www.google.com/search?q=' + encodeURIComponent('site:apple.com/newsroom ' + name) + US,
   };
 
   document.querySelectorAll('[data-find-link]').forEach((btn) => {
@@ -3080,6 +3082,47 @@
 
   // Wikipedia has an open API that allows requests from other sites, so
   // this one can be filled in without leaving admin.
+  // Fill automatically: asks the site's own helper to find the page, so
+  // there is nothing to search for and paste back by hand.
+  document.querySelectorAll('[data-auto-link]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const kind = btn.getAttribute('data-auto-link');
+      const target = document.getElementById(btn.getAttribute('data-target'));
+      const status = document.querySelector('[data-auto-status="' + kind + '"]');
+      const name = document.getElementById('name').value.trim();
+      const say = (msg) => { if (status) status.textContent = msg; };
+
+      if (!name) { say('Give the product a name first, in step 2.'); return; }
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Looking\u2026';
+      say('Looking for the page\u2026');
+      try {
+        const res = await fetch('/.netlify/functions/suggest-link?kind=' + encodeURIComponent(kind) +
+          '&name=' + encodeURIComponent(name));
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error || 'lookup failed');
+        if (!body.url) {
+          say('Nothing found. Use the Find button and paste the address in.');
+        } else if (target.value.trim() && target.value.trim() !== body.url) {
+          if (window.confirm('Replace the address already in this box?\n\nCurrent:\n' + target.value + '\n\nFound:\n' + body.url)) {
+            target.value = body.url;
+            say('Filled in. Open it to check it is the right page before saving.');
+          } else {
+            say('Left as it was.');
+          }
+        } else {
+          target.value = body.url;
+          say('Filled in. Open it to check it is the right page before saving.');
+        }
+      } catch (err) {
+        say('Could not look it up: ' + err.message + '. Use the Find button instead.');
+      }
+      btn.disabled = false;
+      btn.textContent = label;
+    });
+  });
+
   const wikipediaBtn = document.getElementById('wikipedia-auto-btn');
   if (wikipediaBtn) {
     wikipediaBtn.addEventListener('click', async () => {
