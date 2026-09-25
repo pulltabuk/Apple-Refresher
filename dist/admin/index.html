@@ -226,11 +226,13 @@
     <label><input type="radio" name="new_refresh_date_precision" value="year"> Year only</label>
   </div>
   <div class="date-precision-row">
-    <input type="date" id="new_refresh_date_day" class="date-precision-input" autocomplete="off">
+    <input type="text" id="new_refresh_date_text" class="date-precision-text" placeholder="e.g. 15 Oct 2024 or 15/10/2024" autocomplete="off" spellcheck="false" aria-describedby="new_refresh_date_echo">
+    <input type="date" id="new_refresh_date_day" class="date-precision-input" autocomplete="off" aria-label="Date (calendar)">
     <input type="month" id="new_refresh_date_month" class="date-precision-input" style="display:none;">
     <input type="number" id="new_refresh_date_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035" autocomplete="off">
     <button type="button" class="date-precision-clear" data-prefix="new_refresh_date">Clear</button>
   </div>
+  <p class="date-precision-echo" id="new_refresh_date_echo" aria-live="polite"></p>
   
 </div>
               <button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--primary">+ Add</button>
@@ -353,11 +355,13 @@
     <label><input type="radio" name="gallery_date_taken_precision" value="year"> Year only</label>
   </div>
   <div class="date-precision-row">
-    <input type="date" id="gallery_date_taken_day" class="date-precision-input" autocomplete="off">
+    <input type="text" id="gallery_date_taken_text" class="date-precision-text" placeholder="e.g. 15 Oct 2024 or 15/10/2024" autocomplete="off" spellcheck="false" aria-describedby="gallery_date_taken_echo">
+    <input type="date" id="gallery_date_taken_day" class="date-precision-input" autocomplete="off" aria-label="Date taken (calendar)">
     <input type="month" id="gallery_date_taken_month" class="date-precision-input" style="display:none;">
     <input type="number" id="gallery_date_taken_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035" autocomplete="off">
     <button type="button" class="date-precision-clear" data-prefix="gallery_date_taken">Clear</button>
   </div>
+  <p class="date-precision-echo" id="gallery_date_taken_echo" aria-live="polite"></p>
   
 </div>
 

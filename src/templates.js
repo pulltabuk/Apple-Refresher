@@ -1994,11 +1994,13 @@ function datePrecisionFieldHtml(prefix, label, hint) {
     <label><input type="radio" name="${prefix}_precision" value="year"> Year only</label>
   </div>
   <div class="date-precision-row">
-    <input type="date" id="${prefix}_day" class="date-precision-input" autocomplete="off">
+    <input type="text" id="${prefix}_text" class="date-precision-text" placeholder="e.g. 15 Oct 2024 or 15/10/2024" autocomplete="off" spellcheck="false" aria-describedby="${prefix}_echo">
+    <input type="date" id="${prefix}_day" class="date-precision-input" autocomplete="off" aria-label="${label} (calendar)">
     <input type="month" id="${prefix}_month" class="date-precision-input" style="display:none;">
     <input type="number" id="${prefix}_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035" autocomplete="off">
     <button type="button" class="date-precision-clear" data-prefix="${prefix}">Clear</button>
   </div>
+  <p class="date-precision-echo" id="${prefix}_echo" aria-live="polite"></p>
   ${hint ? `<p class="admin-hint">${hint}</p>` : ''}
 </div>`;
 }

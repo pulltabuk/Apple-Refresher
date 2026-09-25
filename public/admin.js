@@ -50,6 +50,100 @@
     return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
+  // Typed-date box that sits in front of the native date picker. Whatever
+  // is typed is parsed and written into "<prefix>_day", which stays the
+  // source of truth for getDatePrecisionValue and everything else.
+  const TYPED_MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  const TYPED_WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+  function typedMonthIndex(word) {
+    const w = word.toLowerCase().replace(/\.$/, '');
+    if (w.length < 3) return -1;
+    if (w === 'sept') return 8;
+    return TYPED_MONTHS.findIndex((m) => m === w || (w.length === 3 && m.startsWith(w)));
+  }
+
+  function isoFromParts(y, m, d) {
+    if (!(y >= 1000 && y <= 9999 && m >= 1 && m <= 12 && d >= 1 && d <= 31)) return null;
+    const date = new Date(Date.UTC(y, m - 1, d));
+    if (date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
+    return String(y) + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  }
+
+  // Returns "YYYY-MM-DD" or null. All-numeric input is read day-first.
+  function parseTypedDate(text) {
+    let s = (text || '').trim().replace(/,/g, ' ').replace(/\s+/g, ' ');
+    if (!s) return null;
+    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) return isoFromParts(+m[1], +m[2], +m[3]);
+    m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+    if (m) return isoFromParts(+m[3], +m[2], +m[1]);
+    // Drop a leading weekday so the tidied "Friday 19 September 2025" re-parses.
+    const words = s.split(' ');
+    const first = words[0].toLowerCase().replace(/\.$/, '');
+    if (words.length === 4 && TYPED_WEEKDAYS.some((d) => d === first || (first.length === 3 && d.startsWith(first)))) words.shift();
+    if (words.length !== 3) return null;
+    const dayOf = (w) => (/^\d{1,2}(st|nd|rd|th)?$/i.test(w) ? parseInt(w, 10) : NaN);
+    if (!/^\d{4}$/.test(words[2])) return null;
+    const year = +words[2];
+    let day = dayOf(words[0]);
+    let month = typedMonthIndex(words[1]);
+    if (isNaN(day) || month < 0) {
+      day = dayOf(words[1]);
+      month = typedMonthIndex(words[0]);
+    }
+    if (isNaN(day) || month < 0) return null;
+    return isoFromParts(year, month + 1, day);
+  }
+
+  function longTypedDate(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).replace(',', '');
+  }
+
+  function setTypedDateEcho(prefix, iso, invalid) {
+    const echo = document.getElementById(prefix + '_echo');
+    if (!echo) return;
+    echo.classList.toggle('date-precision-echo--error', !!invalid);
+    echo.textContent = invalid ? 'Not a date I can read. Try 15 Oct 2024 or 15/10/2024.' : (iso ? longTypedDate(iso) : '');
+  }
+
+  // Mirror "<prefix>_day" into the text box (after load, calendar, clear).
+  function syncTypedDateFromDay(prefix) {
+    const textInput = document.getElementById(prefix + '_text');
+    const dayInput = document.getElementById(prefix + '_day');
+    if (!textInput || !dayInput) return;
+    textInput.value = dayInput.value ? longTypedDate(dayInput.value) : '';
+    setTypedDateEcho(prefix, dayInput.value || null, false);
+  }
+
+  function wireTypedDateInput(prefix) {
+    const textInput = document.getElementById(prefix + '_text');
+    const dayInput = document.getElementById(prefix + '_day');
+    if (!textInput || !dayInput) return;
+    textInput.addEventListener('input', () => {
+      const raw = textInput.value.trim();
+      const iso = parseTypedDate(raw);
+      dayInput.value = iso || '';
+      setTypedDateEcho(prefix, iso, !!raw && !iso);
+    });
+    textInput.addEventListener('blur', () => {
+      const raw = textInput.value.trim();
+      const iso = parseTypedDate(raw);
+      if (iso) textInput.value = longTypedDate(iso);
+      setTypedDateEcho(prefix, iso, !!raw && !iso);
+    });
+    textInput.addEventListener('keydown', (e) => {
+      // Enter tidies the date instead of submitting the whole form.
+      if (e.key === 'Enter') { e.preventDefault(); textInput.blur(); }
+    });
+    dayInput.addEventListener('input', () => syncTypedDateFromDay(prefix));
+    dayInput.addEventListener('change', () => syncTypedDateFromDay(prefix));
+    const form = textInput.form;
+    if (form) form.addEventListener('reset', () => setTimeout(() => syncTypedDateFromDay(prefix), 0));
+  }
+
   function updateDatePrecisionVisibility(prefix) {
     const checked = document.querySelector('input[name="' + prefix + '_precision"]:checked');
     const val = checked ? checked.value : 'day';
@@ -58,6 +152,10 @@
     const yearInput = document.getElementById(prefix + '_year');
     if (!dayInput || !monthInput || !yearInput) return;
     dayInput.style.display = val === 'day' ? '' : 'none';
+    const textInput = document.getElementById(prefix + '_text');
+    if (textInput) textInput.style.display = val === 'day' ? '' : 'none';
+    const echo = document.getElementById(prefix + '_echo');
+    if (echo) echo.style.display = val === 'day' ? '' : 'none';
     monthInput.style.display = val === 'month' ? '' : 'none';
     yearInput.style.display = val === 'year' ? '' : 'none';
   }
@@ -66,6 +164,7 @@
     document.querySelectorAll('input[name="' + prefix + '_precision"]').forEach((radio) => {
       radio.addEventListener('change', () => updateDatePrecisionVisibility(prefix));
     });
+    wireTypedDateInput(prefix);
     updateDatePrecisionVisibility(prefix);
   }
 
@@ -100,6 +199,7 @@
     }
     const radio = document.querySelector('input[name="' + prefix + '_precision"][value="' + precision + '"]');
     if (radio) radio.checked = true;
+    syncTypedDateFromDay(prefix);
     updateDatePrecisionVisibility(prefix);
   }
 
@@ -1831,8 +1931,8 @@
       panel.scrollIntoView({ block: 'center' });
       panel.classList.add('generation-add--highlight');
       setTimeout(() => panel.classList.remove('generation-add--highlight'), 1600);
-      const dayInput = document.getElementById('new_refresh_date_day');
-      if (dayInput) dayInput.focus({ preventScroll: true });
+      const dateTextInput = document.getElementById('new_refresh_date_text');
+      if (dateTextInput) dateTextInput.focus({ preventScroll: true });
     }
   }
 
