@@ -1995,7 +1995,10 @@ function datePrecisionFieldHtml(prefix, label, hint) {
   </div>
   <div class="date-precision-row">
     <input type="text" id="${prefix}_text" class="date-precision-text" placeholder="e.g. 15 Oct 2024 or 15/10/2024" autocomplete="off" spellcheck="false" aria-describedby="${prefix}_echo">
-    <input type="date" id="${prefix}_day" class="date-precision-input" autocomplete="off" aria-label="${label} (calendar)">
+    <span class="date-precision-picker" id="${prefix}_picker">
+      <input type="date" id="${prefix}_day" class="date-precision-input" autocomplete="off" tabindex="-1" aria-hidden="true">
+      <button type="button" class="date-precision-calendar" data-prefix="${prefix}" aria-label="Choose ${label.toLowerCase()} from a calendar" title="Choose from a calendar"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2"/><line x1="3" y1="8.5" x2="17" y2="8.5"/><line x1="7" y1="2.5" x2="7" y2="6"/><line x1="13" y1="2.5" x2="13" y2="6"/></svg></button>
+    </span>
     <input type="month" id="${prefix}_month" class="date-precision-input" style="display:none;">
     <input type="number" id="${prefix}_year" class="date-precision-input" style="display:none;" placeholder="YYYY" min="1970" max="2035" autocomplete="off">
     <button type="button" class="date-precision-clear" data-prefix="${prefix}">Clear</button>

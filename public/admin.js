@@ -138,6 +138,19 @@
       // Enter tidies the date instead of submitting the whole form.
       if (e.key === 'Enter') { e.preventDefault(); textInput.blur(); }
     });
+    // The date input itself is invisible; the calendar button opens its
+    // native picker, and a pick flows back into the text box below.
+    const calendarBtn = document.querySelector('.date-precision-calendar[data-prefix="' + prefix + '"]');
+    if (calendarBtn) {
+      calendarBtn.addEventListener('click', () => {
+        try {
+          dayInput.showPicker();
+        } catch (err) {
+          dayInput.focus();
+          dayInput.click();
+        }
+      });
+    }
     dayInput.addEventListener('input', () => syncTypedDateFromDay(prefix));
     dayInput.addEventListener('change', () => syncTypedDateFromDay(prefix));
     const form = textInput.form;
@@ -151,7 +164,8 @@
     const monthInput = document.getElementById(prefix + '_month');
     const yearInput = document.getElementById(prefix + '_year');
     if (!dayInput || !monthInput || !yearInput) return;
-    dayInput.style.display = val === 'day' ? '' : 'none';
+    const picker = document.getElementById(prefix + '_picker');
+    if (picker) picker.style.display = val === 'day' ? '' : 'none';
     const textInput = document.getElementById(prefix + '_text');
     if (textInput) textInput.style.display = val === 'day' ? '' : 'none';
     const echo = document.getElementById(prefix + '_echo');

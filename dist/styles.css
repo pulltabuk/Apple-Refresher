@@ -172,11 +172,21 @@ a { color: inherit; text-decoration: none; }
 .date-precision-radios label { display: flex; flex-direction: row; align-items: center; gap: 5px; font-size: 14px; font-weight: 400; color: var(--text-secondary); }
 .date-precision-row { display: flex; gap: 8px; align-items: center; }
 .date-precision-row .date-precision-text { flex: 1 1 13em; min-width: 0; }
-.date-precision-row .date-precision-input[type="date"] { flex: 0 1 auto; min-width: 0; }
-@media (max-width: 560px) {
-  .date-precision-row { flex-wrap: wrap; }
-  .date-precision-row .date-precision-text { flex-basis: 100%; }
+/* The native date input sits invisibly under the calendar button so its
+   picker opens in the right place; it still holds the stored value. */
+.date-precision-picker { position: relative; flex: 0 0 auto; display: inline-flex; }
+.admin-form .date-precision-picker input[type="date"] {
+  position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0;
+  opacity: 0; pointer-events: none;
 }
+.date-precision-calendar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; padding: 0;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text-secondary); cursor: pointer;
+}
+.date-precision-calendar:hover { color: var(--accent); border-color: var(--accent); }
+.date-precision-calendar:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .date-precision-echo { min-height: 1.3em; margin: 4px 0 0; font-size: 13px; color: var(--text-secondary); }
 .date-precision-echo--error { color: var(--overdue-text); }
 .date-precision-clear {
