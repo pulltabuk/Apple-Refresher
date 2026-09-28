@@ -8,8 +8,9 @@
   const client = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
   const MAX_PHOTOS = 12;
-  const MAX_EDGE = 3000; // longest side in pixels after resizing
-  const JPEG_QUALITY = 0.88;
+  const MAX_EDGE = 2560; // longest side in pixels after resizing
+  const JPEG_QUALITY = 0.85;
+  const LIST_CACHE_KEY = 'upload-gallery-cache-v1';
   const SUGGESTED_TAG_LIMIT = 16;
 
   const $ = (id) => document.getElementById(id);
@@ -25,6 +26,41 @@
   let submitting = false;
   let editingId = null; // null while adding a new set
   let gallerySets = []; // every gallery_photos row, newest first
+
+  // Small, cached thumbnails via Netlify's Image CDN instead of full-size
+  // photos. If the CDN can't serve one (or on a local preview), the image
+  // falls back to the original file.
+  function thumbUrl(url, size) {
+    if (!/^https?:\/\//.test(url) || location.protocol !== 'https:') return url;
+    return '/.netlify/images?url=' + encodeURIComponent(url) + '&w=' + size + '&h=' + size + '&fit=cover&q=70';
+  }
+
+  function thumbImg(img, url, size) {
+    img.src = thumbUrl(url, size);
+    if (img.src !== url) {
+      img.addEventListener('error', function fallback() {
+        img.removeEventListener('error', fallback);
+        img.src = url;
+      });
+    }
+  }
+
+  function readListCache() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(LIST_CACHE_KEY) || 'null');
+      return cached && Array.isArray(cached.rows) ? cached : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function writeListCache(rows, productNames) {
+    try {
+      localStorage.setItem(LIST_CACHE_KEY, JSON.stringify({ rows, productNames }));
+    } catch (err) {
+      // Storage full or blocked: the list just loads from the network.
+    }
+  }
 
   function show(name) {
     Object.keys(sections).forEach((key) => { sections[key].hidden = key !== name; });
@@ -64,6 +100,8 @@
 
   $('up-logout').addEventListener('click', async () => {
     await client.auth.signOut();
+    try { localStorage.removeItem(LIST_CACHE_KEY); } catch (err) { /* ignore */ }
+    gallerySets = [];
     show('login');
   });
 
@@ -76,12 +114,26 @@
 
   // Loads every gallery set (for the Edit list) and builds the tag, place
   // and product suggestions from them.
+  // Shows the copy remembered from last time straight away, then refreshes
+  // it from the database.
+  let suggestionsFromCache = false;
   async function loadSuggestions() {
+    if (!gallerySets.length && !suggestionsFromCache) {
+      suggestionsFromCache = true;
+      const cached = readListCache();
+      if (cached) applySuggestions(cached.rows, cached.productNames || []);
+    }
     const [photosRes, productsRes] = await Promise.all([
       client.from('gallery_photos').select('*').order('created_at', { ascending: false }),
       client.from('products').select('name'),
     ]);
-    const rows = photosRes.data || [];
+    if (photosRes.error) return;
+    const productNames = (productsRes.data || []).map((p) => p.name).filter(Boolean);
+    writeListCache(photosRes.data || [], productNames);
+    applySuggestions(photosRes.data || [], productNames);
+  }
+
+  function applySuggestions(rows, productNames) {
     gallerySets = rows;
     if (!sections.library.hidden) renderLibrary();
     const counts = new Map();
@@ -90,7 +142,6 @@
       if (t) counts.set(t, (counts.get(t) || 0) + 1);
     }));
     allTags = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t]) => t);
-    const productNames = (productsRes.data || []).map((p) => p.name).filter(Boolean);
     fillDatalist('up-tag-options', uniqueSorted(allTags.concat(productNames)));
     fillDatalist('up-location-options', uniqueSorted(rows.map((r) => r.location)));
     fillDatalist('up-country-options', uniqueSorted(rows.map((r) => r.country)));
@@ -429,8 +480,10 @@
       const cell = document.createElement('div');
       cell.className = 'up-photo up-photo--' + entry.status;
       const img = document.createElement('img');
-      img.src = entry.preview;
+      if (entry.file) img.src = entry.preview;
+      else thumbImg(img, entry.url, 360);
       img.alt = 'Photo ' + (i + 1);
+      img.decoding = 'async';
       cell.appendChild(img);
 
       const state = document.createElement('div');
@@ -652,7 +705,7 @@
       const images = setImages(set);
       if (images[0]) {
         const img = document.createElement('img');
-        img.src = images[0];
+        thumbImg(img, images[0], 160);
         img.alt = '';
         img.loading = 'lazy';
         img.decoding = 'async';

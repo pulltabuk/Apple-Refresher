@@ -2471,6 +2471,8 @@ function uploadPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 <link rel="manifest" href="/upload.webmanifest">
 <link rel="apple-touch-icon" href="/logo.png">
 <link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crossorigin>` : ''}
 <link rel="stylesheet" href="/upload.css">
 </head>
 <body>
@@ -2573,8 +2575,15 @@ function uploadPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   window.SUPABASE_URL = ${JSON.stringify(supabaseUrl || '')};
   window.SUPABASE_ANON_KEY = ${JSON.stringify(supabaseAnonKey || '')};
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
 <script src="/upload.js" defer></script>
+<script>
+  // Keeps the page's files on the phone so it opens instantly from the
+  // Home Screen; updates are fetched in the background.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/upload-sw.js', { scope: '/upload/' }).catch(function () {});
+  }
+</script>
 </body>
 </html>
 `;

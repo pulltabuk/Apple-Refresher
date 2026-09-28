@@ -10,3 +10,9 @@
 # countdown clears itself. 06:10 UTC, a quiet time for the site.
 [functions."daily-build"]
   schedule = "10 6 * * *"
+
+# Lets Netlify's Image CDN (/.netlify/images) resize photos stored in
+# Supabase, so the phone upload page can show small thumbnails instead of
+# downloading every full-size photo.
+[images]
+  remote_images = ["https://.*\\.supabase\\.co/storage/v1/object/public/.*"]
