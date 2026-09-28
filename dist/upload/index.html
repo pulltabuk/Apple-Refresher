@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Upload — Apple Sunset</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#c2540c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Upload">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/upload.webmanifest">
+<link rel="apple-touch-icon" href="/logo.png">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="stylesheet" href="/upload.css">
+</head>
+<body>
+<main class="up">
+  <header class="up-header">
+    <img src="/logo.png" alt="" class="up-logo" width="32" height="32">
+    <h1>Add to gallery</h1>
+  </header>
+
+  <section id="up-loading" class="up-card"><p class="up-muted">Loading…</p></section>
+
+  <section id="up-login" class="up-card" hidden>
+    <p class="up-muted">Sign in with your admin account. Save the password to iCloud Keychain when asked, and Face ID fills it in next time.</p>
+    <form id="up-login-form" class="up-form">
+      <label>Email<input type="email" id="up-email" autocomplete="username" inputmode="email" autocapitalize="off" required></label>
+      <label>Password<input type="password" id="up-password" autocomplete="current-password" required></label>
+      <button type="submit" class="up-btn up-btn--primary">Sign in</button>
+      <p id="up-login-error" class="up-error" role="alert"></p>
+    </form>
+  </section>
+
+  <section id="up-main" hidden>
+    <form id="up-form" class="up-form">
+      <div class="up-card">
+        <div class="up-photos" id="up-photos"></div>
+        <label for="up-file" class="up-btn up-btn--primary up-btn--block" id="up-file-label">Choose photos</label>
+        <input type="file" id="up-file" accept="image/*" multiple class="up-file-input">
+        <p class="up-hint">Up to 12 in one set. The first photo is the main one. Location data is removed from the files before upload.</p>
+      </div>
+
+      <div class="up-card">
+        <label>Title<input type="text" id="up-title" placeholder="e.g. iPhone 17 Pro in Cosmic Orange" autocomplete="off" enterkeyhint="next"></label>
+        <label>Date taken
+          <input type="text" id="up-date" placeholder="e.g. 15 Oct 2024" autocomplete="off" spellcheck="false" enterkeyhint="next">
+        </label>
+        <p class="up-hint" id="up-date-echo" aria-live="polite"></p>
+        <label>Location<input type="text" id="up-location" list="up-location-options" placeholder="e.g. Cardiff" autocomplete="off" enterkeyhint="next"></label>
+        <datalist id="up-location-options"></datalist>
+        <label>Country<input type="text" id="up-country" list="up-country-options" placeholder="e.g. United Kingdom" autocomplete="off" enterkeyhint="done"></label>
+        <datalist id="up-country-options"></datalist>
+      </div>
+
+      <div class="up-card">
+        <span class="up-label">Tags</span>
+        <div class="up-pills" id="up-selected-tags"></div>
+        <div class="up-add-tag">
+          <input type="text" id="up-new-tag" list="up-tag-options" placeholder="Add a tag" autocomplete="off" enterkeyhint="done" aria-label="New tag">
+          <button type="button" id="up-add-tag-btn" class="up-btn">Add</button>
+        </div>
+        <datalist id="up-tag-options"></datalist>
+        <p class="up-hint">Tap to add. A tag that matches a product name also shows the photo on that product's page.</p>
+        <div class="up-pills up-pills--suggest" id="up-suggested-tags"></div>
+        <button type="button" id="up-more-tags" class="up-link" hidden>Show all tags</button>
+      </div>
+
+      <div class="up-card">
+        <label class="up-check"><input type="checkbox" id="up-publish" checked> Publish to the site straight away</label>
+        <button type="submit" class="up-btn up-btn--primary up-btn--block" id="up-submit">Upload</button>
+        <p id="up-status" class="up-status" aria-live="polite"></p>
+      </div>
+    </form>
+  </section>
+
+  <section id="up-done" class="up-card" hidden>
+    <h2 id="up-done-title">Uploaded</h2>
+    <p id="up-done-text" class="up-muted"></p>
+    <button type="button" id="up-again" class="up-btn up-btn--primary up-btn--block">Upload another</button>
+    <a href="/gallery/" class="up-btn up-btn--block">View gallery</a>
+  </section>
+
+  <footer class="up-footer" id="up-footer" hidden>
+    <span id="up-user"></span>
+    <button type="button" id="up-logout" class="up-link">Sign out</button>
+  </footer>
+</main>
+<script>
+  window.SUPABASE_URL = "";
+  window.SUPABASE_ANON_KEY = "";
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/upload.js" defer></script>
+</body>
+</html>

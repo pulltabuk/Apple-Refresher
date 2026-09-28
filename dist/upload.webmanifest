@@ -1,0 +1,12 @@
+{
+  "name": "Apple Sunset Upload",
+  "short_name": "Upload",
+  "start_url": "/upload/",
+  "scope": "/upload/",
+  "display": "standalone",
+  "background_color": "#f7f6f2",
+  "theme_color": "#c2540c",
+  "icons": [
+    { "src": "/logo.png", "sizes": "300x300", "type": "image/png" }
+  ]
+}
