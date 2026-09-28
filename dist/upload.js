@@ -1,5 +1,7 @@
 // Phone upload page (/upload/): pick photos, give them a title, date,
-// place and tags, and publish, without opening the admin panel. Uses the
+// place and tags, and publish, without opening the admin panel. The
+// "Edit existing" tab edits or deletes any gallery set, including ones
+// added from the admin panel. Uses the
 // same Supabase sign-in as the admin panel; the database only accepts
 // writes from signed-in users, so the page itself holds no secrets.
 (function () {
@@ -11,8 +13,9 @@
   const SUGGESTED_TAG_LIMIT = 16;
 
   const $ = (id) => document.getElementById(id);
-  const sections = { loading: $('up-loading'), login: $('up-login'), main: $('up-main'), done: $('up-done') };
+  const sections = { loading: $('up-loading'), login: $('up-login'), main: $('up-main'), library: $('up-library'), done: $('up-done') };
 
+  // Photos already on the site have a url and no file.
   let photos = []; // { id, file, preview, status: 'working'|'done'|'error', url, error, promise }
   let photoSeq = 0;
   let processQueue = Promise.resolve();
@@ -20,10 +23,18 @@
   let allTags = []; // existing tags, most used first
   let showAllTags = false;
   let submitting = false;
+  let editingId = null; // null while adding a new set
+  let gallerySets = []; // every gallery_photos row, newest first
 
   function show(name) {
     Object.keys(sections).forEach((key) => { sections[key].hidden = key !== name; });
     $('up-footer').hidden = name === 'login' || name === 'loading';
+    $('up-tabs').hidden = !(name === 'library' || (name === 'main' && !editingId));
+    const onEdit = name === 'library';
+    $('up-tab-new').classList.toggle('up-tab--on', !onEdit);
+    $('up-tab-edit').classList.toggle('up-tab--on', onEdit);
+    $('up-tab-new').setAttribute('aria-selected', String(!onEdit));
+    $('up-tab-edit').setAttribute('aria-selected', String(onEdit));
     window.scrollTo(0, 0);
   }
 
@@ -58,18 +69,21 @@
 
   function enterApp(session) {
     $('up-user').textContent = session && session.user ? session.user.email : '';
-    show('main');
-    loadSuggestions();
+    startNew();
   }
 
   // --- Suggestions: existing tags, places and product names ---
 
+  // Loads every gallery set (for the Edit list) and builds the tag, place
+  // and product suggestions from them.
   async function loadSuggestions() {
     const [photosRes, productsRes] = await Promise.all([
-      client.from('gallery_photos').select('tags, location, country'),
+      client.from('gallery_photos').select('*').order('created_at', { ascending: false }),
       client.from('products').select('name'),
     ]);
     const rows = photosRes.data || [];
+    gallerySets = rows;
+    if (!sections.library.hidden) renderLibrary();
     const counts = new Map();
     rows.forEach((row) => (row.tags || []).forEach((tag) => {
       const t = String(tag).trim();
@@ -187,10 +201,22 @@
     return String(y) + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
   }
 
+  // Returns "YYYY-MM-DD", or "YYYY-MM" / "YYYY" for a month or year only
+  // (the gallery already stores those for some older sets), or null.
   function parseTypedDate(text) {
     const s = (text || '').trim().replace(/,/g, ' ').replace(/\s+/g, ' ');
     if (!s) return null;
-    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (/^\d{4}$/.test(s)) return +s >= 1000 ? s : null;
+    let m = s.match(/^(\d{4})-(\d{1,2})$/) || s.match(/^(\d{1,2})[/.-](\d{4})$/);
+    if (m) {
+      const [y, mo] = m[1].length === 4 ? [+m[1], +m[2]] : [+m[2], +m[1]];
+      return mo >= 1 && mo <= 12 ? y + '-' + String(mo).padStart(2, '0') : null;
+    }
+    const monthOnly = s.split(' ');
+    if (monthOnly.length === 2 && /^\d{4}$/.test(monthOnly[1]) && monthIndex(monthOnly[0]) >= 0) {
+      return monthOnly[1] + '-' + String(monthIndex(monthOnly[0]) + 1).padStart(2, '0');
+    }
+    m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
     if (m) return isoFromParts(+m[1], +m[2], +m[3]);
     m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
     if (m) return isoFromParts(+m[3], +m[2], +m[1]);
@@ -210,10 +236,18 @@
   }
 
   function longDate(iso) {
+    if (/^\d{4}$/.test(iso)) return iso;
     const [y, m, d] = iso.split('-').map(Number);
+    if (!d) return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
     return new Date(Date.UTC(y, m - 1, d))
       .toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
       .replace(',', '');
+  }
+
+  function precisionNote(iso) {
+    if (/^\d{4}$/.test(iso)) return 'Year only';
+    if (/^\d{4}-\d{2}$/.test(iso)) return 'Month and year only';
+    return '';
   }
 
   const dateInput = $('up-date');
@@ -225,8 +259,11 @@
     const iso = parseTypedDate(raw);
     dateEcho.classList.toggle('up-hint--error', !!raw && !iso && final);
     // Once the box already reads as the tidy long date, don't repeat it.
-    if (iso) dateEcho.textContent = dateInput.value === longDate(iso) ? (dateFromPhoto ? 'Taken from the photo' : '') : longDate(iso) + (dateFromPhoto ? ' (from the photo)' : '');
-    else if (raw) dateEcho.textContent = 'Not a date I can read. Try 15 Oct 2024 or 15/10/2024.';
+    if (iso) {
+      const note = dateFromPhoto ? 'Taken from the photo' : precisionNote(iso);
+      dateEcho.textContent = dateInput.value === longDate(iso) ? note : longDate(iso) + (note ? ' (' + note.toLowerCase() + ')' : '');
+    }
+    else if (raw) dateEcho.textContent = 'Not a date I can read. Try 15 Oct 2024, 15/10/2024 or Oct 2024.';
     else dateEcho.textContent = '';
     return iso;
   }
@@ -371,7 +408,7 @@
       preview: URL.createObjectURL(file),
       status: 'working',
     }));
-    const wasEmpty = photos.length === 0;
+    const wasEmpty = photos.length === 0 && !editingId;
     photos = photos.concat(added);
     added.forEach(processPhoto);
     if (wasEmpty && added.length && !dateInput.value.trim()) {
@@ -431,7 +468,7 @@
       remove.textContent = '×';
       remove.addEventListener('click', () => {
         photos = photos.filter((p) => p !== entry);
-        URL.revokeObjectURL(entry.preview);
+        if (entry.file) URL.revokeObjectURL(entry.preview);
         renderPhotos();
       });
       cell.appendChild(remove);
@@ -489,7 +526,10 @@
         country: $('up-country').value.trim() || null,
         tags: selectedTags.slice(),
       };
-      const { error } = await client.from('gallery_photos').insert(payload);
+      const wasEditing = !!editingId;
+      const { error } = wasEditing
+        ? await client.from('gallery_photos').update(payload).eq('id', editingId)
+        : await client.from('gallery_photos').insert(payload);
       if (error) {
         setStatus('Could not save: ' + error.message, true);
         return;
@@ -506,10 +546,16 @@
         doneText = 'Saved. It will go live the next time you publish, or with the daily rebuild tomorrow morning.';
       }
       const count = payload.image_urls.length;
-      $('up-done-title').textContent = count === 1 ? 'Photo uploaded' : count + ' photos uploaded';
+      $('up-done-title').textContent = wasEditing ? 'Changes saved' : (count === 1 ? 'Photo uploaded' : count + ' photos uploaded');
       $('up-done-text').textContent = doneText;
       setStatus('');
+      if (wasEditing) {
+        editingId = null;
+        clearForm(false);
+        setFormMode();
+      }
       show('done');
+      loadSuggestions();
     } finally {
       submitting = false;
       submitBtn.disabled = false;
@@ -529,18 +575,189 @@
     }
   }
 
-  // Location and country are kept for the next set, since photos taken
-  // on the same outing usually share them.
-  $('up-again').addEventListener('click', () => {
-    photos.forEach((p) => URL.revokeObjectURL(p.preview));
+  function clearForm(keepPlace) {
+    photos.forEach((p) => { if (p.file) URL.revokeObjectURL(p.preview); });
     photos = [];
     selectedTags = [];
     showAllTags = false;
     $('up-title').value = '';
+    if (!keepPlace) {
+      $('up-location').value = '';
+      $('up-country').value = '';
+    }
+    $('up-new-tag').value = '';
     setDate(null);
+    setStatus('');
     renderPhotos();
+    renderTags();
+  }
+
+  function setFormMode() {
+    const editing = !!editingId;
+    $('up-editing').hidden = !editing;
+    $('up-remove-card').hidden = !editing;
+    $('up-submit').textContent = editing ? 'Save changes' : 'Upload';
+  }
+
+  // Location and country are kept for the next set, since photos taken
+  // on the same outing usually share them.
+  function startNew() {
+    const wasEditing = !!editingId;
+    editingId = null;
+    clearForm(!wasEditing);
+    setFormMode();
     show('main');
     loadSuggestions();
+  }
+
+  $('up-again').addEventListener('click', startNew);
+
+  // --- Edit existing sets ---
+
+  function hasUnsavedNewSet() {
+    return !editingId && photos.length > 0;
+  }
+
+  function setTitle(set) {
+    return set.caption || (set.tags && set.tags[0]) || 'Untitled photo';
+  }
+
+  function setImages(set) {
+    if (set.image_urls && set.image_urls.length) return set.image_urls;
+    return set.image_url ? [set.image_url] : [];
+  }
+
+  function openLibrary() {
+    show('library');
+    renderLibrary();
+    loadSuggestions();
+  }
+
+  function renderLibrary() {
+    const list = $('up-library-list');
+    const query = $('up-search').value.trim().toLowerCase();
+    const words = query.split(/\s+/).filter(Boolean);
+    const matches = gallerySets.filter((set) => {
+      const hay = [set.caption, set.location, set.country].concat(set.tags || []).filter(Boolean).join(' ').toLowerCase();
+      return words.every((w) => hay.includes(w));
+    });
+    $('up-library-count').textContent = gallerySets.length
+      ? (query ? matches.length + ' of ' + gallerySets.length + ' sets' : gallerySets.length + ' sets. Tap one to edit it.')
+      : 'No photos in the gallery yet.';
+    list.innerHTML = '';
+    matches.forEach((set) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'up-set';
+      const images = setImages(set);
+      if (images[0]) {
+        const img = document.createElement('img');
+        img.src = images[0];
+        img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        btn.appendChild(img);
+      } else {
+        const blank = document.createElement('span');
+        blank.className = 'up-set-noimg';
+        btn.appendChild(blank);
+      }
+      const text = document.createElement('span');
+      text.className = 'up-set-text';
+      const title = document.createElement('span');
+      title.className = 'up-set-title';
+      title.textContent = setTitle(set);
+      const meta = document.createElement('span');
+      meta.className = 'up-set-meta';
+      meta.textContent = [set.date_taken ? longDate(set.date_taken).replace(/^[A-Za-z]+day /, '') : '', set.location, set.country].filter(Boolean).join(' · ') || 'No date or place';
+      text.appendChild(title);
+      text.appendChild(meta);
+      btn.appendChild(text);
+      if (images.length > 1) {
+        const count = document.createElement('span');
+        count.className = 'up-set-count';
+        count.textContent = images.length + ' photos';
+        btn.appendChild(count);
+      }
+      btn.addEventListener('click', () => editSet(set.id));
+      list.appendChild(btn);
+    });
+  }
+
+  $('up-search').addEventListener('input', renderLibrary);
+
+  function editSet(id) {
+    const set = gallerySets.find((s) => s.id === id);
+    if (!set) return;
+    if (hasUnsavedNewSet() && !window.confirm('Discard the new photos you haven\'t uploaded yet?')) return;
+    clearForm(false);
+    editingId = id;
+    photos = setImages(set).map((url) => ({ id: ++photoSeq, file: null, preview: url, url, status: 'done', promise: Promise.resolve() }));
+    $('up-title').value = set.caption || '';
+    $('up-location').value = set.location || '';
+    $('up-country').value = set.country || '';
+    selectedTags = (set.tags || []).slice();
+    setDate(set.date_taken || null);
+    $('up-editing-title').textContent = setTitle(set);
+    setFormMode();
+    renderPhotos();
+    renderTags();
+    show('main');
+  }
+
+  $('up-cancel-edit').addEventListener('click', () => {
+    editingId = null;
+    clearForm(false);
+    setFormMode();
+    openLibrary();
+  });
+
+  $('up-tab-new').addEventListener('click', () => {
+    if (!sections.main.hidden) return;
+    show('main');
+  });
+  $('up-tab-edit').addEventListener('click', () => {
+    if (!sections.library.hidden) return;
+    openLibrary();
+  });
+  $('up-to-library').addEventListener('click', () => {
+    clearForm(false);
+    setFormMode();
+    openLibrary();
+  });
+
+  $('up-remove-set').addEventListener('click', async () => {
+    if (!editingId || submitting) return;
+    const set = gallerySets.find((s) => s.id === editingId);
+    if (!window.confirm('Delete "' + (set ? setTitle(set) : 'this set') + '" from the gallery? This can\'t be undone.')) return;
+    submitting = true;
+    try {
+      setStatus('Deleting…');
+      const { error } = await client.from('gallery_photos').delete().eq('id', editingId);
+      if (error) {
+        setStatus('Could not delete: ' + error.message, true);
+        return;
+      }
+      let doneText = 'It has been removed from the gallery.';
+      if ($('up-publish').checked) {
+        setStatus('Publishing…');
+        const published = await publishSite();
+        doneText = published.ok
+          ? 'It will be gone from the site in about a minute.'
+          : 'Deleted, but publishing failed (' + published.error + '). It will disappear at the next publish, or with the daily rebuild tomorrow morning.';
+      } else {
+        doneText = 'Deleted. It will disappear from the site the next time you publish, or with the daily rebuild tomorrow morning.';
+      }
+      editingId = null;
+      clearForm(false);
+      setFormMode();
+      $('up-done-title').textContent = 'Photo set deleted';
+      $('up-done-text').textContent = doneText;
+      show('done');
+      loadSuggestions();
+    } finally {
+      submitting = false;
+    }
   });
 
   start();

@@ -152,3 +152,38 @@ body {
 
 .up-footer { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-secondary); padding: 4px 2px; gap: 12px; }
 .up-footer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.gallery-action--danger { color: var(--error); border-color: #e6c3c3; }
+.gallery-action--danger:active { background: #fbeaea; }
+
+/* Add new / Edit existing switch */
+.up-tabs { display: flex; background: #ebe9e2; border-radius: 12px; padding: 4px; margin-bottom: 12px; gap: 4px; }
+.up-tab {
+  flex: 1; min-height: 40px; border: none; border-radius: 9px; background: transparent;
+  font: inherit; font-size: 15px; font-weight: 600; color: var(--text-secondary); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.up-tab--on { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(20, 20, 20, 0.12); }
+
+.up-search {
+  font: inherit; font-size: 17px; padding: 12px 14px; width: 100%;
+  border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--text);
+  -webkit-appearance: none; appearance: none;
+}
+.up-search:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+
+.up-library-list { display: flex; flex-direction: column; gap: 8px; }
+.up-set {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 8px;
+  font: inherit; color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.up-set:active { background: #faf9f6; }
+.up-set img, .up-set-noimg { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: var(--border); }
+.up-set-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.up-set-title { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.up-set-meta { font-size: 13px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.up-set-count { font-size: 12px; font-weight: 700; color: var(--text-secondary); flex-shrink: 0; padding-right: 6px; }
+
+.up-editing { display: flex; flex-direction: column; gap: 2px; margin: 0 2px 10px; }
+.up-editing h2 { margin: 0; font-size: 19px; overflow-wrap: anywhere; }

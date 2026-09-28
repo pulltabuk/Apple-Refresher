@@ -34,7 +34,24 @@
     </form>
   </section>
 
+  <nav class="up-tabs" id="up-tabs" role="tablist" hidden>
+    <button type="button" role="tab" class="up-tab up-tab--on" id="up-tab-new" aria-selected="true">Add new</button>
+    <button type="button" role="tab" class="up-tab" id="up-tab-edit" aria-selected="false">Edit existing</button>
+  </nav>
+
+  <section id="up-library" hidden>
+    <div class="up-card">
+      <input type="search" id="up-search" class="up-search" placeholder="Search title, tag or place" autocomplete="off" aria-label="Search photo sets">
+      <p class="up-hint" id="up-library-count"></p>
+    </div>
+    <div id="up-library-list" class="up-library-list"></div>
+  </section>
+
   <section id="up-main" hidden>
+    <div class="up-editing" id="up-editing" hidden>
+      <button type="button" id="up-cancel-edit" class="up-link">&larr; Back to all sets</button>
+      <h2 id="up-editing-title">Editing</h2>
+    </div>
     <form id="up-form" class="up-form">
       <div class="up-card">
         <div class="up-photos" id="up-photos"></div>
@@ -46,7 +63,7 @@
       <div class="up-card">
         <label>Title<input type="text" id="up-title" placeholder="e.g. iPhone 17 Pro in Cosmic Orange" autocomplete="off" enterkeyhint="next"></label>
         <label>Date taken
-          <input type="text" id="up-date" placeholder="e.g. 15 Oct 2024" autocomplete="off" spellcheck="false" enterkeyhint="next">
+          <input type="text" id="up-date" placeholder="e.g. 15 Oct 2024, or Oct 2024" autocomplete="off" spellcheck="false" enterkeyhint="next">
         </label>
         <p class="up-hint" id="up-date-echo" aria-live="polite"></p>
         <label>Location<input type="text" id="up-location" list="up-location-options" placeholder="e.g. Cardiff" autocomplete="off" enterkeyhint="next"></label>
@@ -73,6 +90,11 @@
         <button type="submit" class="gallery-action gallery-action--primary gallery-action--block" id="up-submit">Upload</button>
         <p id="up-status" class="up-status" aria-live="polite"></p>
       </div>
+
+      <div class="up-card" id="up-remove-card" hidden>
+        <button type="button" id="up-remove-set" class="gallery-action gallery-action--danger gallery-action--block">Delete this photo set</button>
+        <p class="up-hint">Removes it from the gallery. This can't be undone.</p>
+      </div>
     </form>
   </section>
 
@@ -80,6 +102,7 @@
     <h2 id="up-done-title">Uploaded</h2>
     <p id="up-done-text" class="up-muted"></p>
     <button type="button" id="up-again" class="gallery-action gallery-action--primary gallery-action--block">Upload another</button>
+    <button type="button" id="up-to-library" class="gallery-action gallery-action--block">Edit existing sets</button>
     <a href="/gallery/" class="gallery-action gallery-action--block">View gallery</a>
   </section>
 
