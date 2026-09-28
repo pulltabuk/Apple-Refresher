@@ -73,7 +73,7 @@ body {
 .up-error { color: var(--error); margin: 0; font-size: 14px; }
 .up-error:empty { display: none; }
 
-.up-btn {
+.gallery-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -91,10 +91,10 @@ body {
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
-.up-btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.up-btn--primary:active { background: var(--accent-dark); }
-.up-btn--block { width: 100%; }
-.up-btn:disabled { opacity: 0.55; cursor: default; }
+.gallery-action--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.gallery-action--primary:active { background: var(--accent-dark); }
+.gallery-action--block { width: 100%; }
+.gallery-action:disabled { opacity: 0.55; cursor: default; }
 .up-link { background: none; border: none; padding: 6px 0; font: inherit; font-size: 14px; color: var(--accent-dark); font-weight: 600; cursor: pointer; align-self: flex-start; }
 
 .up-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

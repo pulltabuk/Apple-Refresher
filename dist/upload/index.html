@@ -29,7 +29,7 @@
     <form id="up-login-form" class="up-form">
       <label>Email<input type="email" id="up-email" autocomplete="username" inputmode="email" autocapitalize="off" required></label>
       <label>Password<input type="password" id="up-password" autocomplete="current-password" required></label>
-      <button type="submit" class="up-btn up-btn--primary">Sign in</button>
+      <button type="submit" class="gallery-action gallery-action--primary">Sign in</button>
       <p id="up-login-error" class="up-error" role="alert"></p>
     </form>
   </section>
@@ -38,7 +38,7 @@
     <form id="up-form" class="up-form">
       <div class="up-card">
         <div class="up-photos" id="up-photos"></div>
-        <label for="up-file" class="up-btn up-btn--primary up-btn--block" id="up-file-label">Choose photos</label>
+        <label for="up-file" class="gallery-action gallery-action--primary gallery-action--block" id="up-file-label">Choose photos</label>
         <input type="file" id="up-file" accept="image/*" multiple class="up-file-input">
         <p class="up-hint">Up to 12 in one set. The first photo is the main one. Location data is removed from the files before upload.</p>
       </div>
@@ -60,7 +60,7 @@
         <div class="up-pills" id="up-selected-tags"></div>
         <div class="up-add-tag">
           <input type="text" id="up-new-tag" list="up-tag-options" placeholder="Add a tag" autocomplete="off" enterkeyhint="done" aria-label="New tag">
-          <button type="button" id="up-add-tag-btn" class="up-btn">Add</button>
+          <button type="button" id="up-add-tag-btn" class="gallery-action">Add</button>
         </div>
         <datalist id="up-tag-options"></datalist>
         <p class="up-hint">Tap to add. A tag that matches a product name also shows the photo on that product's page.</p>
@@ -70,7 +70,7 @@
 
       <div class="up-card">
         <label class="up-check"><input type="checkbox" id="up-publish" checked> Publish to the site straight away</label>
-        <button type="submit" class="up-btn up-btn--primary up-btn--block" id="up-submit">Upload</button>
+        <button type="submit" class="gallery-action gallery-action--primary gallery-action--block" id="up-submit">Upload</button>
         <p id="up-status" class="up-status" aria-live="polite"></p>
       </div>
     </form>
@@ -79,8 +79,8 @@
   <section id="up-done" class="up-card" hidden>
     <h2 id="up-done-title">Uploaded</h2>
     <p id="up-done-text" class="up-muted"></p>
-    <button type="button" id="up-again" class="up-btn up-btn--primary up-btn--block">Upload another</button>
-    <a href="/gallery/" class="up-btn up-btn--block">View gallery</a>
+    <button type="button" id="up-again" class="gallery-action gallery-action--primary gallery-action--block">Upload another</button>
+    <a href="/gallery/" class="gallery-action gallery-action--block">View gallery</a>
   </section>
 
   <footer class="up-footer" id="up-footer" hidden>
