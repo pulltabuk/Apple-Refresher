@@ -43,11 +43,15 @@
     return this.viewport.clientWidth || 1;
   };
 
-  Slider.prototype.place = function (i, x, z, animate, visible) {
+  // opacity only matters with opts.fadeUnder (the full-screen viewer,
+  // where photos of different shapes would otherwise show round the edges).
+  Slider.prototype.place = function (i, x, z, animate, visible, opacity) {
     var el = this.slides[i];
     if (!el) return;
-    el.style.transition = animate && !reduceMotion ? 'transform ' + SLIDE_MS + 'ms ' + EASE : 'none';
+    var t = animate && !reduceMotion ? SLIDE_MS + 'ms ' + EASE : null;
+    el.style.transition = t ? 'transform ' + t + ', opacity ' + t : 'none';
     el.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+    if (this.opts.fadeUnder) el.style.opacity = String(opacity === undefined ? 1 : opacity);
     el.style.zIndex = String(z);
     el.style.visibility = visible ? 'visible' : 'hidden';
     el.classList.toggle('gp-on-top', z === 2);
@@ -72,7 +76,7 @@
     var other = this.index + dir;
     var hasOther = dx !== 0 && other >= 0 && other < this.count;
     for (var i = 0; i < this.count; i++) {
-      if (i === this.index) this.place(i, hasOther ? dx * UNDER : dx * 0.3, 1, false, true);
+      if (i === this.index) this.place(i, hasOther ? dx * UNDER : dx * 0.3, 1, false, true, hasOther ? 1 - Math.min(Math.abs(dx) / w, 1) : 1);
       else if (hasOther && i === other) this.place(i, dir * w + dx, 2, false, true);
       else this.place(i, i < this.index ? -w : w, 0, false, false);
     }
@@ -107,7 +111,7 @@
         void this.slides[target].offsetWidth; // commit the start position
       }
       this.place(target, 0, 2, true, true);
-      this.place(from, -dir * w * UNDER, 1, true, true);
+      this.place(from, -dir * w * UNDER, 1, true, true, 0);
       this.index = target;
     }
     if (this.opts.onChange) this.opts.onChange(this.index, true);
@@ -359,6 +363,7 @@
     }
 
     var slider = new Slider(viewport, track, photos.length, {
+      fadeUnder: true,
       isLocked: function () { return current().scale > 1.01; },
       onChange: function (index, animate) {
         counter.textContent = (index + 1) + ' / ' + photos.length;
