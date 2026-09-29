@@ -1875,6 +1875,19 @@
     return isNaN(ms) ? '' : ms;
   }
 
+  // Must stay in step with cdnImage() / galleryCarouselImgHtml() in src/templates.js.
+  function cdnImageJS(url, width) {
+    if (!/^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//.test(url)) return url;
+    return '/.netlify/images?url=' + encodeURIComponent(url) + '&w=' + width + '&q=80';
+  }
+
+  function galleryCarouselImgHtmlJS(url, alt, index) {
+    var cdn = cdnImageJS(url, 1280);
+    var srcset = cdn === url ? '' : ' srcset="' + [640, 960, 1280, 1920].map(function (w) { return escapeHtmlJS(cdnImageJS(url, w)) + ' ' + w + 'w'; }).join(', ') + '" sizes="(max-width: 700px) 100vw, 640px"';
+    var fallback = cdn === url ? '' : ' onerror="this.onerror=null;this.removeAttribute(\'srcset\');this.src=this.dataset.full"';
+    return '<img src="' + escapeHtmlJS(cdn) + '"' + srcset + ' data-full="' + escapeHtmlJS(url) + '" alt="' + escapeHtmlJS(alt) + '"' + (index === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async"' + fallback + '>';
+  }
+
   function galleryPhotoImagesJS(photo) {
     if (photo.image_urls && photo.image_urls.length) return photo.image_urls;
     return photo.image_url ? [photo.image_url] : [];
@@ -2005,92 +2018,6 @@
       .catch(function () {});
   }
 
-  // --- Gallery photo lightbox: click an image to enlarge it, Escape or
-  // clicking the overlay background closes it, left/right arrows (on
-  // screen or keyboard) step through every image in the album. Uses
-  // event delegation so it keeps working even if live-refresh replaces
-  // the images below.
-
-  var galleryPhotoPageForLightbox = document.querySelector('.gallery-photo-page');
-  if (galleryPhotoPageForLightbox) {
-    var activeLightbox = null;
-    var lightboxImages = [];
-    var lightboxIndex = 0;
-
-    function closeLightbox() {
-      if (!activeLightbox) return;
-      activeLightbox.remove();
-      activeLightbox = null;
-      document.removeEventListener('keydown', onLightboxKeydown);
-    }
-
-    function showLightboxImage(index) {
-      if (!activeLightbox || index < 0 || index >= lightboxImages.length) return;
-      lightboxIndex = index;
-      var img = activeLightbox.querySelector('img');
-      img.src = lightboxImages[lightboxIndex].src;
-      img.alt = lightboxImages[lightboxIndex].alt;
-      var prevBtn = activeLightbox.querySelector('.gallery-lightbox-prev');
-      var nextBtn = activeLightbox.querySelector('.gallery-lightbox-next');
-      prevBtn.style.visibility = lightboxIndex > 0 ? 'visible' : 'hidden';
-      nextBtn.style.visibility = lightboxIndex < lightboxImages.length - 1 ? 'visible' : 'hidden';
-    }
-
-    function onLightboxKeydown(e) {
-      if (e.key === 'Escape') closeLightbox();
-      else if (e.key === 'ArrowLeft') showLightboxImage(lightboxIndex - 1);
-      else if (e.key === 'ArrowRight') showLightboxImage(lightboxIndex + 1);
-    }
-
-    function openLightbox(clickedImg) {
-      closeLightbox();
-      lightboxImages = Array.prototype.slice.call(galleryPhotoPageForLightbox.querySelectorAll('.gallery-photo-images img')).map(function (el) {
-        return { src: el.src, alt: el.alt };
-      });
-      var startIndex = Array.prototype.indexOf.call(galleryPhotoPageForLightbox.querySelectorAll('.gallery-photo-images img'), clickedImg);
-
-      var overlay = document.createElement('div');
-      overlay.className = 'gallery-lightbox';
-      var img = document.createElement('img');
-      var prevBtn = document.createElement('button');
-      prevBtn.type = 'button';
-      prevBtn.className = 'gallery-lightbox-arrow gallery-lightbox-prev';
-      prevBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 6 9 12 15 18"></polyline></svg>';
-      prevBtn.setAttribute('aria-label', 'Previous photo');
-      var nextBtn = document.createElement('button');
-      nextBtn.type = 'button';
-      nextBtn.className = 'gallery-lightbox-arrow gallery-lightbox-next';
-      nextBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg>';
-      nextBtn.setAttribute('aria-label', 'Next photo');
-      var closeBtn = document.createElement('button');
-      closeBtn.type = 'button';
-      closeBtn.className = 'gallery-lightbox-close';
-      closeBtn.textContent = '\u00d7';
-      closeBtn.setAttribute('aria-label', 'Close');
-
-      overlay.appendChild(prevBtn);
-      overlay.appendChild(img);
-      overlay.appendChild(nextBtn);
-      overlay.appendChild(closeBtn);
-      overlay.addEventListener('click', function (e) {
-        if (e.target === overlay) closeLightbox();
-      });
-      closeBtn.addEventListener('click', closeLightbox);
-      prevBtn.addEventListener('click', function () { showLightboxImage(lightboxIndex - 1); });
-      nextBtn.addEventListener('click', function () { showLightboxImage(lightboxIndex + 1); });
-      document.body.appendChild(overlay);
-      activeLightbox = overlay;
-      showLightboxImage(startIndex >= 0 ? startIndex : 0);
-      document.addEventListener('keydown', onLightboxKeydown);
-    }
-
-    galleryPhotoPageForLightbox.addEventListener('click', function (e) {
-      var img = e.target.closest('.gallery-photo-images img');
-      if (!img) return;
-      openLightbox(img);
-    });
-  }
-
   // --- Live refresh: a single gallery photo page, matched by its URL id.
 
   var galleryPhotoPageEl = document.querySelector('.gallery-photo-page');
@@ -2111,7 +2038,14 @@
         var nextPhoto = index < photos.length - 1 ? photos[index + 1] : null;
         var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
         var images = galleryPhotoImagesJS(photo);
-        var imagesHtml = images.map(function (url) { return '<img src="' + escapeHtmlJS(url) + '" alt="' + escapeHtmlJS(displayName) + '">'; }).join('');
+        // Keep the carousel (and the photo being viewed) when the photos
+        // haven't changed; otherwise rebuild it with the same markup the
+        // build writes (galleryCarouselImgHtml in src/templates.js).
+        var oldImages = galleryPhotoPageEl.querySelector('.gallery-photo-images');
+        var oldFulls = oldImages ? Array.prototype.map.call(oldImages.querySelectorAll('img'), function (img) { return img.getAttribute('data-full') || img.getAttribute('src'); }) : [];
+        var sameImages = oldImages && oldFulls.join('\n') === images.join('\n');
+        var keptIndex = window.GalleryViewer ? window.GalleryViewer.currentIndex(galleryPhotoPageEl) : 0;
+        var imagesHtml = images.map(function (url, i) { return galleryCarouselImgHtmlJS(url, displayName, i); }).join('');
         var mailtoHref = 'mailto:infoswiper@yahoo.com?subject=' + encodeURIComponent('Can I use this photo? \u2014 ' + displayName) + '&body=' + encodeURIComponent('Hi, I\'d like to ask about using this photo:\n' + window.location.href);
         galleryPhotoPageEl.innerHTML =
           '<div class="gallery-photo-header">' +
@@ -2122,7 +2056,7 @@
             (photo.date_taken ? '<p class="gallery-photo-date">' + formatDateJS(photo.date_taken) + '</p>' : '') +
             galleryTagsHtmlJS(photo, true) +
           '</div>' +
-          '<div class="gallery-photo-images">' + imagesHtml + '</div>' +
+          '<div class="gallery-photo-images"></div>' +
           '<div class="gallery-photo-copyright">' +
             '<p>These photos are my own property.</p>' +
             '<a class="intro-cta" href="' + mailtoHref + '">Request to use photo</a>' +
@@ -2132,6 +2066,16 @@
             '<a href="/gallery/" class="gallery-nav-link">Full Gallery</a>' +
             (nextPhoto ? '<a href="/gallery/' + galleryPhotoSlugJS(nextPhoto) + '/" class="gallery-nav-link">Next &rarr;</a>' : '<span></span>') +
           '</div>';
+        var imagesSlot = galleryPhotoPageEl.querySelector('.gallery-photo-images');
+        if (sameImages) {
+          imagesSlot.replaceWith(oldImages);
+        } else {
+          imagesSlot.innerHTML = imagesHtml;
+          if (window.GalleryViewer) {
+            window.GalleryViewer.init(galleryPhotoPageEl);
+            window.GalleryViewer.goTo(galleryPhotoPageEl, Math.min(keptIndex, images.length - 1));
+          }
+        }
         document.title = displayName + ' \u2014 Apple Sunset Gallery';
         revealAdminEditLinks(galleryPhotoPageEl.querySelectorAll('.admin-edit-link'));
       })

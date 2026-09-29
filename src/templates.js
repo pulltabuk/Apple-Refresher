@@ -1041,10 +1041,28 @@ function galleryPhotoCardHtml(photo) {
 </article>`;
 }
 
+// Netlify Image CDN version of a remote photo at a given width. Only
+// Supabase storage is allowed as a source (see netlify.toml); anything
+// else is used as-is.
+function cdnImage(url, width) {
+  if (!/^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//.test(url)) return url;
+  return `/.netlify/images?url=${encodeURIComponent(url)}&w=${width}&q=80`;
+}
+
+// A carousel photo: right-sized for the page via srcset, with the
+// original in data-full for the full-screen viewer. Falls back to the
+// original if the CDN can't serve it.
+function galleryCarouselImgHtml(url, alt, index) {
+  const cdn = cdnImage(url, 1280);
+  const srcset = cdn === url ? '' : ` srcset="${[640, 960, 1280, 1920].map((w) => `${escapeHtml(cdnImage(url, w))} ${w}w`).join(', ')}" sizes="(max-width: 700px) 100vw, 640px"`;
+  const fallback = cdn === url ? '' : ` onerror="this.onerror=null;this.removeAttribute('srcset');this.src=this.dataset.full"`;
+  return `<img src="${escapeHtml(cdn)}"${srcset} data-full="${escapeHtml(url)}" alt="${escapeHtml(alt)}"${index === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async"${fallback}>`;
+}
+
 function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const images = galleryPhotoImages(photo);
-  const imagesHtml = images.map((url) => `<img src="${escapeHtml(url)}" alt="${escapeHtml(displayName)}">`).join('\n');
+  const imagesHtml = images.map((url, i) => galleryCarouselImgHtml(url, displayName, i)).join('\n');
   const pageUrl = `${siteUrl}/gallery/${galleryPhotoSlug(photo)}/`;
   const mailtoHref = `mailto:infoswiper@yahoo.com?subject=${encodeURIComponent(`Can I use this photo? — ${displayName}`)}&body=${encodeURIComponent(`Hi, I'd like to ask about using this photo:\n${pageUrl}`)}`;
   const body = `
@@ -1078,6 +1096,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
     supabaseAnonKey,
     ogImage: images[0],
     ogType: 'article',
+    scripts: DEFAULT_SCRIPTS.concat('<script src="/gallery-viewer.js" defer></script>'),
   });
 }
 
