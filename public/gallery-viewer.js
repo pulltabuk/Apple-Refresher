@@ -17,33 +17,106 @@
   var ARROW_NEXT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"></polyline></svg>';
   var CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>';
 
-  // --- Slider: a track of full-width slides moved with transforms ---
+  // --- Slider: stacked slides. The incoming photo slides in over the
+  // current one, which drifts back a little underneath (parallax). ---
+
+  var UNDER = 0.25; // how far the covered photo drifts, as a share of the movement
 
   function Slider(viewport, track, count, opts) {
+    var self = this;
     this.viewport = viewport;
     this.track = track;
+    this.slides = Array.prototype.slice.call(track.children);
     this.count = count;
     this.opts = opts || {};
     this.index = 0;
     this.pointers = {};
     this.wheelLock = 0;
+    this.cleanup = null;
     this.bind();
-    this.render(false);
+    this.settle();
+    if (this.opts.onChange) this.opts.onChange(0, false);
+    window.addEventListener('resize', function () { if (self.track.isConnected) self.settle(); });
   }
 
-  Slider.prototype.setX = function (dxPx, animate) {
-    this.track.style.transition = animate && !reduceMotion ? 'transform ' + SLIDE_MS + 'ms ' + EASE : 'none';
-    this.track.style.transform = 'translate3d(calc(' + (-this.index * 100) + '% + ' + dxPx + 'px), 0, 0)';
+  Slider.prototype.width = function () {
+    return this.viewport.clientWidth || 1;
   };
 
-  Slider.prototype.render = function (animate) {
-    this.setX(0, animate);
-    if (this.opts.onChange) this.opts.onChange(this.index, animate);
+  Slider.prototype.place = function (i, x, z, animate, visible) {
+    var el = this.slides[i];
+    if (!el) return;
+    el.style.transition = animate && !reduceMotion ? 'transform ' + SLIDE_MS + 'ms ' + EASE : 'none';
+    el.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+    el.style.zIndex = String(z);
+    el.style.visibility = visible ? 'visible' : 'hidden';
+    el.classList.toggle('gp-on-top', z === 2);
+  };
+
+  // Resting state: only the current photo showing.
+  Slider.prototype.settle = function () {
+    var w = this.width();
+    for (var i = 0; i < this.count; i++) {
+      if (i === this.index) this.place(i, 0, 1, false, true);
+      else this.place(i, i < this.index ? -w : w, 0, false, false);
+    }
+  };
+
+  // While dragging: the neighbour in the drag direction follows the finger
+  // over the top; the current photo drifts slightly underneath. At the
+  // first / last photo the current one just resists.
+  Slider.prototype.drag = function (dx) {
+    clearTimeout(this.cleanup);
+    var w = this.width();
+    var dir = dx < 0 ? 1 : -1;
+    var other = this.index + dir;
+    var hasOther = dx !== 0 && other >= 0 && other < this.count;
+    for (var i = 0; i < this.count; i++) {
+      if (i === this.index) this.place(i, hasOther ? dx * UNDER : dx * 0.3, 1, false, true);
+      else if (hasOther && i === other) this.place(i, dir * w + dx, 2, false, true);
+      else this.place(i, i < this.index ? -w : w, 0, false, false);
+    }
   };
 
   Slider.prototype.goTo = function (index, animate) {
-    this.index = clamp(index, 0, this.count - 1);
-    this.render(animate !== false);
+    var self = this;
+    var target = clamp(index, 0, this.count - 1);
+    var from = this.index;
+    var w = this.width();
+    clearTimeout(this.cleanup);
+    if (animate === false || reduceMotion) {
+      this.index = target;
+      this.settle();
+      if (this.opts.onChange) this.opts.onChange(target, false);
+      return;
+    }
+    if (target === from) {
+      // Spring back: whichever neighbour was pulled in slides back out.
+      for (var i = 0; i < this.count; i++) {
+        if (i === from) this.place(i, 0, 1, true, true);
+        else if (this.slides[i].style.visibility === 'visible') this.place(i, i < from ? -w : w, 2, true, true);
+      }
+    } else {
+      var dir = target > from ? 1 : -1;
+      for (var j = 0; j < this.count; j++) {
+        if (j !== target && j !== from) this.place(j, j < target ? -w : w, 0, false, false);
+      }
+      // Pressed an arrow (no drag): start the incoming photo just off-screen.
+      if (this.slides[target].style.visibility !== 'visible') {
+        this.place(target, dir * w, 2, false, true);
+        void this.slides[target].offsetWidth; // commit the start position
+      }
+      this.place(target, 0, 2, true, true);
+      this.place(from, -dir * w * UNDER, 1, true, true);
+      this.index = target;
+    }
+    if (this.opts.onChange) this.opts.onChange(this.index, true);
+    this.cleanup = setTimeout(function () { self.settle(); }, SLIDE_MS + 40);
+  };
+
+  // Back to rest from wherever a drag left things (used on cancel).
+  Slider.prototype.render = function (animate) {
+    this.goTo(this.index, animate);
   };
 
   Slider.prototype.bind = function () {
@@ -81,8 +154,7 @@
       start.samples.push({ x: e.clientX, y: e.clientY, t: e.timeStamp });
       if (start.samples.length > 6) start.samples.shift();
       if (start.lock === 'x') {
-        var atEdge = (self.index === 0 && dx > 0) || (self.index === self.count - 1 && dx < 0);
-        self.setX(atEdge ? dx * 0.3 : dx, false);
+        self.drag(dx);
       } else if (self.opts.onVerticalDrag) {
         self.opts.onVerticalDrag(dy, false);
       }
