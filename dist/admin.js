@@ -3006,11 +3006,11 @@
       imageBtn.type = 'button';
       imageBtn.className = 'admin-btn admin-btn--small';
       imageBtn.textContent = 'Download image';
-      imageBtn.addEventListener('click', () => {
-        const dataUrl = generateFactImage(fact.text);
+      imageBtn.addEventListener('click', async () => {
+        const dataUrl = await generateFactImage(fact.text);
         const link = document.createElement('a');
         link.href = dataUrl;
-        link.download = 'apple-refresher-fact.png';
+        link.download = 'apple-sunset-fact.png';
         link.click();
       });
       const deleteBtn = document.createElement('button');
