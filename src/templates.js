@@ -12,6 +12,25 @@ const CATEGORY_ICONS = {
 };
 
 let CUSTOM_CATEGORY_ICONS = {};
+
+// A file in public/ with a short content hash in its URL, so browsers
+// and the phone app's service worker can never keep serving an old copy
+// after a change.
+const assetHashes = {};
+function assetUrl(file) {
+  if (!assetHashes[file]) {
+    try {
+      const nodeFs = require('fs');
+      const nodePath = require('path');
+      const body = nodeFs.readFileSync(nodePath.join(__dirname, '..', 'public', file));
+      assetHashes[file] = require('crypto').createHash('md5').update(body).digest('hex').slice(0, 10);
+    } catch (err) {
+      assetHashes[file] = 'dev';
+    }
+  }
+  return `/${file}?v=${assetHashes[file]}`;
+}
+
 function setCustomCategoryIcons(icons) {
   CUSTOM_CATEGORY_ICONS = icons || {};
 }
@@ -1096,7 +1115,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
     supabaseAnonKey,
     ogImage: images[0],
     ogType: 'article',
-    scripts: DEFAULT_SCRIPTS.concat('<script src="/gallery-viewer.js" defer></script>'),
+    scripts: DEFAULT_SCRIPTS.concat(`<script src="${assetUrl('gallery-viewer.js')}" defer></script>`),
   });
 }
 
@@ -2465,8 +2484,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     noindex: true,
     scripts: [
       '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>',
-      '<script src="/facts-kit.js" defer></script>',
-      '<script src="/admin.js" defer></script>',
+      `<script src="${assetUrl('facts-kit.js')}" defer></script>`,
+      `<script src="${assetUrl('admin.js')}" defer></script>`,
     ],
   });
 }
@@ -2493,7 +2512,7 @@ function uploadPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crossorigin>` : ''}
-<link rel="stylesheet" href="/upload.css">
+<link rel="stylesheet" href="${assetUrl('upload.css')}">
 </head>
 <body>
 <main class="up">
@@ -2609,13 +2628,24 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
   window.SUPABASE_ANON_KEY = ${JSON.stringify(supabaseAnonKey || '')};
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
-<script src="/facts-kit.js" defer></script>
-<script src="/upload.js" defer></script>
+<script src="${assetUrl('facts-kit.js')}" defer></script>
+<script src="${assetUrl('upload.js')}" defer></script>
 <script>
   // Keeps the page's files on the phone so it opens instantly from the
   // Home Screen; updates are fetched in the background.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/upload-sw.js', { scope: '/upload/' }).catch(function () {});
+    // When a new version of the app takes over just after opening, reload
+    // once so it shows straight away (never later, so it can't interrupt
+    // an upload in progress).
+    var openedAt = Date.now();
+    var hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (hadController && Date.now() - openedAt < 8000 && !sessionStorage.getItem('upload-sw-reloaded')) {
+        sessionStorage.setItem('upload-sw-reloaded', '1');
+        location.reload();
+      }
+    });
+    navigator.serviceWorker.register('/upload-sw.js', { scope: '/upload/', updateViaCache: 'none' }).catch(function () {});
   }
 </script>
 </body>
