@@ -1018,9 +1018,7 @@
     });
     // Post to X links to the fact's page, whose preview is the card. X
     // remembers a preview for days, so wait until the page is live.
-    const toX = actionButton('Post to X', '', () => {
-      window.open('https://x.com/intent/post?text=' + encodeURIComponent(tweet()), '_blank', 'noopener');
-    });
+    const toX = actionButton('Post to X', '', () => openInX(tweet()));
     toX.disabled = true;
     toX.textContent = 'Checking card…';
     (async function waitForPage(tries) {
@@ -1065,6 +1063,29 @@
     [send, toX, copy, save, edit, remove].forEach((b) => actions.appendChild(b));
     card.appendChild(actions);
     return card;
+  }
+
+  // Opens the X app's composer with the tweet. A Home Screen app can't
+  // hand x.com links to the X app (they open in a Safari sheet), so on
+  // iPhone this uses the app's own link, and falls back to the website
+  // only if the app didn't open.
+  function openInX(text) {
+    const web = 'https://x.com/intent/post?text=' + encodeURIComponent(text);
+    const go = window.__uploadNavigate || ((url) => { window.location.href = url; });
+    if (!/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      window.open(web, '_blank', 'noopener');
+      return;
+    }
+    let left = false;
+    const markLeft = () => { left = true; };
+    window.addEventListener('blur', markLeft, { once: true });
+    document.addEventListener('visibilitychange', markLeft, { once: true });
+    go('twitter://post?message=' + encodeURIComponent(text));
+    setTimeout(() => {
+      window.removeEventListener('blur', markLeft);
+      document.removeEventListener('visibilitychange', markLeft);
+      if (!left && document.visibilityState === 'visible') go(web);
+    }, 2000);
   }
 
   function copyText(text, btn) {

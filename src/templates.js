@@ -2647,6 +2647,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
     <span id="up-user"></span>
     <button type="button" id="up-logout" class="up-link">Sign out</button>
   </footer>
+  <p class="up-version">Version ${assetUrl('upload.js').split('v=')[1].slice(0, 6)}</p>
 </main>
 <script>
   window.SUPABASE_URL = ${JSON.stringify(supabaseUrl || '')};
