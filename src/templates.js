@@ -1377,6 +1377,31 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
   });
 }
 
+// One fact's own page. Its main job is the link preview: tweets link
+// here, and X shows the fact's card (og:image) under the tweet.
+function factPage({ fact, cardUrl, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const path = `/facts/${fact.id}/`;
+  const body = `
+<article class="fact-page">
+  <p class="fact-label">Did you know?</p>
+  <h1 class="fact-page-text">${escapeHtml(fact.text)}</h1>
+  ${cardUrl ? `<img class="fact-page-card" src="${escapeHtml(cardUrl)}" alt="${escapeHtml(fact.text)}" width="1200" height="675">` : ''}
+  <a href="/facts/" class="fact-more-link">More facts &rarr;</a>
+</article>`;
+  return shell({
+    title: 'Did you know? — Apple Sunset',
+    description: fact.text,
+    siteUrl,
+    path,
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+    ogImage: cardUrl || undefined,
+    ogType: 'article',
+    noindex: true,
+  });
+}
+
 function factBoxInnerHtml(fact) {
   return `<p class="fact-label">Did you know?</p>
     <p class="fact-text">${escapeHtml(fact.text)}</p>
@@ -2663,6 +2688,7 @@ module.exports = {
   eventsPage,
   eventDetailPage,
   factsPage,
+  factPage,
   setCustomCategoryIcons,
   homePage,
   allProductsPage,

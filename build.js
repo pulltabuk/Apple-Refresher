@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -130,6 +130,26 @@ async function loadEvents() {
     return data || [];
   }
   return [];
+}
+
+// Same fingerprint as factKey() in public/facts-kit.js; keep them in step.
+function factKey(text) {
+  const str = String(text || '').trim();
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
+async function urlExists(url) {
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    return res.ok;
+  } catch (err) {
+    return false;
+  }
 }
 
 async function loadFacts() {
@@ -337,6 +357,17 @@ async function main() {
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }));
   write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
   write('facts/index.html', factsPage({ facts, pageContent: pageContent.facts || null, ...opts }));
+
+  // One page per fact, whose link preview is the fact's card (made and
+  // saved by the app / admin when the fact is published). If a card isn't
+  // there yet the page falls back to the standard preview image.
+  for (const fact of facts) {
+    const cardUrl = SUPABASE_URL
+      ? `${SUPABASE_URL}/storage/v1/object/public/product-images/fact-cards/${fact.id}-${factKey(fact.text)}.png`
+      : null;
+    const cardExists = cardUrl ? await urlExists(cardUrl) : false;
+    write(`facts/${fact.id}/index.html`, factPage({ fact, cardUrl: cardExists ? cardUrl : null, ...opts }));
+  }
   const eventSlugRedirects = [];
   const usedEventSlugs = new Set();
   for (const event of events) {

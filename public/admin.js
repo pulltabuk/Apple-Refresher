@@ -2904,7 +2904,6 @@
 
   // The fact generator, tweet text and image card live in facts-kit.js,
   // shared with the phone app.
-  const buildTweetText = (text) => window.FactsKit.buildTweetText(text);
   const generateFactImage = (text) => window.FactsKit.generateFactImage(text);
   const generateFactCandidates = () => window.FactsKit.generateFactCandidates(cachedProducts);
 
@@ -2930,11 +2929,13 @@
       publishBtn.addEventListener('click', async () => {
         const finalText = textarea.value.trim();
         if (!finalText) return;
-        const { error } = await client.from('facts').insert({ text: finalText });
+        const { data, error } = await client.from('facts').insert({ text: finalText }).select();
         if (error) {
           window.alert('Failed to publish: ' + error.message);
           return;
         }
+        // Saves the fact's card online for its page's tweet preview.
+        if (data && data[0] && data[0].id) await window.FactsKit.uploadFactCard(client, data[0]);
         loadPublishedFacts();
       });
       row.appendChild(textarea);
@@ -2983,6 +2984,7 @@
             window.alert('Save failed: ' + updateError.message);
             return;
           }
+          await window.FactsKit.uploadFactCard(client, { id: fact.id, text: newText });
           loadPublishedFacts();
         });
         row.innerHTML = '';
@@ -2994,7 +2996,7 @@
       copyBtn.className = 'admin-btn admin-btn--small';
       copyBtn.textContent = 'Copy for Twitter';
       copyBtn.addEventListener('click', () => {
-        const tweetText = buildTweetText(fact.text);
+        const tweetText = window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact));
         navigator.clipboard.writeText(tweetText).then(() => {
           copyBtn.textContent = 'Copied!';
           setTimeout(() => { copyBtn.textContent = 'Copy for Twitter'; }, 1500);
