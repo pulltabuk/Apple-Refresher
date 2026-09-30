@@ -866,9 +866,7 @@
     loadFactData();
   }
 
-  function sameFact(a, b) {
-    return a.trim().toLowerCase() === b.trim().toLowerCase();
-  }
+  const sameFact = (a, b) => window.FactsKit.sameFact(a, b);
 
   function tweetCount(textarea, countEl) {
     const text = textarea.value.trim();
