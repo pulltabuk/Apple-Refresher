@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-<link rel="stylesheet" href="/upload.css">
+<link rel="stylesheet" href="/upload.css?v=098d558897">
 </head>
 <body>
 <main class="up">
@@ -131,13 +131,24 @@
   window.SUPABASE_ANON_KEY = "";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
-<script src="/facts-kit.js" defer></script>
-<script src="/upload.js" defer></script>
+<script src="/facts-kit.js?v=3b25ece3be" defer></script>
+<script src="/upload.js?v=e17f8ee156" defer></script>
 <script>
   // Keeps the page's files on the phone so it opens instantly from the
   // Home Screen; updates are fetched in the background.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/upload-sw.js', { scope: '/upload/' }).catch(function () {});
+    // When a new version of the app takes over just after opening, reload
+    // once so it shows straight away (never later, so it can't interrupt
+    // an upload in progress).
+    var openedAt = Date.now();
+    var hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (hadController && Date.now() - openedAt < 8000 && !sessionStorage.getItem('upload-sw-reloaded')) {
+        sessionStorage.setItem('upload-sw-reloaded', '1');
+        location.reload();
+      }
+    });
+    navigator.serviceWorker.register('/upload-sw.js', { scope: '/upload/', updateViaCache: 'none' }).catch(function () {});
   }
 </script>
 </body>
