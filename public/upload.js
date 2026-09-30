@@ -998,7 +998,7 @@
         }
       }
       const link = document.createElement('a');
-      link.href = window.FactsKit.generateFactImage(fact.text);
+      link.href = await window.FactsKit.generateFactImage(fact.text);
       link.download = 'apple-sunset-fact.png';
       link.click();
     });
