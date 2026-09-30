@@ -2,8 +2,8 @@
 // own files from the phone straight away and refreshes them in the
 // background, so the Home Screen app opens instantly. Data (Supabase),
 // uploads and publishing always go to the network.
-const CACHE = 'upload-shell-v1';
-const LOCAL_FILES = ['/upload/', '/upload.css', '/upload.js', '/logo.png', '/favicon.png', '/upload.webmanifest'];
+const CACHE = 'upload-shell-v2';
+const LOCAL_FILES = ['/upload/', '/upload.css', '/upload.js', '/facts-kit.js', '/logo.png', '/favicon.png', '/upload.webmanifest'];
 const LIBRARY = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js';
 const SHELL = LOCAL_FILES.concat(LIBRARY);
 

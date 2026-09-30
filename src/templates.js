@@ -2465,6 +2465,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     noindex: true,
     scripts: [
       '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>',
+      '<script src="/facts-kit.js" defer></script>',
       '<script src="/admin.js" defer></script>',
     ],
   });
@@ -2498,7 +2499,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
 <main class="up">
   <header class="up-header">
     <img src="/logo.png" alt="" class="up-logo" width="32" height="32">
-    <h1>Add to gallery</h1>
+    <h1 id="up-heading">Add to gallery</h1>
   </header>
 
   <section id="up-loading" class="up-card"><p class="up-muted">Loading…</p></section>
@@ -2514,9 +2515,22 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
   </section>
 
   <nav class="up-tabs" id="up-tabs" role="tablist" hidden>
-    <button type="button" role="tab" class="up-tab up-tab--on" id="up-tab-new" aria-selected="true">Add new</button>
-    <button type="button" role="tab" class="up-tab" id="up-tab-edit" aria-selected="false">Edit existing</button>
+    <button type="button" role="tab" class="up-tab up-tab--on" id="up-tab-new" aria-selected="true">Add</button>
+    <button type="button" role="tab" class="up-tab" id="up-tab-edit" aria-selected="false">Edit</button>
+    <button type="button" role="tab" class="up-tab" id="up-tab-facts" aria-selected="false">Did you know?</button>
   </nav>
+
+  <section id="up-facts" hidden>
+    <div class="up-card">
+      <p class="up-muted">Facts worked out from your product data. Generate, pick one, tweak the wording if you like, and it goes on the homepage and the Facts page.</p>
+      <button type="button" id="up-generate-facts" class="gallery-action gallery-action--primary gallery-action--block">Generate facts</button>
+      <p class="up-status" id="up-facts-status" aria-live="polite"></p>
+    </div>
+    <div id="up-fact-choices" class="up-fact-list"></div>
+
+    <h2 class="up-section-title">Published</h2>
+    <div id="up-fact-published" class="up-fact-list"></div>
+  </section>
 
   <section id="up-library" hidden>
     <div class="up-card">
@@ -2595,6 +2609,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
   window.SUPABASE_ANON_KEY = ${JSON.stringify(supabaseAnonKey || '')};
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
+<script src="/facts-kit.js" defer></script>
 <script src="/upload.js" defer></script>
 <script>
   // Keeps the page's files on the phone so it opens instantly from the

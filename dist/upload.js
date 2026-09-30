@@ -14,7 +14,7 @@
   const SUGGESTED_TAG_LIMIT = 16;
 
   const $ = (id) => document.getElementById(id);
-  const sections = { loading: $('up-loading'), login: $('up-login'), main: $('up-main'), library: $('up-library'), done: $('up-done') };
+  const sections = { loading: $('up-loading'), login: $('up-login'), main: $('up-main'), library: $('up-library'), facts: $('up-facts'), done: $('up-done') };
 
   // Photos already on the site have a url and no file.
   let photos = []; // { id, file, preview, status: 'working'|'done'|'error', url, error, promise }
@@ -65,12 +65,13 @@
   function show(name) {
     Object.keys(sections).forEach((key) => { sections[key].hidden = key !== name; });
     $('up-footer').hidden = name === 'login' || name === 'loading';
-    $('up-tabs').hidden = !(name === 'library' || (name === 'main' && !editingId));
-    const onEdit = name === 'library';
-    $('up-tab-new').classList.toggle('up-tab--on', !onEdit);
-    $('up-tab-edit').classList.toggle('up-tab--on', onEdit);
-    $('up-tab-new').setAttribute('aria-selected', String(!onEdit));
-    $('up-tab-edit').setAttribute('aria-selected', String(onEdit));
+    $('up-tabs').hidden = !(name === 'library' || name === 'facts' || (name === 'main' && !editingId));
+    const tab = name === 'library' ? 'edit' : name === 'facts' ? 'facts' : 'new';
+    [['new', 'up-tab-new'], ['edit', 'up-tab-edit'], ['facts', 'up-tab-facts']].forEach(([key, id]) => {
+      $(id).classList.toggle('up-tab--on', key === tab);
+      $(id).setAttribute('aria-selected', String(key === tab));
+    });
+    $('up-heading').textContent = tab === 'facts' ? 'Did you know?' : tab === 'edit' ? 'Edit gallery' : 'Add to gallery';
     window.scrollTo(0, 0);
   }
 
@@ -769,6 +770,10 @@
     if (!sections.main.hidden) return;
     show('main');
   });
+  $('up-tab-facts').addEventListener('click', () => {
+    if (!sections.facts.hidden) return;
+    openFacts();
+  });
   $('up-tab-edit').addEventListener('click', () => {
     if (!sections.library.hidden) return;
     openLibrary();
@@ -812,6 +817,254 @@
       submitting = false;
     }
   });
+
+  // --- Did you know? facts ---
+  // Candidates come from FactsKit (facts-kit.js, shared with the admin
+  // panel's Facts tab); publishing writes to the facts table and rebuilds
+  // the site so the fact appears on the homepage and /facts/.
+
+  let factProducts = [];
+  let publishedFacts = [];
+
+  function factsStatus(text, isError) {
+    const el = $('up-facts-status');
+    el.textContent = text || '';
+    el.classList.toggle('up-status--error', !!isError);
+  }
+
+  function actionButton(label, extraClass, onClick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'gallery-action' + (extraClass ? ' ' + extraClass : '');
+    btn.textContent = label;
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+
+  function flash(btn, text) {
+    const original = btn.textContent;
+    btn.textContent = text;
+    setTimeout(() => { btn.textContent = original; }, 1600);
+  }
+
+  async function loadFactData() {
+    const [productsRes, factsRes] = await Promise.all([
+      client.from('products').select('*'),
+      client.from('facts').select('*').order('created_at', { ascending: false }),
+    ]);
+    if (!productsRes.error) factProducts = productsRes.data || [];
+    if (factsRes.error) {
+      factsStatus('Could not load facts: ' + factsRes.error.message, true);
+      return;
+    }
+    publishedFacts = factsRes.data || [];
+    renderPublishedFacts();
+  }
+
+  function openFacts() {
+    show('facts');
+    loadFactData();
+  }
+
+  function sameFact(a, b) {
+    return a.trim().toLowerCase() === b.trim().toLowerCase();
+  }
+
+  function tweetCount(textarea, countEl) {
+    const text = textarea.value.trim();
+    // buildTweetText shortens the fact itself when the tweet runs over 280.
+    const over = text && !window.FactsKit.buildTweetText(text).includes(text);
+    countEl.textContent = over ? 'Too long for one tweet, it will be shortened' : 'Fits in a tweet';
+    countEl.classList.toggle('up-fact-count--over', !!over);
+  }
+
+  function renderFactChoices() {
+    const list = $('up-fact-choices');
+    list.innerHTML = '';
+    const candidates = window.FactsKit.generateFactCandidates(factProducts)
+      .filter((text) => !publishedFacts.some((f) => sameFact(f.text, text)));
+    if (!factProducts.length) {
+      factsStatus('Could not load the product data to work facts out from.', true);
+      return;
+    }
+    if (!candidates.length) {
+      factsStatus('No new facts right now. Every one the data supports is already published; add more products or dates to unlock more.');
+      return;
+    }
+    factsStatus(candidates.length + ' fact' + (candidates.length === 1 ? '' : 's') + ' to choose from. Edit the wording if you like, then tap Use this fact.');
+    candidates.forEach((text) => {
+      const card = document.createElement('div');
+      card.className = 'up-card';
+      const area = document.createElement('textarea');
+      area.className = 'up-fact-edit';
+      area.value = text;
+      area.setAttribute('aria-label', 'Fact wording');
+      const count = document.createElement('p');
+      count.className = 'up-fact-count';
+      area.addEventListener('input', () => tweetCount(area, count));
+      const use = actionButton('Use this fact', 'gallery-action--primary gallery-action--block', async () => {
+        const finalText = area.value.trim();
+        if (!finalText) return;
+        use.disabled = true;
+        use.textContent = 'Publishing…';
+        const { error } = await client.from('facts').insert({ text: finalText });
+        if (error) {
+          use.disabled = false;
+          use.textContent = 'Use this fact';
+          factsStatus('Could not publish: ' + error.message, true);
+          return;
+        }
+        card.remove();
+        const published = await publishSite();
+        factsStatus(published.ok
+          ? 'Published. It will be on the homepage and Facts page in about a minute.'
+          : 'Saved, but the site rebuild failed (' + published.error + '). It will appear at the next publish or the morning rebuild.', !published.ok);
+        await loadFactData();
+      });
+      card.appendChild(area);
+      card.appendChild(count);
+      card.appendChild(use);
+      list.appendChild(card);
+      tweetCount(area, count);
+    });
+  }
+
+  $('up-generate-facts').addEventListener('click', async () => {
+    factsStatus('Working them out…');
+    if (!factProducts.length) await loadFactData();
+    renderFactChoices();
+  });
+
+  // The share sheet has to open straight from the tap, so each card's
+  // image is made ahead of time.
+  function renderPublishedFacts() {
+    const list = $('up-fact-published');
+    list.innerHTML = '';
+    if (!publishedFacts.length) {
+      const empty = document.createElement('p');
+      empty.className = 'up-muted';
+      empty.textContent = 'Nothing published yet.';
+      list.appendChild(empty);
+      return;
+    }
+    publishedFacts.forEach((fact) => list.appendChild(publishedFactCard(fact)));
+  }
+
+  function publishedFactCard(fact) {
+    const card = document.createElement('div');
+    card.className = 'up-card';
+    let imageFile = null;
+    window.FactsKit.factImageFile(fact.text).then((file) => { imageFile = file; });
+    const tweet = () => window.FactsKit.buildTweetText(fact.text);
+
+    const text = document.createElement('p');
+    text.className = 'up-fact-text';
+    text.textContent = fact.text;
+    card.appendChild(text);
+    if (fact.created_at) {
+      const date = document.createElement('p');
+      date.className = 'up-fact-date';
+      date.textContent = 'Published ' + new Date(fact.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      card.appendChild(date);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'up-fact-actions';
+
+    // Share: text + image card to the share sheet (pick X there).
+    const send = actionButton('Share with image', 'gallery-action--primary gallery-action--wide', async () => {
+      const data = imageFile && navigator.canShare && navigator.canShare({ files: [imageFile] })
+        ? { text: tweet(), files: [imageFile] }
+        : { text: tweet() };
+      if (navigator.share) {
+        try {
+          await navigator.share(data);
+          return;
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+        }
+      }
+      copyText(tweet(), send);
+    });
+    const toX = actionButton('Post to X', '', () => {
+      window.open('https://x.com/intent/post?text=' + encodeURIComponent(tweet()), '_blank', 'noopener');
+    });
+    const copy = actionButton('Copy text', '', () => copyText(tweet(), copy));
+    const save = actionButton('Save image', '', async () => {
+      if (imageFile && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+        try {
+          await navigator.share({ files: [imageFile] }); // the sheet offers Save Image
+          return;
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+        }
+      }
+      const link = document.createElement('a');
+      link.href = window.FactsKit.generateFactImage(fact.text);
+      link.download = 'apple-sunset-fact.png';
+      link.click();
+    });
+    const edit = actionButton('Edit', '', () => editFact(card, fact));
+    const remove = actionButton('Delete', 'gallery-action--danger gallery-action--wide', async () => {
+      if (!window.confirm('Delete this fact? It will come off the site.')) return;
+      const { error } = await client.from('facts').delete().eq('id', fact.id);
+      if (error) {
+        factsStatus('Could not delete: ' + error.message, true);
+        return;
+      }
+      card.remove();
+      const published = await publishSite();
+      factsStatus(published.ok ? 'Deleted. It will be gone from the site in about a minute.' : 'Deleted, but the site rebuild failed (' + published.error + ').', !published.ok);
+      loadFactData();
+    });
+    [send, toX, copy, save, edit, remove].forEach((b) => actions.appendChild(b));
+    card.appendChild(actions);
+    return card;
+  }
+
+  function copyText(text, btn) {
+    const done = () => flash(btn, 'Copied');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => window.prompt('Copy this:', text));
+    } else {
+      window.prompt('Copy this:', text);
+    }
+  }
+
+  function editFact(card, fact) {
+    card.innerHTML = '';
+    const area = document.createElement('textarea');
+    area.className = 'up-fact-edit';
+    area.value = fact.text;
+    area.setAttribute('aria-label', 'Fact wording');
+    const count = document.createElement('p');
+    count.className = 'up-fact-count';
+    area.addEventListener('input', () => tweetCount(area, count));
+    const actions = document.createElement('div');
+    actions.className = 'up-fact-actions';
+    const saveBtn = actionButton('Save', 'gallery-action--primary', async () => {
+      const newText = area.value.trim();
+      if (!newText) return;
+      saveBtn.disabled = true;
+      const { error } = await client.from('facts').update({ text: newText }).eq('id', fact.id);
+      if (error) {
+        saveBtn.disabled = false;
+        factsStatus('Could not save: ' + error.message, true);
+        return;
+      }
+      const published = await publishSite();
+      factsStatus(published.ok ? 'Saved. The site will update in about a minute.' : 'Saved, but the site rebuild failed (' + published.error + ').', !published.ok);
+      loadFactData();
+    });
+    const cancel = actionButton('Cancel', '', () => card.replaceWith(publishedFactCard(fact)));
+    actions.appendChild(saveBtn);
+    actions.appendChild(cancel);
+    card.appendChild(area);
+    card.appendChild(count);
+    card.appendChild(actions);
+    tweetCount(area, count);
+    area.focus();
+  }
 
   start();
 })();
