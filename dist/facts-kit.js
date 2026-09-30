@@ -46,7 +46,7 @@
 
   // The site header's sunset gradient (styles.css .site-header-bg).
   const SUNSET = [[0, '#f5b942'], [0.3, '#e8752c'], [0.58, '#c8432f'], [0.82, '#7d2a4a'], [1, '#2e1a3d']];
-  const FONT = 'system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif';
+  const FONT = '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
   let logoPromise = null;
   function loadLogo() {
@@ -96,6 +96,8 @@
     return lines;
   }
 
+  // Same layout as the original card (small label, big fact, web address),
+  // on the site's sunset colours, with the logo small in the bottom-right.
   async function drawFactCanvas(factText) {
     const logo = await loadLogo();
     const W = 1200;
@@ -106,76 +108,79 @@
     canvas.height = H;
     const ctx = canvas.getContext('2d');
 
-    // Deep plum night sky, from the dark end of the sunset.
+    // Sunset background, from the orange of the header gradient through
+    // to its deep plum, so white text stays readable everywhere.
     const bg = ctx.createLinearGradient(0, 0, W, H);
-    bg.addColorStop(0, '#2e1a3d');
-    bg.addColorStop(1, '#14213d');
+    bg.addColorStop(0, '#e8752c');
+    bg.addColorStop(0.38, '#c8432f');
+    bg.addColorStop(0.72, '#7d2a4a');
+    bg.addColorStop(1, '#2e1a3d');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
-
-    // A soft sunset glow rising from the bottom-left corner.
-    const glow = ctx.createRadialGradient(0, H, 0, 0, H, 760);
-    glow.addColorStop(0, 'rgba(232, 117, 44, 0.42)');
-    glow.addColorStop(0.45, 'rgba(200, 67, 47, 0.18)');
-    glow.addColorStop(1, 'rgba(200, 67, 47, 0)');
-    ctx.fillStyle = glow;
+    // A light shade over the brightest corner for extra contrast.
+    const shade = ctx.createLinearGradient(0, 0, W * 0.6, 0);
+    shade.addColorStop(0, 'rgba(46, 26, 61, 0.22)');
+    shade.addColorStop(1, 'rgba(46, 26, 61, 0)');
+    ctx.fillStyle = shade;
     ctx.fillRect(0, 0, W, H);
-
-    // Sunset band across the top, as in the site header.
+    // The header's golden edge along the top.
     ctx.fillStyle = sunsetGradient(ctx, 0, 0, W, 0);
-    ctx.fillRect(0, 0, W, 14);
+    ctx.fillRect(0, 0, W, 10);
 
-    // Logo and "Did you know?" label.
-    const logoSize = 96;
-    const topY = 62;
-    let labelX = PAD;
-    if (logo) {
-      ctx.save();
-      roundedRect(ctx, PAD, topY, logoSize, logoSize, 20);
-      ctx.clip();
-      ctx.drawImage(logo, PAD, topY, logoSize, logoSize);
-      ctx.restore();
-      labelX = PAD + logoSize + 28;
-    }
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = sunsetGradient(ctx, labelX, 0, labelX + 360, 0, SUNSET_WARM);
-    ctx.font = '800 38px ' + FONT;
-    ctx.fillText('DID YOU KNOW?', labelX, topY + logoSize / 2 - 16);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.font = '600 24px ' + FONT;
-    ctx.fillText('Apple Sunset', labelX, topY + logoSize / 2 + 24);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 2;
 
-    // The fact: largest size that fits the space, vertically centred.
-    const areaTop = topY + logoSize + 40;
-    const areaBottom = H - 120;
+    // Label.
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = '700 34px ' + FONT;
+    ctx.fillText('DID YOU KNOW?', PAD, 120);
+
+    // The fact: as large as fits between the label and the footer.
+    const areaTop = 170;
+    const areaBottom = H - 150; // clear of the logo
     const maxWidth = W - PAD * 2;
-    let size = 58;
+    let size = 56;
     let lines;
     let lineHeight;
     for (;;) {
       ctx.font = '700 ' + size + 'px ' + FONT;
       lines = wrapLines(ctx, factText, maxWidth);
-      lineHeight = Math.round(size * 1.24);
+      lineHeight = Math.round(size * 1.26);
       if (lines.length * lineHeight <= areaBottom - areaTop || size <= 30) break;
       size -= 2;
     }
-    ctx.fillStyle = '#ffffff';
-    ctx.textBaseline = 'alphabetic';
-    const blockHeight = lines.length * lineHeight;
-    let y = areaTop + Math.max(0, (areaBottom - areaTop - blockHeight) / 2) + size;
+    let y = areaTop + size;
     lines.forEach((line) => {
       ctx.fillText(line, PAD, y);
       y += lineHeight;
     });
 
-    // Footer: a short sunset rule and the web address.
-    const footY = H - 62;
-    ctx.fillStyle = sunsetGradient(ctx, PAD, 0, PAD + 64, 0, SUNSET_WARM);
-    ctx.fillRect(PAD, footY - 5, 64, 4);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.font = '600 26px ' + FONT;
-    ctx.textBaseline = 'middle';
-    ctx.fillText('applesunset.com', PAD + 84, footY - 3);
+    // Web address, bottom-left.
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = '500 26px ' + FONT;
+    ctx.fillText('applesunset.com', PAD, H - 60);
+
+    // Logo, small, bottom-right.
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 4;
+    if (logo) {
+      const size2 = 76;
+      const lx = W - PAD - size2 + 10;
+      const ly = H - 50 - size2;
+      roundedRect(ctx, lx, ly, size2, size2, 16);
+      ctx.fillStyle = '#000';
+      ctx.fill(); // casts the shadow
+      ctx.shadowColor = 'transparent';
+      ctx.save();
+      roundedRect(ctx, lx, ly, size2, size2, 16);
+      ctx.clip();
+      ctx.drawImage(logo, lx, ly, size2, size2);
+      ctx.restore();
+    }
+    ctx.shadowColor = 'transparent';
 
     return canvas;
   }
