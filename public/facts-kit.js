@@ -112,7 +112,7 @@
       const topMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0];
       if (topMonth && topMonth[1] / allDates.length >= 0.3) {
         const pct = Math.round((topMonth[1] / allDates.length) * 100);
-        facts.push(pct + '% of the ' + allDates.length + ' product releases tracked on this site have happened in ' + topMonth[0] + ' (' + topMonth[1] + ' of ' + allDates.length + ').');
+        facts.push(pct + '% of the ' + allDates.length + ' product releases tracked by Apple Sunset have happened in ' + topMonth[0] + ' (' + topMonth[1] + ' of ' + allDates.length + ').');
       }
     }
 
@@ -126,7 +126,7 @@
       const topDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0];
       if (topDay && topDay[1] / allDates.length >= 0.3) {
         const pct = Math.round((topDay[1] / allDates.length) * 100);
-        facts.push(pct + '% of the ' + allDates.length + ' product releases tracked here have landed on a ' + topDay[0] + ' (' + topDay[1] + ' of ' + allDates.length + ').');
+        facts.push(pct + '% of the ' + allDates.length + ' product releases tracked by Apple Sunset have landed on a ' + topDay[0] + ' (' + topDay[1] + ' of ' + allDates.length + ').');
       }
     }
 
@@ -146,7 +146,7 @@
       const cycles = categoryCycles[cat];
       if (cycles.length >= 2) {
         const avg = Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length);
-        facts.push(cat + ' products have refreshed roughly every ' + avg + ' days on average, based on ' + cycles.length + ' refresh' + (cycles.length === 1 ? '' : 'es') + ' tracked here.');
+        facts.push(cat + ' products have refreshed roughly every ' + avg + ' days on average, based on ' + cycles.length + ' refresh' + (cycles.length === 1 ? '' : 'es') + ' tracked by Apple Sunset.');
       }
     });
 
@@ -164,24 +164,37 @@
       const longest = lifespans.slice().sort((a, b) => b.days - a.days)[0];
       const longYears = Math.floor(longest.days / 365);
       const longText = longYears >= 1 ? 'about ' + longYears + ' year' + (longYears === 1 ? '' : 's') : longest.days + ' days';
-      facts.push('The ' + longest.name + ' had the longest run of any discontinued product tracked on this site, lasting ' + longText + ' before being replaced.');
+      facts.push('The ' + longest.name + ' had the longest run of any discontinued product tracked by Apple Sunset, lasting ' + longText + ' before being replaced.');
 
       const shortest = lifespans.slice().sort((a, b) => a.days - b.days)[0];
       if (shortest.name !== longest.name) {
         const shortYears = Math.floor(shortest.days / 365);
         const shortText = shortYears >= 1 ? 'about ' + shortYears + ' year' + (shortYears === 1 ? '' : 's') : 'just ' + shortest.days + ' days';
-        facts.push('The ' + shortest.name + ' had the shortest run of any discontinued product tracked here, lasting ' + shortText + '.');
+        facts.push('The ' + shortest.name + ' had the shortest run of any discontinued product tracked by Apple Sunset, lasting ' + shortText + '.');
       }
     }
 
     // Always-available overall stats.
     const categoryCount = new Set(cachedProducts.map((p) => p.category)).size;
-    facts.push('This site is currently tracking ' + cachedProducts.length + ' Apple products across ' + categoryCount + ' categories.');
+    facts.push('Apple Sunset is currently tracking ' + cachedProducts.length + ' Apple products across ' + categoryCount + ' categories.');
 
     return facts;
   }
 
+  // Facts published before the wording changed from "this site" / "here"
+  // to "Apple Sunset" still count as the same fact.
+  function normaliseFact(text) {
+    return String(text || '').trim().toLowerCase()
+      .replace(/tracked (on this site|here|by apple sunset)/g, 'tracked')
+      .replace(/^(this site|apple sunset) is/, 'x is');
+  }
+
+  function sameFact(a, b) {
+    return normaliseFact(a) === normaliseFact(b);
+  }
+
   window.FactsKit = {
+    sameFact,
     buildTweetText,
     drawFactCanvas,
     generateFactImage,

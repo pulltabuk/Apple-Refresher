@@ -1341,7 +1341,7 @@ function factsPage({ facts, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }
   <h1>${pageHeading(pageContent, 'Facts')}</h1>
   <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
 </div>
-${pageStandardLine(pageContent, `<p class="page-intro">Interesting patterns spotted across every product tracked on this site.</p>`)}
+${pageStandardLine(pageContent, `<p class="page-intro">Interesting patterns spotted across every product tracked by Apple Sunset.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <p id="no-facts" class="page-intro" style="display:${facts.length ? 'none' : ''};">Nothing published yet.</p>
 <div id="facts-list" class="facts-list" data-mode="facts">
@@ -1349,7 +1349,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 </div>`;
   return shell({
     title: 'Facts — Apple Sunset',
-    description: 'Interesting patterns spotted across every Apple product tracked on this site.',
+    description: 'Interesting patterns spotted across every Apple product tracked by Apple Sunset.',
     siteUrl,
     path: '/facts/',
     bodyHtml: body,
