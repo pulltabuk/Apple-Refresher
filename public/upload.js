@@ -859,6 +859,36 @@
     }
     publishedFacts = factsRes.data || [];
     renderPublishedFacts();
+    makeMissingCards();
+  }
+
+  // Facts published before cards were saved online (or from somewhere
+  // that didn't save one) get their card made now, then one rebuild so
+  // their pages pick it up.
+  let makingCards = false;
+  async function makeMissingCards() {
+    if (makingCards) return;
+    makingCards = true;
+    try {
+      const missing = [];
+      for (const fact of publishedFacts) {
+        if (!(await window.FactsKit.factCardExists(client, fact))) missing.push(fact);
+      }
+      if (!missing.length) return;
+      factsStatus('Making tweet cards for ' + missing.length + ' fact' + (missing.length === 1 ? '' : 's') + '…');
+      let made = 0;
+      for (const fact of missing) {
+        if (await window.FactsKit.uploadFactCard(client, fact)) made++;
+      }
+      if (made) {
+        const published = await publishSite();
+        factsStatus(published.ok ? 'Tweet cards ready. Post to X will show them in about a minute.' : 'Cards saved, but the site rebuild failed (' + published.error + ').', !published.ok);
+      } else {
+        factsStatus('Could not save the tweet cards. Check the connection and open this tab again.', true);
+      }
+    } finally {
+      makingCards = false;
+    }
   }
 
   function openFacts() {
@@ -905,7 +935,7 @@
         if (!finalText) return;
         use.disabled = true;
         use.textContent = 'Publishing…';
-        const { error } = await client.from('facts').insert({ text: finalText });
+        const { data, error } = await client.from('facts').insert({ text: finalText }).select();
         if (error) {
           use.disabled = false;
           use.textContent = 'Use this fact';
@@ -913,6 +943,8 @@
           return;
         }
         card.remove();
+        const row = data && data[0];
+        if (row && row.id) await window.FactsKit.uploadFactCard(client, row); // the tweet preview card
         const published = await publishSite();
         factsStatus(published.ok
           ? 'Published. It will be on the homepage and Facts page in about a minute.'
@@ -953,7 +985,7 @@
     card.className = 'up-card';
     let imageFile = null;
     window.FactsKit.factImageFile(fact.text).then((file) => { imageFile = file; });
-    const tweet = () => window.FactsKit.buildTweetText(fact.text);
+    const tweet = () => window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact));
 
     const text = document.createElement('p');
     text.className = 'up-fact-text';
@@ -984,9 +1016,24 @@
       }
       copyText(tweet(), send);
     });
+    // Post to X links to the fact's page, whose preview is the card. X
+    // remembers a preview for days, so wait until the page is live.
     const toX = actionButton('Post to X', '', () => {
       window.open('https://x.com/intent/post?text=' + encodeURIComponent(tweet()), '_blank', 'noopener');
     });
+    toX.disabled = true;
+    toX.textContent = 'Checking card…';
+    (async function waitForPage(tries) {
+      if (!card.isConnected && tries > 0) return;
+      if (await window.FactsKit.factPageLive(fact)) {
+        toX.disabled = false;
+        toX.textContent = 'Post to X';
+        return;
+      }
+      toX.textContent = 'Card ready in a moment…';
+      if (tries < 40) setTimeout(() => waitForPage(tries + 1), 15000);
+      else toX.textContent = 'Card not live yet';
+    })(0);
     const copy = actionButton('Copy text', '', () => copyText(tweet(), copy));
     const save = actionButton('Save image', '', async () => {
       if (imageFile && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
@@ -1050,6 +1097,7 @@
         factsStatus('Could not save: ' + error.message, true);
         return;
       }
+      await window.FactsKit.uploadFactCard(client, { id: fact.id, text: newText }); // new wording, new card
       const published = await publishSite();
       factsStatus(published.ok ? 'Saved. The site will update in about a minute.' : 'Saved, but the site rebuild failed (' + published.error + ').', !published.ok);
       loadFactData();

@@ -2,7 +2,9 @@
 // phone app (upload.js): working out fact candidates from product data,
 // the tweet text, and the image card that goes with a tweet.
 (function () {
-  function buildTweetText(factText) {
+  // The tweet links to the fact's own page (/facts/<id>/), whose preview
+  // image is the fact's card, so X shows the card under the tweet.
+  function buildTweetText(factText, link) {
     const lower = factText.toLowerCase();
     let emoji = '\ud83c\udf4e';
     const hashtags = ['#Apple'];
@@ -25,14 +27,16 @@
     const uniqueHashtags = Array.from(new Set(hashtags)).slice(0, 4);
 
     const hook = emoji + ' Apple Fact:';
-    const footer = uniqueHashtags.join(' ') + '\n' + window.location.host;
+    const footer = uniqueHashtags.join(' ') + '\n' + (link || window.location.host);
     let body = hook + ' ' + factText;
     let full = body + '\n\n' + footer;
 
     // Twitter's 280-char limit: trim the fact text itself (never the
     // hashtags or link) if the combined text runs over.
-    if (full.length > 280) {
-      const overBy = full.length - 280;
+    // X counts any link as 23 characters, however long it is.
+    const linkAllowance = link ? link.length - 23 : 0;
+    if (full.length - linkAllowance > 280) {
+      const overBy = full.length - linkAllowance - 280;
       const keep = Math.max(20, factText.length - overBy - 1);
       const trimmed = factText.slice(0, keep).trim() + '\u2026';
       body = hook + ' ' + trimmed;
@@ -299,7 +303,75 @@
     return normaliseFact(a) === normaliseFact(b);
   }
 
+  // --- Each fact's card, saved online for its page's link preview ---
+  // A short fingerprint of the wording, so an edited fact gets a new card
+  // (and X, which remembers previews, sees a new image). build.js has the
+  // same function; keep them in step.
+  function factKey(text) {
+    const str = String(text || '').trim();
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return hash.toString(16).padStart(8, '0');
+  }
+
+  const CARD_BUCKET = 'product-images';
+
+  function factCardPath(fact) {
+    return 'fact-cards/' + fact.id + '-' + factKey(fact.text) + '.png';
+  }
+
+  // ?v= changes with the wording: X remembers a preview per address, so
+  // an edited fact needs a new address to show its new card.
+  function factPageUrl(fact) {
+    return window.location.origin + '/facts/' + fact.id + '/?v=' + factKey(fact.text);
+  }
+
+  function factCardPublicUrl(client, fact) {
+    return client.storage.from(CARD_BUCKET).getPublicUrl(factCardPath(fact)).data.publicUrl;
+  }
+
+  async function factCardExists(client, fact) {
+    try {
+      const res = await fetch(factCardPublicUrl(client, fact), { method: 'HEAD', cache: 'no-store' });
+      return res.ok;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  // Makes the card and saves it. Returns true when the card is online.
+  async function uploadFactCard(client, fact) {
+    const file = await factImageFile(fact.text);
+    if (!file) return false;
+    const { error } = await client.storage.from(CARD_BUCKET).upload(factCardPath(fact), file, { contentType: 'image/png' });
+    if (!error) return true;
+    // Already there from an earlier save of the same wording.
+    return /exist|duplicate/i.test(error.message || '') || error.statusCode === '409';
+  }
+
+  // True once the fact's page is live and points at this wording's card,
+  // so X finds the right card when it looks.
+  async function factPageLive(fact) {
+    try {
+      const res = await fetch('/facts/' + fact.id + '/', { cache: 'no-store' });
+      if (!res.ok) return false;
+      const html = await res.text();
+      return html.indexOf(fact.id + '-' + factKey(fact.text) + '.png') !== -1;
+    } catch (err) {
+      return false;
+    }
+  }
+
   window.FactsKit = {
+    factKey,
+    factCardPath,
+    factPageUrl,
+    factCardExists,
+    uploadFactCard,
+    factPageLive,
     sameFact,
     buildTweetText,
     drawFactCanvas,
