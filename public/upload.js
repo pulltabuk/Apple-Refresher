@@ -65,13 +65,15 @@
   function show(name) {
     Object.keys(sections).forEach((key) => { sections[key].hidden = key !== name; });
     $('up-footer').hidden = name === 'login' || name === 'loading';
-    $('up-tabs').hidden = !(name === 'library' || name === 'facts' || (name === 'main' && !editingId));
-    const tab = name === 'library' ? 'edit' : name === 'facts' ? 'facts' : 'new';
+    // The Add / Edit / Did you know? tabs stay up everywhere except sign-in
+    // and while editing a set (which has its own Back link).
+    $('up-tabs').hidden = !(name === 'library' || name === 'facts' || name === 'done' || (name === 'main' && !editingId));
+    const tab = name === 'library' ? 'edit' : name === 'facts' ? 'facts' : name === 'done' ? 'none' : 'new';
     [['new', 'up-tab-new'], ['edit', 'up-tab-edit'], ['facts', 'up-tab-facts']].forEach(([key, id]) => {
       $(id).classList.toggle('up-tab--on', key === tab);
       $(id).setAttribute('aria-selected', String(key === tab));
     });
-    $('up-heading').textContent = tab === 'facts' ? 'Did you know?' : tab === 'edit' ? 'Edit gallery' : 'Add to gallery';
+    $('up-heading').textContent = tab === 'facts' ? 'Did you know?' : tab === 'edit' ? 'Edit gallery' : tab === 'none' ? 'Done' : 'Add to gallery';
     window.scrollTo(0, 0);
   }
 
@@ -581,9 +583,9 @@
         tags: selectedTags.slice(),
       };
       const wasEditing = !!editingId;
-      const { error } = wasEditing
+      const { data: saved, error } = wasEditing
         ? await client.from('gallery_photos').update(payload).eq('id', editingId)
-        : await client.from('gallery_photos').insert(payload);
+        : await client.from('gallery_photos').insert(payload).select();
       if (error) {
         setStatus('Could not save: ' + error.message, true);
         return;
@@ -603,11 +605,13 @@
       $('up-done-title').textContent = wasEditing ? 'Changes saved' : (count === 1 ? 'Photo uploaded' : count + ' photos uploaded');
       $('up-done-text').textContent = doneText;
       setStatus('');
-      if (wasEditing) {
-        editingId = null;
-        clearForm(false);
-        setFormMode();
-      }
+      lastSavedId = wasEditing ? editingId : (saved && saved[0] && saved[0].id) || null;
+      $('up-edit-saved').hidden = !lastSavedId;
+      // Clear the form now, so the Add tab is fresh if tapped from here.
+      // A new upload keeps its place for the next set from the same outing.
+      editingId = null;
+      clearForm(!wasEditing);
+      setFormMode();
       show('done');
       loadSuggestions();
     } finally {
@@ -665,6 +669,14 @@
   }
 
   $('up-again').addEventListener('click', startNew);
+
+  // "Edit this set" on the done screen: straight back into what was saved.
+  let lastSavedId = null;
+  $('up-edit-saved').addEventListener('click', async () => {
+    if (!lastSavedId) return;
+    if (!gallerySets.some((set) => set.id === lastSavedId)) await loadSuggestions();
+    editSet(lastSavedId);
+  });
 
   // --- Edit existing sets ---
 
@@ -768,6 +780,7 @@
 
   $('up-tab-new').addEventListener('click', () => {
     if (!sections.main.hidden) return;
+    if (!sections.done.hidden) { startNew(); return; }
     show('main');
   });
   $('up-tab-facts').addEventListener('click', () => {
@@ -811,6 +824,8 @@
       setFormMode();
       $('up-done-title').textContent = 'Photo set deleted';
       $('up-done-text').textContent = doneText;
+      lastSavedId = null;
+      $('up-edit-saved').hidden = true;
       show('done');
       loadSuggestions();
     } finally {
