@@ -2639,8 +2639,9 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
     <h2 id="up-done-title">Uploaded</h2>
     <p id="up-done-text" class="up-muted"></p>
     <button type="button" id="up-again" class="gallery-action gallery-action--primary gallery-action--block">Upload another</button>
-    <button type="button" id="up-to-library" class="gallery-action gallery-action--block">Edit existing sets</button>
-    <a href="/gallery/" class="gallery-action gallery-action--block">View gallery</a>
+    <button type="button" id="up-edit-saved" class="gallery-action gallery-action--block">Edit this set</button>
+    <button type="button" id="up-to-library" class="gallery-action gallery-action--block">All my photo sets</button>
+    <a href="/gallery/" class="gallery-action gallery-action--block">View gallery on the site</a>
   </section>
 
   <footer class="up-footer" id="up-footer" hidden>
