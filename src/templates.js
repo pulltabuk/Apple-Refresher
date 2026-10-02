@@ -2425,6 +2425,21 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     <button type="button" id="generate-facts-btn" class="admin-btn admin-btn--primary">Generate facts</button>
     <div id="fact-candidates" class="admin-fact-list"></div>
 
+    <h3 class="admin-form-section">Research a fact with Claude</h3>
+    <p class="admin-hint">Say what it should be about. Claude opens in a new tab with a request to find little-known facts, check each against two reliable sources, and skip any you've already published. Copy the one you like into the box below.</p>
+    <div class="admin-fact-row">
+      <input type="text" id="fact-topic" class="admin-fact-textarea" placeholder="e.g. the original iPod" aria-label="What the fact should be about" autocomplete="off">
+      <button type="button" id="ask-claude-btn" class="admin-btn admin-btn--small admin-btn--primary">Ask Claude</button>
+    </div>
+    <p class="admin-hint" id="ask-claude-note"></p>
+
+    <h3 class="admin-form-section">Add your own fact</h3>
+    <div class="admin-fact-row">
+      <textarea id="own-fact" class="admin-fact-textarea" rows="2" placeholder="Paste or type a fact" aria-label="Your fact"></textarea>
+      <button type="button" id="own-fact-btn" class="admin-btn admin-btn--small admin-btn--primary">Publish</button>
+    </div>
+    <p class="admin-hint" id="own-fact-note"></p>
+
     <h3 class="admin-form-section">Published facts</h3>
     <div id="published-facts" class="admin-fact-list"></div>
   </div>
