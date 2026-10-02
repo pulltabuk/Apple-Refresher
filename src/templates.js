@@ -875,7 +875,7 @@ ${noindex ? '<meta name="robots" content="noindex">' : '<meta name="robots" cont
     },
   ],
 })}</script>
-${extraJsonLd ? `<script type="application/ld+json">${JSON.stringify(extraJsonLd)}</script>` : ''}
+${extraJsonLd ? `<script type="application/ld+json">${JSON.stringify(extraJsonLd).replace(/</g, "\\u003c")}</script>` : ''}
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -1078,10 +1078,37 @@ function galleryCarouselImgHtml(url, alt, index) {
   return `<img src="${escapeHtml(cdn)}"${srcset} data-full="${escapeHtml(url)}" alt="${escapeHtml(alt)}"${index === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async"${fallback}>`;
 }
 
+// Where a photo was taken, e.g. "London, UK" (either part may be missing).
+function galleryPlace(photo) {
+  return [photo.location, photo.country].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ');
+}
+
+// Per-photo description for search engines and screen readers, e.g.
+// "iPod Hi-Fi — photo 2 of 5, London, UK". Must stay in step with
+// galleryImageAltJS() in public/app.js.
+function galleryImageAlt(displayName, photo, index, total) {
+  const place = galleryPlace(photo);
+  return `${displayName}${total > 1 ? ` — photo ${index + 1} of ${total}` : ''}${place ? `, ${place}` : ''}`;
+}
+
+// A search-result summary built from the album's own details.
+function galleryPhotoDescription(displayName, photo, count) {
+  const place = galleryPlace(photo);
+  const tags = (photo.tags || []).filter((t) => t !== displayName).slice(0, 5);
+  let text = `${count > 1 ? `${count} photos` : 'A photo'} of ${displayName}`;
+  if (place) text += ` taken in ${place}`;
+  if (photo.date_taken) text += `${place ? ',' : ''} ${formatDate(photo.date_taken)}`;
+  text += ' — from the Apple Sunset gallery.';
+  if (tags.length) text += ` Tags: ${tags.join(', ')}.`;
+  return text;
+}
+
 function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const images = galleryPhotoImages(photo);
-  const imagesHtml = images.map((url, i) => galleryCarouselImgHtml(url, displayName, i)).join('\n');
+  const imagesHtml = images.map((url, i) => galleryCarouselImgHtml(url, galleryImageAlt(displayName, photo, i, images.length), i)).join('\n');
+  const place = galleryPlace(photo);
+  const description = galleryPhotoDescription(displayName, photo, images.length);
   const pageUrl = `${siteUrl}/gallery/${galleryPhotoSlug(photo)}/`;
   const mailtoHref = `mailto:infoswiper@yahoo.com?subject=${encodeURIComponent(`Can I use this photo? — ${displayName}`)}&body=${encodeURIComponent(`Hi, I'd like to ask about using this photo:\n${pageUrl}`)}`;
   const body = `
@@ -1107,7 +1134,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
 </article>`;
   return shell({
     title: `${escapeHtml(displayName)} — Apple Sunset Gallery`,
-    description: `A photo from the Apple Sunset gallery${photo.location ? `, taken in ${photo.location}` : ''}.`,
+    description,
     siteUrl,
     path: `/gallery/${galleryPhotoSlug(photo)}/`,
     bodyHtml: body,
@@ -1115,6 +1142,36 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
     supabaseAnonKey,
     ogImage: images[0],
     ogType: 'article',
+    extraJsonLd: {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'ImageGallery',
+          name: displayName,
+          description,
+          url: pageUrl,
+          keywords: (photo.tags || []).join(', ') || undefined,
+          image: images.map((url, i) => ({
+            '@type': 'ImageObject',
+            contentUrl: url,
+            name: galleryImageAlt(displayName, photo, i, images.length),
+            dateCreated: photo.date_taken || undefined,
+            contentLocation: place ? { '@type': 'Place', name: place } : undefined,
+            creator: { '@type': 'Organization', name: 'Apple Sunset' },
+            creditText: 'Apple Sunset',
+            copyrightNotice: 'Apple Sunset',
+            acquireLicensePage: `${siteUrl}/contact/`,
+          })),
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Gallery', item: `${siteUrl}/gallery/` },
+            { '@type': 'ListItem', position: 2, name: displayName, item: pageUrl },
+          ],
+        },
+      ],
+    },
     scripts: DEFAULT_SCRIPTS.concat(`<script src="${assetUrl('gallery-viewer.js')}" defer></script>`),
   });
 }
@@ -2716,6 +2773,7 @@ module.exports = {
   launchDate,
   galleryPage,
   galleryPhotoPage,
+  galleryPhotoImages,
   galleryPhotoCardHtml,
   eventsPage,
   eventDetailPage,

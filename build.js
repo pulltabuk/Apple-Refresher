@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -36,7 +36,11 @@ const DIST = path.join(__dirname, 'dist');
 
 const sitemapUrls = [];
 
-function write(relPath, content, lastmod) {
+function xmlEscape(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function write(relPath, content, lastmod, images) {
   const fullPath = path.join(DIST, relPath);
   fs.mkdirSync(path.dirname(fullPath), { recursive: true });
   fs.writeFileSync(fullPath, content);
@@ -46,7 +50,7 @@ function write(relPath, content, lastmod) {
   const isNoIndex = /<meta name="robots" content="[^"]*noindex/.test(content);
   if (relPath.endsWith('index.html') && !relPath.startsWith('admin/') && !isNoIndex) {
     const urlPath = '/' + relPath.replace(/index\.html$/, '');
-    sitemapUrls.push({ path: urlPath, lastmod: lastmod || null });
+    sitemapUrls.push({ path: urlPath, lastmod: lastmod || null, images: images || [] });
   }
 }
 
@@ -401,7 +405,7 @@ async function main() {
       slug = `${slug}-${n}`;
     }
     usedPhotoSlugs.add(slug);
-    write(`gallery/${slug}/index.html`, galleryPhotoPage({ photo, prevPhoto, nextPhoto, ...opts }));
+    write(`gallery/${slug}/index.html`, galleryPhotoPage({ photo, prevPhoto, nextPhoto, ...opts }), null, galleryPhotoImages(photo));
     // Old UUID links keep working and pass their ranking value across.
     if (slug !== String(photo.id)) {
       gallerySlugRedirects.push(`/gallery/${photo.id}/* /gallery/${slug}/ 301!`);
@@ -463,8 +467,8 @@ async function main() {
   fs.writeFileSync(path.join(DIST, 'feed.xml'), rssXml);
 
   const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${sitemapUrls.map((u) => `  <url><loc>${SITE_URL}${u.path}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}</url>`).join('\n')}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${sitemapUrls.map((u) => `  <url><loc>${SITE_URL}${u.path}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}${u.images.map((img) => `<image:image><image:loc>${xmlEscape(img)}</image:loc></image:image>`).join('')}</url>`).join('\n')}
 </urlset>
 `;
   write('sitemap.xml', sitemapXml);
