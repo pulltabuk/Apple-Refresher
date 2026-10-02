@@ -2946,10 +2946,56 @@
 
   document.getElementById('generate-facts-btn').addEventListener('click', renderFactCandidates);
 
+  let cachedFacts = [];
+
+  // --- Research a fact with Claude, and add your own (same as the phone app) ---
+
+  document.getElementById('ask-claude-btn').addEventListener('click', () => {
+    const topicEl = document.getElementById('fact-topic');
+    const note = document.getElementById('ask-claude-note');
+    const topic = topicEl.value.trim();
+    if (!topic) {
+      note.textContent = 'Type what the fact should be about first.';
+      topicEl.focus();
+      return;
+    }
+    const prompt = window.FactsKit.claudeResearchPrompt(topic, cachedFacts.map((f) => f.text));
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(prompt).catch(() => {});
+    note.textContent = 'Claude opened in a new tab (the request is also copied, in case it opens empty). Copy the fact you like into "Add your own fact" below.';
+    window.open(window.FactsKit.claudeResearchUrl(prompt), '_blank', 'noopener');
+  });
+  document.getElementById('fact-topic').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('ask-claude-btn').click();
+  });
+
+  document.getElementById('own-fact-btn').addEventListener('click', async () => {
+    const box = document.getElementById('own-fact');
+    const note = document.getElementById('own-fact-note');
+    const btn = document.getElementById('own-fact-btn');
+    const text = box.value.trim().replace(/\s+/g, ' ');
+    if (!text) return;
+    if (cachedFacts.some((f) => window.FactsKit.sameFact(f.text, text))) {
+      note.textContent = 'That fact is already published.';
+      return;
+    }
+    btn.disabled = true;
+    const { data, error } = await client.from('facts').insert({ text }).select();
+    btn.disabled = false;
+    if (error) {
+      note.textContent = 'Could not publish: ' + error.message;
+      return;
+    }
+    if (data && data[0] && data[0].id) await window.FactsKit.uploadFactCard(client, data[0]);
+    box.value = '';
+    note.textContent = 'Added. Press Publish changes to put it on the site.';
+    loadPublishedFacts();
+  });
+
   async function loadPublishedFacts() {
     const listEl = document.getElementById('published-facts');
     const { data, error } = await client.from('facts').select('*').order('created_at', { ascending: false });
     listEl.innerHTML = '';
+    cachedFacts = data || [];
     if (error) {
       listEl.textContent = 'Could not load facts: ' + error.message + ' (has supabase-schema-update-17.sql been run?)';
       return;

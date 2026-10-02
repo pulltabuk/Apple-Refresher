@@ -990,24 +990,8 @@
   // --- Research a fact with Claude (free: uses the Claude app, not the API) ---
   // Builds a careful research request and opens Claude with it filled in
   // (also copied, in case Claude opens without it).
-  function claudeResearchPrompt(topic) {
-    const published = publishedFacts.slice(0, 25).map((f) => '- ' + f.text).join('\n'); // keeps the link a safe length
-    return [
-      'I run Apple Sunset (applesunset.com), a site tracking how long it has been since each Apple product was refreshed or discontinued. I need a "Did you know?" fact for the site and X.',
-      '',
-      'Topic: ' + topic,
-      '',
-      'Please:',
-      '1. Search the web and find 3 surprising, little-known, specific facts about this topic.',
-      '2. Check every fact against at least two independent, reliable sources (for example Apple Newsroom or press releases, Apple Support pages, major news outlets, well-cited Wikipedia articles). Search again independently to confirm; don\'t rely on one site copying another.',
-      '3. Double-check every date, number and name exactly. Drop any fact that isn\'t confirmed by two sources, that sources disagree on, or that relies on rumour.',
-      '4. Don\'t repeat or closely resemble any of my published facts (listed below).',
-      '5. Write each fact as one or two plain sentences in British English, under 200 characters, in a neutral brand voice (no "I" or "my"). If it mentions this site, say "Apple Sunset".',
-      '',
-      'Reply with, for each fact: the fact on its own line, then its sources as links, then how confident you are and why.',
-      published ? '\nMy published facts:\n' + published : '',
-    ].join('\n');
-  }
+  const claudeResearchPrompt = (topic) =>
+    window.FactsKit.claudeResearchPrompt(topic, publishedFacts.map((f) => f.text));
 
   $('up-ask-claude').addEventListener('click', () => {
     const topic = $('up-fact-topic').value.trim();
