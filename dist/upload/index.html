@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-<link rel="stylesheet" href="/upload.css?v=a0d8441e53">
+<link rel="stylesheet" href="/upload.css?v=2008c020a6">
 </head>
 <body>
 <main class="up">
@@ -49,6 +49,21 @@
       <p class="up-status" id="up-facts-status" aria-live="polite"></p>
     </div>
     <div id="up-fact-choices" class="up-fact-list"></div>
+
+    <div class="up-card">
+      <span class="up-label">Research a fact with Claude</span>
+      <p class="up-muted">Say what it should be about. Claude opens with a request to find little-known facts, check each against two reliable sources, and skip any you've already published. Copy the one you like into the box below.</p>
+      <textarea id="up-fact-topic" class="up-fact-edit up-fact-edit--short" placeholder="e.g. the original iPod" aria-label="What the fact should be about"></textarea>
+      <button type="button" id="up-ask-claude" class="gallery-action gallery-action--primary gallery-action--block">Ask Claude</button>
+      <p class="up-hint" id="up-ask-claude-note"></p>
+    </div>
+
+    <div class="up-card">
+      <span class="up-label">Add your own fact</span>
+      <textarea id="up-own-fact" class="up-fact-edit" placeholder="Paste or type a fact" aria-label="Your fact"></textarea>
+      <p class="up-fact-count" id="up-own-fact-count"></p>
+      <button type="button" id="up-own-fact-use" class="gallery-action gallery-action--primary gallery-action--block">Use this fact</button>
+    </div>
 
     <h2 class="up-section-title">Published</h2>
     <div id="up-fact-published" class="up-fact-list"></div>
@@ -126,7 +141,7 @@
     <span id="up-user"></span>
     <button type="button" id="up-logout" class="up-link">Sign out</button>
   </footer>
-  <p class="up-version">Version c18c25</p>
+  <p class="up-version">Version 0c13f4</p>
 </main>
 <script>
   window.SUPABASE_URL = "";
@@ -134,7 +149,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
 <script src="/facts-kit.js?v=c9ed3869d1" defer></script>
-<script src="/upload.js?v=c18c250cc8" defer></script>
+<script src="/upload.js?v=0c13f44f72" defer></script>
 <script>
   // Keeps the page's files on the phone so it opens instantly from the
   // Home Screen; updates are fetched in the background.

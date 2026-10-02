@@ -208,3 +208,4 @@ body {
 .up-tab { font-size: 14px; }
 
 .up-version { text-align: center; font-size: 11px; color: var(--text-secondary); opacity: 0.7; margin: 8px 0 0; }
+.up-fact-edit--short { min-height: 64px; }
