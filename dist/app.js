@@ -1888,6 +1888,12 @@
     return '<img src="' + escapeHtmlJS(cdn) + '"' + srcset + ' data-full="' + escapeHtmlJS(url) + '" alt="' + escapeHtmlJS(alt) + '"' + (index === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async"' + fallback + '>';
   }
 
+  // Must stay in step with galleryImageAlt() in src/templates.js.
+  function galleryImageAltJS(displayName, photo, index, total) {
+    var place = [photo.location, photo.country].filter(Boolean).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+    return displayName + (total > 1 ? ' \u2014 photo ' + (index + 1) + ' of ' + total : '') + (place ? ', ' + place : '');
+  }
+
   function galleryPhotoImagesJS(photo) {
     if (photo.image_urls && photo.image_urls.length) return photo.image_urls;
     return photo.image_url ? [photo.image_url] : [];
@@ -2045,7 +2051,7 @@
         var oldFulls = oldImages ? Array.prototype.map.call(oldImages.querySelectorAll('img'), function (img) { return img.getAttribute('data-full') || img.getAttribute('src'); }) : [];
         var sameImages = oldImages && oldFulls.join('\n') === images.join('\n');
         var keptIndex = window.GalleryViewer ? window.GalleryViewer.currentIndex(galleryPhotoPageEl) : 0;
-        var imagesHtml = images.map(function (url, i) { return galleryCarouselImgHtmlJS(url, displayName, i); }).join('');
+        var imagesHtml = images.map(function (url, i) { return galleryCarouselImgHtmlJS(url, galleryImageAltJS(displayName, photo, i, images.length), i); }).join('');
         var mailtoHref = 'mailto:infoswiper@yahoo.com?subject=' + encodeURIComponent('Can I use this photo? \u2014 ' + displayName) + '&body=' + encodeURIComponent('Hi, I\'d like to ask about using this photo:\n' + window.location.href);
         galleryPhotoPageEl.innerHTML =
           '<div class="gallery-photo-header">' +
