@@ -946,25 +946,7 @@
       count.className = 'up-fact-count';
       area.addEventListener('input', () => tweetCount(area, count));
       const use = actionButton('Use this fact', 'gallery-action--primary gallery-action--block', async () => {
-        const finalText = area.value.trim();
-        if (!finalText) return;
-        use.disabled = true;
-        use.textContent = 'Publishing…';
-        const { data, error } = await client.from('facts').insert({ text: finalText }).select();
-        if (error) {
-          use.disabled = false;
-          use.textContent = 'Use this fact';
-          factsStatus('Could not publish: ' + error.message, true);
-          return;
-        }
-        card.remove();
-        const row = data && data[0];
-        if (row && row.id) await window.FactsKit.uploadFactCard(client, row); // the tweet preview card
-        const published = await publishSite();
-        factsStatus(published.ok
-          ? 'Published. It will be on the homepage and Facts page in about a minute.'
-          : 'Saved, but the site rebuild failed (' + published.error + '). It will appear at the next publish or the morning rebuild.', !published.ok);
-        await loadFactData();
+        if (await publishFact(area.value, use)) card.remove();
       });
       card.appendChild(area);
       card.appendChild(count);
@@ -973,6 +955,83 @@
       tweetCount(area, count);
     });
   }
+
+  // Saves a fact, makes its tweet card, rebuilds the site. Shared by the
+  // generated choices and "Add your own fact". Returns true when saved.
+  async function publishFact(rawText, button) {
+    const finalText = (rawText || '').trim().replace(/\s+/g, ' ');
+    if (!finalText) return false;
+    if (publishedFacts.some((f) => sameFact(f.text, finalText))) {
+      factsStatus('That fact is already published.', true);
+      return false;
+    }
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Publishing…';
+    const { data, error } = await client.from('facts').insert({ text: finalText }).select();
+    if (error) {
+      button.disabled = false;
+      button.textContent = label;
+      factsStatus('Could not publish: ' + error.message, true);
+      return false;
+    }
+    const row = data && data[0];
+    if (row && row.id) await window.FactsKit.uploadFactCard(client, row); // the tweet preview card
+    const published = await publishSite();
+    factsStatus(published.ok
+      ? 'Published. It will be on the homepage and Facts page in about a minute.'
+      : 'Saved, but the site rebuild failed (' + published.error + '). It will appear at the next publish or the morning rebuild.', !published.ok);
+    button.disabled = false;
+    button.textContent = label;
+    await loadFactData();
+    return true;
+  }
+
+  // --- Research a fact with Claude (free: uses the Claude app, not the API) ---
+  // Builds a careful research request and opens Claude with it filled in
+  // (also copied, in case Claude opens without it).
+  function claudeResearchPrompt(topic) {
+    const published = publishedFacts.slice(0, 25).map((f) => '- ' + f.text).join('\n'); // keeps the link a safe length
+    return [
+      'I run Apple Sunset (applesunset.com), a site tracking how long it has been since each Apple product was refreshed or discontinued. I need a "Did you know?" fact for the site and X.',
+      '',
+      'Topic: ' + topic,
+      '',
+      'Please:',
+      '1. Search the web and find 3 surprising, little-known, specific facts about this topic.',
+      '2. Check every fact against at least two independent, reliable sources (for example Apple Newsroom or press releases, Apple Support pages, major news outlets, well-cited Wikipedia articles). Search again independently to confirm; don\'t rely on one site copying another.',
+      '3. Double-check every date, number and name exactly. Drop any fact that isn\'t confirmed by two sources, that sources disagree on, or that relies on rumour.',
+      '4. Don\'t repeat or closely resemble any of my published facts (listed below).',
+      '5. Write each fact as one or two plain sentences in British English, under 200 characters, in a neutral brand voice (no "I" or "my"). If it mentions this site, say "Apple Sunset".',
+      '',
+      'Reply with, for each fact: the fact on its own line, then its sources as links, then how confident you are and why.',
+      published ? '\nMy published facts:\n' + published : '',
+    ].join('\n');
+  }
+
+  $('up-ask-claude').addEventListener('click', () => {
+    const topic = $('up-fact-topic').value.trim();
+    const note = $('up-ask-claude-note');
+    if (!topic) {
+      note.textContent = 'Type what the fact should be about first.';
+      note.classList.add('up-hint--error');
+      $('up-fact-topic').focus();
+      return;
+    }
+    note.classList.remove('up-hint--error');
+    const prompt = claudeResearchPrompt(topic);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(prompt).catch(() => {});
+    note.textContent = 'Opening Claude. The request is also copied: if it opens empty, paste it in. When Claude replies, copy the fact you like into "Add your own fact" below.';
+    window.open('https://claude.ai/new?q=' + encodeURIComponent(prompt), '_blank', 'noopener');
+  });
+
+  $('up-own-fact').addEventListener('input', () => tweetCount($('up-own-fact'), $('up-own-fact-count')));
+  $('up-own-fact-use').addEventListener('click', async () => {
+    if (await publishFact($('up-own-fact').value, $('up-own-fact-use'))) {
+      $('up-own-fact').value = '';
+      $('up-own-fact-count').textContent = '';
+    }
+  });
 
   $('up-generate-facts').addEventListener('click', async () => {
     factsStatus('Working them out…');

@@ -2572,6 +2572,21 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
     </div>
     <div id="up-fact-choices" class="up-fact-list"></div>
 
+    <div class="up-card">
+      <span class="up-label">Research a fact with Claude</span>
+      <p class="up-muted">Say what it should be about. Claude opens with a request to find little-known facts, check each against two reliable sources, and skip any you've already published. Copy the one you like into the box below.</p>
+      <textarea id="up-fact-topic" class="up-fact-edit up-fact-edit--short" placeholder="e.g. the original iPod" aria-label="What the fact should be about"></textarea>
+      <button type="button" id="up-ask-claude" class="gallery-action gallery-action--primary gallery-action--block">Ask Claude</button>
+      <p class="up-hint" id="up-ask-claude-note"></p>
+    </div>
+
+    <div class="up-card">
+      <span class="up-label">Add your own fact</span>
+      <textarea id="up-own-fact" class="up-fact-edit" placeholder="Paste or type a fact" aria-label="Your fact"></textarea>
+      <p class="up-fact-count" id="up-own-fact-count"></p>
+      <button type="button" id="up-own-fact-use" class="gallery-action gallery-action--primary gallery-action--block">Use this fact</button>
+    </div>
+
     <h2 class="up-section-title">Published</h2>
     <div id="up-fact-published" class="up-fact-list"></div>
   </section>
