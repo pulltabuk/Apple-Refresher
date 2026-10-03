@@ -36,6 +36,13 @@ const DIST = path.join(__dirname, 'dist');
 
 const sitemapUrls = [];
 
+// When an album was last added or changed (YYYY-MM-DD), so the sitemap
+// tells Google which albums are new.
+function galleryLastmod(photo) {
+  const stamp = photo.updated_at || photo.created_at;
+  return stamp ? String(stamp).slice(0, 10) : null;
+}
+
 function xmlEscape(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -358,7 +365,7 @@ async function main() {
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));
   write('contact/index.html', contactPage(opts));
   write('contact/thanks/index.html', contactThanksPage(opts));
-  write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }));
+  write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }), galleryPhotos.map(galleryLastmod).filter(Boolean).sort().pop() || null);
   write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
   write('facts/index.html', factsPage({ facts, pageContent: pageContent.facts || null, ...opts }));
 
@@ -405,7 +412,7 @@ async function main() {
       slug = `${slug}-${n}`;
     }
     usedPhotoSlugs.add(slug);
-    write(`gallery/${slug}/index.html`, galleryPhotoPage({ photo, prevPhoto, nextPhoto, ...opts }), null, galleryPhotoImages(photo));
+    write(`gallery/${slug}/index.html`, galleryPhotoPage({ photo, prevPhoto, nextPhoto, ...opts }), galleryLastmod(photo), galleryPhotoImages(photo));
     // Old UUID links keep working and pass their ranking value across.
     if (slug !== String(photo.id)) {
       gallerySlugRedirects.push(`/gallery/${photo.id}/* /gallery/${slug}/ 301!`);

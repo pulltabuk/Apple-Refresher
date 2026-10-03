@@ -1674,6 +1674,12 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card .pill:not(.pill--location):not(.pill--count) { font-size: 10px; padding: 3px 9px; border-color: #e6e1d8; color: var(--text-secondary); }
 .card .pill:not(.pill--location):not(.pill--count):hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-dark); }
 .card .pill--location, .card .pill--count { font-size: 10px; padding: 3px 9px; }
+/* Album tiles: subject tags in orange so they stand out; places clear
+   until hovered. */
+.card .gallery-card-footer .pill:not(.pill--location):not(.pill--count) { background: var(--accent); border-color: var(--accent); color: #fff; }
+.card .gallery-card-footer .pill:not(.pill--location):not(.pill--count):hover { background: var(--accent-dark); border-color: var(--accent-dark); color: #fff; }
+.card .gallery-card-footer .pill--location { background: transparent; border-color: #e6e1d8; color: var(--text-secondary); }
+.card .gallery-card-footer .pill--location:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 .filter-bar { gap: 6px; }
 .homepage-category-links { margin-top: 0.5rem; }
 
