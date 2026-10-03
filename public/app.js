@@ -1953,8 +1953,8 @@
       return all ? '<div class="gallery-tags"><div class="gallery-tags-row">' + all + '</div></div>' : '';
     }
     var rows = [];
-    if (placeHtml) rows.push('<div class="gallery-tags-row">' + placeHtml + '</div>');
     if (tagPills) rows.push('<div class="gallery-tags-row">' + tagPills + '</div>');
+    if (placeHtml) rows.push('<div class="gallery-tags-row">' + placeHtml + '</div>');
     return rows.length ? '<div class="gallery-tags">' + rows.join('') + '</div>' : '';
   }
 

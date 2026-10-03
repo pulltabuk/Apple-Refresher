@@ -1041,9 +1041,10 @@ function galleryTagsHtml(photo, singleRow) {
     const all = placePills + tagPills;
     return all ? `<div class="gallery-tags"><div class="gallery-tags-row">${all}</div></div>` : '';
   }
+  // Album tiles: subject tags first, places underneath.
   const rows = [
-    placePills ? `<div class="gallery-tags-row">${placePills}</div>` : '',
     tagPills ? `<div class="gallery-tags-row">${tagPills}</div>` : '',
+    placePills ? `<div class="gallery-tags-row">${placePills}</div>` : '',
   ].filter(Boolean).join('\n');
   return rows ? `<div class="gallery-tags">${rows}</div>` : '';
 }
