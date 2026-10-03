@@ -93,6 +93,21 @@
     return (product.refresh_history || []).slice().sort();
   }
 
+  // Mirrors releaseDates() in src/templates.js.
+  function releaseDatesJS(product) {
+    var notReleases = {};
+    if (product.discontinued && product.discontinued_date) notReleases[product.discontinued_date] = true;
+    var details = product.generation_details && typeof product.generation_details === 'object' && !Array.isArray(product.generation_details) ? product.generation_details : {};
+    Object.keys(details).forEach(function (k) {
+      var info = details[k];
+      if (info && info.announced) notReleases[info.announced] = true;
+      if (info && info.preorder) notReleases[info.preorder] = true;
+    });
+    var all = sortedHistoryJS(product);
+    var releases = all.filter(function (d) { return !notReleases[d]; });
+    return releases.length ? releases : all;
+  }
+
   function launchDateJS(product) {
     var h = sortedHistoryJS(product);
     return h.length ? h[0] : null;
@@ -861,7 +876,11 @@
 
     // Mirrors the key facts grid plus secondary list in src/templates.js.
     var keyFacts = [
-      keyFactJS(sortedDates.length > 1 ? 'Latest release' : 'Released', latest ? formatDateJS(latest) : (launch ? formatDateJS(launch) : null)),
+      (function () {
+        var releases = releaseDatesJS(product);
+        var newest = releases[releases.length - 1] || latest;
+        return keyFactJS(releases.length > 1 ? 'Latest release' : 'Released', newest ? formatDateJS(newest) : (launch ? formatDateJS(launch) : null));
+      })(),
       (function () {
         var info = latest ? (generationDetailsJS(product)[latest] || {}) : {};
         return (info.announced ? keyFactJS('Announced', formatDateJS(info.announced)) : '') +

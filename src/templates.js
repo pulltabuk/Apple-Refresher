@@ -211,6 +211,21 @@ function sortedHistory(product) {
   return (product.refresh_history || []).slice().sort();
 }
 
+// Dates in the history that are actual releases: leaves out a
+// discontinued date and any announcement or pre-order date that has
+// ended up in the list, so they never count as extra releases. Must
+// stay in step with releaseDatesJS() in public/app.js.
+function releaseDates(product) {
+  const notReleases = new Set();
+  if (product.discontinued && product.discontinued_date) notReleases.add(product.discontinued_date);
+  Object.values(generationDetails(product)).forEach((info) => {
+    if (info && info.announced) notReleases.add(info.announced);
+    if (info && info.preorder) notReleases.add(info.preorder);
+  });
+  const releases = sortedHistory(product).filter((d) => !notReleases.has(d));
+  return releases.length ? releases : sortedHistory(product);
+}
+
 function launchDate(product) {
   const h = sortedHistory(product);
   return h.length ? h[0] : null;
@@ -1927,7 +1942,11 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   // in a smaller list underneath. Nothing is hidden, but the page no
   // longer gives "Days counted from" the same weight as the price.
   const keyFacts = [
-    keyFact(sortedDates.length > 1 ? 'Latest release' : 'Released', latest ? formatDate(latest) : (launch ? formatDate(launch) : null)),
+    (() => {
+      const releases = releaseDates(product);
+      const newest = releases[releases.length - 1] || latest;
+      return keyFact(releases.length > 1 ? 'Latest release' : 'Released', newest ? formatDate(newest) : (launch ? formatDate(launch) : null));
+    })(),
     // Announcement and pre-order dates are already recorded against the
     // newest release, so show them rather than leave the grid half empty.
     (() => {
