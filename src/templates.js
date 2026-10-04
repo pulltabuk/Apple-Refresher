@@ -2638,6 +2638,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
 <body>
 <main class="up">
   <header class="up-header">
+    <button type="button" id="up-home-btn" class="up-home-btn" aria-label="Back to the menu" hidden>&lsaquo; Menu</button>
     <img src="/logo.png" alt="" class="up-logo" width="32" height="32">
     <h1 id="up-heading">Add to gallery</h1>
   </header>
@@ -2652,6 +2653,32 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
       <button type="submit" class="gallery-action gallery-action--primary">Sign in</button>
       <p id="up-login-error" class="up-error" role="alert"></p>
     </form>
+  </section>
+
+  <section id="up-home" hidden>
+    <p class="up-muted up-home-intro">What would you like to do?</p>
+    <div class="up-home-grid">
+      <button type="button" class="up-home-tile" id="up-go-add">
+        <span class="up-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></span>
+        <span class="up-home-title">Add photos</span>
+        <span class="up-home-desc">Upload a new album</span>
+      </button>
+      <button type="button" class="up-home-tile" id="up-go-edit">
+        <span class="up-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M14 20l1-3.5 4.5-4.5 2.5 2.5-4.5 4.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+        <span class="up-home-title">Edit albums</span>
+        <span class="up-home-desc">Change or delete a set</span>
+      </button>
+      <button type="button" class="up-home-tile" id="up-go-facts">
+        <span class="up-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></span>
+        <span class="up-home-title">Did you know?</span>
+        <span class="up-home-desc">Create and post facts</span>
+      </button>
+      <a class="up-home-tile" id="up-go-site" href="/">
+        <span class="up-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <span class="up-home-title">View the site</span>
+        <span class="up-home-desc">Open Apple Sunset</span>
+      </a>
+    </div>
   </section>
 
   <nav class="up-tabs" id="up-tabs" role="tablist" hidden>
