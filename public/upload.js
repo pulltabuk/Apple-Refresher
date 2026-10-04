@@ -14,7 +14,7 @@
   const SUGGESTED_TAG_LIMIT = 16;
 
   const $ = (id) => document.getElementById(id);
-  const sections = { loading: $('up-loading'), login: $('up-login'), main: $('up-main'), library: $('up-library'), facts: $('up-facts'), done: $('up-done') };
+  const sections = { loading: $('up-loading'), login: $('up-login'), home: $('up-home'), main: $('up-main'), library: $('up-library'), facts: $('up-facts'), done: $('up-done') };
 
   // Photos already on the site have a url and no file.
   let photos = []; // { id, file, preview, status: 'working'|'done'|'error', url, error, promise }
@@ -65,15 +65,15 @@
   function show(name) {
     Object.keys(sections).forEach((key) => { sections[key].hidden = key !== name; });
     $('up-footer').hidden = name === 'login' || name === 'loading';
-    // The Add / Edit / Did you know? tabs stay up everywhere except sign-in
-    // and while editing a set (which has its own Back link).
-    $('up-tabs').hidden = !(name === 'library' || name === 'facts' || name === 'done' || (name === 'main' && !editingId));
-    const tab = name === 'library' ? 'edit' : name === 'facts' ? 'facts' : name === 'done' ? 'none' : 'new';
-    [['new', 'up-tab-new'], ['edit', 'up-tab-edit'], ['facts', 'up-tab-facts']].forEach(([key, id]) => {
-      $(id).classList.toggle('up-tab--on', key === tab);
-      $(id).setAttribute('aria-selected', String(key === tab));
-    });
-    $('up-heading').textContent = tab === 'facts' ? 'Did you know?' : tab === 'edit' ? 'Edit gallery' : tab === 'none' ? 'Done' : 'Add to gallery';
+    // The menu is the starting page; every other page has a Menu button
+    // back to it.
+    $('up-tabs').hidden = true;
+    $('up-home-btn').hidden = name === 'home' || name === 'login' || name === 'loading';
+    $('up-heading').textContent = name === 'home' ? 'Apple Sunset'
+      : name === 'facts' ? 'Did you know?'
+      : name === 'library' || (name === 'main' && editingId) ? 'Edit albums'
+      : name === 'done' ? 'Done'
+      : 'Add photos';
     window.scrollTo(0, 0);
   }
 
@@ -110,7 +110,10 @@
 
   function enterApp(session) {
     $('up-user').textContent = session && session.user ? session.user.email : '';
-    startNew();
+    clearForm(true);
+    setFormMode();
+    show('home');
+    loadSuggestions();
   }
 
   // --- Suggestions: existing tags, places and product names ---
@@ -777,6 +780,18 @@
     setFormMode();
     openLibrary();
   });
+
+  // --- Menu ---
+  $('up-home-btn').addEventListener('click', () => show('home'));
+  // Add photos picks up a half-finished new album where it was left;
+  // otherwise it starts a fresh one.
+  $('up-go-add').addEventListener('click', () => {
+    if (editingId) { startNew(); return; }
+    show('main');
+    loadSuggestions();
+  });
+  $('up-go-edit').addEventListener('click', openLibrary);
+  $('up-go-facts').addEventListener('click', openFacts);
 
   $('up-tab-new').addEventListener('click', () => {
     if (!sections.main.hidden) return;
