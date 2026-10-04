@@ -1918,6 +1918,7 @@
     loadedFactText = (document.getElementById('did_you_know_editor').textContent || '').trim();
     factDateTouched = false;
     document.getElementById('did_you_know_date').value = p.did_you_know_date || '';
+    document.getElementById('did-you-know-date-note').hidden = factDateColumnExists();
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     document.getElementById('is_new_launch').checked = !!p.is_new_launch;
     currentRefreshHistory = (p.refresh_history || []).slice().sort();
@@ -1975,6 +1976,7 @@
     loadedFactText = '';
     factDateTouched = false;
     document.getElementById('did_you_know_date').value = '';
+    document.getElementById('did-you-know-date-note').hidden = factDateColumnExists();
     currentOriginalLaunchDate = null;
     currentRefreshHistory = [];
     currentGenerationDetails = {};
