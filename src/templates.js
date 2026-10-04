@@ -2292,6 +2292,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <p class="admin-hint" id="did-you-know-count"></p>
             <label class="admin-subfield-label" for="did_you_know_date">Fact date <span class="admin-optional">Shown as “As of” month and year. Set to today when you change the fact.</span></label>
             <input type="date" id="did_you_know_date">
+            <p class="admin-hint" id="did-you-know-date-note" hidden>Fact dates aren’t switched on yet, so this date won’t be saved. Run <code>supabase-schema-update-28.sql</code> in the Supabase SQL editor, then reload this page.</p>
           </div>
 
           <div class="admin-subfield">
