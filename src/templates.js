@@ -1309,13 +1309,14 @@ function galleryStripItemHtml(photo) {
         </span>
       </span>`
     : `<span class="gallery-strip-single">${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}</span>`;
-  const place = [photo.location, photo.country].filter(Boolean)
-    .map((t) => `<span class="pill pill--location">${escapeHtml(t)}</span>`).join('');
+  // Subject tags (e.g. iPod), in orange like the gallery tiles.
+  const tags = (photo.tags || []).slice().sort((a, b) => a.localeCompare(b)).slice(0, 3)
+    .map((t) => `<span class="pill pill--tag">${escapeHtml(t)}</span>`).join('');
   const count = images.length > 1 ? `<span class="gallery-strip-count">${images.length} photos</span>` : '';
   return `<a class="gallery-strip-item" href="/gallery/${galleryPhotoSlug(photo)}/">
     <span class="gallery-strip-media">${media}${count}</span>
     <span class="gallery-strip-caption">${escapeHtml(displayName)}</span>
-    ${place ? `<span class="gallery-strip-pills">${place}</span>` : ''}
+    ${tags ? `<span class="gallery-strip-pills">${tags}</span>` : ''}
   </a>`;
 }
 
@@ -2029,7 +2030,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
       ${product.discontinued ? '' : categoryStatsSentence(product.category || 'this family',
           allProducts.filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })))}
 
-      ${product.did_you_know ? `<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">${sanitizeRichText(product.did_you_know, siteUrl)}</div></aside>` : ''}
+      ${product.did_you_know ? `<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">${sanitizeRichText(product.did_you_know, siteUrl)}</div>${product.did_you_know_date ? `<p class="did-you-know-date">As of ${formatDate(String(product.did_you_know_date).slice(0, 7))}</p>` : ''}</aside>` : ''}
 
       <dl class="spec-list spec-list--secondary">
         ${specs}
@@ -2289,6 +2290,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             </div>
             <div id="did_you_know_editor" class="richtext-editor richtext-editor--short" contenteditable="true" data-placeholder="One short, surprising fact about this product."></div>
             <p class="admin-hint" id="did-you-know-count"></p>
+            <label class="admin-subfield-label" for="did_you_know_date">Fact date <span class="admin-optional">Shown as “As of” month and year. Set to today when you change the fact.</span></label>
+            <input type="date" id="did_you_know_date">
           </div>
 
           <div class="admin-subfield">

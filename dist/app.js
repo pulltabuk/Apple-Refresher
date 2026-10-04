@@ -950,7 +950,7 @@
           '</div>' +
           (product.discontinued ? '' : familyCadenceJS(product.category || 'this family',
             allProducts.filter(function (p) { return (p.category || '') === (product.category || ''); }))) +
-          (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">' + sanitizeRichTextJS(product.did_you_know) + '</div></aside>' : '') +
+          (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">' + sanitizeRichTextJS(product.did_you_know) + '</div>' + (product.did_you_know_date ? '<p class="did-you-know-date">As of ' + formatDateJS(String(product.did_you_know_date).slice(0, 7)) + '</p>' : '') + '</aside>' : '') +
           '<dl class="spec-list spec-list--secondary">' + specs + '</dl>' +
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
         '</div>' +
@@ -1927,14 +1927,14 @@
         images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb"><img src="' + escapeHtmlJS(u) + '" alt=""></span>'; }).join('') +
         (images.length > 3 ? '<span class="gallery-strip-more">+' + (images.length - 3) + '</span>' : '') + '</span></span>'
       : '<span class="gallery-strip-single">' + (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</span>';
-    var place = [photo.location, photo.country].filter(Boolean).map(function (t) {
-      return '<span class="pill pill--location">' + escapeHtmlJS(t) + '</span>';
+    var tags = (photo.tags || []).slice().sort(function (a, b) { return a.localeCompare(b); }).slice(0, 3).map(function (t) {
+      return '<span class="pill pill--tag">' + escapeHtmlJS(t) + '</span>';
     }).join('');
     var count = images.length > 1 ? '<span class="gallery-strip-count">' + images.length + ' photos</span>' : '';
     return '<a class="gallery-strip-item" href="/gallery/' + galleryPhotoSlugJS(photo) + '/">' +
       '<span class="gallery-strip-media">' + media + count + '</span>' +
       '<span class="gallery-strip-caption">' + escapeHtmlJS(displayName) + '</span>' +
-      (place ? '<span class="gallery-strip-pills">' + place + '</span>' : '') + '</a>';
+      (tags ? '<span class="gallery-strip-pills">' + tags + '</span>' : '') + '</a>';
   }
 
   function galleryTagLinkJS(value, extraClass) {

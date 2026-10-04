@@ -642,6 +642,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
    overlaid on the image rather than sitting in this row. */
 .gallery-strip-pills { margin-top: auto; padding-top: 2px; }
 .gallery-strip-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.pill--tag { background: var(--accent); border-color: var(--accent); color: #fff; }
+.gallery-strip-item:hover .pill--tag { background: var(--accent-dark); border-color: var(--accent-dark); }
 .gallery-strip-item:hover .gallery-strip-caption { color: var(--accent-dark); }
 @media (max-width: 700px) {
   /* Two to a row on a phone rather than one large tile */
@@ -1902,6 +1904,7 @@ body.is-admin .site-search { display: none; }
   color: var(--accent-dark);
 }
 .did-you-know-text { margin: 0; color: var(--text); font-size: 16px; line-height: 1.6; }
+.did-you-know-date { margin: 8px 0 0; font-size: 12px; color: var(--text-secondary); }
 
 /* Draft-a-post composer: a pop-up styled like a real post */
 .post-composer {
