@@ -1915,6 +1915,9 @@
     document.getElementById('in_countdown').checked = !!p.in_countdown;
     document.getElementById('did_you_know_editor').innerHTML = p.did_you_know || '';
     updateDidYouKnowCount();
+    loadedFactText = (document.getElementById('did_you_know_editor').textContent || '').trim();
+    factDateTouched = false;
+    document.getElementById('did_you_know_date').value = p.did_you_know_date || '';
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     document.getElementById('is_new_launch').checked = !!p.is_new_launch;
     currentRefreshHistory = (p.refresh_history || []).slice().sort();
@@ -1969,6 +1972,9 @@
     document.getElementById('rumor_note_editor').innerHTML = '';
     document.getElementById('did_you_know_editor').innerHTML = '';
     updateDidYouKnowCount();
+    loadedFactText = '';
+    factDateTouched = false;
+    document.getElementById('did_you_know_date').value = '';
     currentOriginalLaunchDate = null;
     currentRefreshHistory = [];
     currentGenerationDetails = {};
@@ -2261,6 +2267,10 @@
         discontinued_reason: isDiscontinued ? (document.getElementById('discontinued_reason').value.trim() || null) : null,
         video_url: currentVideoUrl,
       };
+      if (factDateColumnExists()) {
+        const factDate = document.getElementById('did_you_know_date').value || null;
+        payload.did_you_know_date = payload.did_you_know ? (factDate || todayIso()) : null;
+      }
 
       const result = editingId
         ? await client.from('products').update(payload).eq('id', editingId)
@@ -3179,7 +3189,33 @@
     const editor = document.getElementById('did_you_know_editor');
     if (!editor) return;
     editor.addEventListener('input', updateDidYouKnowCount);
+    editor.addEventListener('input', stampFactDate);
   })();
+
+  // The fact's "As of" date: set to today whenever the fact's wording
+  // changes, unless a date has been picked by hand.
+  let loadedFactText = '';
+  let factDateTouched = false;
+  function todayIso() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function stampFactDate() {
+    const input = document.getElementById('did_you_know_date');
+    const text = (document.getElementById('did_you_know_editor').textContent || '').trim();
+    if (!input || factDateTouched) return;
+    if (!text) { input.value = ''; return; }
+    if (text !== loadedFactText) input.value = todayIso();
+  }
+  (function wireFactDate() {
+    const input = document.getElementById('did_you_know_date');
+    if (input) input.addEventListener('input', () => { factDateTouched = true; });
+  })();
+  // Only send the date once the database has the column, so saving keeps
+  // working before the SQL update has been run.
+  function factDateColumnExists() {
+    return cachedProducts.some((p) => Object.prototype.hasOwnProperty.call(p, 'did_you_know_date'));
+  }
 
   document.querySelectorAll('.richtext-toolbar [data-editor]').forEach((btn) => {
     // Stops the click stealing focus, which would clear the highlight
