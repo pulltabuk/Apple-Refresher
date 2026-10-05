@@ -1788,6 +1788,11 @@
           return;
         }
         factSectionWrapper.style.display = '';
+        // Still the fact the page was built with: keep it as built, link
+        // to its product included. A newer one shows straight away and
+        // gains its link when the site rebuilds a moment later.
+        var builtFact = factBoxSection.querySelector('[data-fact-id]');
+        if (builtFact && builtFact.getAttribute('data-fact-id') === String(latest.id)) return;
         factBoxSection.innerHTML =
           '<p class="fact-label">Did you know?</p>' +
           '<p class="fact-text">' + escapeHtmlJS(latest.text) + '</p>' +

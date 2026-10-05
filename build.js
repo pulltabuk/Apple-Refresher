@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -393,6 +393,7 @@ async function main() {
     productsBySlug,
     activeEvent,
     latestFact,
+    latestFactLink: latestFact ? factRelatedLink(latestFact.text, products, galleryPhotos) : null,
     pageContent: pageContent.home || null,
     countdown,
     ...opts,
@@ -414,7 +415,7 @@ async function main() {
       ? `${SUPABASE_URL}/storage/v1/object/public/product-images/fact-cards/${fact.id}-${factKey(fact.text)}.png`
       : null;
     const cardExists = cardUrl ? await urlExists(cardUrl) : false;
-    write(`facts/${fact.id}/index.html`, factPage({ fact, cardUrl: cardExists ? cardUrl : null, ...opts }));
+    write(`facts/${fact.id}/index.html`, factPage({ fact, cardUrl: cardExists ? cardUrl : null, related: factRelatedLink(fact.text, products, galleryPhotos), ...opts }));
   }
   const eventSlugRedirects = [];
   const usedEventSlugs = new Set();
