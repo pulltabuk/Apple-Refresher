@@ -3270,63 +3270,23 @@
   // --- Fact helper: three facts worked out from this product's own data,
   // or a Claude research request built from an idea.
 
-  function spanText(days) {
-    const years = days / 365.25;
-    if (years >= 1.75) return 'about ' + (Math.round(years * 2) / 2).toString().replace('.5', '\u00bd') + ' years';
-    if (days >= 60) return 'about ' + Math.round(days / 30.44) + ' months';
-    return days + ' days';
-  }
-  function daysBetweenIso(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
-  function longDate(iso) { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); }
-  function parsePrice(text) {
-    const m = String(text || '').match(/^([£$€])?\s*([\d,.]+)/);
-    return m ? { symbol: m[1] || '', value: parseFloat(m[2].replace(/,/g, '')) } : null;
+  // This product as it stands in the form, for the fact helpers.
+  function formProduct() {
+    const symbol = (document.querySelector('input[name="price_currency"]:checked') || {}).value || '';
+    const priceRaw = document.getElementById('price').value.trim();
+    return {
+      name: document.getElementById('name').value.trim(),
+      refresh_history: currentRefreshHistory.slice(),
+      discontinued: !!currentDiscontinuedDate,
+      discontinued_date: currentDiscontinuedDate,
+      generation_details: currentGenerationDetails,
+      previous_model: document.getElementById('previous_model').value || null,
+      price: priceRaw ? symbol + priceRaw : null,
+    };
   }
 
   function productFactSuggestions() {
-    const name = document.getElementById('name').value.trim() || 'This product';
-    const today = new Date().toISOString().slice(0, 10);
-    const releases = currentRefreshHistory.filter((d) => d !== currentDiscontinuedDate && d <= today).slice().sort();
-    const latest = releases[releases.length - 1];
-    const info = latest ? (currentGenerationDetails[latest] || {}) : {};
-    const out = [];
-    if (latest && info.announced && info.announced < latest) {
-      out.push(name + ' went on sale ' + spanText(daysBetweenIso(info.announced, latest)) + ' after Apple announced it, on ' + longDate(info.announced) + '.');
-    }
-    if (latest && info.preorder && info.preorder < latest) {
-      out.push('Pre-orders for the ' + name + ' opened ' + daysBetweenIso(info.preorder, latest) + ' days before it reached customers on ' + longDate(latest) + '.');
-    }
-    if (releases.length >= 2) {
-      const gaps = releases.slice(1).map((d, i) => daysBetweenIso(releases[i], d)).filter((g) => g > 0);
-      if (gaps.length) {
-        const avg = Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length);
-        out.push('Across ' + releases.length + ' releases since ' + new Date(releases[0]).getFullYear() + ', Apple has updated the ' + name + ' roughly every ' + spanText(avg).replace(/^about /, '') + '.');
-        const longest = Math.max(...gaps);
-        if (gaps.length >= 2 && longest > avg * 1.25) out.push('The longest wait between ' + name + ' updates was ' + spanText(longest) + '.');
-      }
-    }
-    if (currentDiscontinuedDate && releases.length) {
-      out.push('The ' + name + ' was on sale for ' + spanText(daysBetweenIso(releases[0], currentDiscontinuedDate)) + ' before Apple discontinued it on ' + longDate(currentDiscontinuedDate) + '.');
-    }
-    const prevSlug = document.getElementById('previous_model').value;
-    const prev = prevSlug ? cachedProducts.find((p) => p.slug === prevSlug) : null;
-    if (prev && latest) {
-      const prevDates = (prev.refresh_history || []).filter((d) => d !== prev.discontinued_date).slice().sort();
-      const prevLatest = prevDates[prevDates.length - 1];
-      if (prevLatest && prevLatest < latest) out.push('The ' + name + ' arrived ' + spanText(daysBetweenIso(prevLatest, latest)) + ' after the ' + prev.name + ' it replaces.');
-      const symbol = (document.querySelector('input[name="price_currency"]:checked') || {}).value || '';
-      const mine = parsePrice(symbol + document.getElementById('price').value.trim());
-      const theirs = parsePrice(prev.price);
-      if (mine && theirs && mine.symbol === theirs.symbol && mine.value !== theirs.value) {
-        const diff = Math.abs(mine.value - theirs.value);
-        out.push('The ' + name + ' launched at ' + mine.symbol + mine.value + ', ' + mine.symbol + diff + (mine.value > theirs.value ? ' more' : ' less') + ' than the ' + prev.name + ' at ' + theirs.symbol + theirs.value + '.');
-      }
-    }
-    if (latest) {
-      const weekday = new Date(latest).toLocaleDateString('en-GB', { weekday: 'long' });
-      out.push('The ' + name + ' was released on a ' + weekday + ', ' + longDate(latest) + '.');
-    }
-    return out.slice(0, 3);
+    return window.FactsKit.productFactCandidates(formProduct(), cachedProducts);
   }
 
   function setFactText(text) {
@@ -3366,13 +3326,27 @@
       note.textContent = 'Give the product a name, or type an idea, first.';
       return;
     }
-    const topic = (name ? 'the Apple ' + name : '') + (seed ? (name ? ': ' : '') + seed : '');
-    const published = cachedProducts.map((p) => (p.did_you_know ? p.did_you_know.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '')).filter(Boolean)
-      .concat(cachedFacts.map((f) => f.text));
-    const prompt = window.FactsKit.claudeResearchPrompt(topic, published);
+    const prompt = window.FactsKit.productFactPrompt(name, seed, cachedProducts.filter((p) => p.id !== editingId), cachedFacts.map((f) => f.text));
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(prompt).catch(() => {});
     note.textContent = 'Claude opened in a new tab with your request (also copied, in case it opens empty). It finds 3 checked facts; paste the one you like into the box above.';
     window.open(window.FactsKit.claudeResearchUrl(prompt), '_blank', 'noopener');
+  });
+  document.getElementById('notes-research-btn').addEventListener('click', () => {
+    const product = formProduct();
+    const note = document.getElementById('notes-helper-note');
+    if (!product.name) {
+      note.textContent = 'Give the product a name first.';
+      return;
+    }
+    product.category = document.getElementById('category').value || selectedFamily || '';
+    product.rumor_note = document.getElementById('rumor_note_editor').innerHTML;
+    const prompt = window.FactsKit.productNotesPrompt(product, document.getElementById('notes-seed').value.trim(), cachedProducts);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(prompt).catch(() => {});
+    note.textContent = 'Claude opened in a new tab with your request (also copied, in case it opens empty). Check its sources, paste the notes into the box above, edit, then save.';
+    window.open(window.FactsKit.claudeResearchUrl(prompt), '_blank', 'noopener');
+  });
+  document.getElementById('notes-seed').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('notes-research-btn').click(); }
   });
   document.getElementById('fact-seed').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); document.getElementById('fact-research-btn').click(); }

@@ -220,6 +220,13 @@
               <button type="button" id="richtext-clear-all-btn" class="richtext-clear-all">Clear all formatting</button>
             </div>
             <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
+            <div class="fact-helper">
+              <div class="fact-research">
+                <input type="text" id="notes-seed" placeholder="Optional focus, e.g. what changed from the last model" autocomplete="off" aria-label="What the notes should focus on">
+                <button type="button" id="notes-research-btn" class="admin-btn admin-btn--small">Research notes with Claude</button>
+              </div>
+              <p class="admin-hint" id="notes-helper-note">Claude drafts short notes with every point checked against two sources, and lists them so you can check too. Paste into the box above, edit, then save.</p>
+            </div>
           </div>
         </section>
 
@@ -564,7 +571,7 @@
   window.SUPABASE_ANON_KEY = "";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="/facts-kit.js?v=9eec0d5b11" defer></script>
-<script src="/admin.js?v=249ddac0d2" defer></script>
+<script src="/facts-kit.js?v=703a58f0ee" defer></script>
+<script src="/admin.js?v=59d23d4fe0" defer></script>
 </body>
 </html>

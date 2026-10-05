@@ -233,3 +233,13 @@ body {
   font: inherit; font-size: 16px; font-weight: 600; color: var(--accent-dark); cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Product facts & notes */
+.up-fact-edit--tall { min-height: 160px; }
+.up-fact-pick {
+  text-align: left; font: inherit; font-size: 15px; line-height: 1.45; color: var(--text);
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: #fff; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.up-fact-pick:active { border-color: var(--accent); background: var(--accent-bg); }
+#up-product .up-card h2 { font-size: 17px; }
