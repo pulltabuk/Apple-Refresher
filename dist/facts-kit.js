@@ -203,14 +203,17 @@
     });
   }
 
-  // Start fetching the logo straight away so the first card is quick.
-  loadLogo();
+  // Start fetching the logo straight away so the first card is quick
+  // (in a browser only: the build also uses this file).
+  if (typeof Image !== 'undefined') loadLogo();
 
   function generateFactCandidates(products) {
     const cachedProducts = products || [];
     const facts = [];
+    // Only real releases count: a discontinued date stored alongside the
+    // release dates, or a date still to come, is not a release.
     const allDates = [];
-    cachedProducts.forEach((p) => (p.refresh_history || []).forEach((d) => allDates.push(d)));
+    cachedProducts.forEach((p) => pastReleases(p).filter((d, i, a) => a.indexOf(d) === i).forEach((d) => allDates.push(d)));
 
     // Month-of-release pattern, only surfaced with a real sample behind it.
     if (allDates.length >= 5) {
@@ -243,7 +246,7 @@
     // Average refresh cycle per category.
     const categoryCycles = {};
     cachedProducts.forEach((p) => {
-      const hist = (p.refresh_history || []).slice().sort();
+      const hist = pastReleases(p);
       if (hist.length < 2) return;
       for (let i = 1; i < hist.length; i++) {
         const days = Math.round((new Date(hist[i]) - new Date(hist[i - 1])) / 86400000);
@@ -500,7 +503,45 @@
     ].join('\n').replace(/\n{3,}/g, '\n\n');
   }
 
-  window.FactsKit = {
+  // --- The public Facts page (/facts/): statistics worked out from every
+  // product, then each product's own "Did you know?". The build and the
+  // page's live refresh both use this, so they always show the same.
+  function escapeHtml(str) {
+    return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function monthYear(iso) {
+    const parts = String(iso).slice(0, 7).split('-').map(Number);
+    return new Date(Date.UTC(parts[0], parts[1] - 1, 1)).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+  }
+
+  function factsPageHtml(products, sanitize) {
+    const list = products || [];
+    const stats = list.length ? generateFactCandidates(list) : [];
+    const withFacts = list
+      .filter((p) => p.slug && plainText(p.did_you_know))
+      .sort((a, b) => String(b.did_you_know_date || '').localeCompare(String(a.did_you_know_date || '')) || a.name.localeCompare(b.name));
+    const statsHtml = stats.length
+      ? '<section class="facts-section"><h2 class="facts-section-title">By the numbers</h2>' +
+        '<p class="facts-section-note">Worked out from every product Apple Sunset tracks, and recalculated each time the site updates.</p>' +
+        '<div class="facts-grid">' + stats.map((t) => '<div class="fact-card"><p class="fact-text">' + escapeHtml(t) + '</p></div>').join('') + '</div></section>'
+      : '';
+    const productHtml = withFacts.length
+      ? '<section class="facts-section"><h2 class="facts-section-title">Did you know?</h2><div class="facts-grid">' +
+        withFacts.map((p) => {
+          const href = '/products/' + encodeURIComponent(p.slug) + '/';
+          return '<article class="fact-card fact-card--product">' +
+            '<a class="fact-product-name" href="' + href + '">' + escapeHtml(p.name) + '</a>' +
+            '<div class="fact-text">' + sanitize(p.did_you_know) + '</div>' +
+            (p.did_you_know_date ? '<p class="fact-date">As of ' + monthYear(p.did_you_know_date) + '</p>' : '') +
+            '<a class="fact-more-link" href="' + href + '">More on the ' + escapeHtml(p.name) + ' &rarr;</a>' +
+            '</article>';
+        }).join('') + '</div></section>'
+      : '';
+    return statsHtml + productHtml;
+  }
+
+  const FactsKit = {
+    factsPageHtml,
     productFactCandidates,
     productFactPrompt,
     productNotesPrompt,
@@ -520,4 +561,6 @@
     factImageFile,
     generateFactCandidates,
   };
+  if (typeof module !== 'undefined' && module.exports) module.exports = FactsKit;
+  if (typeof window !== 'undefined') window.FactsKit = FactsKit;
 })();

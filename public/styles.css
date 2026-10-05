@@ -579,12 +579,22 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .fact-text { margin-top: 10px; font-size: 18px; font-weight: 600; line-height: 1.4; }
 .fact-more-link { display: block; margin-top: 12px; font-size: 14px; font-weight: 600; color: var(--accent); text-decoration: none; }
 .fact-more-link:hover { color: var(--accent-dark); }
-.facts-list {
+.facts-list { margin-top: 1.5rem; }
+.facts-section + .facts-section { margin-top: 2.5rem; }
+.facts-section-title { font-size: 20px; margin: 0 0 0.35rem; }
+.facts-section-note { margin: 0 0 1rem; font-size: 14px; color: var(--text-secondary); }
+.facts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 18px;
-  margin-top: 1.5rem;
 }
+.fact-card--product { display: flex; flex-direction: column; }
+.fact-product-name { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--accent-dark); text-decoration: none; }
+.fact-product-name:hover { text-decoration: underline; }
+.fact-card .fact-text p { margin: 0 0 0.5em; }
+.fact-card .fact-text p:last-child { margin: 0; }
+.fact-card .fact-text a { color: inherit; }
+.fact-card--product .fact-more-link { margin: auto 0 0; padding-top: 14px; max-width: none; }
 .fact-card { background: var(--accent-bg); border-radius: 14px; padding: 1.5rem; }
 .fact-card .fact-text { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.45; color: var(--text); }
 .fact-card .fact-date { margin: 14px 0 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--accent-dark); }
