@@ -1708,18 +1708,40 @@
       .catch(function () { return null; });
   }
 
+  // Must stay in step with orderedFeatured() in build.js.
+  function orderedFeaturedJS(items, orderIds) {
+    var featured = items.filter(function (i) { return i.product.featured; });
+    var ordered = [];
+    orderIds.forEach(function (id) {
+      var hit = featured.filter(function (i) { return String(i.product.id) === String(id); })[0];
+      if (hit && ordered.indexOf(hit) === -1) ordered.push(hit);
+    });
+    var rest = featured.filter(function (i) { return ordered.indexOf(i) === -1; }).sort(function (a, b) { return a.product.name.localeCompare(b.product.name); });
+    return ordered.concat(rest).slice(0, 3);
+  }
+
   var heroCardsSection = document.getElementById('hero-cards');
   if (heroCardsSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-    Promise.all([fetchAllProductsJS(), fetchActiveEventJS()]).then(function (results) {
+    var featuredOrderReq = fetch(window.SUPABASE_URL + '/rest/v1/site_content?select=body&id=eq.featured', {
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (rows) {
+        var ids = JSON.parse((Array.isArray(rows) && rows[0] && rows[0].body) || '[]');
+        return Array.isArray(ids) ? ids.map(String) : [];
+      })
+      .catch(function () { return []; });
+    Promise.all([fetchAllProductsJS(), fetchActiveEventJS(), featuredOrderReq]).then(function (results) {
       var products = results[0];
       var activeEvent = results[1];
+      var featuredOrder = results[2];
       var active = products.filter(function (p) { return !p.discontinued; });
       var withStatus = active
         .map(function (p) { return { product: p, status: computeStatusJS(p) }; })
         .filter(function (i) { return i.status; });
       if (!withStatus.length && !activeEvent) return;
 
-      var explicitlyFeatured = activeEvent ? null : withStatus.filter(function (i) { return i.product.featured; })[0];
+      var featuredItems = orderedFeaturedJS(withStatus, featuredOrder);
       // Must match build.js: an unreleased product stays out of the hero
       // unless it has been deliberately featured.
       var todayStr = new Date().toISOString().slice(0, 10);
@@ -1727,17 +1749,22 @@
         var dates = i.product.refresh_history || [];
         return !dates.length || !dates.every(function (d) { return d > todayStr; });
       });
+      // Must match build.js: featured products fill the tiles in their
+      // chosen order, random picks fill whatever is left.
       var heroFeatured, heroRest;
       if (activeEvent) {
         heroFeatured = null;
-        heroRest = pickRandomJS(releasedOnly, 2);
-      } else if (explicitlyFeatured) {
-        heroFeatured = explicitlyFeatured;
-        heroRest = pickRandomJS(releasedOnly.filter(function (i) { return i !== explicitlyFeatured; }), 2);
+        heroRest = featuredItems.slice(0, 2);
+      } else if (featuredItems.length) {
+        heroFeatured = featuredItems[0];
+        heroRest = featuredItems.slice(1, 3);
       } else {
         var heroPicks = pickRandomJS(releasedOnly, 3);
         heroFeatured = heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0];
         heroRest = heroPicks.filter(function (i) { return i !== heroFeatured; });
+      }
+      if (heroFeatured || activeEvent) {
+        heroRest = heroRest.concat(pickRandomJS(releasedOnly.filter(function (i) { return i !== heroFeatured && heroRest.indexOf(i) === -1; }), 2 - heroRest.length));
       }
 
       var featuredSlotHtml = activeEvent ? eventCardHtmlJS(activeEvent) : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');

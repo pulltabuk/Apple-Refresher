@@ -129,6 +129,22 @@ async function loadSiteContent() {
   return DEFAULT_ABOUT;
 }
 
+// The order of the homepage's featured products (up to 3), kept as a
+// list of product ids in the site_content row 'featured'. Slot 1 is the
+// big tile.
+async function loadFeaturedOrder() {
+  if (!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)) return [];
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data } = await supabase.from('site_content').select('body').eq('id', 'featured').maybeSingle();
+    const ids = JSON.parse((data && data.body) || '[]');
+    return Array.isArray(ids) ? ids.map(String) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
 async function loadEvents() {
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     const { createClient } = require('@supabase/supabase-js');
@@ -205,6 +221,17 @@ async function loadGalleryPhotos() {
     return data || [];
   }
   return [];
+}
+
+// Featured products in their chosen order: the saved slot order first,
+// then any other product still marked featured, at most three. Must stay
+// in step with orderedFeaturedJS() in public/app.js.
+function orderedFeatured(items, orderIds) {
+  const featured = items.filter((i) => i.product.featured);
+  const byId = new Map(featured.map((i) => [String(i.product.id), i]));
+  const ordered = orderIds.map((id) => byId.get(String(id))).filter(Boolean);
+  const rest = featured.filter((i) => !ordered.includes(i)).sort((a, b) => a.product.name.localeCompare(b.product.name));
+  return ordered.concat(rest).slice(0, 3);
 }
 
 function pickRandom(arr, n) {
@@ -314,16 +341,26 @@ async function main() {
   // belongs in the hero if it has been deliberately featured. Otherwise
   // it has the countdown panel to itself.
   const released = rankable.filter((i) => !(i.product.refresh_history || []).every((d) => d > today));
-  const explicitlyFeatured = rankable.find((i) => i.product.featured);
+  // Up to three featured products, in the order chosen in admin. They
+  // fill the hero tiles in that order (slot 1 is the big tile, unless an
+  // Apple Event has it); any tile left over is a random pick.
+  const featuredOrder = await loadFeaturedOrder();
+  const featuredItems = orderedFeatured(rankable, featuredOrder);
   let heroFeatured;
   let heroRest;
-  if (explicitlyFeatured) {
-    heroFeatured = explicitlyFeatured;
-    heroRest = pickRandom(released.filter((i) => i !== explicitlyFeatured), 2);
+  if (activeEvent) {
+    heroFeatured = null;
+    heroRest = featuredItems.slice(0, 2);
+  } else if (featuredItems.length) {
+    heroFeatured = featuredItems[0];
+    heroRest = featuredItems.slice(1, 3);
   } else {
     const heroPicks = pickRandom(released, 3);
     heroFeatured = [...heroPicks].sort((a, b) => b.status.ratio - a.status.ratio)[0] || null;
     heroRest = heroPicks.filter((i) => i !== heroFeatured);
+  }
+  if (heroFeatured || activeEvent) {
+    heroRest = heroRest.concat(pickRandom(released.filter((i) => i !== heroFeatured && !heroRest.includes(i)), 2 - heroRest.length));
   }
 
   // The two-row "waiting longest" section: the true most-overdue list,

@@ -2242,3 +2242,20 @@ body.is-admin .site-search { display: none; }
 .gallery-strip-pills { gap: 4px; }
 .gallery-strip-pills .pill { font-size: 9px; line-height: 1.3; padding: 2px 7px; min-height: 0; letter-spacing: 0.02em; }
 .gallery-strip-pills .pill::before { content: none; }
+
+/* Admin: homepage feature slot picker */
+.admin-feature-slot { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; margin-top: 4px; }
+.admin-feature-slot select { font: inherit; font-weight: 400; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; max-width: 360px; }
+
+/* Admin: fact helper under "Did you know?" */
+.fact-helper { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 12px; }
+.fact-helper > .admin-btn { align-self: flex-start; }
+.fact-suggestions { display: flex; flex-direction: column; gap: 6px; }
+.fact-suggestions:empty { display: none; }
+.fact-suggestion {
+  text-align: left; font: inherit; font-size: 14px; line-height: 1.45; color: var(--text);
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; cursor: pointer;
+}
+.fact-suggestion:hover { border-color: var(--accent); background: var(--accent-bg); }
+.fact-research { display: flex; gap: 8px; flex-wrap: wrap; }
+.fact-research input { flex: 1; min-width: 200px; font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }

@@ -1168,6 +1168,7 @@
       return;
     }
     cachedProducts = data;
+    await loadFeaturedOrder();
     updateCategoryOptions();
     renderProductList();
   }
@@ -1268,7 +1269,7 @@
       featureBtn.type = 'button';
       featureBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
       featureBtn.textContent = '\u2606 Feature';
-      featureBtn.title = 'Make this the featured product on the homepage';
+      featureBtn.title = 'Put this in a free homepage featured slot (up to 3)';
       featureBtn.addEventListener('click', () => makeFeatured(p));
       actions.appendChild(featureBtn);
     }
@@ -1911,7 +1912,7 @@
     document.getElementById('press_release_url').value = p.press_release_url || '';
     document.getElementById('apple_url_unavailable').checked = !!p.apple_url_unavailable;
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
-    document.getElementById('featured').checked = !!p.featured;
+    updateFeaturedSlotOptions(p.id);
     document.getElementById('in_countdown').checked = !!p.in_countdown;
     document.getElementById('did_you_know_editor').innerHTML = p.did_you_know || '';
     updateDidYouKnowCount();
@@ -1966,6 +1967,7 @@
       window.history.pushState({}, '', '/admin/?new=1');
     }
     productForm.reset();
+    updateFeaturedSlotOptions(null);
     const wantsNewFamily = !!(options && options.newFamily);
     const preset = wantsNewFamily ? '' : (options && options.category ? canonicalFamily(options.category) : (selectedFamily || ''));
     document.getElementById('category').value = preset;
@@ -2025,20 +2027,87 @@
     if (deleted) backToList();
   });
 
-  async function makeFeatured(product) {
-    const previouslyFeatured = cachedProducts.find((p) => p.featured && p.id !== product.id);
-    if (previouslyFeatured) {
-      const clearResult = await client.from('products').update({ featured: false }).eq('id', previouslyFeatured.id);
-      if (clearResult.error) {
-        window.alert('Failed to un-feature "' + previouslyFeatured.name + '": ' + clearResult.error.message);
-        return;
+  // --- Homepage featured products: up to 3, in slot order. The order
+  // is kept as a list of product ids in the site_content row 'featured';
+  // each product's own "featured" flag says whether it is in a slot.
+  let featuredOrder = [];
+  async function loadFeaturedOrder() {
+    try {
+      const { data } = await client.from('site_content').select('body').eq('id', 'featured').maybeSingle();
+      const ids = JSON.parse((data && data.body) || '[]');
+      featuredOrder = Array.isArray(ids) ? ids : [];
+    } catch (err) {
+      featuredOrder = [];
+    }
+  }
+
+  // Which product id is in each of the 3 slots (null when empty).
+  function featuredSlots() {
+    const featured = cachedProducts.filter((p) => p.featured && !p.discontinued);
+    const isFeatured = (id) => featured.some((p) => String(p.id) === String(id));
+    const slots = [0, 1, 2].map((i) => (featuredOrder[i] != null && isFeatured(featuredOrder[i]) ? String(featuredOrder[i]) : null));
+    featured
+      .filter((p) => !slots.includes(String(p.id)))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .forEach((p) => { const free = slots.indexOf(null); if (free > -1) slots[free] = String(p.id); });
+    return slots;
+  }
+
+  function productNameById(id) {
+    const p = cachedProducts.find((x) => String(x.id) === String(id));
+    return p ? p.name : '';
+  }
+
+  // Shows who is in each slot, so it is clear what picking one replaces.
+  function updateFeaturedSlotOptions(currentId) {
+    const select = document.getElementById('featured_slot');
+    if (!select) return;
+    const slots = featuredSlots();
+    [1, 2, 3].forEach((n) => {
+      const occupant = slots[n - 1];
+      const base = n === 1 ? 'Slot 1 (big tile)' : 'Slot ' + n;
+      select.options[n].textContent = occupant && occupant !== String(currentId) ? base + ' \u2014 now ' + productNameById(occupant) : base;
+    });
+    const mine = currentId != null ? slots.indexOf(String(currentId)) : -1;
+    select.value = String(mine + 1);
+  }
+
+  // Puts a product in a slot (0 takes it out), un-featuring whatever was
+  // there, and saves the order.
+  async function setFeaturedSlot(productId, slot) {
+    const id = String(productId);
+    const slots = featuredSlots().map((s) => (s === id ? null : s));
+    if (slot > 0) {
+      const displaced = slots[slot - 1];
+      if (displaced) {
+        const clear = await client.from('products').update({ featured: false }).eq('id', displaced);
+        if (clear.error) window.alert('Could not un-feature ' + productNameById(displaced) + ': ' + clear.error.message);
       }
+      slots[slot - 1] = id;
+    }
+    const result = await client.from('site_content').upsert({ id: 'featured', body: JSON.stringify(slots) });
+    if (result.error) {
+      window.alert('The featured order could not be saved: ' + result.error.message);
+      return;
+    }
+    featuredOrder = slots;
+  }
+
+  // The "Feature" button in the list: the first free slot, or (when all
+  // three are taken) slot 3 after asking.
+  async function makeFeatured(product) {
+    const slots = featuredSlots();
+    let slot = slots.indexOf(null) + 1;
+    if (!slot) {
+      if (!window.confirm('All 3 featured slots are taken. Put ' + product.name + ' in slot 3 instead of ' + productNameById(slots[2]) + '?')) return;
+      slot = 3;
     }
     const result = await client.from('products').update({ featured: true }).eq('id', product.id);
     if (result.error) {
       window.alert('Failed to feature "' + product.name + '": ' + result.error.message);
       return;
     }
+    await setFeaturedSlot(product.id, slot);
     loadProducts();
   }
 
@@ -2088,16 +2157,20 @@
   // (which can validly hold multiple simultaneously-current siblings,
   // e.g. iPhone 17 and iPhone 17 Pro). So automatic discontinuation is
   // driven off Previous model specifically, never off Timeline group.
-  // Only one product should be Featured at a time, so marking a new one
-  // un-features whichever other product currently holds it.
-  async function enforceFeaturedExclusivity(payload) {
-    if (!payload.featured) return;
-    const previouslyFeatured = cachedProducts.find((p) => p.featured && p.id !== editingId);
-    if (!previouslyFeatured) return;
-    const result = await client.from('products').update({ featured: false }).eq('id', previouslyFeatured.id);
-    if (result.error) {
-      console.error('Failed to un-feature the previous product:', result.error);
+  // Saves the slot picked in the form. A new product's id is only known
+  // after it has been inserted, so it is looked up by its address.
+  async function saveFeaturedSlot(slug) {
+    const slot = parseInt(document.getElementById('featured_slot').value, 10) || 0;
+    let id = editingId;
+    if (!id) {
+      if (!slot) return;
+      const { data } = await client.from('products').select('id').eq('slug', slug).maybeSingle();
+      if (!data) return;
+      id = data.id;
     }
+    const current = featuredSlots().indexOf(String(id)) + 1;
+    if (current === slot) return;
+    await setFeaturedSlot(id, slot);
   }
 
   // Keeps the two halves of a relationship in step. Setting "previous
@@ -2255,7 +2328,7 @@
           const html = document.getElementById('rumor_note_editor').innerHTML.trim();
           return html && html !== '<br>' ? html : null;
         })(),
-        featured: document.getElementById('featured').checked,
+        featured: document.getElementById('featured_slot').value !== '0',
         in_countdown: document.getElementById('in_countdown').checked,
         did_you_know: (() => { const h = document.getElementById('did_you_know_editor').innerHTML.trim(); return h && h !== '<br>' ? h : null; })(),
         days_basis: document.querySelector('input[name="days_basis"]:checked').value,
@@ -2308,7 +2381,7 @@
       if (linked.length) {
         window.alert('Also updated ' + linked.join(' and ') + ' so the two link to each other. Publish when you are ready for that to show on the site.');
       }
-      await enforceFeaturedExclusivity(payload);
+      await saveFeaturedSlot(slug);
       selectedFamily = category;
       editingId = null;
       editingSlug = null;
@@ -3193,6 +3266,117 @@
     editor.addEventListener('input', updateDidYouKnowCount);
     editor.addEventListener('input', stampFactDate);
   })();
+
+  // --- Fact helper: three facts worked out from this product's own data,
+  // or a Claude research request built from an idea.
+
+  function spanText(days) {
+    const years = days / 365.25;
+    if (years >= 1.75) return 'about ' + (Math.round(years * 2) / 2).toString().replace('.5', '\u00bd') + ' years';
+    if (days >= 60) return 'about ' + Math.round(days / 30.44) + ' months';
+    return days + ' days';
+  }
+  function daysBetweenIso(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
+  function longDate(iso) { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  function parsePrice(text) {
+    const m = String(text || '').match(/^([£$€])?\s*([\d,.]+)/);
+    return m ? { symbol: m[1] || '', value: parseFloat(m[2].replace(/,/g, '')) } : null;
+  }
+
+  function productFactSuggestions() {
+    const name = document.getElementById('name').value.trim() || 'This product';
+    const today = new Date().toISOString().slice(0, 10);
+    const releases = currentRefreshHistory.filter((d) => d !== currentDiscontinuedDate && d <= today).slice().sort();
+    const latest = releases[releases.length - 1];
+    const info = latest ? (currentGenerationDetails[latest] || {}) : {};
+    const out = [];
+    if (latest && info.announced && info.announced < latest) {
+      out.push(name + ' went on sale ' + spanText(daysBetweenIso(info.announced, latest)) + ' after Apple announced it, on ' + longDate(info.announced) + '.');
+    }
+    if (latest && info.preorder && info.preorder < latest) {
+      out.push('Pre-orders for the ' + name + ' opened ' + daysBetweenIso(info.preorder, latest) + ' days before it reached customers on ' + longDate(latest) + '.');
+    }
+    if (releases.length >= 2) {
+      const gaps = releases.slice(1).map((d, i) => daysBetweenIso(releases[i], d)).filter((g) => g > 0);
+      if (gaps.length) {
+        const avg = Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length);
+        out.push('Across ' + releases.length + ' releases since ' + new Date(releases[0]).getFullYear() + ', Apple has updated the ' + name + ' roughly every ' + spanText(avg).replace(/^about /, '') + '.');
+        const longest = Math.max(...gaps);
+        if (gaps.length >= 2 && longest > avg * 1.25) out.push('The longest wait between ' + name + ' updates was ' + spanText(longest) + '.');
+      }
+    }
+    if (currentDiscontinuedDate && releases.length) {
+      out.push('The ' + name + ' was on sale for ' + spanText(daysBetweenIso(releases[0], currentDiscontinuedDate)) + ' before Apple discontinued it on ' + longDate(currentDiscontinuedDate) + '.');
+    }
+    const prevSlug = document.getElementById('previous_model').value;
+    const prev = prevSlug ? cachedProducts.find((p) => p.slug === prevSlug) : null;
+    if (prev && latest) {
+      const prevDates = (prev.refresh_history || []).filter((d) => d !== prev.discontinued_date).slice().sort();
+      const prevLatest = prevDates[prevDates.length - 1];
+      if (prevLatest && prevLatest < latest) out.push('The ' + name + ' arrived ' + spanText(daysBetweenIso(prevLatest, latest)) + ' after the ' + prev.name + ' it replaces.');
+      const symbol = (document.querySelector('input[name="price_currency"]:checked') || {}).value || '';
+      const mine = parsePrice(symbol + document.getElementById('price').value.trim());
+      const theirs = parsePrice(prev.price);
+      if (mine && theirs && mine.symbol === theirs.symbol && mine.value !== theirs.value) {
+        const diff = Math.abs(mine.value - theirs.value);
+        out.push('The ' + name + ' launched at ' + mine.symbol + mine.value + ', ' + mine.symbol + diff + (mine.value > theirs.value ? ' more' : ' less') + ' than the ' + prev.name + ' at ' + theirs.symbol + theirs.value + '.');
+      }
+    }
+    if (latest) {
+      const weekday = new Date(latest).toLocaleDateString('en-GB', { weekday: 'long' });
+      out.push('The ' + name + ' was released on a ' + weekday + ', ' + longDate(latest) + '.');
+    }
+    return out.slice(0, 3);
+  }
+
+  function setFactText(text) {
+    const editor = document.getElementById('did_you_know_editor');
+    if (editor.textContent.trim() && !window.confirm('Replace the current fact with this one?')) return;
+    const p = document.createElement('p');
+    p.textContent = text;
+    editor.innerHTML = '';
+    editor.appendChild(p);
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  document.getElementById('fact-suggest-btn').addEventListener('click', () => {
+    const box = document.getElementById('fact-suggestions');
+    const list = productFactSuggestions();
+    box.innerHTML = '';
+    if (!list.length) {
+      document.getElementById('fact-helper-note').textContent = 'Add this product\u2019s release dates first, or use Research with Claude.';
+      return;
+    }
+    list.forEach((text) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'fact-suggestion';
+      btn.textContent = text;
+      btn.addEventListener('click', () => { setFactText(text); box.innerHTML = ''; });
+      box.appendChild(btn);
+    });
+    document.getElementById('fact-helper-note').textContent = 'Tap one to use it. You can edit it in the box above.';
+  });
+
+  document.getElementById('fact-research-btn').addEventListener('click', () => {
+    const name = document.getElementById('name').value.trim();
+    const seed = document.getElementById('fact-seed').value.trim();
+    const note = document.getElementById('fact-helper-note');
+    if (!name && !seed) {
+      note.textContent = 'Give the product a name, or type an idea, first.';
+      return;
+    }
+    const topic = (name ? 'the Apple ' + name : '') + (seed ? (name ? ': ' : '') + seed : '');
+    const published = cachedProducts.map((p) => (p.did_you_know ? p.did_you_know.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '')).filter(Boolean)
+      .concat(cachedFacts.map((f) => f.text));
+    const prompt = window.FactsKit.claudeResearchPrompt(topic, published);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(prompt).catch(() => {});
+    note.textContent = 'Claude opened in a new tab with your request (also copied, in case it opens empty). It finds 3 checked facts; paste the one you like into the box above.';
+    window.open(window.FactsKit.claudeResearchUrl(prompt), '_blank', 'noopener');
+  });
+  document.getElementById('fact-seed').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('fact-research-btn').click(); }
+  });
 
   // The fact's "As of" date: set to today whenever the fact's wording
   // changes, unless a date has been picked by hand.
