@@ -1974,8 +1974,12 @@
 
   // After adding a date the box keeps it, since the next one (pre-order,
   // then release) is usually a few days later: just adjust the day.
+  // The date left in the box after adding one, so saving doesn't mistake
+  // it for a new date that still needs adding.
+  let carriedDate = null;
   function resetGenerationPanel(keepDate) {
     targetChosenByHand = false;
+    carriedDate = keepDate || null;
     setDatePrecisionValue('new_refresh_date', keepDate || null);
     document.getElementById('new_generation_name').value = '';
     document.getElementById('generation-add-error').textContent = '';
@@ -2461,8 +2465,14 @@
         document.getElementById('name-error').textContent = 'Give this product line a name.';
         firstError = firstError || document.getElementById('step-line');
       }
+      // A date still sitting in the "Add a date" box only blocks saving if
+      // it's new: not the one carried over from the last add, and not
+      // already recorded as a release, announcement or pre-order.
       const pendingGenerationDate = getDatePrecisionValue('new_refresh_date');
-      if (pendingGenerationDate && currentRefreshHistory.indexOf(pendingGenerationDate) === -1 && pendingGenerationDate !== currentDiscontinuedDate) {
+      const alreadyRecorded = (d) => currentRefreshHistory.indexOf(d) !== -1 || d === currentDiscontinuedDate ||
+        Object.values(currentGenerationDetails).some((info) => info && (info.announced === d || info.preorder === d)) ||
+        d === pendingAnnouncedDate || d === pendingPreorderDate;
+      if (pendingGenerationDate && pendingGenerationDate !== carriedDate && !alreadyRecorded(pendingGenerationDate)) {
         document.getElementById('generation-add-error').textContent = 'You picked a date but haven\u2019t added it yet. Tap "+ Add", or clear the date.';
         firstError = firstError || document.getElementById('step-generations');
       }
