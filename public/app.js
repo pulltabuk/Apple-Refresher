@@ -1777,7 +1777,7 @@
     if (!s || !s.total) return '';
     var stat = function (href, num, label, extra) { return '<a class="site-stat" href="' + href + '"><span class="site-stat-num">' + num + '</span><span class="site-stat-label">' + label + '</span>' + (extra || '') + '</a>'; };
     return '<div class="site-stats" id="site-stats">' +
-      '<div class="site-stats-head"><h2 class="site-stats-title">Apple at a glance</h2><span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span></div>' +
+      '<div class="site-stats-head"><h2 class="site-stats-title">Apple Sunset at a glance</h2><span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span></div>' +
       '<div class="site-stats-row">' +
       stat('/products/', s.total, 'products tracked') +
       stat('/products/', s.onSale, 'on sale now') +
