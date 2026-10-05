@@ -385,6 +385,7 @@ async function main() {
 
   write('index.html', homePage({
     heroFeatured,
+    heroRotation: activeEvent ? null : featuredItems.slice(0, 3),
     heroRest,
     overdueItems,
     categoryLinks,
