@@ -14,7 +14,7 @@
   const SUGGESTED_TAG_LIMIT = 16;
 
   const $ = (id) => document.getElementById(id);
-  const sections = { loading: $('up-loading'), login: $('up-login'), home: $('up-home'), main: $('up-main'), library: $('up-library'), facts: $('up-facts'), done: $('up-done') };
+  const sections = { loading: $('up-loading'), login: $('up-login'), home: $('up-home'), products: $('up-products'), product: $('up-product'), main: $('up-main'), library: $('up-library'), facts: $('up-facts'), done: $('up-done') };
 
   // Photos already on the site have a url and no file.
   let photos = []; // { id, file, preview, status: 'working'|'done'|'error', url, error, promise }
@@ -71,6 +71,7 @@
     $('up-home-btn').hidden = name === 'home' || name === 'login' || name === 'loading';
     $('up-heading').textContent = name === 'home' ? 'Apple Sunset'
       : name === 'facts' ? 'Did you know?'
+      : name === 'products' || name === 'product' ? 'Product facts'
       : name === 'library' || (name === 'main' && editingId) ? 'Edit albums'
       : name === 'done' ? 'Done'
       : 'Add photos';
@@ -792,6 +793,191 @@
   });
   $('up-go-edit').addEventListener('click', openLibrary);
   $('up-go-facts').addEventListener('click', openFacts);
+  $('up-go-products').addEventListener('click', openProducts);
+
+  // --- Product facts & notes: a product's "Did you know?" and its Notes,
+  // written here or researched with Claude, then saved and published.
+  let allProducts = [];
+  let currentProduct = null;
+  let loadedFact = '';
+  let loadedNotes = '';
+  let factDateTouchedApp = false;
+
+  function todayIsoApp() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function escapeText(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  // Plain text from the phone back to the page's paragraphs.
+  function textToHtml(text) {
+    return text.split(/\n+/).map((p) => p.trim()).filter(Boolean).map((p) => '<p>' + escapeText(p) + '</p>').join('');
+  }
+  // Bold, italics or links in what is stored, which plain text would lose.
+  function hasFormatting(html) {
+    return /<(a|b|strong|i|em|u)\b/i.test(html || '');
+  }
+  function lastRelease(p) {
+    const dates = (p.refresh_history || []).filter((d) => d !== p.discontinued_date).slice().sort();
+    return dates[dates.length - 1] || null;
+  }
+
+  async function openProducts() {
+    show('products');
+    if (!allProducts.length) $('up-product-count').textContent = 'Loading…';
+    const { data, error } = await client.from('products').select('*').order('name');
+    if (error) {
+      $('up-product-count').textContent = 'Could not load products: ' + error.message;
+      return;
+    }
+    allProducts = data || [];
+    renderProducts();
+  }
+
+  function renderProducts() {
+    const list = $('up-product-list');
+    const words = $('up-product-search').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const matches = allProducts.filter((p) => {
+      const hay = [p.name, p.category].filter(Boolean).join(' ').toLowerCase();
+      return words.every((w) => hay.includes(w));
+    });
+    $('up-product-count').textContent = words.length ? matches.length + ' of ' + allProducts.length + ' products' : allProducts.length + ' products. Tap one to write its fact or notes.';
+    list.innerHTML = '';
+    matches.forEach((p) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'up-set';
+      const text = document.createElement('span');
+      text.className = 'up-set-text';
+      const title = document.createElement('span');
+      title.className = 'up-set-title';
+      title.textContent = p.name;
+      const meta = document.createElement('span');
+      meta.className = 'up-set-meta';
+      meta.textContent = [p.category, p.discontinued ? 'Discontinued' : '', p.did_you_know ? 'Has a fact' : 'No fact yet'].filter(Boolean).join(' · ');
+      text.appendChild(title);
+      text.appendChild(meta);
+      btn.appendChild(text);
+      btn.addEventListener('click', () => openProduct(p));
+      list.appendChild(btn);
+    });
+  }
+  $('up-product-search').addEventListener('input', renderProducts);
+  $('up-product-back').addEventListener('click', () => { show('products'); renderProducts(); });
+
+  function updateProductFactCount() {
+    const len = $('up-pf-fact').value.trim().length;
+    $('up-pf-fact-count').textContent = len ? len + ' / 320 characters' : '';
+    $('up-pf-fact-count').classList.toggle('up-fact-count--over', len > 320);
+  }
+
+  function openProduct(p) {
+    currentProduct = p;
+    $('up-product-name').textContent = p.name;
+    const latest = lastRelease(p);
+    $('up-product-meta').textContent = [p.category, latest ? 'Last released ' + longDate(latest).replace(/^[A-Za-z]+day /, '') : '', p.discontinued ? 'Discontinued' : ''].filter(Boolean).join(' · ');
+    loadedFact = window.FactsKit.plainText(p.did_you_know).replace(/\n+/g, ' ');
+    loadedNotes = window.FactsKit.plainText(p.rumor_note);
+    $('up-pf-fact').value = loadedFact;
+    $('up-pf-notes').value = loadedNotes;
+    $('up-pf-notes-format').textContent = hasFormatting(p.rumor_note) ? 'These notes have bold or links. Saving changed notes from here keeps the words but drops that formatting.' : '';
+    const hasDateColumn = Object.prototype.hasOwnProperty.call(p, 'did_you_know_date');
+    $('up-pf-date-wrap').hidden = !hasDateColumn;
+    $('up-pf-date').value = p.did_you_know_date || '';
+    factDateTouchedApp = false;
+    ['up-pf-suggestions', 'up-pf-fact-note', 'up-pf-notes-note', 'up-pf-status'].forEach((id) => { $(id).textContent = ''; });
+    $('up-pf-fact-idea').value = '';
+    $('up-pf-notes-idea').value = '';
+    updateProductFactCount();
+    show('product');
+  }
+
+  $('up-pf-fact').addEventListener('input', () => {
+    updateProductFactCount();
+    if (factDateTouchedApp) return;
+    const text = $('up-pf-fact').value.trim();
+    $('up-pf-date').value = !text ? '' : text !== loadedFact ? todayIsoApp() : (currentProduct.did_you_know_date || '');
+  });
+  $('up-pf-date').addEventListener('input', () => { factDateTouchedApp = true; });
+
+  $('up-pf-suggest').addEventListener('click', () => {
+    const box = $('up-pf-suggestions');
+    box.innerHTML = '';
+    const list = window.FactsKit.productFactCandidates(currentProduct, allProducts);
+    if (!list.length) {
+      $('up-pf-fact-note').textContent = 'Not enough dates on this product yet. Try Research a fact with Claude.';
+      return;
+    }
+    $('up-pf-fact-note').textContent = 'Tap one to use it, then edit it if you like.';
+    list.forEach((text) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'up-fact-pick';
+      btn.textContent = text;
+      btn.addEventListener('click', () => {
+        if ($('up-pf-fact').value.trim() && !window.confirm('Replace the current fact with this one?')) return;
+        $('up-pf-fact').value = text;
+        $('up-pf-fact').dispatchEvent(new Event('input'));
+        box.innerHTML = '';
+        $('up-pf-fact-note').textContent = '';
+      });
+      box.appendChild(btn);
+    });
+  });
+
+  // Opens the Claude app with the request (and copies it, in case the
+  // app opens without it).
+  function openClaude(prompt, noteId, message) {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(prompt).catch(() => {});
+    $(noteId).textContent = message;
+    window.open(window.FactsKit.claudeResearchUrl(prompt), '_blank');
+  }
+  $('up-pf-fact-claude').addEventListener('click', () => {
+    const others = allProducts.filter((p) => p.id !== currentProduct.id);
+    const prompt = window.FactsKit.productFactPrompt(currentProduct.name, $('up-pf-fact-idea').value.trim(), others, publishedFacts.map((f) => f.text));
+    openClaude(prompt, 'up-pf-fact-note', 'Claude is finding 3 checked facts (the request is also copied). Check its sources, then copy the one you like into the box above.');
+  });
+  $('up-pf-notes-claude').addEventListener('click', () => {
+    const product = Object.assign({}, currentProduct, { rumor_note: textToHtml($('up-pf-notes').value) });
+    const prompt = window.FactsKit.productNotesPrompt(product, $('up-pf-notes-idea').value.trim(), allProducts);
+    openClaude(prompt, 'up-pf-notes-note', 'Claude is drafting notes, checking each point against two sources (the request is also copied). Check its sources, then paste the notes into the box above and edit.');
+  });
+
+  $('up-pf-save').addEventListener('click', async () => {
+    const btn = $('up-pf-save');
+    const status = $('up-pf-status');
+    const fact = $('up-pf-fact').value.trim().replace(/\s+/g, ' ');
+    const notes = $('up-pf-notes').value.trim();
+    const update = {};
+    if (fact !== loadedFact) update.did_you_know = fact ? textToHtml(fact) : null;
+    if (notes !== loadedNotes) update.rumor_note = notes ? textToHtml(notes) : null;
+    if (Object.prototype.hasOwnProperty.call(currentProduct, 'did_you_know_date')) {
+      const date = fact ? ($('up-pf-date').value || todayIsoApp()) : null;
+      if (date !== (currentProduct.did_you_know_date || null)) update.did_you_know_date = date;
+    }
+    if (!Object.keys(update).length) {
+      status.textContent = 'Nothing has changed.';
+      return;
+    }
+    btn.disabled = true;
+    status.classList.remove('up-status--error');
+    status.textContent = 'Saving…';
+    const { error } = await client.from('products').update(update).eq('id', currentProduct.id);
+    if (error) {
+      btn.disabled = false;
+      status.classList.add('up-status--error');
+      status.textContent = 'Could not save: ' + error.message;
+      return;
+    }
+    Object.assign(currentProduct, update);
+    loadedFact = fact;
+    loadedNotes = notes;
+    status.textContent = 'Saved. Publishing…';
+    const published = await publishSite();
+    btn.disabled = false;
+    status.textContent = published.ok ? 'Saved and published. The page updates in a minute or two.' : 'Saved, but publishing didn’t start (' + published.error + '). It will go live with the next publish.';
+  });
 
   $('up-tab-new').addEventListener('click', () => {
     if (!sections.main.hidden) return;

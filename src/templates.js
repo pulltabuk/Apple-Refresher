@@ -2323,6 +2323,13 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <button type="button" id="richtext-clear-all-btn" class="richtext-clear-all">Clear all formatting</button>
             </div>
             <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
+            <div class="fact-helper">
+              <div class="fact-research">
+                <input type="text" id="notes-seed" placeholder="Optional focus, e.g. what changed from the last model" autocomplete="off" aria-label="What the notes should focus on">
+                <button type="button" id="notes-research-btn" class="admin-btn admin-btn--small">Research notes with Claude</button>
+              </div>
+              <p class="admin-hint" id="notes-helper-note">Claude drafts short notes with every point checked against two sources, and lists them so you can check too. Paste into the box above, edit, then save.</p>
+            </div>
           </div>
         </section>
 
@@ -2689,11 +2696,55 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
         <span class="up-home-title">Did you know?</span>
         <span class="up-home-desc">Create and post facts</span>
       </button>
+      <button type="button" class="up-home-tile" id="up-go-products">
+        <span class="up-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><rect x="4" y="3.5" width="16" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 8.5h8M8 12h8M8 15.5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <span class="up-home-title">Product facts &amp; notes</span>
+        <span class="up-home-desc">Write or research them</span>
+      </button>
       <a class="up-home-tile" id="up-go-site" href="/">
         <span class="up-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
         <span class="up-home-title">View the site</span>
         <span class="up-home-desc">Open Apple Sunset</span>
       </a>
+    </div>
+  </section>
+
+  <section id="up-products" hidden>
+    <div class="up-card">
+      <input type="search" id="up-product-search" class="up-search" placeholder="Search products" autocomplete="off" aria-label="Search products">
+      <p class="up-hint" id="up-product-count"></p>
+    </div>
+    <div id="up-product-list" class="up-library-list"></div>
+  </section>
+
+  <section id="up-product" hidden>
+    <div class="up-editing">
+      <button type="button" id="up-product-back" class="up-link">&larr; All products</button>
+      <h2 id="up-product-name"></h2>
+      <p class="up-muted" id="up-product-meta"></p>
+    </div>
+    <div class="up-card">
+      <h2>Did you know?</h2>
+      <textarea id="up-pf-fact" class="up-fact-edit" placeholder="One short, surprising fact about this product" aria-label="Did you know? fact"></textarea>
+      <p class="up-fact-count" id="up-pf-fact-count"></p>
+      <label class="up-label" id="up-pf-date-wrap">Fact date (shown as &ldquo;As of&rdquo;)<input type="date" id="up-pf-date" class="up-search"></label>
+      <button type="button" id="up-pf-suggest" class="gallery-action gallery-action--block">Suggest 3 from its dates</button>
+      <div id="up-pf-suggestions" class="up-fact-list"></div>
+      <textarea id="up-pf-fact-idea" class="up-fact-edit up-fact-edit--short" placeholder="Idea to research, e.g. its colours" aria-label="Idea for a fact"></textarea>
+      <button type="button" id="up-pf-fact-claude" class="gallery-action gallery-action--block">Research a fact with Claude</button>
+      <p class="up-hint" id="up-pf-fact-note"></p>
+    </div>
+    <div class="up-card">
+      <h2>Notes</h2>
+      <textarea id="up-pf-notes" class="up-fact-edit up-fact-edit--tall" placeholder="Short notes shown on the product page" aria-label="Notes"></textarea>
+      <p class="up-hint" id="up-pf-notes-format"></p>
+      <textarea id="up-pf-notes-idea" class="up-fact-edit up-fact-edit--short" placeholder="Optional focus, e.g. what changed from the last model" aria-label="What the notes should focus on"></textarea>
+      <button type="button" id="up-pf-notes-claude" class="gallery-action gallery-action--block">Research notes with Claude</button>
+      <p class="up-hint" id="up-pf-notes-note"></p>
+    </div>
+    <div class="up-card">
+      <button type="button" id="up-pf-save" class="gallery-action gallery-action--primary gallery-action--block">Save and publish</button>
+      <p class="up-status" id="up-pf-status" aria-live="polite"></p>
     </div>
   </section>
 
