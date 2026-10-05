@@ -1742,6 +1742,21 @@
           }
           fields.appendChild(annLabel);
 
+          const preLabel = document.createElement('label');
+          preLabel.textContent = 'Pre-orders opened';
+          const preInput = document.createElement('input');
+          preInput.type = 'date';
+          preInput.value = /^\d{4}-\d{2}-\d{2}$/.test(info.preorder || '') ? info.preorder : '';
+          preInput.addEventListener('change', () => { detailFor(date).preorder = preInput.value || null; });
+          preLabel.appendChild(preInput);
+          if (info.preorder && !/^\d{4}-\d{2}-\d{2}$/.test(info.preorder)) {
+            const note = document.createElement('span');
+            note.className = 'admin-hint';
+            note.textContent = 'Currently ' + formatAdminDate(info.preorder) + '.';
+            preLabel.appendChild(note);
+          }
+          fields.appendChild(preLabel);
+
           const makeLaunch = document.createElement('label');
           makeLaunch.className = 'checkbox-label';
           const launchBox = document.createElement('input');
@@ -1816,11 +1831,32 @@
       const opt = document.createElement('option');
       opt.value = d;
       const info = currentGenerationDetails[d] || {};
-      opt.textContent = formatAdminDate(d) + ((info.name || '').trim() ? ' \u2013 ' + info.name.trim() : '') + (info.announced ? ' (already has one)' : '');
+      const field = type === 'preorder' ? 'preorder' : 'announced';
+      opt.textContent = formatAdminDate(d) + ((info.name || '').trim() ? ' \u2013 ' + info.name.trim() : '') + (info[field] ? ' (already has one)' : '');
       select.appendChild(opt);
     });
-    if (keep && Array.from(select.options).some((o) => o.value === keep)) select.value = keep;
+    if (targetChosenByHand && keep && Array.from(select.options).some((o) => o.value === keep)) select.value = keep;
+    else pickTargetForDate();
   }
+
+  // An announcement or pre-order belongs to the first release on or after
+  // its date (they come before the release). Picked automatically as the
+  // date is typed, unless the release has been chosen by hand.
+  let targetChosenByHand = false;
+  function releaseForDate(value) {
+    const releases = currentRefreshHistory.filter((d) => d !== currentDiscontinuedDate).slice().sort();
+    if (!releases.length) return null;
+    if (!value) return releases[releases.length - 1];
+    return releases.find((d) => d >= value) || releases[releases.length - 1];
+  }
+  function pickTargetForDate() {
+    if (targetChosenByHand) return;
+    const select = document.getElementById('announced_target');
+    const best = releaseForDate(getDatePrecisionValue('new_refresh_date'));
+    if (best && Array.from(select.options).some((o) => o.value === best)) select.value = best;
+  }
+  document.getElementById('announced_target').addEventListener('change', () => { targetChosenByHand = true; });
+  ['input', 'change'].forEach((evt) => document.getElementById('new_refresh_date_field').addEventListener(evt, () => setTimeout(pickTargetForDate, 0)));
 
   document.querySelectorAll('input[name="entry_type"]').forEach((radio) => {
     radio.addEventListener('change', updateAddPanelForType);
@@ -1939,6 +1975,7 @@
   // After adding a date the box keeps it, since the next one (pre-order,
   // then release) is usually a few days later: just adjust the day.
   function resetGenerationPanel(keepDate) {
+    targetChosenByHand = false;
     setDatePrecisionValue('new_refresh_date', keepDate || null);
     document.getElementById('new_generation_name').value = '';
     document.getElementById('generation-add-error').textContent = '';
@@ -1968,6 +2005,7 @@
         renderRefreshHistory();
         return;
       }
+      if (!targetChosenByHand) pickTargetForDate();
       const target = document.getElementById('announced_target').value;
       if (!target) {
         errorEl.textContent = 'Pick which release this belongs to.';
