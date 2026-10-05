@@ -2269,3 +2269,15 @@ body.is-admin .site-search { display: none; }
 .fact-suggestion:hover { border-color: var(--accent); background: var(--accent-bg); }
 .fact-research { display: flex; gap: 8px; flex-wrap: wrap; }
 .fact-research input { flex: 1; min-width: 200px; font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
+
+/* Desktop header: the menu and search always sit beside the logo. The
+   links are spaced a little tighter so all six and the search fit on
+   one line; if the window is too narrow for that, they wrap within
+   their own column next to the logo rather than dropping beneath it. */
+@media (min-width: 861px) {
+  .site-header { flex-wrap: nowrap; column-gap: 1.25rem; }
+  .site-nav { flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
+  .site-nav a { margin-left: 1.25rem; }
+  .site-search { margin-left: 1.25rem; }
+  .site-search input { width: 160px; }
+}
