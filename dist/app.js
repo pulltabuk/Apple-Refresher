@@ -2384,14 +2384,6 @@
 
   // Countdown clock. The server already rendered the number of days, so
   // this only upgrades it to days, hours and minutes and keeps it ticking.
-  // The mobile family picker navigates on choose.
-  (function categoryJump() {
-    var el = document.querySelector('[data-category-jump]');
-    if (!el) return;
-    el.addEventListener('change', function () {
-      if (el.value) window.location.href = el.value;
-    });
-  })();
 
   // Works out the exact moment to count down to. An event's time is typed
   // as free text such as "10am PT", so read the hour and time zone from it
