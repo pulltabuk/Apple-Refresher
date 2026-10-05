@@ -124,12 +124,19 @@
           <h3 class="admin-step-title"><span class="admin-step-num">2</span> Product</h3>
           <label>Name<input type="text" id="name" placeholder="e.g. AirPods Pro" autocomplete="off"></label>
           <p id="name-error" class="form-error"></p>
-          <label class="checkbox-label checkbox-label--feature"><input type="checkbox" id="featured"> &#9733; Feature this product on the homepage</label>
+          <label class="admin-feature-slot">&#9733; Feature on the homepage
+            <select id="featured_slot">
+              <option value="0">Not featured</option>
+              <option value="1">Slot 1 (big tile)</option>
+              <option value="2">Slot 2</option>
+              <option value="3">Slot 3</option>
+            </select>
+          </label>
           <div id="in-countdown-wrap" style="display:none;">
             <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
             <p class="admin-hint">Only for a product whose release date is still ahead. More than one can be counted down at once, and each drops off by itself once its date passes.</p>
           </div>
-          <p class="admin-hint">Only one product can be featured. Choosing this one un-features the current one.</p>
+          <p class="admin-hint">Up to 3 products, shown in the homepage tiles in slot order. Picking a slot that is taken un-features the product in it. Empty slots show a random product. A featured Apple Event takes the big tile and the slots move along.</p>
           <div class="admin-subfield">
             <span class="admin-subfield-label">Icon for this product <span class="admin-optional">Optional</span></span>
             <div class="admin-icon-row">
@@ -187,6 +194,15 @@
             </div>
             <div id="did_you_know_editor" class="richtext-editor richtext-editor--short" contenteditable="true" data-placeholder="One short, surprising fact about this product."></div>
             <p class="admin-hint" id="did-you-know-count"></p>
+            <div class="fact-helper">
+              <button type="button" id="fact-suggest-btn" class="admin-btn admin-btn--small admin-btn--ghost">Suggest 3 facts</button>
+              <div id="fact-suggestions" class="fact-suggestions"></div>
+              <div class="fact-research">
+                <input type="text" id="fact-seed" placeholder="An idea for a fact, e.g. its battery or the name" autocomplete="off" aria-label="Idea for a fact">
+                <button type="button" id="fact-research-btn" class="admin-btn admin-btn--small">Research with Claude</button>
+              </div>
+              <p class="admin-hint" id="fact-helper-note">Suggest 3 facts works them out from this product&rsquo;s dates and price. Research with Claude finds 3 checked facts from the web (free in the Claude app); paste the one you like into the box above.</p>
+            </div>
             <label class="admin-subfield-label" for="did_you_know_date">Fact date <span class="admin-optional">Shown as “As of” month and year. Set to today when you change the fact.</span></label>
             <input type="date" id="did_you_know_date">
             <p class="admin-hint" id="did-you-know-date-note" hidden>Fact dates aren’t switched on yet, so this date won’t be saved. Run <code>supabase-schema-update-28.sql</code> in the Supabase SQL editor, then reload this page.</p>
@@ -549,6 +565,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/facts-kit.js?v=9eec0d5b11" defer></script>
-<script src="/admin.js?v=ed675e3bda" defer></script>
+<script src="/admin.js?v=249ddac0d2" defer></script>
 </body>
 </html>
