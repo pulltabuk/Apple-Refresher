@@ -1611,8 +1611,9 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
     : heroFeatured
     ? featuredCardHtml(heroFeatured.product, heroFeatured.status, productsBySlug)
     : '';
+  // The big featured tile, with the Live counts as a tall panel beside it.
   const heroCardsHtml = heroFeatured || activeEvent
-    ? `${featuredSlotHtml}${heroRest.map((r) => cardHtml(r.product, r.status)).join('\n')}`
+    ? `${featuredSlotHtml}${siteStatsHtml(stats)}`
     : emptyState('products');
 
   // Pills on desktop, a native picker on mobile: thirteen families wrap
@@ -1665,7 +1666,6 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
       ${countdownHtml(countdown)}
       ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
-      ${siteStatsHtml(stats)}
       <a class="intro-cta" href="/products/">Browse all products</a>
     </div>
     <div class="intro-hero-cards" id="hero-cards">
@@ -2341,7 +2341,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
             <p class="admin-hint">Only for a product whose release date is still ahead. More than one can be counted down at once, and each drops off by itself once its date passes.</p>
           </div>
-          <p class="admin-hint">Up to 3 products, shown in the homepage tiles in slot order. Picking a slot that is taken un-features the product in it. Empty slots show a random product. A featured Apple Event takes the big tile and the slots move along.</p>
+          <p class="admin-hint">Slot 1 is the big tile on the homepage. Slots 2 and 3 are back-ups: if the slot 1 product is un-featured, the next one moves up. A featured Apple Event takes the big tile.</p>
           <div class="admin-subfield">
             <span class="admin-subfield-label">Icon for this product <span class="admin-optional">Optional</span></span>
             <div class="admin-icon-row">
