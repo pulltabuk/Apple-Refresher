@@ -2130,14 +2130,17 @@
       .catch(function () {});
   }
 
-  // Facts page: statistics from every product plus each product's own
-  // "Did you know?", from the same code the build uses (facts-kit.js).
+  // Facts page: every fact published to the homepage, newest first, from
+  // the same code the build uses (facts-kit.js).
   var factsListSection = document.getElementById('facts-list');
   if (factsListSection && window.FactsKit && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-    fetchAllProductsJS()
-      .then(function (products) {
-        if (!Array.isArray(products) || !products.length) return;
-        var html = window.FactsKit.factsPageHtml(products, sanitizeRichTextJS);
+    fetch(window.SUPABASE_URL + '/rest/v1/facts?select=*&order=created_at.desc', {
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (facts) {
+        if (!Array.isArray(facts)) return;
+        var html = window.FactsKit.factsPageHtml(facts);
         factsListSection.innerHTML = html;
         var noFacts = document.getElementById('no-facts');
         if (noFacts) noFacts.style.display = html ? 'none' : '';
