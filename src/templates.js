@@ -1303,6 +1303,15 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
   const expectedPassed = expectedDate ? expectedDate.getTime() < Date.now() : false;
   const nextExpected = expectedDate ? expectedDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }) : null;
   const extras = upcomingExtras(product);
+  // How far through its usual refresh cycle the product is, as a bar.
+  // Keep in step with featuredCycleHtmlJS() in public/app.js.
+  const cycleHtml = statusInfo && daysInfo && daysInfo.days >= 0 && !product.discontinued
+    ? `<div class="card-featured-cycle card-featured-cycle--${statusInfo.status}">
+      <div class="card-featured-cycle-head"><span>Average refresh cycle</span><strong>${statusInfo.avgCycleDays} days</strong></div>
+      <div class="card-featured-cycle-bar"><span style="width:${Math.min(100, Math.round(statusInfo.ratio * 100))}%"></span></div>
+      <p class="card-featured-cycle-note">${statusInfo.ratio >= 1 ? `${statusInfo.ratio.toFixed(1)}&times; the usual wait` : `${Math.round(statusInfo.ratio * 100)}% of the usual wait`}</p>
+    </div>`
+    : '';
   const detailRows = [
     product.price ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price</span> ${escapeHtml(formatPrice(product.price))}</div>` : '',
     extras.announced ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Announced</span> ${formatDate(extras.announced)}</div>` : '',
@@ -1320,6 +1329,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
     <span class="card-featured-label">Featured</span>
     <div class="card-name-row">${productIcon(product, 42)}<p class="card-name">${escapeHtml(product.name)}</p></div>
     ${countHtml}
+    ${cycleHtml}
     ${detailRows ? `<div class="card-featured-details">${detailRows}</div>` : ''}
   </a>
   ${categoryPill(product.category)}

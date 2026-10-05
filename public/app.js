@@ -1679,6 +1679,17 @@
     return picked;
   }
 
+  // Must match the cycle bar in featuredCardHtml() in src/templates.js.
+  function featuredCycleHtmlJS(product, statusInfo, daysInfo) {
+    if (!statusInfo || !daysInfo || daysInfo.days < 0 || product.discontinued) return '';
+    var ratio = statusInfo.ratio;
+    return '<div class="card-featured-cycle card-featured-cycle--' + statusInfo.status + '">' +
+      '<div class="card-featured-cycle-head"><span>Average refresh cycle</span><strong>' + statusInfo.avgCycleDays + ' days</strong></div>' +
+      '<div class="card-featured-cycle-bar"><span style="width:' + Math.min(100, Math.round(ratio * 100)) + '%"></span></div>' +
+      '<p class="card-featured-cycle-note">' + (ratio >= 1 ? ratio.toFixed(1) + '\u00d7 the usual wait' : Math.round(ratio * 100) + '% of the usual wait') + '</p>' +
+    '</div>';
+  }
+
   function featuredCardHtmlJS(product, statusInfo, allProducts) {
     var daysInfo = statusInfo ? badgeDaysInfoJS(product, statusInfo) : null;
     var countHtml = daysInfo
@@ -1712,6 +1723,7 @@
         '<span class="card-featured-label">Featured</span>' +
         '<div class="card-name-row">' + productIconJS(product, 42) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
         countHtml +
+        featuredCycleHtmlJS(product, statusInfo, daysInfo) +
         (detailRows.length ? '<div class="card-featured-details">' + detailRows.join('') + '</div>' : '') +
       '</a>' +
       pillJS(product.category) +
