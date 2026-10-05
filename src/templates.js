@@ -740,6 +740,19 @@ function badgeDaysInfo(product, statusInfo) {
   return { days: statusInfo.daysSince, suffix: 'since refresh' };
 }
 
+// One row of the homepage's "Waiting longest" top five.
+function overdueRowHtml(product, statusInfo) {
+  const daysInfo = badgeDaysInfo(product, statusInfo);
+  const wait = statusInfo.ratio >= 1
+    ? `${statusInfo.ratio.toFixed(1)}&times; the usual wait`
+    : `${Math.round(statusInfo.ratio * 100)}% of the usual wait`;
+  return `<li><a class="overdue-row overdue-row--${statusInfo.status}" href="/products/${product.slug}/">
+    <span class="overdue-row-icon">${productIcon(product, 36)}</span>
+    <span class="overdue-row-main"><span class="overdue-row-name">${escapeHtml(product.name)}</span><span class="overdue-row-sub">Usually every ${statusInfo.avgCycleDays} days &middot; ${wait}</span></span>
+    <span class="overdue-row-days"><strong>${daysInfo.days}</strong> days</span>
+  </a></li>`;
+}
+
 function plural(count, one, many) {
   return `${count} ${count === 1 ? one : many}`;
 }
@@ -1605,7 +1618,7 @@ function siteStatsHtml(s) {
   if (!s || !s.total) return '';
   const stat = (href, num, label, extra) => `<a class="site-stat" href="${href}"><span class="site-stat-num">${num}</span><span class="site-stat-label">${label}</span>${extra || ''}</a>`;
   return `<div class="site-stats" id="site-stats">
-    <span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span>
+    <div class="site-stats-head"><h2 class="site-stats-title">Apple at a glance</h2><span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span></div>
     <div class="site-stats-row">
       ${stat('/products/', s.total, 'products tracked')}
       ${stat('/products/', s.onSale, 'on sale now')}
@@ -1651,9 +1664,9 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   const overdueSection = overdueItems && overdueItems.length
     ? `<section class="homepage-section">
   <h2>Waiting longest for a refresh</h2>
-  <div class="card-grid" id="overdue-grid">
-    ${overdueItems.map((i) => cardHtml(i.product, i.status)).join('\n')}
-  </div>
+  <ol class="overdue-list" id="overdue-list">
+    ${overdueItems.map((i) => overdueRowHtml(i.product, i.status)).join('\n')}
+  </ol>
 </section>`
     : '';
 

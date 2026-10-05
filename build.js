@@ -370,7 +370,7 @@ async function main() {
   const overdueItems = rankable
     .slice()
     .sort((a, b) => b.status.ratio - a.status.ratio)
-    .slice(0, 8);
+    .slice(0, 5);
 
   // Category quick-links, current + discontinued together.
   const categoryTally = {};
