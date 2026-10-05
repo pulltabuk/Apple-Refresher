@@ -1824,8 +1824,13 @@
         heroFeatured = null;
         heroRest = featuredItems.slice(0, 2);
       } else if (featuredItems.length) {
-        heroFeatured = featuredItems[0];
-        heroRest = featuredItems.slice(1, 3);
+        // Must match homePage(): the featured products take turns. Keep the
+        // one the page already picked so the tile doesn't change under you.
+        var rotation = featuredItems.slice(0, 3);
+        heroFeatured = rotation.filter(function (i) { return i.product.slug === window.__heroPick; })[0] ||
+          rotation[Math.floor(Math.random() * rotation.length)];
+        window.__heroPick = heroFeatured.product.slug;
+        heroRest = rotation.filter(function (i) { return i !== heroFeatured; });
       } else {
         var heroPicks = pickRandomJS(releasedOnly, 3);
         heroFeatured = heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0];

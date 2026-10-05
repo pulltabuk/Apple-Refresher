@@ -1605,9 +1605,14 @@ function siteStatsHtml(s) {
   </div>`;
 }
 
-function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, latestFactLink, pageContent, countdown, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, latestFactLink, pageContent, countdown, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const featuredSlotHtml = activeEvent
     ? eventCardHtml(activeEvent)
+    : heroRotation && heroRotation.length > 1
+    // Every featured product is built in; the script after the hero shows
+    // one at random on each visit, so the tile rotates without a swap.
+    ? heroRotation.map((i, n) => featuredCardHtml(i.product, i.status, productsBySlug)
+        .replace('<article ', `<article data-hero-slug="${escapeHtml(i.product.slug)}"${n ? ' hidden' : ''} `)).join('\n')
     : heroFeatured
     ? featuredCardHtml(heroFeatured.product, heroFeatured.status, productsBySlug)
     : '';
@@ -1671,6 +1676,7 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
     <div class="intro-hero-cards" id="hero-cards">
       ${heroCardsHtml}
     </div>
+    <script>(function(){var c=document.querySelectorAll('#hero-cards [data-hero-slug]');if(c.length<2)return;var k=Math.floor(Math.random()*c.length);for(var i=0;i<c.length;i++)c[i].hidden=i!==k;window.__heroPick=c[k].getAttribute('data-hero-slug');})();</script>
   </div>
 </section>
 <hr class="hero-divider">
@@ -2341,7 +2347,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
             <p class="admin-hint">Only for a product whose release date is still ahead. More than one can be counted down at once, and each drops off by itself once its date passes.</p>
           </div>
-          <p class="admin-hint">Slot 1 is the big tile on the homepage. Slots 2 and 3 are back-ups: if the slot 1 product is un-featured, the next one moves up. A featured Apple Event takes the big tile.</p>
+          <p class="admin-hint">The featured products take turns in the big homepage tile, a different one on each visit. A featured Apple Event takes the big tile.</p>
           <div class="admin-subfield">
             <span class="admin-subfield-label">Icon for this product <span class="admin-optional">Optional</span></span>
             <div class="admin-icon-row">
