@@ -102,7 +102,7 @@
 
   // Same layout as the original card (small label, big fact, web address),
   // on the site's sunset colours, with the logo small in the bottom-right.
-  async function drawFactCanvas(factText) {
+  async function drawFactCanvas(factText, label) {
     const logo = await loadLogo();
     const W = 1200;
     const H = 675;
@@ -139,7 +139,7 @@
     ctx.fillStyle = '#ffffff';
     ctx.textBaseline = 'alphabetic';
     ctx.font = '700 34px ' + FONT;
-    ctx.fillText('DID YOU KNOW?', PAD, 120);
+    ctx.fillText(String(label || 'Did you know?').toUpperCase(), PAD, 120);
 
     // The fact: as large as fits between the label and the footer.
     const areaTop = 170;
@@ -189,13 +189,13 @@
     return canvas;
   }
 
-  async function generateFactImage(factText) {
-    return (await drawFactCanvas(factText)).toDataURL('image/png');
+  async function generateFactImage(factText, label) {
+    return (await drawFactCanvas(factText, label)).toDataURL('image/png');
   }
 
   // The same card as a PNG file, for the iPhone share sheet.
-  async function factImageFile(factText) {
-    const canvas = await drawFactCanvas(factText);
+  async function factImageFile(factText, label) {
+    const canvas = await drawFactCanvas(factText, label);
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
         resolve(blob ? new File([blob], 'apple-sunset-fact.png', { type: 'image/png' }) : null);
@@ -251,6 +251,7 @@
       for (let i = 1; i < hist.length; i++) {
         const days = Math.round((new Date(hist[i]) - new Date(hist[i - 1])) / 86400000);
         if (days <= 0) continue;
+        if (!p.category) continue;
         if (!categoryCycles[p.category]) categoryCycles[p.category] = [];
         categoryCycles[p.category].push(days);
       }
@@ -288,8 +289,8 @@
     }
 
     // Always-available overall stats.
-    const categoryCount = new Set(cachedProducts.map((p) => p.category)).size;
-    facts.push('Apple Sunset is currently tracking ' + cachedProducts.length + ' Apple products across ' + categoryCount + ' categories.');
+    const categoryCount = new Set(cachedProducts.map((p) => p.category).filter(Boolean)).size;
+    facts.push('Apple Sunset is currently tracking ' + cachedProducts.length + ' Apple product' + (cachedProducts.length === 1 ? '' : 's') + ' across ' + categoryCount + ' categor' + (categoryCount === 1 ? 'y' : 'ies') + '.');
 
     return facts;
   }
@@ -462,7 +463,7 @@
   }
 
   function plainText(html) {
-    return String(html || '').replace(/<\/p>|<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ')
+    return String(html || '').replace(/<\/(p|div|li|h\d)>|<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')
       .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&rsquo;/g, '’')
       .replace(/[ \t]+/g, ' ').replace(/\n\s*/g, '\n').trim();
   }
@@ -540,7 +541,103 @@
     return statsHtml + productHtml;
   }
 
+  // --- X posts: ideas worked out from the site's own data, the post
+  // text, and a request for Claude to write posts. X only: nothing here
+  // is saved or shown on the website.
+
+  function hashtagsFor(text) {
+    const lower = String(text || '').toLowerCase();
+    const tags = ['#Apple'];
+    [['iphone', '#iPhone'], ['ipad', '#iPad'], ['mac', '#Mac'], ['airpods', '#AirPods'], ['watch', '#AppleWatch'],
+      ['vision pro', '#VisionPro'], ['apple tv', '#AppleTV'], ['airtag', '#AirTag'], ['ipod', '#iPod'], ['homepod', '#HomePod']]
+      .forEach(([word, tag]) => { if (lower.indexOf(word) !== -1 && tags.indexOf(tag) === -1) tags.push(tag); });
+    return tags.slice(0, 3);
+  }
+
+  // The text that goes to X: the post, then hashtags and a link if wanted.
+  function xPostText(text, opts) {
+    const o = opts || {};
+    const extras = [];
+    if (o.hashtags) extras.push(hashtagsFor(text).join(' '));
+    if (o.link) extras.push(o.link);
+    return String(text || '').trim() + (extras.length ? '\n\n' + extras.join('\n') : '');
+  }
+
+  // How long X counts it: every link counts as 23 characters.
+  function xPostLength(full) {
+    return String(full || '').replace(/https?:\/\/\S+/g, 'x'.repeat(23)).length;
+  }
+
+  function daysBetweenDates(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
+
+  // Post ideas from the products: on this day, coming soon, the longest
+  // waits, each product's "Did you know?", and the site-wide statistics.
+  function xPostIdeas(products, siteOrigin) {
+    const list = products || [];
+    const origin = siteOrigin || 'https://applesunset.com';
+    const today = new Date().toISOString().slice(0, 10);
+    const productLink = (p) => origin + '/products/' + p.slug + '/';
+    const ideas = [];
+    list.forEach((p) => {
+      if (!p.slug) return;
+      pastReleases(p).forEach((d) => {
+        if (d.slice(5) === today.slice(5) && d.slice(0, 4) !== today.slice(0, 4)) {
+          const years = Number(today.slice(0, 4)) - Number(d.slice(0, 4));
+          ideas.push({ kind: 'On this day', text: 'On this day in ' + d.slice(0, 4) + ', Apple released the ' + p.name + '. That was ' + years + ' year' + (years === 1 ? '' : 's') + ' ago.', link: productLink(p) });
+        }
+      });
+      if (!p.discontinued) {
+        const next = (p.refresh_history || []).filter((d) => d > today).sort()[0];
+        if (next) {
+          const days = daysBetweenDates(today, next);
+          ideas.push({ kind: 'Coming soon', text: days + ' day' + (days === 1 ? '' : 's') + ' to go until the ' + p.name + ' arrives on ' + longDate(next) + '.', link: productLink(p) });
+        }
+      }
+      const fact = plainText(p.did_you_know).replace(/\s+/g, ' ');
+      if (fact) ideas.push({ kind: 'Did you know?', text: 'Did you know? ' + fact, link: productLink(p) });
+    });
+    // The longest waits for an update among products still on sale.
+    list.filter((p) => p.slug && !p.discontinued)
+      .map((p) => { const r = pastReleases(p); return { p, r, last: r[r.length - 1] }; })
+      .filter((x) => x.last)
+      .sort((a, b) => (a.last < b.last ? -1 : 1))
+      .slice(0, 5)
+      .forEach(({ p, r, last }) => {
+        const days = daysBetweenDates(last, today);
+        let text = 'It’s been ' + days.toLocaleString('en-GB') + ' days since Apple last updated the ' + p.name + '.';
+        if (r.length >= 2) {
+          const gaps = r.slice(1).map((d, i) => daysBetweenDates(r[i], d)).filter((g) => g > 0);
+          const avg = gaps.length ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length) : 0;
+          if (avg) text += days > avg ? ' Its usual gap between updates is about ' + avg.toLocaleString('en-GB') + ' days.' : ' Its usual gap is about ' + avg.toLocaleString('en-GB') + ' days, so it isn’t due yet.';
+        }
+        ideas.push({ kind: 'Still waiting', text, link: productLink(p) });
+      });
+    if (list.length) generateFactCandidates(list).forEach((t) => ideas.push({ kind: 'By the numbers', text: t, link: origin + '/facts/' }));
+    return ideas;
+  }
+
+  // A request for Claude to write X posts, checked against two sources.
+  function xPostPrompt(idea) {
+    return [
+      'I run the X account for Apple Sunset (applesunset.com), a site tracking how long it has been since each Apple product was refreshed or discontinued. I need posts for X only.',
+      '',
+      'Topic: ' + (idea || 'anything interesting about Apple products, past or present'),
+      '',
+      'Please:',
+      '1. Search the web and write 5 different posts about this topic: surprising facts, anniversaries, comparisons, or a question to get replies.',
+      '2. Check every fact against at least two independent, reliable sources (for example Apple Newsroom, Apple Support pages, major news outlets). Double-check every date, number and name. Leave out anything that isn\'t confirmed, or that relies on rumour unless clearly labelled as one.',
+      '3. Each post must be under 230 characters, in British English, in a friendly but neutral brand voice (no "I" or "my"), with no hashtags or links (those get added afterwards).',
+      '',
+      'Reply with, for each post: the post on its own line, then its sources as links, then how confident you are.',
+    ].join('\n');
+  }
+
   const FactsKit = {
+    xPostIdeas,
+    xPostText,
+    xPostLength,
+    xPostPrompt,
+    hashtagsFor,
     factsPageHtml,
     productFactCandidates,
     productFactPrompt,

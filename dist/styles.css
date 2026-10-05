@@ -2281,3 +2281,16 @@ body.is-admin .site-search { display: none; }
   .site-search { margin-left: 1.25rem; }
   .site-search input { width: 160px; }
 }
+
+/* Admin: X posts */
+.x-source-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
+.x-source-row .admin-hint { margin: 0; }
+.x-idea-kind { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-dark); margin-bottom: 3px; }
+.x-text { width: 100%; max-width: 640px; font: inherit; font-size: 15px; line-height: 1.5; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.x-options { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 10px 0 0; }
+.x-options input[type="text"] { flex: 1; min-width: 220px; max-width: 420px; font: inherit; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.x-preview { white-space: pre-wrap; font: inherit; font-size: 15px; line-height: 1.5; max-width: 640px; margin: 4px 0 0; padding: 12px 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; }
+#x-count.is-over { color: var(--overdue-text); font-weight: 600; }
+.x-card { display: block; width: 100%; max-width: 480px; border-radius: 12px; margin: 8px 0; }
+.x-card[hidden] { display: none; }
+.x-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
