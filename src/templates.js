@@ -1453,13 +1453,14 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 
 // One fact's own page. Its main job is the link preview: tweets link
 // here, and X shows the fact's card (og:image) under the tweet.
-function factPage({ fact, cardUrl, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function factPage({ fact, cardUrl, related, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const path = `/facts/${fact.id}/`;
   const body = `
 <article class="fact-page">
   <p class="fact-label">Did you know?</p>
   <h1 class="fact-page-text">${escapeHtml(fact.text)}</h1>
   ${cardUrl ? `<img class="fact-page-card" src="${escapeHtml(cardUrl)}" alt="${escapeHtml(fact.text)}" width="1200" height="675">` : ''}
+  ${factRelatedLinkHtml(related)}
   <a href="/facts/" class="fact-more-link">More facts &rarr;</a>
 </article>`;
   return shell({
@@ -1476,9 +1477,37 @@ function factPage({ fact, cardUrl, siteUrl, supabaseUrl, supabaseAnonKey }) {
   });
 }
 
-function factBoxInnerHtml(fact) {
+// Where a fact can send a curious reader: the product it names (longest
+// name wins, so "AirPods Pro" beats "AirPods"), otherwise a gallery
+// album whose title it names. Null when it names neither.
+function factRelatedLink(text, products, galleryPhotos) {
+  const lower = String(text || '').toLowerCase();
+  const names = (str) => {
+    const n = String(str || '').trim().toLowerCase();
+    if (n.length < 3) return false;
+    const at = lower.indexOf(n);
+    if (at === -1) return false;
+    const before = lower[at - 1];
+    const after = lower[at + n.length];
+    return !(before && /[a-z0-9]/.test(before)) && !(after && /[a-z0-9]/.test(after));
+  };
+  const product = (products || []).filter((p) => p.slug && names(p.name))
+    .sort((a, b) => b.name.length - a.name.length)[0];
+  if (product) return { href: `/products/${product.slug}/`, label: `More on the ${product.name}` };
+  const album = (galleryPhotos || []).filter((g) => g.caption && names(g.caption))
+    .sort((a, b) => b.caption.length - a.caption.length)[0];
+  if (album) return { href: `/gallery/${galleryPhotoSlug(album)}/`, label: `See the ${album.caption} photos` };
+  return null;
+}
+
+function factRelatedLinkHtml(related) {
+  return related ? `<a href="${escapeHtml(related.href)}" class="fact-more-link fact-related-link">${escapeHtml(related.label)} &rarr;</a>` : '';
+}
+
+function factBoxInnerHtml(fact, related) {
   return `<p class="fact-label">Did you know?</p>
-    <p class="fact-text">${escapeHtml(fact.text)}</p>
+    <p class="fact-text" data-fact-id="${escapeHtml(String(fact.id || ''))}">${escapeHtml(fact.text)}</p>
+    ${factRelatedLinkHtml(related)}
     <a href="/facts/" class="fact-more-link">More facts &rarr;</a>`;
 }
 
@@ -1505,7 +1534,7 @@ function countdownHtml(countdown) {
   }).join('\n');
 }
 
-function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, pageContent, countdown, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, latestFactLink, pageContent, countdown, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const featuredSlotHtml = activeEvent
     ? eventCardHtml(activeEvent)
     : heroFeatured
@@ -1553,7 +1582,7 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
 
   const factSection = `<section class="homepage-section homepage-section--divided" id="fact-section" style="display:${latestFact ? '' : 'none'};">
   <div class="fact-box" id="fact-box">
-    ${latestFact ? factBoxInnerHtml(latestFact) : ''}
+    ${latestFact ? factBoxInnerHtml(latestFact, latestFactLink) : ''}
   </div>
 </section>`;
 
@@ -2892,6 +2921,7 @@ module.exports = {
   galleryPage,
   galleryPhotoPage,
   galleryPhotoImages,
+  factRelatedLink,
   galleryPhotoCardHtml,
   eventsPage,
   eventDetailPage,
