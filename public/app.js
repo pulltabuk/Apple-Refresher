@@ -2113,7 +2113,7 @@
           '</div>' +
           '<div class="gallery-photo-images"></div>' +
           '<div class="gallery-photo-copyright">' +
-            '<p>These photos are my own property.</p>' +
+            '<p>These photos are my own property. <a href="/photo-licence/">Photo licence</a></p>' +
             '<a class="intro-cta" href="' + mailtoHref + '">Request to use photo</a>' +
           '</div>' +
           '<div class="gallery-photo-nav">' +
