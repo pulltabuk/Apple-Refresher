@@ -2228,6 +2228,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <button type="button" class="admin-tab-btn" data-tab="gallery">Gallery</button>
       <button type="button" class="admin-tab-btn" data-tab="event">Apple Event</button>
       <button type="button" class="admin-tab-btn" data-tab="facts">Facts</button>
+      <button type="button" class="admin-tab-btn" data-tab="x">X posts</button>
       <button type="button" class="admin-tab-btn" data-tab="pagetext">Page text</button>
       <button type="button" class="admin-tab-btn" data-tab="about">About page</button>
     </div>
@@ -2581,6 +2582,44 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     </div>
   </div>
 
+
+  <div id="tab-x" class="admin-tab-panel" style="display:none;">
+    <p class="admin-hint">Posts for the Apple Sunset X account only. Nothing here is saved or shown on the website.</p>
+
+    <h3 class="admin-form-section">1. Pick an idea, or write one with Claude</h3>
+    <div class="x-source-row">
+      <button type="button" id="x-ideas-btn" class="admin-btn admin-btn--primary">Ideas from my data</button>
+      <span class="admin-hint">On this day, coming soon, longest waits, product facts and site statistics. Tap one to use it.</span>
+    </div>
+    <div id="x-ideas" class="fact-suggestions"></div>
+    <div class="fact-research">
+      <input type="text" id="x-topic" placeholder="Or an idea for Claude, e.g. the first iPod, or Apple's oldest product still on sale" autocomplete="off" aria-label="Idea for Claude">
+      <button type="button" id="x-claude-btn" class="admin-btn">Write with Claude</button>
+    </div>
+    <p class="admin-hint" id="x-claude-note">Claude writes 5 posts, each checked against two sources (free in the Claude app). Copy the one you like into the box below.</p>
+
+    <h3 class="admin-form-section">2. Your post</h3>
+    <textarea id="x-text" class="x-text" rows="4" placeholder="Write or paste your post here"></textarea>
+    <div class="x-options">
+      <label class="checkbox-label"><input type="checkbox" id="x-tags" checked> Add hashtags</label>
+      <label class="checkbox-label"><input type="checkbox" id="x-link-on"> Add a link</label>
+      <input type="text" id="x-link" placeholder="https://applesunset.com/" autocomplete="off" aria-label="Link">
+    </div>
+    <div class="x-options">
+      <label class="checkbox-label"><input type="checkbox" id="x-card-on"> Make a card image</label>
+      <input type="text" id="x-card-label" value="Did you know?" autocomplete="off" aria-label="Card heading">
+    </div>
+    <p class="admin-hint">How it will look on X:</p>
+    <pre id="x-preview" class="x-preview"></pre>
+    <p id="x-count" class="admin-hint"></p>
+    <img id="x-card" class="x-card" alt="" hidden>
+    <div class="x-actions">
+      <button type="button" id="x-post-btn" class="admin-btn admin-btn--primary">Post to X</button>
+      <button type="button" id="x-copy-btn" class="admin-btn">Copy text</button>
+      <button type="button" id="x-card-btn" class="admin-btn" hidden>Download card</button>
+    </div>
+    <p class="admin-hint" id="x-note">X can’t attach a picture from a link. To post with the card, download it first, then add it in the X window that opens.</p>
+  </div>
 
   <div id="tab-facts" class="admin-tab-panel" style="display:none;">
     <p class="admin-hint">Computed from your current product data (release dates, categories, refresh cycles). Only patterns with a reasonable sample size behind them are shown, small datasets won't produce a fact until there's enough to say something real. Regenerate any time you've added more products.</p>

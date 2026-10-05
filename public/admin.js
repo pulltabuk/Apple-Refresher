@@ -360,6 +360,126 @@
     });
   }
 
+  // --- X posts: for the X account only, nothing is saved or published
+  // on the site.
+  (function xPosts() {
+    const $x = (id) => document.getElementById(id);
+    const origin = window.location.origin;
+    let ideas = [];
+    let shown = 0;
+    let cardUrl = null;
+    let cardTimer = null;
+
+    function fullText() {
+      return window.FactsKit.xPostText($x('x-text').value, {
+        hashtags: $x('x-tags').checked,
+        link: $x('x-link-on').checked ? $x('x-link').value.trim() : '',
+      });
+    }
+
+    function refresh() {
+      const text = $x('x-text').value.trim();
+      const full = text ? fullText() : '';
+      $x('x-preview').textContent = full || 'Your post will appear here.';
+      const len = window.FactsKit.xPostLength(full);
+      $x('x-count').textContent = text ? len + ' / 280 characters' + (len > 280 ? ' — too long for X, shorten it a little' : '') : '';
+      $x('x-count').classList.toggle('is-over', len > 280);
+      $x('x-post-btn').disabled = !text || len > 280;
+      $x('x-copy-btn').disabled = !text;
+      // The card follows the text, redrawn a moment after typing stops.
+      clearTimeout(cardTimer);
+      const wantCard = $x('x-card-on').checked && text;
+      $x('x-card').hidden = !wantCard;
+      $x('x-card-btn').hidden = !wantCard;
+      if (wantCard) {
+        cardTimer = setTimeout(async () => {
+          cardUrl = await window.FactsKit.generateFactImage(text, $x('x-card-label').value.trim() || 'Did you know?');
+          $x('x-card').src = cardUrl;
+        }, 300);
+      }
+    }
+
+    function useIdea(idea) {
+      if ($x('x-text').value.trim() && !window.confirm('Replace the post you are writing with this idea?')) return;
+      $x('x-text').value = idea.text;
+      $x('x-link').value = idea.link || '';
+      $x('x-link-on').checked = !!idea.link;
+      $x('x-card-label').value = idea.kind || 'Did you know?';
+      refresh();
+      $x('x-text').focus();
+    }
+
+    function showIdeas() {
+      const box = $x('x-ideas');
+      box.innerHTML = '';
+      if (!ideas.length) {
+        box.textContent = 'No ideas yet: add some products and dates first.';
+        return;
+      }
+      for (let i = 0; i < Math.min(6, ideas.length); i++) {
+        const idea = ideas[(shown + i) % ideas.length];
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'fact-suggestion';
+        const kind = document.createElement('span');
+        kind.className = 'x-idea-kind';
+        kind.textContent = idea.kind;
+        btn.appendChild(kind);
+        btn.appendChild(document.createTextNode(idea.text));
+        btn.addEventListener('click', () => useIdea(idea));
+        box.appendChild(btn);
+      }
+      shown = (shown + 6) % ideas.length;
+      $x('x-ideas-btn').textContent = ideas.length > 6 ? 'More ideas' : 'Ideas from my data';
+    }
+
+    $x('x-ideas-btn').addEventListener('click', () => {
+      if (!ideas.length) {
+        ideas = window.FactsKit.xPostIdeas(cachedProducts, origin);
+        // Mixed up, so each batch has a bit of everything.
+        for (let i = ideas.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [ideas[i], ideas[j]] = [ideas[j], ideas[i]];
+        }
+        shown = 0;
+      }
+      showIdeas();
+    });
+
+    $x('x-claude-btn').addEventListener('click', () => {
+      const prompt = window.FactsKit.xPostPrompt($x('x-topic').value.trim());
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(prompt).catch(() => {});
+      $x('x-claude-note').textContent = 'Claude opened in a new tab (the request is also copied, in case it opens empty). Check its sources, then copy the post you like into the box below.';
+      window.open(window.FactsKit.claudeResearchUrl(prompt), '_blank', 'noopener');
+    });
+    $x('x-topic').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); $x('x-claude-btn').click(); }
+    });
+
+    ['x-text', 'x-link', 'x-card-label'].forEach((id) => $x(id).addEventListener('input', refresh));
+    ['x-tags', 'x-link-on', 'x-card-on'].forEach((id) => $x(id).addEventListener('change', refresh));
+
+    $x('x-post-btn').addEventListener('click', () => {
+      window.open('https://x.com/intent/post?text=' + encodeURIComponent(fullText()), '_blank', 'noopener');
+    });
+    $x('x-copy-btn').addEventListener('click', () => {
+      const text = fullText();
+      const btn = $x('x-copy-btn');
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy text'; }, 1500);
+      }).catch(() => window.prompt('Copy this:', text));
+    });
+    $x('x-card-btn').addEventListener('click', () => {
+      if (!cardUrl) return;
+      const link = document.createElement('a');
+      link.href = cardUrl;
+      link.download = 'apple-sunset-post.png';
+      link.click();
+    });
+    refresh();
+  })();
+
   // Starts a rebuild of the live site (the same as Publish changes,
   // without asking first).
   async function rebuildSite() {
@@ -385,6 +505,7 @@
       document.getElementById('tab-gallery').style.display = tab === 'gallery' ? 'block' : 'none';
       document.getElementById('tab-event').style.display = tab === 'event' ? 'block' : 'none';
       document.getElementById('tab-facts').style.display = tab === 'facts' ? 'block' : 'none';
+      document.getElementById('tab-x').style.display = tab === 'x' ? 'block' : 'none';
       document.getElementById('tab-pagetext').style.display = tab === 'pagetext' ? 'block' : 'none';
       document.getElementById('tab-about').style.display = tab === 'about' ? 'block' : 'none';
       if (tab === 'families') renderFamilyAdminList();
