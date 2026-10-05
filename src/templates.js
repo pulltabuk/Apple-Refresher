@@ -2798,11 +2798,46 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
         <span class="up-home-title">Product facts &amp; notes</span>
         <span class="up-home-desc">Write or research them</span>
       </button>
+      <button type="button" class="up-home-tile" id="up-go-x">
+        <span class="up-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 4l16 16M20 4L4 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <span class="up-home-title">X posts</span>
+        <span class="up-home-desc">Posts for X only</span>
+      </button>
       <a class="up-home-tile" id="up-go-site" href="/">
         <span class="up-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
         <span class="up-home-title">View the site</span>
         <span class="up-home-desc">Open Apple Sunset</span>
       </a>
+    </div>
+  </section>
+
+  <section id="up-x" hidden>
+    <p class="up-muted up-home-intro">Posts for the Apple Sunset X account only. Nothing here goes on the website.</p>
+    <div class="up-card">
+      <button type="button" id="up-x-ideas" class="gallery-action gallery-action--primary gallery-action--block">Ideas from my data</button>
+      <div id="up-x-idea-list" class="up-fact-list"></div>
+      <textarea id="up-x-topic" class="up-fact-edit up-fact-edit--short" placeholder="Or an idea for Claude, e.g. the first iPod" aria-label="Idea for Claude"></textarea>
+      <button type="button" id="up-x-claude" class="gallery-action gallery-action--block">Write with Claude</button>
+      <p class="up-hint" id="up-x-claude-note"></p>
+    </div>
+    <div class="up-card">
+      <h2>Your post</h2>
+      <textarea id="up-x-text" class="up-fact-edit" placeholder="Write or paste your post here" aria-label="Your post"></textarea>
+      <label class="up-check"><input type="checkbox" id="up-x-tags" checked> Add hashtags</label>
+      <label class="up-check"><input type="checkbox" id="up-x-link-on"> Add a link</label>
+      <input type="url" id="up-x-link" class="up-search" placeholder="https://applesunset.com/" autocomplete="off" aria-label="Link">
+      <label class="up-check"><input type="checkbox" id="up-x-card-on" checked> Add a card image</label>
+      <input type="text" id="up-x-card-label" class="up-search" value="Did you know?" autocomplete="off" aria-label="Card heading">
+      <p class="up-hint">How it will look on X:</p>
+      <pre id="up-x-preview" class="up-x-preview"></pre>
+      <p class="up-fact-count" id="up-x-count"></p>
+      <img id="up-x-card" class="up-fact-preview" alt="" hidden>
+      <div class="up-fact-actions">
+        <button type="button" id="up-x-share" class="gallery-action gallery-action--primary gallery-action--wide">Share to X with card</button>
+        <button type="button" id="up-x-post" class="gallery-action">Post text only</button>
+        <button type="button" id="up-x-copy" class="gallery-action">Copy text</button>
+      </div>
+      <p class="up-hint" id="up-x-note">Share to X with card opens the share sheet: pick X and the card and text go in together. If the text doesn’t appear in X, it’s been copied, so just paste it.</p>
     </div>
   </section>
 

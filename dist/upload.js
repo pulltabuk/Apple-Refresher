@@ -14,7 +14,7 @@
   const SUGGESTED_TAG_LIMIT = 16;
 
   const $ = (id) => document.getElementById(id);
-  const sections = { loading: $('up-loading'), login: $('up-login'), home: $('up-home'), products: $('up-products'), product: $('up-product'), main: $('up-main'), library: $('up-library'), facts: $('up-facts'), done: $('up-done') };
+  const sections = { loading: $('up-loading'), login: $('up-login'), home: $('up-home'), x: $('up-x'), products: $('up-products'), product: $('up-product'), main: $('up-main'), library: $('up-library'), facts: $('up-facts'), done: $('up-done') };
 
   // Photos already on the site have a url and no file.
   let photos = []; // { id, file, preview, status: 'working'|'done'|'error', url, error, promise }
@@ -72,6 +72,7 @@
     $('up-heading').textContent = name === 'home' ? 'Apple Sunset'
       : name === 'facts' ? 'Did you know?'
       : name === 'products' || name === 'product' ? 'Product facts'
+      : name === 'x' ? 'X posts'
       : name === 'library' || (name === 'main' && editingId) ? 'Edit albums'
       : name === 'done' ? 'Done'
       : 'Add photos';
@@ -794,6 +795,137 @@
   $('up-go-edit').addEventListener('click', openLibrary);
   $('up-go-facts').addEventListener('click', openFacts);
   $('up-go-products').addEventListener('click', openProducts);
+  $('up-go-x').addEventListener('click', openXPosts);
+
+  // --- X posts: for the X account only, nothing is saved or published on
+  // the site. Ideas come from the products; the card goes to the X app
+  // through the share sheet.
+  let xIdeas = [];
+  let xShown = 0;
+  let xCardFile = null;
+  let xCardTimer = null;
+
+  function xFullText() {
+    return window.FactsKit.xPostText($('up-x-text').value, {
+      hashtags: $('up-x-tags').checked,
+      link: $('up-x-link-on').checked ? $('up-x-link').value.trim() : '',
+    });
+  }
+
+  function xRefresh() {
+    const text = $('up-x-text').value.trim();
+    const full = text ? xFullText() : '';
+    $('up-x-preview').textContent = full || 'Your post will appear here.';
+    const len = window.FactsKit.xPostLength(full);
+    $('up-x-count').textContent = text ? len + ' / 280 characters' + (len > 280 ? ' — too long for X' : '') : '';
+    $('up-x-count').classList.toggle('up-fact-count--over', len > 280);
+    ['up-x-share', 'up-x-post', 'up-x-copy'].forEach((id) => { $(id).disabled = !text || len > 280; });
+    $('up-x-link').hidden = !$('up-x-link-on').checked;
+    const wantCard = $('up-x-card-on').checked && !!text;
+    $('up-x-card-label').hidden = !$('up-x-card-on').checked;
+    $('up-x-card').hidden = !wantCard;
+    $('up-x-share').textContent = $('up-x-card-on').checked ? 'Share to X with card' : 'Share to X';
+    clearTimeout(xCardTimer);
+    xCardFile = null;
+    if (wantCard) {
+      xCardTimer = setTimeout(async () => {
+        const label = $('up-x-card-label').value.trim() || 'Did you know?';
+        $('up-x-card').src = await window.FactsKit.generateFactImage(text, label);
+        xCardFile = await window.FactsKit.factImageFile(text, label);
+      }, 300);
+    }
+  }
+
+  function xUseIdea(idea) {
+    if ($('up-x-text').value.trim() && !window.confirm('Replace the post you are writing with this idea?')) return;
+    $('up-x-text').value = idea.text;
+    $('up-x-link').value = idea.link || '';
+    $('up-x-link-on').checked = !!idea.link;
+    $('up-x-card-label').value = idea.kind || 'Did you know?';
+    $('up-x-idea-list').innerHTML = '';
+    xRefresh();
+    $('up-x-text').scrollIntoView({ block: 'center' });
+  }
+
+  function xShowIdeas() {
+    const box = $('up-x-idea-list');
+    box.innerHTML = '';
+    if (!xIdeas.length) {
+      box.textContent = 'No ideas yet: add some products and dates first.';
+      return;
+    }
+    for (let i = 0; i < Math.min(5, xIdeas.length); i++) {
+      const idea = xIdeas[(xShown + i) % xIdeas.length];
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'up-fact-pick';
+      const kind = document.createElement('span');
+      kind.className = 'up-x-kind';
+      kind.textContent = idea.kind;
+      btn.appendChild(kind);
+      btn.appendChild(document.createTextNode(idea.text));
+      btn.addEventListener('click', () => xUseIdea(idea));
+      box.appendChild(btn);
+    }
+    xShown = (xShown + 5) % xIdeas.length;
+    $('up-x-ideas').textContent = xIdeas.length > 5 ? 'More ideas' : 'Ideas from my data';
+  }
+
+  async function openXPosts() {
+    show('x');
+    xRefresh();
+  }
+
+  $('up-x-ideas').addEventListener('click', async () => {
+    if (!xIdeas.length) {
+      $('up-x-ideas').disabled = true;
+      if (!allProducts.length) {
+        const { data } = await client.from('products').select('*');
+        allProducts = data || [];
+      }
+      $('up-x-ideas').disabled = false;
+      xIdeas = window.FactsKit.xPostIdeas(allProducts, window.location.origin);
+      for (let i = xIdeas.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [xIdeas[i], xIdeas[j]] = [xIdeas[j], xIdeas[i]];
+      }
+      xShown = 0;
+    }
+    xShowIdeas();
+  });
+
+  $('up-x-claude').addEventListener('click', () => {
+    openClaude(window.FactsKit.xPostPrompt($('up-x-topic').value.trim()), 'up-x-claude-note',
+      'Claude is writing 5 posts, each checked against two sources (the request is also copied). Check its sources, then copy the one you like into the box below.');
+  });
+
+  ['up-x-text', 'up-x-link', 'up-x-card-label'].forEach((id) => $(id).addEventListener('input', xRefresh));
+  ['up-x-tags', 'up-x-link-on', 'up-x-card-on'].forEach((id) => $(id).addEventListener('change', xRefresh));
+
+  $('up-x-share').addEventListener('click', async () => {
+    const text = xFullText();
+    const btn = $('up-x-share');
+    // Copied first, in case the app picked from the share sheet drops it.
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(() => {});
+    if ($('up-x-card-on').checked && !xCardFile) {
+      clearTimeout(xCardTimer);
+      const label = $('up-x-card-label').value.trim() || 'Did you know?';
+      xCardFile = await window.FactsKit.factImageFile($('up-x-text').value.trim(), label);
+    }
+    const withCard = $('up-x-card-on').checked && xCardFile && navigator.canShare && navigator.canShare({ files: [xCardFile] });
+    if (navigator.share) {
+      try {
+        await navigator.share(withCard ? { text, files: [xCardFile] } : { text });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+      }
+    }
+    if (!withCard) { openInX(text); return; }
+    flash(btn, 'Copied: open X and paste');
+  });
+  $('up-x-post').addEventListener('click', () => openInX(xFullText()));
+  $('up-x-copy').addEventListener('click', () => copyText(xFullText(), $('up-x-copy')));
 
   // --- Product facts & notes: a product's "Did you know?" and its Notes,
   // written here or researched with Claude, then saved and published.
