@@ -1705,7 +1705,6 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
     <script>(function(){var c=document.querySelectorAll('#hero-cards [data-hero-slug]');if(c.length<2)return;var k=Math.floor(Math.random()*c.length);for(var i=0;i<c.length;i++)c[i].hidden=i!==k;window.__heroPick=c[k].getAttribute('data-hero-slug');})();</script>
   </div>
 </section>
-<hr class="hero-divider">
 ${overdueSection}
 ${categoryLinksHtml}
 ${factSection}
