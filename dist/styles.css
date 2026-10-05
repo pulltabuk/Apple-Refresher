@@ -2428,3 +2428,10 @@ button.generation-name-text:hover { background: var(--accent-bg); }
 #fact-section { border-top: none; padding-top: 0; margin-top: 2rem; }
 #fact-section .fact-box { padding: 1.5rem 1.5rem; }
 #fact-section + .homepage-section--divided { border-top: none; padding-top: 0; margin-top: 2rem; }
+
+/* Tighter gap between the hero and the "waiting longest" list */
+.hero-divider { margin-top: 1.75rem; }
+.hero-divider + .homepage-section { margin-top: 1.5rem; }
+.overdue-more { margin: 0.75rem 0 0; font-size: 14px; font-weight: 600; }
+.overdue-more a { color: var(--accent); text-decoration: none; }
+.overdue-more a:hover { color: var(--accent-dark); }

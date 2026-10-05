@@ -1001,7 +1001,7 @@ function cardHtml(product, statusInfo) {
   const meta = launch && product.discontinued && product.discontinued_date
     ? `<p class="card-meta card-meta--lifespan">Lived ${lifespanText(launch, product.discontinued_date)}</p>`
     : '';
-  return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
+  return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-wait="${days !== '' ? statusInfo.ratio.toFixed(3) : ''}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <a class="card-link" href="/products/${product.slug}/">
         <div class="card-name-row">${productIcon(product, 36)}<p class="card-name">${escapeHtml(product.name)}</p></div>
     ${productBadge(product, statusInfo)}
@@ -1029,6 +1029,7 @@ function sortSelect(options) {
 }
 
 const PRODUCT_SORT_OPTIONS = [
+  ['wait-desc', 'Most overdue first'],
   ['days-desc', 'Days since refresh: high to low'],
   ['days-asc', 'Days since refresh: low to high'],
   ['launch-desc', 'Launched: newest first'],
@@ -1655,6 +1656,7 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
 <div class="homepage-category-select">
   <label class="sr-only" for="category-jump">Browse by family</label>
   <select id="category-jump" data-category-jump>
+    <option value="" selected disabled>Browse by family&hellip;</option>
     <option value="/products/">All products (${totalCount})</option>
     ${categoryLinks.map((c) => `<option value="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} (${c.count})</option>`).join('\n')}
   </select>
@@ -1667,6 +1669,7 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   <ol class="overdue-list" id="overdue-list">
     ${overdueItems.map((i) => overdueRowHtml(i.product, i.status)).join('\n')}
   </ol>
+  <p class="overdue-more"><a href="/products/?sort=wait-desc">See every product, most overdue first &rarr;</a></p>
 </section>`
     : '';
 
@@ -1835,7 +1838,7 @@ function leagueRowHtml(product, statusInfo, rank) {
   const discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
   const lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetween(launch, product.discontinued_date) : '';
   const decade = product.discontinued && product.discontinued_date ? `${Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10}s` : '';
-  return `<tr class="league-row${status === 'discontinued' ? ' league-row--discontinued' : ''}" data-href="/products/${product.slug}/" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
+  return `<tr class="league-row${status === 'discontinued' ? ' league-row--discontinued' : ''}" data-href="/products/${product.slug}/" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-wait="${days !== '' ? statusInfo.ratio.toFixed(3) : ''}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <td class="league-rank">${rank}</td>
   <td class="league-name"><a href="/products/${product.slug}/" class="league-name-link">${productIcon(product, 24)}<span>${escapeHtml(product.name)}</span></a></td>
   <td class="league-status">${productBadge(product, statusInfo)}</td>
