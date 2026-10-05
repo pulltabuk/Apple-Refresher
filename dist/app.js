@@ -710,7 +710,7 @@
       ? '<p class="card-meta card-meta--lifespan">Lived ' + lifespanTextJS(launch, product.discontinued_date) + '</p>'
       : '';
     return (
-      '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
+      '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-wait="' + (days !== '' ? statusInfo.ratio.toFixed(3) : '') + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<a class="card-link" href="/products/' + product.slug + '/">' +
           '<div class="card-name-row">' + productIconJS(product, 36) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
           badgeHtmlJS(product, statusInfo) +
@@ -730,7 +730,7 @@
     var lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetweenJS(launch, product.discontinued_date) : '';
     var decade = product.discontinued && product.discontinued_date ? Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10 + 's' : '';
     return (
-      '<tr class="league-row' + (status === 'discontinued' ? ' league-row--discontinued' : '') + '" data-href="/products/' + product.slug + '/" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
+      '<tr class="league-row' + (status === 'discontinued' ? ' league-row--discontinued' : '') + '" data-href="/products/' + product.slug + '/" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-wait="' + (days !== '' ? statusInfo.ratio.toFixed(3) : '') + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<td class="league-rank">' + rank + '</td>' +
         '<td class="league-name"><a href="/products/' + product.slug + '/" class="league-name-link">' + productIconJS(product, 24) + '<span>' + escapeHtmlJS(product.name) + '</span></a></td>' +
         '<td class="league-status">' + badgeHtmlJS(product, statusInfo) + '</td>' +
@@ -1420,6 +1420,18 @@
       renumberLeagueRanks();
     }
   }
+
+  // A link can ask for an order, e.g. /products/?sort=wait-desc from the
+  // homepage's "waiting longest" list.
+  (function () {
+    var wanted = new URLSearchParams(window.location.search).get('sort');
+    if (!sortSelect || !wanted) return;
+    var match = Array.prototype.some.call(sortSelect.options, function (o) { return o.value === wanted && !o.disabled; });
+    if (!match) return;
+    captureOriginalOrderIfNeeded();
+    sortSelect.value = wanted;
+    if (sortResetBtn) sortResetBtn.style.display = '';
+  })();
 
   if (sortSelect) {
     sortSelect.addEventListener('change', function () {
