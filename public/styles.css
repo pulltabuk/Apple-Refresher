@@ -557,6 +557,33 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card-featured-count { display: flex; flex-direction: column; align-items: flex-start; margin: 10px 0; }
 .card-featured-count-number { font-size: 56px; font-weight: 700; line-height: 1; }
 .card-featured-count-suffix { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+/* The refresh-cycle bar under the day count */
+.card-featured-cycle { display: flex; flex-direction: column; gap: 6px; }
+.card-featured-cycle-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+.card-featured-cycle-head strong { color: var(--text); font-weight: 600; }
+.card-featured-cycle-bar { height: 8px; border-radius: 999px; background: #efece4; overflow: hidden; }
+.card-featured-cycle-bar span { display: block; height: 100%; border-radius: inherit; background: var(--fresh-text); }
+.card-featured-cycle--aging .card-featured-cycle-bar span { background: var(--aging-text); }
+.card-featured-cycle--overdue .card-featured-cycle-bar span { background: var(--overdue-text); }
+.card-featured-cycle-note { margin: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+/* Side by side, the hero columns share one height: spread each one's
+   contents over it rather than leaving a gap at the bottom. */
+@media (min-width: 701px) {
+  .intro-hero-cards .card--featured { padding: 1.25rem; }
+  .intro-hero-cards .card--featured .card-link { flex: 1; gap: 14px; }
+  .intro-hero-cards .card--featured .card-featured-count { margin: auto 0 0; }
+  .intro-hero-cards .card--featured .card-featured-count-number { font-size: 84px; }
+  .intro-hero-cards .card--featured .card-featured-count-suffix { font-size: 16px; }
+  .intro-hero-cards .card--featured .card-featured-details { gap: 10px; padding-top: 16px; }
+  .intro-hero-cards .card--featured .card-featured-detail { font-size: 15px; }
+}
+@media (min-width: 901px) {
+  .intro-hero-layout { align-items: stretch; }
+  .intro-hero-text { display: flex; flex-direction: column; }
+  .intro-hero-text > .countdown + :not(.countdown) { margin-top: auto; }
+  .intro-hero-text .intro-subtitle, .intro-hero-text .page-copy p { font-size: 18px; line-height: 1.6; max-width: 460px; }
+  .intro-hero-text > .intro-cta { margin-top: auto; align-self: flex-start; font-size: 15px; padding: 14px 28px; }
+}
 .card-featured-count--fresh .card-featured-count-number { color: var(--fresh-text); }
 .card-featured-count--aging .card-featured-count-number { color: var(--aging-text); }
 .card-featured-count--overdue .card-featured-count-number { color: var(--overdue-text); }
