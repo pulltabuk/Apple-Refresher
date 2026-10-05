@@ -1481,22 +1481,30 @@ function factPage({ fact, cardUrl, related, siteUrl, supabaseUrl, supabaseAnonKe
 // name wins, so "AirPods Pro" beats "AirPods"), otherwise a gallery
 // album whose title it names. Null when it names neither.
 function factRelatedLink(text, products, galleryPhotos) {
-  const lower = String(text || '').toLowerCase();
+  // Spacing and punctuation don't matter: "Hi-Fi", "Hi Fi" and "HiFi"
+  // all match.
+  const words = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const factWords = ' ' + words(text) + ' ';
+  const factJoined = factWords.replace(/ /g, '');
   const names = (str) => {
-    const n = String(str || '').trim().toLowerCase();
+    const n = words(str);
     if (n.length < 3) return false;
-    const at = lower.indexOf(n);
-    if (at === -1) return false;
-    const before = lower[at - 1];
-    const after = lower[at + n.length];
-    return !(before && /[a-z0-9]/.test(before)) && !(after && /[a-z0-9]/.test(after));
+    if (factWords.includes(' ' + n + ' ')) return true;
+    const joined = n.replace(/ /g, '');
+    return joined.length >= 6 && factJoined.includes(joined);
   };
   const product = (products || []).filter((p) => p.slug && names(p.name))
     .sort((a, b) => b.name.length - a.name.length)[0];
   if (product) return { href: `/products/${product.slug}/`, label: `More on the ${product.name}` };
-  const album = (galleryPhotos || []).filter((g) => g.caption && names(g.caption))
-    .sort((a, b) => b.caption.length - a.caption.length)[0];
-  if (album) return { href: `/gallery/${galleryPhotoSlug(album)}/`, label: `See the ${album.caption} photos` };
+  // An album matches on its title or on one of its tags.
+  const albums = (galleryPhotos || []).map((g) => {
+    const hit = [g.caption].concat(g.tags || []).filter((t) => t && names(t)).sort((a, b) => b.length - a.length)[0];
+    return hit ? { album: g, hit } : null;
+  }).filter(Boolean).sort((a, b) => b.hit.length - a.hit.length);
+  if (albums.length) {
+    const { album, hit } = albums[0];
+    return { href: `/gallery/${galleryPhotoSlug(album)}/`, label: `See the ${album.caption || hit} photos` };
+  }
   return null;
 }
 

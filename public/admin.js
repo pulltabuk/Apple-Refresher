@@ -360,6 +360,21 @@
     });
   }
 
+  // Starts a rebuild of the live site (the same as Publish changes,
+  // without asking first).
+  async function rebuildSite() {
+    try {
+      const { data } = await client.auth.getSession();
+      const token = data && data.session ? data.session.access_token : null;
+      if (!token) return { ok: false, error: 'signed out' };
+      const res = await fetch('/.netlify/functions/publish', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+      const body = await res.json().catch(() => ({}));
+      return res.ok ? { ok: true } : { ok: false, error: body.error || 'status ' + res.status };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
+
   document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.admin-tab-btn').forEach((b) => b.classList.remove('active'));
@@ -3135,6 +3150,45 @@
           window.alert('Could not copy automatically, here is the text:\n\n' + tweetText);
         });
       });
+      // Post to X: the tweet links to the fact's own page, whose preview
+      // is the fact's card. X remembers a preview for days, so the button
+      // only opens X once that page is live with the card.
+      const xBtn = document.createElement('button');
+      xBtn.type = 'button';
+      xBtn.className = 'admin-btn admin-btn--small admin-btn--primary';
+      xBtn.textContent = 'Checking card\u2026';
+      xBtn.disabled = true;
+      let xReady = false;
+      const markReady = () => { xReady = true; xBtn.disabled = false; xBtn.textContent = 'Post to X'; };
+      const waitForPage = async (tries) => {
+        if (!xBtn.isConnected) return;
+        if (await window.FactsKit.factPageLive(fact)) { markReady(); return; }
+        if (tries >= 40) { xBtn.disabled = false; xBtn.textContent = 'Make card'; return; }
+        xBtn.textContent = 'Card ready in a moment\u2026';
+        setTimeout(() => waitForPage(tries + 1), 15000);
+      };
+      window.FactsKit.factPageLive(fact).then((live) => {
+        if (live) markReady();
+        else { xBtn.disabled = false; xBtn.textContent = 'Make card'; }
+      });
+      xBtn.addEventListener('click', async () => {
+        if (xReady) {
+          const tweetText = window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact));
+          window.open('https://x.com/intent/post?text=' + encodeURIComponent(tweetText), '_blank', 'noopener');
+          return;
+        }
+        xBtn.disabled = true;
+        xBtn.textContent = 'Making card\u2026';
+        if (!(await window.FactsKit.factCardExists(client, fact))) await window.FactsKit.uploadFactCard(client, fact);
+        const rebuilt = await rebuildSite();
+        if (!rebuilt.ok) {
+          xBtn.disabled = false;
+          xBtn.textContent = 'Make card';
+          window.alert('The card is saved, but the site rebuild didn\u2019t start (' + rebuilt.error + '). Press Publish changes, then try again.');
+          return;
+        }
+        waitForPage(0);
+      });
       const imageBtn = document.createElement('button');
       imageBtn.type = 'button';
       imageBtn.className = 'admin-btn admin-btn--small';
@@ -3161,6 +3215,7 @@
       });
       row.appendChild(p);
       row.appendChild(editBtn);
+      row.appendChild(xBtn);
       row.appendChild(copyBtn);
       row.appendChild(imageBtn);
       row.appendChild(deleteBtn);
