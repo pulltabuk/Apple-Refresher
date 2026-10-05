@@ -515,30 +515,20 @@
     return new Date(Date.UTC(parts[0], parts[1] - 1, 1)).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
   }
 
-  function factsPageHtml(products, sanitize) {
-    const list = products || [];
-    const stats = list.length ? generateFactCandidates(list) : [];
-    const withFacts = list
-      .filter((p) => p.slug && plainText(p.did_you_know))
-      .sort((a, b) => String(b.did_you_know_date || '').localeCompare(String(a.did_you_know_date || '')) || a.name.localeCompare(b.name));
-    const statsHtml = stats.length
-      ? '<section class="facts-section"><h2 class="facts-section-title">By the numbers</h2>' +
-        '<p class="facts-section-note">Worked out from every product Apple Sunset tracks, and recalculated each time the site updates.</p>' +
-        '<div class="facts-grid">' + stats.map((t) => '<div class="fact-card"><p class="fact-text">' + escapeHtml(t) + '</p></div>').join('') + '</div></section>'
-      : '';
-    const productHtml = withFacts.length
-      ? '<section class="facts-section"><h2 class="facts-section-title">Did you know?</h2><div class="facts-grid">' +
-        withFacts.map((p) => {
-          const href = '/products/' + encodeURIComponent(p.slug) + '/';
-          return '<article class="fact-card fact-card--product">' +
-            '<a class="fact-product-name" href="' + href + '">' + escapeHtml(p.name) + '</a>' +
-            '<div class="fact-text">' + sanitize(p.did_you_know) + '</div>' +
-            (p.did_you_know_date ? '<p class="fact-date">As of ' + monthYear(p.did_you_know_date) + '</p>' : '') +
-            '<a class="fact-more-link" href="' + href + '">More on the ' + escapeHtml(p.name) + ' &rarr;</a>' +
-            '</article>';
-        }).join('') + '</div></section>'
-      : '';
-    return statsHtml + productHtml;
+  // The Facts page: every fact published to the homepage, newest first.
+  // Product "Did you know?" notes stay on their product pages.
+  function factsPageHtml(facts) {
+    const list = (facts || []).filter((f) => f && f.id && String(f.text || '').trim());
+    if (!list.length) return '';
+    return '<div class="facts-grid">' + list.map((f) => {
+      const href = '/facts/' + encodeURIComponent(String(f.id)) + '/';
+      const day = String(f.created_at || '').slice(0, 10);
+      return '<article class="fact-card fact-card--product">' +
+        '<p class="fact-text">' + escapeHtml(f.text) + '</p>' +
+        (/^\d{4}-\d{2}-\d{2}$/.test(day) ? '<p class="fact-date">' + Number(day.slice(8)) + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(day.slice(5, 7)) - 1] + ' ' + day.slice(0, 4) + '</p>' : '') +
+        '<a class="fact-more-link" href="' + href + '">Read more &rarr;</a>' +
+        '</article>';
+    }).join('') + '</div>';
   }
 
   // --- X posts: ideas worked out from the site's own data, the post
