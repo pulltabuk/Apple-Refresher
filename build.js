@@ -363,13 +363,11 @@ async function main() {
     heroRest = heroRest.concat(pickRandom(released.filter((i) => i !== heroFeatured && !heroRest.includes(i)), 2 - heroRest.length));
   }
 
-  // The two-row "waiting longest" section: the true most-overdue list,
-  // regardless of what's also shown in the hero above (the hero picks
-  // randomly and changes on every load, so some overlap here is
-  // expected, not a bug, and keeps this section's ranking honest).
+  // The homepage "waiting longest" top five: most days since the last
+  // refresh first, the same order as Products sorted by days, high to low.
   const overdueItems = rankable
     .slice()
-    .sort((a, b) => b.status.ratio - a.status.ratio)
+    .sort((a, b) => b.status.daysSince - a.status.daysSince)
     .slice(0, 5);
 
   // Category quick-links, current + discontinued together.
