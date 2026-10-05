@@ -1618,7 +1618,7 @@ function siteStatsHtml(s) {
   if (!s || !s.total) return '';
   const stat = (href, num, label, extra) => `<a class="site-stat" href="${href}"><span class="site-stat-num">${num}</span><span class="site-stat-label">${label}</span>${extra || ''}</a>`;
   return `<div class="site-stats" id="site-stats">
-    <div class="site-stats-head"><h2 class="site-stats-title">Apple at a glance</h2><span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span></div>
+    <div class="site-stats-head"><h2 class="site-stats-title">Apple Sunset at a glance</h2><span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span></div>
     <div class="site-stats-row">
       ${stat('/products/', s.total, 'products tracked')}
       ${stat('/products/', s.onSale, 'on sale now')}
@@ -1663,7 +1663,7 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
 
   const overdueSection = overdueItems && overdueItems.length
     ? `<section class="homepage-section">
-  <h2>Waiting longest for a refresh</h2>
+  <h2>Products waiting longest for a refresh</h2>
   <ol class="overdue-list" id="overdue-list">
     ${overdueItems.map((i) => overdueRowHtml(i.product, i.status)).join('\n')}
   </ol>
@@ -1703,8 +1703,8 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   </div>
 </section>
 <hr class="hero-divider">
-${categoryLinksHtml}
 ${overdueSection}
+${categoryLinksHtml}
 ${factSection}
 ${gallerySection}
 ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;

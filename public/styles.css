@@ -2412,3 +2412,19 @@ button.generation-name-text:hover { background: var(--accent-bg); }
 @media (max-width: 700px) {
   #gallery-strip > :nth-child(n+5) { display: none; }
 }
+/* Computers: one row of gallery photos, as many as the columns. */
+@media (min-width: 701px) {
+  #gallery-strip { grid-template-columns: repeat(4, 1fr); }
+  #gallery-strip > :nth-child(n+5) { display: none; }
+}
+@media (min-width: 1000px) {
+  #gallery-strip { grid-template-columns: repeat(5, 1fr); }
+  #gallery-strip > :nth-child(5) { display: flex; }
+}
+/* The category links now sit under the "waiting longest" list. */
+.homepage-category-links.filter-bar { margin-top: 1.25rem; }
+.homepage-category-select { margin-top: 1rem; }
+/* Less space around the "Did you know?" band. */
+#fact-section { border-top: none; padding-top: 0; margin-top: 2rem; }
+#fact-section .fact-box { padding: 1.5rem 1.5rem; }
+#fact-section + .homepage-section--divided { border-top: none; padding-top: 0; margin-top: 2rem; }
