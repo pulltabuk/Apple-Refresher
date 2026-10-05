@@ -1569,7 +1569,43 @@ function countdownHtml(countdown) {
   }).join('\n');
 }
 
-function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, latestFactLink, pageContent, countdown, siteUrl, supabaseUrl, supabaseAnonKey }) {
+// The homepage's at-a-glance counts. Must stay in step with
+// siteStatsJS() / siteStatsHtmlJS() in public/app.js, which refresh them
+// from live data a moment after the page loads.
+function siteStats(products) {
+  const list = products || [];
+  const today = new Date().toISOString().slice(0, 10);
+  const onSale = list.filter((p) => !p.discontinued);
+  let latest = null;
+  onSale.forEach((p) => {
+    (p.refresh_history || []).forEach((d) => {
+      if (d <= today && d !== p.discontinued_date && (!latest || d > latest.date)) latest = { date: d, name: p.name, slug: p.slug };
+    });
+  });
+  return {
+    total: list.length,
+    onSale: onSale.length,
+    discontinued: list.length - onSale.length,
+    latest,
+    latestDays: latest ? Math.round((new Date(today) - new Date(latest.date)) / 86400000) : null,
+  };
+}
+
+function siteStatsHtml(s) {
+  if (!s || !s.total) return '';
+  const stat = (href, num, label, extra) => `<a class="site-stat" href="${href}"><span class="site-stat-num">${num}</span><span class="site-stat-label">${label}</span>${extra || ''}</a>`;
+  return `<div class="site-stats" id="site-stats">
+    <span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span>
+    <div class="site-stats-row">
+      ${stat('/products/', s.total, 'products tracked')}
+      ${stat('/products/', s.onSale, 'on sale now')}
+      ${stat('/discontinued/', s.discontinued, 'discontinued')}
+      ${s.latest ? stat(`/products/${escapeHtml(s.latest.slug)}/`, s.latestDays === 0 ? 'Today' : `${s.latestDays}<small> ${s.latestDays === 1 ? 'day' : 'days'}</small>`, 'since the latest release', `<span class="site-stat-sub">${escapeHtml(s.latest.name)}</span>`) : ''}
+    </div>
+  </div>`;
+}
+
+function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, latestFactLink, pageContent, countdown, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const featuredSlotHtml = activeEvent
     ? eventCardHtml(activeEvent)
     : heroFeatured
@@ -1629,6 +1665,7 @@ function homePage({ heroFeatured, heroRest, overdueItems, categoryLinks, totalCo
       ${countdownHtml(countdown)}
       ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
+      ${siteStatsHtml(stats)}
       <a class="intro-cta" href="/products/">Browse all products</a>
     </div>
     <div class="intro-hero-cards" id="hero-cards">
@@ -3033,6 +3070,7 @@ module.exports = {
   galleryPage,
   galleryPhotoPage,
   galleryPhotoImages,
+  siteStats,
   photoLicencePage,
   factRelatedLink,
   galleryPhotoCardHtml,

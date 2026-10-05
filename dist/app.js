@@ -1159,6 +1159,16 @@
     grid.insertBefore(makeDivider('Discontinued', 'discontinued'), visibleCards[firstDiscontinuedIndex]);
   }
 
+  // The number of tiles per row changes with the window, so pages are
+  // re-cut when it does.
+  var lastPaginationCols = null;
+  window.addEventListener('resize', function () {
+    var grid = document.getElementById('grid');
+    if (!grid || !isPaginatedGrid()) return;
+    var cols = (getComputedStyle(grid).gridTemplateColumns || '').split(' ').filter(Boolean).length;
+    if (cols !== lastPaginationCols) { lastPaginationCols = cols; applyPagination(); }
+  });
+
   function applyPagination() {
     if (!isPaginatedGrid()) return;
     var grid = document.getElementById('grid');
@@ -1167,13 +1177,34 @@
     var nonMatching = Array.prototype.slice.call(grid.querySelectorAll('.card[data-matches-filter="false"]'));
     nonMatching.forEach(function (card) { card.style.display = 'none'; });
 
-    var totalPages = Math.max(1, Math.ceil(matching.length / PAGE_SIZE));
+    // Pages hold whole rows. When the list is grouped (on sale, then
+    // discontinued), a group starts on a fresh row, and only starts on a
+    // page that has at least one full row left, so a page never ends with
+    // a lone tile under the Discontinued heading.
+    var cols = (getComputedStyle(grid).gridTemplateColumns || '').split(' ').filter(Boolean).length || 1;
+    var capacity = Math.max(cols, Math.floor(PAGE_SIZE / cols) * cols);
+    var statusOf = function (c) { return c.getAttribute('data-status') === 'discontinued' ? 'discontinued' : 'current'; };
+    var switches = 0;
+    matching.forEach(function (c, i) { if (i && statusOf(c) !== statusOf(matching[i - 1])) switches++; });
+    var grouped = switches === 1;
+    var pageOf = [];
+    var page = 1;
+    var used = 0;
+    matching.forEach(function (card, i) {
+      if (grouped && i && statusOf(card) !== statusOf(matching[i - 1])) {
+        used = Math.ceil(used / cols) * cols;
+        if (capacity - used < cols) { page++; used = 0; }
+      }
+      if (used >= capacity) { page++; used = 0; }
+      pageOf.push(page);
+      used++;
+    });
+    var totalPages = Math.max(1, page);
     if (currentPage > totalPages) currentPage = totalPages;
     if (currentPage < 1) currentPage = 1;
 
     matching.forEach(function (card, i) {
-      var page = Math.floor(i / PAGE_SIZE) + 1;
-      card.style.display = page === currentPage ? '' : 'none';
+      card.style.display = pageOf[i] === currentPage ? '' : 'none';
     });
 
     updateStatusDivider();
@@ -1712,6 +1743,37 @@
       .catch(function () { return null; });
   }
 
+  // Must stay in step with siteStats() / siteStatsHtml() in src/templates.js.
+  function siteStatsJS(products) {
+    var today = new Date().toISOString().slice(0, 10);
+    var onSale = products.filter(function (p) { return !p.discontinued; });
+    var latest = null;
+    onSale.forEach(function (p) {
+      (p.refresh_history || []).forEach(function (d) {
+        if (d <= today && d !== p.discontinued_date && (!latest || d > latest.date)) latest = { date: d, name: p.name, slug: p.slug };
+      });
+    });
+    return {
+      total: products.length,
+      onSale: onSale.length,
+      discontinued: products.length - onSale.length,
+      latest: latest,
+      latestDays: latest ? Math.round((new Date(today) - new Date(latest.date)) / 86400000) : null,
+    };
+  }
+  function siteStatsHtmlJS(s) {
+    if (!s || !s.total) return '';
+    var stat = function (href, num, label, extra) { return '<a class="site-stat" href="' + href + '"><span class="site-stat-num">' + num + '</span><span class="site-stat-label">' + label + '</span>' + (extra || '') + '</a>'; };
+    return '<div class="site-stats" id="site-stats">' +
+      '<span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span>' +
+      '<div class="site-stats-row">' +
+      stat('/products/', s.total, 'products tracked') +
+      stat('/products/', s.onSale, 'on sale now') +
+      stat('/discontinued/', s.discontinued, 'discontinued') +
+      (s.latest ? stat('/products/' + escapeHtmlJS(s.latest.slug) + '/', s.latestDays === 0 ? 'Today' : s.latestDays + '<small> ' + (s.latestDays === 1 ? 'day' : 'days') + '</small>', 'since the latest release', '<span class="site-stat-sub">' + escapeHtmlJS(s.latest.name) + '</span>') : '') +
+      '</div></div>';
+  }
+
   // Must stay in step with orderedFeatured() in build.js.
   function orderedFeaturedJS(items, orderIds) {
     var featured = items.filter(function (i) { return i.product.featured; });
@@ -1739,6 +1801,8 @@
       var products = results[0];
       var activeEvent = results[1];
       var featuredOrder = results[2];
+      var statsEl = document.getElementById('site-stats');
+      if (statsEl && Array.isArray(products) && products.length) statsEl.outerHTML = siteStatsHtmlJS(siteStatsJS(products));
       var active = products.filter(function (p) { return !p.discontinued; });
       var withStatus = active
         .map(function (p) { return { product: p, status: computeStatusJS(p) }; })
