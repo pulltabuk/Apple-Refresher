@@ -1836,9 +1836,10 @@
       }
 
       var featuredSlotHtml = activeEvent ? eventCardHtmlJS(activeEvent) : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');
+      // Must match homePage(): the featured tile, then the Live counts panel.
       heroCardsSection.innerHTML =
         featuredSlotHtml +
-        heroRest.map(function (r) { return cardHtmlJS(r.product, r.status); }).join('');
+        siteStatsHtmlJS(siteStatsJS(products));
     }).catch(function () {});
   }
 

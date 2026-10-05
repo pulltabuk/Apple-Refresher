@@ -2340,3 +2340,14 @@ button.generation-name-text:hover { background: var(--accent-bg); }
 .site-stat-num { white-space: nowrap; font-size: 22px; }
 .site-stat-label { margin-top: 0; }
 .site-stat-sub { flex-basis: 100%; }
+
+/* Homepage hero: the Live counts sit beside the featured tile as a tall
+   panel, the same height as it, top and bottom. */
+.intro-hero-cards .site-stats { grid-column: 3; grid-row: 1 / span 2; margin: 0; max-width: none; display: flex; flex-direction: column; padding: 16px; }
+.intro-hero-cards .site-stats-row { flex: 1; grid-template-columns: 1fr; grid-auto-rows: 1fr; gap: 10px; }
+.intro-hero-cards .site-stat { flex-direction: column; flex-wrap: nowrap; justify-content: center; align-items: flex-start; padding: 10px 12px; }
+.intro-hero-cards .site-stat-num { font-size: 26px; }
+@media (max-width: 560px) {
+  .intro-hero-cards .site-stats { grid-column: 1 / -1; grid-row: auto; }
+  .intro-hero-cards .site-stats-row { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; }
+}
