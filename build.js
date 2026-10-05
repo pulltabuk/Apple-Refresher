@@ -405,7 +405,7 @@ async function main() {
   write('contact/thanks/index.html', contactThanksPage(opts));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }), galleryPhotos.map(galleryLastmod).filter(Boolean).sort().pop() || null);
   write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
-  write('facts/index.html', factsPage({ facts, pageContent: pageContent.facts || null, ...opts }));
+  write('facts/index.html', factsPage({ products, pageContent: pageContent.facts || null, ...opts }));
 
   // One page per fact, whose link preview is the fact's card (made and
   // saved by the app / admin when the fact is published). If a card isn't

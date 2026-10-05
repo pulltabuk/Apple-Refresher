@@ -2044,19 +2044,17 @@
       .catch(function () {});
   }
 
+  // Facts page: statistics from every product plus each product's own
+  // "Did you know?", from the same code the build uses (facts-kit.js).
   var factsListSection = document.getElementById('facts-list');
-  if (factsListSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-    fetch(window.SUPABASE_URL + '/rest/v1/facts?select=*&order=created_at.desc', {
-      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (facts) {
-        if (!Array.isArray(facts)) return;
-        factsListSection.innerHTML = facts.map(function (fact) {
-          return '<div class="fact-card"><p class="fact-text">' + escapeHtmlJS(fact.text) + '</p><p class="fact-date">' + formatDateJS(fact.created_at.slice(0, 10)) + '</p></div>';
-        }).join('');
+  if (factsListSection && window.FactsKit && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+    fetchAllProductsJS()
+      .then(function (products) {
+        if (!Array.isArray(products) || !products.length) return;
+        var html = window.FactsKit.factsPageHtml(products, sanitizeRichTextJS);
+        factsListSection.innerHTML = html;
         var noFacts = document.getElementById('no-facts');
-        if (noFacts) noFacts.style.display = facts.length ? 'none' : '';
+        if (noFacts) noFacts.style.display = html ? 'none' : '';
       })
       .catch(function () {});
   }

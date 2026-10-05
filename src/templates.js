@@ -17,6 +17,8 @@ let CUSTOM_CATEGORY_ICONS = {};
 // and the phone app's service worker can never keep serving an old copy
 // after a change.
 const assetHashes = {};
+const FactsKit = require('../public/facts-kit.js');
+
 function assetUrl(file) {
   if (!assetHashes[file]) {
     try {
@@ -1421,14 +1423,11 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
   });
 }
 
-function factCardHtml(fact) {
-  return `<div class="fact-card">
-  <p class="fact-text">${escapeHtml(fact.text)}</p>
-  <p class="fact-date">${formatDate(fact.created_at.slice(0, 10))}</p>
-</div>`;
-}
-
-function factsPage({ facts, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+// Statistics worked out from every product, then each product's own
+// "Did you know?". Built by the same code (public/facts-kit.js) that
+// the page's live refresh uses.
+function factsPage({ products, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const inner = FactsKit.factsPageHtml(products, (html) => sanitizeRichText(html, siteUrl));
   const body = `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Facts')}</h1>
@@ -1436,10 +1435,8 @@ function factsPage({ facts, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }
 </div>
 ${pageStandardLine(pageContent, `<p class="page-intro">Interesting patterns spotted across every product tracked by Apple Sunset.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
-<p id="no-facts" class="page-intro" style="display:${facts.length ? 'none' : ''};">Nothing published yet.</p>
-<div id="facts-list" class="facts-list" data-mode="facts">
-  ${facts.map(factCardHtml).join('\n')}
-</div>`;
+<p id="no-facts" class="page-intro" style="display:${inner ? 'none' : ''};">Nothing here yet.</p>
+<div id="facts-list" class="facts-list" data-mode="facts">${inner}</div>`;
   return shell({
     title: 'Facts — Apple Sunset',
     description: 'Interesting patterns spotted across every Apple product tracked by Apple Sunset.',
@@ -1448,6 +1445,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
+    scripts: [`<script src="${assetUrl('facts-kit.js')}" defer></script>`].concat(DEFAULT_SCRIPTS),
   });
 }
 
