@@ -270,14 +270,17 @@ function productGenerations(product) {
   return dates.map((date, i) => {
     const info = details[date] || {};
     const next = dates[i + 1] || null;
-    const end = next || (product.discontinued ? product.discontinued_date || null : today);
+    // A release marked "still on sale" stays current alongside a newer one
+    // (e.g. the 14-inch M5 MacBook Pro next to the M5 Pro and M5 Max).
+    const stillOnSale = !product.discontinued && !!info.still_on_sale;
+    const end = stillOnSale ? today : next || (product.discontinued ? product.discontinued_date || null : today);
     return {
       date,
       name: storedGenerationName(product, date) || autoGenerationName(product, i, dates.length),
       hasStoredDetails: !!(storedGenerationName(product, date) || info.announced),
       announced: info.announced || null,
       end,
-      isCurrent: !next && !product.discontinued,
+      isCurrent: (!next || stillOnSale) && !product.discontinued,
     };
   });
 }
@@ -391,6 +394,9 @@ function categoryTimelinePoints(product, allProducts) {
       .sort((a, b) => (a.date < b.date ? -1 : 1));
     const newest = mine[mine.length - 1];
     if (newest) newest.isCurrent = true;
+    // Older releases marked "still on sale" are current too.
+    const details = generationDetails(p);
+    mine.forEach((pt) => { if (details[pt.date] && details[pt.date].still_on_sale) pt.isCurrent = true; });
   });
 
   const typePriority = { discontinued: 0, launch: 1, refresh: 1 };
