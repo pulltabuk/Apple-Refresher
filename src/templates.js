@@ -742,11 +742,10 @@ function badgeDaysInfo(product, statusInfo) {
 
 // One row of the homepage's "Waiting longest" top five.
 function overdueRowHtml(product, statusInfo) {
-  const daysInfo = badgeDaysInfo(product, statusInfo);
   return `<li><a class="overdue-row overdue-row--${statusInfo.status}" href="/products/${product.slug}/">
     <span class="overdue-row-icon">${productIcon(product, 36)}</span>
     <span class="overdue-row-main"><span class="overdue-row-name">${escapeHtml(product.name)}</span></span>
-    <span class="overdue-row-days"><strong>${daysInfo.days}</strong> days</span>
+    <span class="overdue-row-days"><strong>${statusInfo.daysSince}</strong> days</span>
   </a></li>`;
 }
 
@@ -1666,7 +1665,7 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   <ol class="overdue-list" id="overdue-list">
     ${overdueItems.map((i) => overdueRowHtml(i.product, i.status)).join('\n')}
   </ol>
-  <p class="overdue-more"><a href="/products/?sort=wait-desc">See every product, most overdue first &rarr;</a></p>
+  <p class="overdue-more"><a href="/products/?sort=days-desc">See every product, longest wait first &rarr;</a></p>
 </section>`
     : '';
 
