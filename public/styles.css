@@ -2437,3 +2437,19 @@ button.generation-name-text:hover { background: var(--accent-bg); }
 .overdue-more a:hover { color: var(--accent-dark); }
 /* Name and day count only: keep each row to a single line */
 .overdue-row-days strong { display: inline; font-size: 20px; margin-right: 3px; }
+
+/* Phones: "Browse by family" opens a list of real links. (A picker that
+   navigates by script makes iPhone Safari skip the homepage on Back.) */
+.homepage-category-select summary {
+  list-style: none; cursor: pointer;
+  padding: 13px 40px 13px 14px; font-size: 15px; font-weight: 600; color: var(--accent-dark);
+  background: var(--accent-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c4009' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 14px center / 17px;
+  border: 1px solid var(--accent); border-radius: 999px;
+}
+.homepage-category-select summary::-webkit-details-marker { display: none; }
+.homepage-category-select[open] summary { border-radius: 22px 22px 0 0; }
+.homepage-category-menu { display: flex; flex-direction: column; border: 1px solid var(--accent); border-top: none; border-radius: 0 0 16px 16px; overflow: hidden; background: #fff; }
+.homepage-category-menu a { display: flex; justify-content: space-between; padding: 12px 16px; font-size: 15px; font-weight: 600; color: var(--text); text-decoration: none; min-height: 44px; box-sizing: border-box; align-items: center; }
+.homepage-category-menu a + a { border-top: 1px solid var(--border); }
+.homepage-category-menu a span { color: var(--text-secondary); font-weight: 500; }
+.homepage-category-menu a:active { background: var(--accent-bg); }

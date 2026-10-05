@@ -1649,14 +1649,13 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   <a class="filter-btn active" href="/products/">All <span class="filter-btn-count">(${totalCount})</span></a>
   ${categoryLinks.map((c) => `<a class="filter-btn" href="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} <span class="filter-btn-count">(${c.count})</span></a>`).join('\n')}
 </div>
-<div class="homepage-category-select">
-  <label class="sr-only" for="category-jump">Browse by family</label>
-  <select id="category-jump" data-category-jump>
-    <option value="" selected disabled>Browse by family&hellip;</option>
-    <option value="/products/">All products (${totalCount})</option>
-    ${categoryLinks.map((c) => `<option value="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} (${c.count})</option>`).join('\n')}
-  </select>
-</div>`
+<details class="homepage-category-select">
+  <summary>Browse by family</summary>
+  <nav class="homepage-category-menu" aria-label="Browse by family">
+    <a href="/products/">All products <span>${totalCount}</span></a>
+    ${categoryLinks.map((c) => `<a href="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} <span>${c.count}</span></a>`).join('\n')}
+  </nav>
+</details>`
     : '';
 
   const overdueSection = overdueItems && overdueItems.length
