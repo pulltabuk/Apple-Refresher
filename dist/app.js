@@ -160,7 +160,9 @@
     return dates.map(function (date, i) {
       var info = details[date] || {};
       var next = dates[i + 1] || null;
-      var end = next || (product.discontinued ? product.discontinued_date || null : today);
+      // Mirrors productGenerations(): "still on sale" keeps an older release current.
+      var stillOnSale = !product.discontinued && !!info.still_on_sale;
+      var end = stillOnSale ? today : next || (product.discontinued ? product.discontinued_date || null : today);
       var stored = storedGenerationNameJS(product, date);
       return {
         date: date,
@@ -168,7 +170,7 @@
         hasStoredDetails: !!(stored || info.announced),
         announced: info.announced || null,
         end: end,
-        isCurrent: !next && !product.discontinued,
+        isCurrent: (!next || stillOnSale) && !product.discontinued,
       };
     });
   }
@@ -250,6 +252,8 @@
       }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
       var newest = mine[mine.length - 1];
       if (newest) newest.isCurrent = true;
+      var details = p.generation_details && typeof p.generation_details === 'object' ? p.generation_details : {};
+      mine.forEach(function (pt) { if (details[pt.date] && details[pt.date].still_on_sale) pt.isCurrent = true; });
     });
 
     var typePriority = { discontinued: 0, launch: 1, refresh: 1 };

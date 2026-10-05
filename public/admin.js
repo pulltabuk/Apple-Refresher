@@ -1580,6 +1580,12 @@
         top.appendChild(firstTag);
       }
 
+      if (info.still_on_sale && type !== 'discontinued' && !currentDiscontinuedDate) {
+        const onSaleTag = document.createElement('span');
+        onSaleTag.className = 'generation-tag';
+        onSaleTag.textContent = 'Still on sale';
+        top.appendChild(onSaleTag);
+      }
       const released = document.createElement('span');
       released.className = 'generation-date';
       released.textContent = formatAdminDate(date);
@@ -1775,6 +1781,24 @@
             preLabel.appendChild(note);
           }
           fields.appendChild(preLabel);
+
+          // Only an older release can be "still on sale": the newest one
+          // always is (until the product is discontinued).
+          const newestRelease = releaseDates[releaseDates.length - 1];
+          if (date !== newestRelease && !currentDiscontinuedDate) {
+            const onSale = document.createElement('label');
+            onSale.className = 'checkbox-label';
+            const onSaleBox = document.createElement('input');
+            onSaleBox.type = 'checkbox';
+            onSaleBox.checked = !!info.still_on_sale;
+            onSaleBox.addEventListener('change', () => {
+              detailFor(date).still_on_sale = onSaleBox.checked;
+              renderRefreshHistory();
+            });
+            onSale.appendChild(onSaleBox);
+            onSale.appendChild(document.createTextNode(' Still on sale alongside the newer release'));
+            fields.appendChild(onSale);
+          }
 
           const makeLaunch = document.createElement('label');
           makeLaunch.className = 'checkbox-label';
@@ -2449,9 +2473,13 @@
       const name = (info.name || '').trim();
       const announced = info.announced || null;
       const preorder = info.preorder || null;
+      const stillOnSale = !!info.still_on_sale;
       // preorder was missing here, so every pre-order date typed in was
       // thrown away on save without a word.
-      if (name || announced || preorder) out[date] = { name: name || null, announced, preorder };
+      if (name || announced || preorder || stillOnSale) {
+        out[date] = { name: name || null, announced, preorder };
+        if (stillOnSale) out[date].still_on_sale = true;
+      }
     });
     return out;
   }
