@@ -1860,11 +1860,36 @@
     });
   });
 
-  document.getElementById('richtext-link-btn').addEventListener('click', () => {
+  // Turns the selected words into a link; with nothing selected, the
+  // address itself goes in as the link text, so a link is never silently
+  // lost.
+  function insertLink(editor, url) {
+    editor.focus();
+    const sel = window.getSelection();
+    const inside = sel && sel.rangeCount && editor.contains(sel.anchorNode);
+    if (inside && !sel.isCollapsed) {
+      document.execCommand('createLink', false, url);
+      return;
+    }
+    if (!inside) {
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    const a = document.createElement('a');
+    a.href = url;
+    a.textContent = url;
+    document.execCommand('insertHTML', false, a.outerHTML + '&nbsp;');
+  }
+
+  const richtextLinkBtn = document.getElementById('richtext-link-btn');
+  richtextLinkBtn.addEventListener('mousedown', (e) => e.preventDefault());
+  richtextLinkBtn.addEventListener('click', () => {
     const url = window.prompt('Link URL (include https://)');
     if (!url) return;
-    richTextEditor.focus();
-    document.execCommand('createLink', false, url);
+    insertLink(richTextEditor, url.trim());
   });
 
   function extractParagraphs(root) {
@@ -1911,8 +1936,10 @@
     updateDidYouKnowCount();
   });
 
-  function resetGenerationPanel() {
-    setDatePrecisionValue('new_refresh_date', null);
+  // After adding a date the box keeps it, since the next one (pre-order,
+  // then release) is usually a few days later: just adjust the day.
+  function resetGenerationPanel(keepDate) {
+    setDatePrecisionValue('new_refresh_date', keepDate || null);
     document.getElementById('new_generation_name').value = '';
     document.getElementById('generation-add-error').textContent = '';
   }
@@ -1928,7 +1955,7 @@
     const type = selectedEntryType();
     if (type === 'discontinued') {
       currentDiscontinuedDate = value;
-      resetGenerationPanel();
+      resetGenerationPanel(value);
       renderRefreshHistory();
       updateStatusReadout();
       return;
@@ -1937,7 +1964,7 @@
       const field = type === 'preorder' ? 'preorder' : 'announced';
       if (currentRefreshHistory.length === 0) {
         if (field === 'preorder') pendingPreorderDate = value; else pendingAnnouncedDate = value;
-        resetGenerationPanel();
+        resetGenerationPanel(value);
         renderRefreshHistory();
         return;
       }
@@ -1947,7 +1974,7 @@
         return;
       }
       detailFor(target)[field] = value;
-      resetGenerationPanel();
+      resetGenerationPanel(value);
       renderRefreshHistory();
       return;
     }
@@ -1972,13 +1999,12 @@
     if (pendingAnnouncedDate) {
       detailFor(value).announced = pendingAnnouncedDate;
       pendingAnnouncedDate = null;
-    pendingPreorderDate = null;
     }
     if (pendingPreorderDate) {
       detailFor(value).preorder = pendingPreorderDate;
       pendingPreorderDate = null;
     }
-    resetGenerationPanel();
+    resetGenerationPanel(value);
     renderRefreshHistory();
     updateStatusReadout();
   }
@@ -3568,8 +3594,7 @@
     btn.addEventListener('click', () => {
       const url = window.prompt('Link URL (include https://)');
       if (!url) return;
-      document.getElementById(btn.getAttribute('data-link-for')).focus();
-      document.execCommand('createLink', false, url);
+      insertLink(document.getElementById(btn.getAttribute('data-link-for')), url.trim());
     });
   });
 
