@@ -16,6 +16,7 @@
   // An announcement added before any release date exists. It attaches
   // itself to the first release added, so dates can be entered in any order.
   let pendingAnnouncedDate = null;
+  let focusNameFor = null; // a release whose Name box should get the cursor
   let pendingPreorderDate = null;
   let editingSlug = null;
   let cachedProducts = [];
@@ -1584,10 +1585,24 @@
       released.textContent = formatAdminDate(date);
       top.appendChild(released);
 
+      // The name is a button: one click opens this release with its Name
+      // box ready to type in.
       if (type !== 'discontinued') {
-        const nameText = document.createElement('span');
+        const nameText = document.createElement('button');
+        nameText.type = 'button';
         nameText.className = 'generation-name-text' + ((info.name || '').trim() ? '' : ' generation-name-text--auto');
         nameText.textContent = (info.name || '').trim() || autoName;
+        nameText.title = 'Rename this release';
+        const pencil = document.createElement('span');
+        pencil.className = 'generation-rename-icon';
+        pencil.setAttribute('aria-hidden', 'true');
+        pencil.textContent = ' \u270e';
+        nameText.appendChild(pencil);
+        nameText.addEventListener('click', () => {
+          expandedGenerations.add(date);
+          focusNameFor = date;
+          renderRefreshHistory();
+        });
         top.appendChild(nameText);
       }
 
@@ -1718,13 +1733,17 @@
 
         if (type !== 'discontinued') {
           const nameLabel = document.createElement('label');
-          nameLabel.textContent = 'Name';
+          nameLabel.textContent = 'Name (blank uses the automatic one)';
           const nameInput = document.createElement('input');
           nameInput.type = 'text';
           nameInput.value = info.name || '';
           nameInput.placeholder = autoName;
           nameInput.addEventListener('input', () => { detailFor(date).name = nameInput.value; });
           nameLabel.appendChild(nameInput);
+          if (focusNameFor === date) {
+            focusNameFor = null;
+            setTimeout(() => { nameInput.focus(); nameInput.select(); }, 0);
+          }
           fields.appendChild(nameLabel);
 
           const annLabel = document.createElement('label');

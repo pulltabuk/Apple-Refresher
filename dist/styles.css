@@ -2314,3 +2314,8 @@ details.fact-helper[open] > summary { margin-bottom: 8px; }
 .richtext-editor a::after { content: '\2197'; font-size: 0.8em; margin-left: 1px; text-decoration: none; display: inline-block; }
 .admin-form .fact-meta-row label.fact-asof { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; margin: 0; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
 .admin-form .fact-meta-row label.fact-asof input { width: auto; min-width: 0; margin: 0; padding: 4px 8px; font-size: 13px; }
+
+/* A release's name is clickable to rename it. */
+button.generation-name-text { background: none; border: none; padding: 2px 4px; margin: -2px 0; font: inherit; color: inherit; cursor: pointer; border-radius: 6px; text-align: left; }
+button.generation-name-text:hover { background: var(--accent-bg); }
+.generation-rename-icon { color: var(--accent-dark); font-style: normal; font-size: 0.9em; }
