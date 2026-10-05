@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
+const { homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -403,6 +403,7 @@ async function main() {
   write('about/index.html', aboutPage({ content: aboutContent, ...opts }));
   write('contact/index.html', contactPage(opts));
   write('contact/thanks/index.html', contactThanksPage(opts));
+  write('photo-licence/index.html', photoLicencePage(opts));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }), galleryPhotos.map(galleryLastmod).filter(Boolean).sort().pop() || null);
   write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
   write('facts/index.html', factsPage({ products, pageContent: pageContent.facts || null, ...opts }));

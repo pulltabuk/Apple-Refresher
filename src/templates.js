@@ -851,6 +851,27 @@ function contactThanksPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   });
 }
 
+// How the gallery photos may be used. Every photo's structured data
+// points here as its licence, which Google Images asks for.
+function photoLicencePage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const mailto = `mailto:infoswiper@yahoo.com?subject=${encodeURIComponent('Can I use a photo from Apple Sunset?')}`;
+  const body = `<h1>Photo licence</h1>
+  <p class="page-intro">Every photo in the <a href="/gallery/">Apple Sunset gallery</a> was taken by Apple Sunset and is protected by copyright. All rights are reserved.</p>
+  <h2>Using a photo</h2>
+  <p>You are welcome to link to any photo page. To use a photo anywhere else, such as on a website, in an article or on social media, please ask first. Most requests are happily agreed, usually with a credit to Apple Sunset and a link back.</p>
+  <p><a class="intro-cta" href="${mailto}">Request to use a photo</a></p>
+  <p>Please include a link to the photo and say where and how you would like to use it. You can also get in touch through the <a href="/contact/">contact page</a>.</p>`;
+  return shell({
+    title: 'Photo licence — Apple Sunset',
+    description: 'How the photos in the Apple Sunset gallery may be used, and how to ask permission.',
+    siteUrl,
+    path: '/photo-licence/',
+    bodyHtml: `<div class="page-narrow">${body}</div>`,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
+}
+
 function shell({ title, description, siteUrl, path, bodyHtml, supabaseUrl, supabaseAnonKey, noindex, scripts, ogImage, ogType, extraJsonLd }) {
   const bodyClass = path === '/admin/' ? ' class="is-admin"' : '';
   const scriptTags = (scripts || DEFAULT_SCRIPTS).join('\n');
@@ -1142,7 +1163,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   </div>
   <div class="gallery-photo-images">${imagesHtml}</div>
   <div class="gallery-photo-copyright">
-    <p>These photos are my own property.</p>
+    <p>These photos are my own property. <a href="/photo-licence/">Photo licence</a></p>
     <a class="intro-cta" href="${mailtoHref}">Request to use photo</a>
   </div>
   <div class="gallery-photo-nav">
@@ -1179,7 +1200,8 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
             creator: { '@type': 'Organization', name: 'Apple Sunset' },
             creditText: 'Apple Sunset',
             copyrightNotice: 'Apple Sunset',
-            acquireLicensePage: `${siteUrl}/contact/`,
+            license: `${siteUrl}/photo-licence/`,
+            acquireLicensePage: `${siteUrl}/photo-licence/`,
           })),
         },
         {
@@ -2928,6 +2950,7 @@ module.exports = {
   galleryPage,
   galleryPhotoPage,
   galleryPhotoImages,
+  photoLicencePage,
   factRelatedLink,
   galleryPhotoCardHtml,
   eventsPage,
