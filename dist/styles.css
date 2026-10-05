@@ -2435,3 +2435,5 @@ button.generation-name-text:hover { background: var(--accent-bg); }
 .overdue-more { margin: 0.75rem 0 0; font-size: 14px; font-weight: 600; }
 .overdue-more a { color: var(--accent); text-decoration: none; }
 .overdue-more a:hover { color: var(--accent-dark); }
+/* Name and day count only: keep each row to a single line */
+.overdue-row-days strong { display: inline; font-size: 20px; margin-right: 3px; }
