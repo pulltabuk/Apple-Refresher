@@ -195,19 +195,21 @@
               <button type="button" id="did-you-know-clear-all-btn" class="richtext-clear-all">Clear all formatting</button>
             </div>
             <div id="did_you_know_editor" class="richtext-editor richtext-editor--short" contenteditable="true" data-placeholder="One short, surprising fact about this product."></div>
-            <p class="admin-hint" id="did-you-know-count"></p>
-            <div class="fact-helper">
-              <button type="button" id="fact-suggest-btn" class="admin-btn admin-btn--small admin-btn--ghost">Suggest 3 facts</button>
+            <div class="fact-meta-row">
+              <p class="admin-hint" id="did-you-know-count"></p>
+              <label class="fact-asof" title="Shown under the fact as &ldquo;As of&rdquo; month and year. Set to today whenever the fact changes.">As of <input type="date" id="did_you_know_date" aria-label="As of date for this fact"></label>
+            </div>
+            <p class="admin-hint" id="did-you-know-date-note" hidden>The &ldquo;As of&rdquo; date isn&rsquo;t switched on yet, so it won&rsquo;t be saved. Run <code>supabase-schema-update-28.sql</code> in the Supabase SQL editor, then reload this page.</p>
+            <details class="fact-helper">
+              <summary>Help me write one</summary>
+              <button type="button" id="fact-suggest-btn" class="admin-btn admin-btn--small admin-btn--ghost">Suggest 3 from its dates</button>
               <div id="fact-suggestions" class="fact-suggestions"></div>
               <div class="fact-research">
-                <input type="text" id="fact-seed" placeholder="An idea for a fact, e.g. its battery or the name" autocomplete="off" aria-label="Idea for a fact">
+                <input type="text" id="fact-seed" placeholder="Or an idea for Claude, e.g. its battery or the name" autocomplete="off" aria-label="Idea for a fact">
                 <button type="button" id="fact-research-btn" class="admin-btn admin-btn--small">Research with Claude</button>
               </div>
-              <p class="admin-hint" id="fact-helper-note">Suggest 3 facts works them out from this product&rsquo;s dates and price. Research with Claude finds 3 checked facts from the web (free in the Claude app); paste the one you like into the box above.</p>
-            </div>
-            <label class="admin-subfield-label" for="did_you_know_date">Fact date <span class="admin-optional">Shown as “As of” month and year. Set to today when you change the fact.</span></label>
-            <input type="date" id="did_you_know_date">
-            <p class="admin-hint" id="did-you-know-date-note" hidden>Fact dates aren’t switched on yet, so this date won’t be saved. Run <code>supabase-schema-update-28.sql</code> in the Supabase SQL editor, then reload this page.</p>
+              <p class="admin-hint" id="fact-helper-note">Claude finds 3 checked facts (free in the Claude app); paste the one you like into the box above.</p>
+            </details>
           </div>
 
           <div class="admin-subfield">
@@ -222,13 +224,14 @@
               <button type="button" id="richtext-clear-all-btn" class="richtext-clear-all">Clear all formatting</button>
             </div>
             <div id="rumor_note_editor" class="richtext-editor" contenteditable="true"></div>
-            <div class="fact-helper">
+            <details class="fact-helper">
+              <summary>Help me write them</summary>
               <div class="fact-research">
                 <input type="text" id="notes-seed" placeholder="Optional focus, e.g. what changed from the last model" autocomplete="off" aria-label="What the notes should focus on">
                 <button type="button" id="notes-research-btn" class="admin-btn admin-btn--small">Research notes with Claude</button>
               </div>
               <p class="admin-hint" id="notes-helper-note">Claude drafts short notes with every point checked against two sources, and lists them so you can check too. Paste into the box above, edit, then save.</p>
-            </div>
+            </details>
           </div>
         </section>
 
@@ -612,6 +615,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/facts-kit.js?v=f06cda4acb" defer></script>
-<script src="/admin.js?v=fa1e5f42a7" defer></script>
+<script src="/admin.js?v=fc632c7e2a" defer></script>
 </body>
 </html>
