@@ -33,6 +33,23 @@ function assetUrl(file) {
   return `/${file}?v=${assetHashes[file]}`;
 }
 
+// Apple's own spelling for product and category names, whatever was
+// typed: "Airpods Pro" -> "AirPods Pro", "Mac Mini" -> "Mac mini". Only
+// the casing changes, so slugs and links stay the same. Must match
+// appleNameJS() in public/app.js.
+const APPLE_WORDS = [
+  [/\bairpods\b/gi, 'AirPods'], [/\bairtag(s?)\b/gi, 'AirTag$1'], [/\bimac\b/gi, 'iMac'], [/\bmacbook\b/gi, 'MacBook'],
+  [/\bhomepod\b/gi, 'HomePod'], [/\biphone\b/gi, 'iPhone'], [/\bipad\b/gi, 'iPad'], [/\bipod\b/gi, 'iPod'],
+  [/\bmac\b/gi, 'Mac'], [/\bapple watch\b/gi, 'Apple Watch'], [/\bapple\b/gi, 'Apple'], [/\bpro\b/gi, 'Pro'], [/\bmax\b/gi, 'Max'], [/\bultra\b/gi, 'Ultra'],
+  [/\bair\b/gi, 'Air'], [/\bse\b/gi, 'SE'], [/\btv\b/gi, 'TV'], [/\bhi-?fi\b/gi, (m) => (m.indexOf('-') !== -1 ? 'Hi-Fi' : 'HiFi')],
+  // "mini" is lower case after Mac, iPad, HomePod and iPhone (iPhone 13 mini).
+  [/\b(Mac|iPad|HomePod|iPhone(?: \d+)?) mini\b/gi, (m, what) => what + ' mini'],
+];
+function appleName(name) {
+  if (name == null) return name;
+  return APPLE_WORDS.reduce((s, [re, to]) => s.replace(re, to), String(name));
+}
+
 function setCustomCategoryIcons(icons) {
   CUSTOM_CATEGORY_ICONS = icons || {};
 }
@@ -3107,6 +3124,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
 }
 
 module.exports = {
+  appleName,
   sanitizeRichText,
   categoryTimelinePoints,
   launchDate,
