@@ -638,7 +638,7 @@ function notFoundPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <p class="page-intro">The product may have been renamed or merged into another line. These will get you back on track.</p>
   <p class="not-found-links">
     <a class="intro-cta" href="/products/">All products</a>
-    <a class="intro-cta intro-cta--ghost" href="/categories/">Browse by family</a>
+    <a class="intro-cta intro-cta--ghost" href="/categories/">Browse by category</a>
     <a class="intro-cta intro-cta--ghost" href="/">Home</a>
   </p>
 </div>`;
@@ -759,6 +759,7 @@ function plural(count, one, many) {
 // to guess.
 function badgeExplanation(statusInfo) {
   if (!statusInfo) return '';
+  if (!statusInfo.hasCycle) return 'Only one release recorded so far';
   const cycle = `${plural(statusInfo.avgCycleDays, 'day', 'days')}`;
   if (statusInfo.status === 'overdue') return `Overdue: this one is usually updated every ${cycle}`;
   if (statusInfo.status === 'aging') return `Getting on: this one is usually updated every ${cycle}`;
@@ -1307,7 +1308,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
   const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
   // Once the predicted date has gone by, saying "expected" is wrong: it
   // was expected, and the product is overdue.
-  const expectedDate = statusInfo && !product.discontinued
+  const expectedDate = statusInfo && statusInfo.hasCycle && !product.discontinued
     ? new Date(new Date(statusInfo.lastRefresh).getTime() + statusInfo.avgCycleDays * 86400000)
     : null;
   const expectedPassed = expectedDate ? expectedDate.getTime() < Date.now() : false;
@@ -1315,7 +1316,15 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
   const extras = upcomingExtras(product);
   // How far through its usual refresh cycle the product is, as a bar.
   // Keep in step with featuredCycleHtmlJS() in public/app.js.
-  const cycleHtml = statusInfo && daysInfo && daysInfo.days >= 0 && !product.discontinued
+  // One release: no cycle to show, so say that instead of drawing a bar.
+  const firstRelease = (product.refresh_history || []).slice().sort()[0];
+  const singleHtml = `<div class="card-featured-cycle card-featured-cycle--single">
+      <div class="card-featured-cycle-head"><span>Releases so far</span><strong>1</strong></div>
+      <p class="card-featured-cycle-note">The first and only release${firstRelease ? `, ${formatDate(firstRelease)}` : ''}. No refresh cycle to go on yet.</p>
+    </div>`;
+  const cycleHtml = statusInfo && daysInfo && daysInfo.days >= 0 && !product.discontinued && !statusInfo.hasCycle
+    ? singleHtml
+    : statusInfo && daysInfo && daysInfo.days >= 0 && !product.discontinued
     ? `<div class="card-featured-cycle card-featured-cycle--${statusInfo.status}">
       <div class="card-featured-cycle-head"><span>Average refresh cycle</span><strong>${statusInfo.avgCycleDays} days</strong></div>
       <div class="card-featured-cycle-bar"><span style="width:${Math.min(100, Math.round(statusInfo.ratio * 100))}%"></span></div>
@@ -1646,13 +1655,11 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   // them off the edge.
   const categoryLinksHtml = categoryLinks && categoryLinks.length
     ? `<div class="filter-bar homepage-category-links">
-  <a class="filter-btn active" href="/products/">All <span class="filter-btn-count">(${totalCount})</span></a>
   ${categoryLinks.map((c) => `<a class="filter-btn" href="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} <span class="filter-btn-count">(${c.count})</span></a>`).join('\n')}
 </div>
 <details class="homepage-category-select">
-  <summary>Browse by family</summary>
-  <nav class="homepage-category-menu" aria-label="Browse by family">
-    <a href="/products/">All products <span>${totalCount}</span></a>
+  <summary>Browse by category</summary>
+  <nav class="homepage-category-menu" aria-label="Browse by category">
     ${categoryLinks.map((c) => `<a href="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} <span>${c.count}</span></a>`).join('\n')}
   </nav>
 </details>`
@@ -1738,11 +1745,11 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length, true, 'All')}
   </div>
   <div class="filter-group">
-    <span class="filter-group-label">Family</span>
+    <span class="filter-group-label">Category</span>
     ${filterBar('category', categories, null, categoryCounts, items.length, false)}
     <div class="family-select-wrap">
-      <select class="family-select" data-family-select aria-label="Filter by family">
-        <option value="">All families</option>
+      <select class="family-select" data-family-select aria-label="Filter by category">
+        <option value="">All categories</option>
         ${categories.map((c, i) => `<option value="${escapeHtml(c)}">${escapeHtml(c)} (${categoryCounts[i]})</option>`).join('\n        ')}
       </select>
     </div>
@@ -1948,7 +1955,7 @@ function relatedProductsHtml(product, productsBySlug, statusBySlug) {
     </a>`;
   }).join('\n');
   return `<section class="related-section">
-    <h2>More in ${escapeHtml(product.category || 'this family')}</h2>
+    <h2>More in ${escapeHtml(product.category || 'this category')}</h2>
     <div class="related-grid">${cards}</div>
     <p class="see-all"><a class="intro-cta" href="/categories/${slugify(product.category || 'other')}/">All ${escapeHtml(product.category || 'products')} &rarr;</a></p>
   </section>`;
@@ -1967,6 +1974,9 @@ function heroCycle(product, status, sortedDates, allProducts) {
   // family's real gaps, labelled so it is clear which is being shown.
   // Never the built-in category default, which is a guess.
   if (sortedDates.length > 1 && status) return { days: status.avgCycleDays, family: null };
+  // One release: there is no cycle to measure against, so no bar and no
+  // borrowed family figure either.
+  if (sortedDates.length <= 1) return null;
   const fam = familyCadence((allProducts || []).filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })));
   return fam ? { days: fam.avg, family: product.category || null } : null;
 }
@@ -2154,7 +2164,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
         <div class="key-facts-row" data-facts="${(keyFacts.match(/key-fact-label/g) || []).length}">${keyFacts}</div>
       </div>
 
-      ${product.discontinued ? '' : categoryStatsSentence(product.category || 'this family',
+      ${product.discontinued ? '' : categoryStatsSentence(product.category || 'this category',
           allProducts.filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })))}
 
       ${product.did_you_know ? `<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">${sanitizeRichText(product.did_you_know, siteUrl)}</div>${product.did_you_know_date ? `<p class="did-you-know-date">As of ${formatDate(String(product.did_you_know_date).slice(0, 7))}</p>` : ''}</aside>` : ''}

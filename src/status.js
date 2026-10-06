@@ -41,7 +41,11 @@ function computeStatus(product, today = new Date()) {
   else if (ratio < 1.0) status = 'aging';
   else status = 'overdue';
 
-  return { daysSince, avgCycleDays, ratio, status, lastRefresh };
+  // With a single release there is no real cycle (avgCycleDays above is
+  // only a category guess), so nothing should state one or predict a date.
+  const hasCycle = history.length >= 2;
+
+  return { daysSince, avgCycleDays, ratio, status, lastRefresh, hasCycle };
 }
 
 module.exports = { computeStatus, CATEGORY_DEFAULT_CYCLE_DAYS };

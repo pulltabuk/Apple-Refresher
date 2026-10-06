@@ -2453,3 +2453,20 @@ button.generation-name-text:hover { background: var(--accent-bg); }
 .homepage-category-menu a + a { border-top: 1px solid var(--border); }
 .homepage-category-menu a span { color: var(--text-secondary); font-weight: 500; }
 .homepage-category-menu a:active { background: var(--accent-bg); }
+
+/* Homepage: less space between "Full gallery" and the footer */
+main:has(> .intro-hero) { padding-bottom: 1.75rem; }
+#gallery-strip + .see-all { margin-top: 1.5rem; margin-bottom: 0; }
+
+/* Stacked hero (tablets and phones): the description first, then the
+   countdown or event, then Browse all products. */
+@media (max-width: 900px) {
+  .intro-hero-text { display: flex; flex-direction: column; }
+  .intro-hero-text > * { order: 2; }
+  .intro-hero-text > .intro-heading { order: 0; }
+  .intro-hero-text > .countdown { order: 3; }
+  .intro-hero-text > .intro-cta { order: 4; align-self: flex-start; }
+}
+
+/* One-release products: no refresh cycle, just a plain note */
+.card-featured-cycle--single .card-featured-cycle-note { font-weight: 500; color: var(--text-secondary); }
