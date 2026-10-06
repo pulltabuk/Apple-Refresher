@@ -2567,3 +2567,18 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-cards .site-stat-label { font-size: 12px; line-height: 1.25; }
   .intro-hero-cards .site-stat-sub { font-size: 11px; }
 }
+
+/* At a glance tiles: bigger numbers, every tile's text sitting along the
+   bottom, and the tiles filling the box below its heading. */
+@media (min-width: 701px) {
+  .intro-hero-cards .site-stats { justify-content: flex-start; }
+  .intro-hero-cards .site-stats-head { margin-bottom: 14px; }
+  .intro-hero-cards .site-stats-row { flex: 1; grid-auto-rows: 1fr; }
+  .intro-hero-cards .site-stat { aspect-ratio: auto; flex-wrap: nowrap; justify-content: flex-end; gap: 4px; }
+  .intro-hero-cards .site-stat-num { font-size: 52px; line-height: 1; }
+  .intro-hero-cards .site-stat-num small { font-size: 20px; }
+  .intro-hero-cards .site-stat-label { font-size: 13px; }
+  .intro-hero-cards .site-stat-sub { font-size: 12px; margin-top: 2px; flex-basis: auto; }
+}
+/* Products: the order heading in burnt orange */
+.sort-heading { color: var(--accent-dark); }
