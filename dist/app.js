@@ -515,7 +515,7 @@
       searchProductsPromise = window.SUPABASE_URL && window.SUPABASE_ANON_KEY
         ? Promise.all([
             fetch(window.SUPABASE_URL + '/rest/v1/products?select=id,name,slug,category,icon_url,discontinued', { headers })
-              .then(function (res) { return res.json(); }).catch(function () { return []; }),
+              .then(function (res) { return res.json(); }).then(appleNamesJS).catch(function () { return []; }),
             fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=id,heading,event_date,announced_products', { headers })
               .then(function (res) { return res.json(); }).catch(function () { return []; }),
           ]).then(function (both) {
@@ -1018,10 +1018,32 @@
     return '<p class="page-stats">' + text + '</p>';
   }
 
+  // Must match appleName() in src/templates.js.
+  var APPLE_WORDS_JS = [
+    [/\bairpods\b/gi, 'AirPods'], [/\bairtag(s?)\b/gi, 'AirTag$1'], [/\bimac\b/gi, 'iMac'], [/\bmacbook\b/gi, 'MacBook'],
+    [/\bhomepod\b/gi, 'HomePod'], [/\biphone\b/gi, 'iPhone'], [/\bipad\b/gi, 'iPad'], [/\bipod\b/gi, 'iPod'],
+    [/\bmac\b/gi, 'Mac'], [/\bapple watch\b/gi, 'Apple Watch'], [/\bapple\b/gi, 'Apple'], [/\bpro\b/gi, 'Pro'], [/\bmax\b/gi, 'Max'], [/\bultra\b/gi, 'Ultra'],
+    [/\bair\b/gi, 'Air'], [/\bse\b/gi, 'SE'], [/\btv\b/gi, 'TV'], [/\bhi-?fi\b/gi, function (m) { return m.indexOf('-') !== -1 ? 'Hi-Fi' : 'HiFi'; }],
+    [/\b(Mac|iPad|HomePod|iPhone(?: \d+)?) mini\b/gi, function (m, what) { return what + ' mini'; }],
+  ];
+  function appleNameJS(name) {
+    if (name == null) return name;
+    return APPLE_WORDS_JS.reduce(function (s, rule) { return s.replace(rule[0], rule[1]); }, String(name));
+  }
+  function appleNamesJS(rows) {
+    return Array.isArray(rows) ? rows.map(function (p) {
+      var copy = {};
+      for (var k in p) copy[k] = p[k];
+      copy.name = appleNameJS(p.name);
+      copy.category = appleNameJS(p.category);
+      return copy;
+    }) : rows;
+  }
+
   function fetchAllProductsJS() {
     return fetch(window.SUPABASE_URL + '/rest/v1/products?select=*', {
       headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
-    }).then(function (res) { return res.json(); });
+    }).then(function (res) { return res.json(); }).then(appleNamesJS);
   }
 
   // --- Waiting button: works whether rendered at build time or injected live.
