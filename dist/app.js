@@ -1845,8 +1845,8 @@
       '<div class="site-stats-head"><h2 class="site-stats-title">Apple Sunset at a glance</h2><span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span></div>' +
       '<div class="site-stats-row">' +
       stat('/products/', s.total, 'products tracked') +
-      stat('/products/', s.onSale, 'on sale now') +
-      stat('/discontinued/', s.discontinued, 'discontinued') +
+      stat('/products/', s.onSale, 'products on sale now') +
+      stat('/discontinued/', s.discontinued, 'products discontinued') +
       (s.latest ? stat('/products/' + escapeHtmlJS(s.latest.slug) + '/', s.latestDays === 0 ? 'Today' : s.latestDays + '<small> ' + (s.latestDays === 1 ? 'day' : 'days') + '</small>', 'since the latest release', '<span class="site-stat-sub">' + escapeHtmlJS(s.latest.name) + '</span>') : '') +
       '</div></div>';
   }
