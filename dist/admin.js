@@ -489,8 +489,53 @@
     ['x-text', 'x-link', 'x-card-label'].forEach((id) => $x(id).addEventListener('input', refresh));
     ['x-tags', 'x-link-on', 'x-card-on'].forEach((id) => $x(id).addEventListener('change', refresh));
 
+    // The writing fields, always editable when the page is in view (a
+    // phone coming back from X can leave them looking stuck).
+    const xFields = ['x-text', 'x-link', 'x-card-label', 'x-topic', 'x-tags', 'x-link-on', 'x-card-on'];
+    function unlockFields() {
+      xFields.forEach((id) => { const el = $x(id); if (el) { el.disabled = false; el.readOnly = false; } });
+    }
+    window.addEventListener('pageshow', unlockFields);
+    window.addEventListener('focus', unlockFields);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) unlockFields(); });
+
+    function clearPost() {
+      $x('x-text').value = '';
+      $x('x-link').value = '';
+      $x('x-link-on').checked = false;
+      $x('x-card-label').value = 'Did you know?';
+      $x('x-topic').value = '';
+      $x('x-ideas').innerHTML = '';
+      $x('x-after').hidden = true;
+      cardKey = null;
+      cardFor = '';
+      unlockFields();
+      refresh();
+    }
+
     $x('x-post-btn').addEventListener('click', () => {
       window.open('https://x.com/intent/post?text=' + encodeURIComponent(fullText()), '_blank', 'noopener');
+      $x('x-after').hidden = false;
+    });
+    $x('x-clear-btn').addEventListener('click', () => {
+      if ($x('x-text').value.trim() && !window.confirm('Clear this post and start again?')) return;
+      clearPost();
+      $x('x-text').focus();
+    });
+    $x('x-another-btn').addEventListener('click', () => {
+      clearPost();
+      $x('x-ideas-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    $x('x-edit-btn').addEventListener('click', () => {
+      $x('x-after').hidden = true;
+      unlockFields();
+      $x('x-text').focus();
+    });
+    $x('x-back-btn').addEventListener('click', () => {
+      clearPost();
+      const home = document.querySelector('.admin-tab-btn[data-tab="products"]');
+      if (home) home.click();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
     $x('x-copy-btn').addEventListener('click', () => {
       const text = fullText();

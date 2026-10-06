@@ -2723,8 +2723,17 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <button type="button" id="x-post-btn" class="admin-btn admin-btn--primary">Post to X</button>
       <button type="button" id="x-copy-btn" class="admin-btn">Copy text</button>
       <button type="button" id="x-card-btn" class="admin-btn" hidden>Download card</button>
+      <button type="button" id="x-clear-btn" class="admin-btn">Clear</button>
     </div>
-    <p class="admin-hint" id="x-note">X can’t attach a picture from a link. To post with the card, download it first, then add it in the X window that opens.</p>
+    <div id="x-after" class="x-after" hidden>
+      <p><strong>Your post is open in X.</strong> Once it&rsquo;s posted, what next?</p>
+      <div class="x-actions">
+        <button type="button" id="x-another-btn" class="admin-btn admin-btn--primary">Write another</button>
+        <button type="button" id="x-edit-btn" class="admin-btn">Keep editing this one</button>
+        <button type="button" id="x-back-btn" class="admin-btn">Back to admin</button>
+      </div>
+    </div>
+    <p class="admin-hint" id="x-note">With a card, it shows under your post on X as the link&rsquo;s preview picture.</p>
   </div>
 
   <div id="tab-facts" class="admin-tab-panel" style="display:none;">
