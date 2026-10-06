@@ -1676,7 +1676,7 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   <ol class="overdue-list" id="overdue-list">
     ${overdueItems.map((i) => overdueRowHtml(i.product, i.status)).join('\n')}
   </ol>
-  <p class="overdue-more"><a href="/products/?sort=days-desc">See every product, longest wait first &rarr;</a></p>
+  <p class="see-all overdue-more"><a class="intro-cta" href="/products/?sort=days-desc">See every product, longest wait first &rarr;</a></p>
 </section>`
     : '';
 

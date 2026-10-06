@@ -2431,9 +2431,6 @@ button.generation-name-text:hover { background: var(--accent-bg); }
 /* No divider line between the hero and the "waiting longest" list,
    just a short gap */
 .intro-hero + .homepage-section { margin-top: 1.5rem; }
-.overdue-more { margin: 0.75rem 0 0; font-size: 14px; font-weight: 600; }
-.overdue-more a { color: var(--accent); text-decoration: none; }
-.overdue-more a:hover { color: var(--accent-dark); }
 /* Name and day count only: keep each row to a single line */
 .overdue-row-days strong { display: inline; font-size: 20px; margin-right: 3px; }
 
@@ -2510,3 +2507,10 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .filter-panel .filter-bar[data-filter-key="category"] .filter-btn { justify-content: space-between; width: 100%; box-sizing: border-box; white-space: nowrap; }
 /* Products: search and sort sit under the filter pills, just above the tiles */
 .controls-row--below-filters { margin: 0 0 1.25rem; }
+
+/* Homepage: under the waiting list, one centred pill to every product.
+   Computers drop the row of category pills (phones keep the picker). */
+.see-all.overdue-more { margin: 1.25rem 0 0; }
+@media (min-width: 701px) {
+  .homepage-category-links { display: none !important; }
+}
