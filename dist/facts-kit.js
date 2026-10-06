@@ -504,7 +504,7 @@
   // product, then each product's own "Did you know?". The build and the
   // page's live refresh both use this, so they always show the same.
   function escapeHtml(str) {
-    return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   function monthYear(iso) {
     const parts = String(iso).slice(0, 7).split('-').map(Number);

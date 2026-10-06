@@ -88,12 +88,17 @@ function sanitizeRichText(html, siteUrl) {
   return out;
 }
 
+// Quotes too: the result often goes inside an attribute (alt, title,
+// content, href), where a name like MacBook Pro 14" would otherwise end
+// it early. Must match escapeHtmlJS() in public/app.js.
 function escapeHtml(str) {
   if (str == null) return '';
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function galleryPhotoSlug(photo) {
@@ -938,7 +943,7 @@ ${extraJsonLd ? `<script type="application/ld+json">${JSON.stringify(extraJsonLd
 <header class="site-header-bg">
   <div class="site-header">
     <a class="site-title" href="/">
-      <img src="/logo.png" alt="Apple Sunset" class="site-logo-img">
+      <img src="/logo.png" alt="Apple Sunset" class="site-logo-img" width="300" height="300">
     </a>
     <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
       <span class="nav-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
@@ -1190,7 +1195,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   </div>
 </article>`;
   return shell({
-    title: `${escapeHtml(displayName)} — Apple Sunset Gallery`,
+    title: `${displayName} — Apple Sunset Gallery`,
     description,
     siteUrl,
     path: `/gallery/${galleryPhotoSlug(photo)}/`,
@@ -1449,7 +1454,7 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
 </article>`;
   return shell({
     title: `${event.heading} — Apple Sunset`,
-    description: `${event.heading}${dateText ? `, ${dateText}` : ''}. ${sortedProducts.length ? 'Announced: ' + sortedProducts.join(', ') + '.' : ''}`,
+    description: `${event.heading}${dateText ? `, ${dateText}` : ''}. ${sortedProducts.length ? 'Announced: ' + sortedProducts.join(', ') + '.' : 'The date, time and what Apple announced, tracked by Apple Sunset.'}`,
     siteUrl,
     path: `/events/${eventSlug(event)}/`,
     bodyHtml: body,
@@ -1520,7 +1525,7 @@ function factPage({ fact, cardUrl, related, siteUrl, supabaseUrl, supabaseAnonKe
   <a href="/facts/" class="fact-more-link">More facts &rarr;</a>
 </article>`;
   return shell({
-    title: 'Did you know? — Apple Sunset',
+    title: `Did you know? ${fact.text.length > 44 ? fact.text.slice(0, 42).trim() + '…' : fact.text} — Apple Sunset`,
     description: fact.text,
     siteUrl,
     path,
@@ -1904,7 +1909,7 @@ ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
 ${leagueTableHtml(items, category)}
 ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   return shell({
-    title: `${category}: release history and time since the last update | Apple Sunset`,
+    title: `${category} release history and update tracker | Apple Sunset`,
     description: `How long since each ${category} product was last updated, with release dates, typical refresh cycles and every discontinued model.`,
     siteUrl,
     path: `/categories/${slug}/`,
@@ -2217,13 +2222,15 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     extraJsonLd: {
       '@context': 'https://schema.org',
       '@graph': [
+        // A WebPage about the product, not a Product item: Google treats
+        // Product as something for sale and flags it in Search Console
+        // without a price offer or reviews, which a tracker doesn't have.
         {
-          '@type': 'Product',
-          name: product.name,
-          category: product.category,
-          releaseDate: launch || undefined,
+          '@type': 'WebPage',
+          name: `${product.name} release history`,
           url: `${siteUrl}/products/${product.slug}/`,
-          brand: { '@type': 'Brand', name: 'Apple' },
+          about: { '@type': 'Thing', name: product.name, description: `${product.name} by Apple, ${product.category} line` },
+          dateModified: [product.discontinued && product.discontinued_date, ...(product.refresh_history || [])].filter((d) => d && d <= new Date().toISOString().slice(0, 10)).sort().pop() || undefined,
         },
         {
           '@type': 'BreadcrumbList',
@@ -2254,7 +2261,7 @@ function aboutPage({ content, siteUrl, supabaseUrl, supabaseAnonKey }) {
 
   return shell({
     title: 'About — Apple Sunset',
-    description: 'What Apple Sunset is and why it exists.',
+    description: 'What Apple Sunset is: an independent tracker of how long it has been since every Apple product was last refreshed or discontinued.',
     siteUrl,
     path: '/about/',
     bodyHtml: body,
