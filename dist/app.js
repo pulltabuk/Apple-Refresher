@@ -28,9 +28,11 @@
     return { daysSince: daysSince, avgCycleDays: avgCycleDays, ratio: ratio, status: status, lastRefresh: lastRefresh, hasCycle: history.length >= 2 };
   }
 
+  // Quotes too: the result often goes inside an attribute (alt, title,
+  // href), where a name like MacBook Pro 14" would otherwise end it early.
   function escapeHtmlJS(str) {
     if (str == null) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function readableSlugFallbackJS(value) {
@@ -1921,6 +1923,11 @@
       .then(function (res) { return res.json(); })
       .then(function (photos) {
         if (!Array.isArray(photos) || !photos.length) return;
+        // Keep the built random picks when they all still exist, so the
+        // strip doesn't reshuffle a moment after the page appears.
+        var live = photos.map(function (ph) { return '/gallery/' + galleryPhotoSlugJS(ph) + '/'; });
+        var built = Array.prototype.map.call(galleryStripSection.querySelectorAll('a.gallery-strip-item'), function (a) { return a.getAttribute('href'); });
+        if (built.length && built.length === Math.min(10, photos.length) && built.every(function (h) { return live.indexOf(h) !== -1; })) return;
         var picks = pickRandomJS(photos, 10);
         galleryStripSection.innerHTML = picks.map(galleryStripItemHtmlJS).join('');
       })
@@ -2000,8 +2007,9 @@
         var categories = [];
         items.forEach(function (i) { if (categories.indexOf(i.product.category) === -1) categories.push(i.product.category); });
         categories.sort(function (a, b) { return a.localeCompare(b); });
-        categoryBar.innerHTML = '<button class="filter-btn active" data-filter-value="all">All Products <span class="filter-btn-count">(' + items.length + ')</span></button>' +
-          categories.map(function (c) {
+        // Must match filterBar('category', ...) in allProductsPage(): no
+        // "All" button, every category starts unselected.
+        categoryBar.innerHTML = categories.map(function (c) {
             var count = items.filter(function (i) { return i.product.category === c; }).length;
             return '<button class="filter-btn" data-filter-value="' + escapeHtmlJS(c) + '">' + escapeHtmlJS(c) + ' <span class="filter-btn-count">(' + count + ')</span></button>';
           }).join('');
@@ -2022,8 +2030,19 @@
             return '<button class="filter-btn" data-filter-value="' + d + '">' + d + ' <span class="filter-btn-count">(' + count + ')</span></button>';
           }).join('');
       }
+      // Keep any filter the visitor already picked, if it still exists.
+      var keptFilters = activeFilters;
       activeFilters = {};
       wireFilterBars();
+      Object.keys(keptFilters).forEach(function (key) {
+        var value = keptFilters[key];
+        var bar = document.querySelector('.filter-bar[data-filter-key="' + key + '"]');
+        if (!bar || !value || value === 'all') return;
+        var hit = Array.prototype.filter.call(bar.querySelectorAll('.filter-btn'), function (b) { return b.getAttribute('data-filter-value') === value; })[0];
+        if (!hit) return;
+        activeFilters[key] = value;
+        bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.toggle('active', b === hit); });
+      });
       applySort();
       applyFilters();
     }).catch(function () {});
@@ -2279,7 +2298,14 @@
         // The re-render replaces the button, so its click handler must be
         // attached again or it shows but does nothing.
         wireTweetButtons(productPageEl.querySelectorAll('.tweet-btn'));
-        document.title = product.name + ' \u2014 Apple Sunset';
+        // Must match the title productPage() builds: search engines run
+        // this script too, so a different title here would replace it.
+        var titleDays = status ? badgeDaysInfoJS(product, status) : null;
+        document.title = product.discontinued
+          ? product.name + ': discontinued' + (product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '') + ' | Apple Sunset'
+          : status
+          ? product.name + ': ' + pluralJS(titleDays ? titleDays.days : status.daysSince, 'day', 'days') + ' since the last update | Apple Sunset'
+          : product.name + ' | Apple Sunset';
       })
       .catch(function () {});
   }
