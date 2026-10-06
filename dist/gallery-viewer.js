@@ -510,6 +510,13 @@
 
   // --- Inline carousel on the photo page ---
 
+  // A small copy for a thumbnail: the image CDN at 240px when the photo
+  // comes through it, otherwise the photo itself.
+  function thumbSrc(img) {
+    var src = img.getAttribute('src') || '';
+    return /\/\.netlify\/images\?/.test(src) ? src.replace(/([?&])w=\d+/, '$1w=240') : src;
+  }
+
   function init(root) {
     var container = (root || document).querySelector('.gallery-photo-images');
     if (!container || container.dataset.viewer === 'on') return;
@@ -551,25 +558,56 @@
     var prevBtn = null;
     var nextBtn = null;
     var bar = null;
+    var thumbs = null;
+    var slider = null;
     var counter = null;
     if (imgs.length > 1) {
       prevBtn = arrowButton('prev', 'gp-arrow');
       nextBtn = arrowButton('next', 'gp-arrow');
       viewport.appendChild(prevBtn);
       viewport.appendChild(nextBtn);
+      // A row of thumbnails under the photo; the one showing is outlined.
+      thumbs = document.createElement('div');
+      thumbs.className = 'gp-thumbs';
+      imgs.forEach(function (img, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'gp-thumb';
+        b.setAttribute('aria-label', 'Show photo ' + (i + 1) + ' of ' + imgs.length);
+        var t = document.createElement('img');
+        t.src = thumbSrc(img);
+        t.alt = '';
+        t.loading = 'lazy';
+        t.decoding = 'async';
+        t.draggable = false;
+        var full = img.getAttribute('data-full');
+        if (full) t.onerror = function () { t.onerror = null; t.src = full; };
+        b.appendChild(t);
+        b.addEventListener('click', function () { if (slider) slider.goTo(i); });
+        thumbs.appendChild(b);
+      });
       var footer = document.createElement('div');
       footer.className = 'gp-footer';
-      bar = progress(imgs.length);
       counter = document.createElement('span');
       counter.className = 'gp-counter';
-      footer.appendChild(bar.el);
+      footer.appendChild(thumbs);
       footer.appendChild(counter);
       container.appendChild(footer);
     }
 
-    var slider = new Slider(viewport, track, imgs.length, {
+    slider = new Slider(viewport, track, imgs.length, {
       onChange: function (index, animate) {
         if (bar) bar.set(index, animate);
+        if (thumbs) {
+          Array.prototype.forEach.call(thumbs.children, function (b, i) {
+            b.classList.toggle('is-active', i === index);
+            if (i === index) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+          });
+          var on = thumbs.children[index];
+          if (on && thumbs.scrollWidth > thumbs.clientWidth) {
+            thumbs.scrollTo({ left: on.offsetLeft - (thumbs.clientWidth - on.offsetWidth) / 2, behavior: animate && !reduceMotion ? 'smooth' : 'auto' });
+          }
+        }
         if (counter) counter.textContent = (index + 1) + ' / ' + imgs.length;
         if (prevBtn) prevBtn.disabled = index === 0;
         if (nextBtn) nextBtn.disabled = index === imgs.length - 1;
