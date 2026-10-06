@@ -52,22 +52,6 @@
 <h1>All products</h1>
 <p class="page-intro">Everything on the site, current and discontinued, in one searchable place.</p>
 
-<div class="controls-row">
-  <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
-  <div class="sort-select-wrap">
-    <select id="sort-select" class="sort-select" aria-label="Sort products">
-      <option value="" selected disabled>Sort by...</option>
-      <option value="wait-desc">Most overdue first</option>
-<option value="days-desc">Days since refresh: high to low</option>
-<option value="days-asc">Days since refresh: low to high</option>
-<option value="launch-desc">Launched: newest first</option>
-<option value="launch-asc">Launched: oldest first</option>
-<option value="name-asc">Name: A to Z</option>
-<option value="name-desc">Name: Z to A</option>
-    </select>
-    <button type="button" id="sort-reset-btn" class="sort-reset-btn" aria-label="Reset sort order" title="Reset to default order" style="display:none;">&times;</button>
-  </div>
-</div>
 <div class="filter-panel">
   <div class="filter-group">
     <span class="filter-group-label">Show</span>
@@ -99,6 +83,22 @@
         <option value="Other">Other (2)</option>
       </select>
     </div>
+  </div>
+</div>
+<div class="controls-row controls-row--below-filters">
+  <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
+  <div class="sort-select-wrap">
+    <select id="sort-select" class="sort-select" aria-label="Sort products">
+      <option value="" selected disabled>Sort by...</option>
+      <option value="wait-desc">Most overdue first</option>
+<option value="days-desc">Days since refresh: high to low</option>
+<option value="days-asc">Days since refresh: low to high</option>
+<option value="launch-desc">Launched: newest first</option>
+<option value="launch-asc">Launched: oldest first</option>
+<option value="name-asc">Name: A to Z</option>
+<option value="name-desc">Name: Z to A</option>
+    </select>
+    <button type="button" id="sort-reset-btn" class="sort-reset-btn" aria-label="Reset sort order" title="Reset to default order" style="display:none;">&times;</button>
   </div>
 </div>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>

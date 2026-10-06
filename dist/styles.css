@@ -2505,5 +2505,8 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-cards .card--featured .card-name { font-size: 32px; line-height: 1.15; }
 }
 /* Category filter: pills lined up in even columns, name left, count right */
-.filter-panel .filter-bar[data-filter-key="category"] { display: grid; flex: 1; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; }
+@media (min-width: 701px) { .filter-panel .filter-bar[data-filter-key="category"] { display: grid; } }
+.filter-panel .filter-bar[data-filter-key="category"] { flex: 1; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; }
 .filter-panel .filter-bar[data-filter-key="category"] .filter-btn { justify-content: space-between; width: 100%; box-sizing: border-box; white-space: nowrap; }
+/* Products: search and sort sit under the filter pills, just above the tiles */
+.controls-row--below-filters { margin: 0 0 1.25rem; }

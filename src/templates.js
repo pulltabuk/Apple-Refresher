@@ -1735,10 +1735,6 @@ function allProductsPage({ items, pageContent, siteUrl, supabaseUrl, supabaseAno
 <h1>${pageHeading(pageContent, 'All products')}</h1>
 ${pageStandardLine(pageContent, `<p class="page-intro">Everything on the site, current and discontinued, in one searchable place.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
-<div class="controls-row">
-  <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
-  ${sortSelect(PRODUCT_SORT_OPTIONS)}
-</div>
 <div class="filter-panel">
   <div class="filter-group">
     <span class="filter-group-label">Show</span>
@@ -1754,6 +1750,10 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
       </select>
     </div>
   </div>
+</div>
+<div class="controls-row controls-row--below-filters">
+  <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
+  ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="all">
