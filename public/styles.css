@@ -2488,7 +2488,7 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-text > .countdown .countdown-label { font-size: 12px; }
   .intro-hero-text > .countdown .countdown-name { font-size: 22px; }
   .intro-hero-text > .countdown .countdown-clock { gap: 18px; }
-  .intro-hero-text > .countdown .countdown-value { font-size: 40px; }
+  .intro-hero-text > .countdown .countdown-value { font-size: 34px; }
   .intro-hero-text > .countdown .countdown-unit-label { font-size: 14px; }
   .intro-hero-text > .countdown .countdown-date { font-size: 15px; }
   .intro-hero-text > .countdown + .countdown { margin-top: 0; }
@@ -2513,4 +2513,57 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .see-all.overdue-more { margin: 1.25rem 0 0; }
 @media (min-width: 701px) {
   .homepage-category-links { display: none !important; }
+}
+
+/* Products: the reset (x) sits a little apart from the sort menu */
+.sort-select-wrap { gap: 12px; }
+/* Products: names the order the tiles are in */
+.sort-heading { font-size: 18px; margin: 0 0 0.85rem; }
+
+/* Homepage under the waiting list: Browse all products, centred */
+.overdue-more { margin: 1.25rem 0 0; text-align: center; }
+
+/* Homepage hero from 701px: a slim featured tile (one column) and the
+   at-a-glance box twice as wide (two columns) as a 2x2 of square tiles. */
+@media (min-width: 701px) {
+  .intro-hero-cards .card--featured { grid-column: 1; grid-row: 1 / span 2; padding: 1rem; }
+  .intro-hero-cards .site-stats { grid-column: 2 / span 2; grid-row: 1 / span 2; }
+  .intro-hero-cards .site-stats { justify-content: space-between; }
+  .intro-hero-cards .site-stats-row { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; flex: none; gap: 10px; }
+  .intro-hero-cards .site-stat { aspect-ratio: 1; flex-direction: column; align-items: flex-start; justify-content: flex-end; padding: 14px; box-sizing: border-box; }
+  .intro-hero-cards .site-stat-num { font-size: 34px; }
+  .intro-hero-cards .site-stat-label { font-size: 13px; }
+  .intro-hero-cards .card--featured .card-name-row svg,
+  .intro-hero-cards .card--featured .card-name-row img { width: 48px; height: 48px; }
+  .intro-hero-cards .card--featured .card-name { font-size: 22px; }
+  .intro-hero-cards .card--featured .card-featured-count-number { font-size: 56px; }
+  .intro-hero-cards .card--featured .card-featured-count-suffix { font-size: 14px; }
+  .intro-hero-cards .card--featured .card-featured-detail { font-size: 13px; }
+  .intro-hero-cards .card--featured .card-featured-cycle-head,
+  .intro-hero-cards .card--featured .card-featured-cycle-note { font-size: 12px; }
+}
+/* Side by side (laptops): the countdown fills the rest of the column,
+   level with the bottom of the tiles, its clock as four tiles that echo
+   the at-a-glance squares. */
+@media (min-width: 901px) {
+  .intro-hero-text > .countdown { flex: 1 1 auto; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 12px; margin: 1.25rem 0 0; }
+  .intro-hero-text > .countdown > * { flex: none; }
+  .intro-hero-text > .countdown + .countdown { margin-top: 10px; }
+  .intro-hero-text > .countdown .countdown-clock { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; width: 100%; }
+  .intro-hero-text > .countdown .countdown-unit { flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 14px 6px; background: #fff; border-radius: 12px; border: 1px solid #f0d9c4; }
+  .intro-hero-text > .countdown .countdown-value { font-size: 34px; }
+  .intro-hero-text > .countdown .countdown-unit-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+}
+@media (min-width: 901px) {
+  /* Two countdowns share the column: a more compact clock each */
+  .intro-hero-text > .countdown:has(+ .countdown), .intro-hero-text > .countdown + .countdown { gap: 8px; padding: 14px 18px; }
+  .intro-hero-text > .countdown:has(+ .countdown) .countdown-unit, .intro-hero-text > .countdown + .countdown .countdown-unit { padding: 8px 4px; }
+  .intro-hero-text > .countdown:has(+ .countdown) .countdown-value, .intro-hero-text > .countdown + .countdown .countdown-value { font-size: 28px; }
+  .intro-hero-text > .countdown:has(+ .countdown) .countdown-name, .intro-hero-text > .countdown + .countdown .countdown-name { font-size: 18px; }
+}
+@media (min-width: 701px) {
+  .intro-hero-cards .site-stat { padding: 12px; overflow: hidden; }
+  .intro-hero-cards .site-stat-num { font-size: 30px; }
+  .intro-hero-cards .site-stat-label { font-size: 12px; line-height: 1.25; }
+  .intro-hero-cards .site-stat-sub { font-size: 11px; }
 }

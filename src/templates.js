@@ -1693,7 +1693,7 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   <ol class="overdue-list" id="overdue-list">
     ${overdueItems.map((i) => overdueRowHtml(i.product, i.status)).join('\n')}
   </ol>
-  <p class="see-all overdue-more"><a class="intro-cta" href="/products/?sort=days-desc">See every product, longest wait first &rarr;</a></p>
+  <p class="overdue-more"><a class="intro-cta" href="/products/">Browse all products</a></p>
 </section>`
     : '';
 
@@ -1721,7 +1721,6 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
       ${countdownHtml(countdown)}
       ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
-      <a class="intro-cta" href="/products/">Browse all products</a>
     </div>
     <div class="intro-hero-cards" id="hero-cards">
       ${heroCardsHtml}
@@ -1777,6 +1776,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
   <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
+<h2 id="sort-heading" class="sort-heading">Longest wait first, discontinued last</h2>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid" id="grid" data-mode="all">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}

@@ -1412,7 +1412,21 @@
     if (items.length) originalGridOrder = Array.prototype.slice.call(items);
   }
 
+  // Products page: a heading above the tiles naming the order they're in.
+  var SORT_HEADINGS = {
+    'wait-desc': 'Most overdue first', 'days-desc': 'Longest since a refresh first', 'days-asc': 'Most recently refreshed first',
+    'launch-desc': 'Newest launches first', 'launch-asc': 'Oldest launches first', 'name-asc': 'A to Z', 'name-desc': 'Z to A',
+  };
+  var sortHeading = document.getElementById('sort-heading');
+  var defaultSortHeading = sortHeading ? sortHeading.textContent : '';
+  function updateSortHeading() {
+    if (!sortHeading) return;
+    var value = sortSelect && sortSelect.value;
+    sortHeading.textContent = (value && SORT_HEADINGS[value]) || defaultSortHeading;
+  }
+
   function applySort() {
+    updateSortHeading();
     var grid = document.getElementById('grid');
     if (!grid || !sortSelect || !sortSelect.value) return;
     var parts = sortSelect.value.split('-');
@@ -1480,6 +1494,7 @@
       });
       sortSelect.value = '';
       sortResetBtn.style.display = 'none';
+      updateSortHeading();
       if (isPaginatedGrid()) {
         currentPage = 1;
         applyPagination();
