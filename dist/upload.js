@@ -805,21 +805,57 @@
   let xCardFile = null;
   let xCardTimer = null;
 
-  function xFullText() {
+  // Post to X carries the card as the link's preview (see xCardLink in
+  // facts-kit.js), so the card is saved to storage once the wording
+  // settles, and Post to X waits for it. The share sheet attaches the
+  // image itself, so it keeps the plain link.
+  let xCardKey = null;
+  let xCardFor = '';
+  let xUploadTimer = null;
+  let xProductsLoading = false;
+  const xCardSig = () => ($('up-x-card-label').value.trim() || 'Did you know?') + '\n' + $('up-x-text').value.trim();
+  const xWantsCard = () => $('up-x-card-on').checked && !!$('up-x-text').value.trim();
+  const xCardReady = () => !xWantsCard() || (xCardKey && xCardFor === xCardSig());
+
+  function xFullText(withCardLink) {
+    const link = $('up-x-link-on').checked ? $('up-x-link').value.trim() : '';
     return window.FactsKit.xPostText($('up-x-text').value, {
       hashtags: $('up-x-tags').checked,
-      link: $('up-x-link-on').checked ? $('up-x-link').value.trim() : '',
+      products: allProducts,
+      link: withCardLink && xWantsCard() && xCardReady() ? window.FactsKit.xCardLink(window.location.origin, xCardKey, link) : link,
     });
+  }
+
+  function xPrepareCard() {
+    clearTimeout(xUploadTimer);
+    if (!xWantsCard() || xCardReady()) return;
+    const sig = xCardSig();
+    xUploadTimer = setTimeout(async () => {
+      const label = $('up-x-card-label').value.trim() || 'Did you know?';
+      const key = await window.FactsKit.uploadXCard(client, $('up-x-text').value.trim(), label);
+      if (sig !== xCardSig()) return;
+      if (key) { xCardKey = key; xCardFor = sig; }
+      $('up-x-post').textContent = key ? 'Post to X' : 'Post to X (card failed to save)';
+      xRefresh();
+    }, 900);
   }
 
   function xRefresh() {
     const text = $('up-x-text').value.trim();
-    const full = text ? xFullText() : '';
+    // The product list gives the #ProductName hashtag.
+    if (text && !allProducts.length && !xProductsLoading) {
+      xProductsLoading = true;
+      client.from('products').select('*').then(({ data }) => { if (data && data.length) { allProducts = data; xRefresh(); } });
+    }
+    const full = text ? xFullText(true) : '';
     $('up-x-preview').textContent = full || 'Your post will appear here.';
     const len = window.FactsKit.xPostLength(full);
     $('up-x-count').textContent = text ? len + ' / 280 characters' + (len > 280 ? ' — too long for X' : '') : '';
     $('up-x-count').classList.toggle('up-fact-count--over', len > 280);
     ['up-x-share', 'up-x-post', 'up-x-copy'].forEach((id) => { $(id).disabled = !text || len > 280; });
+    if (text && !xCardReady()) { $('up-x-post').disabled = true; $('up-x-post').textContent = 'Preparing card\u2026'; }
+    else if ($('up-x-post').textContent === 'Preparing card\u2026') $('up-x-post').textContent = 'Post to X';
+    xPrepareCard();
     $('up-x-link').hidden = !$('up-x-link-on').checked;
     const wantCard = $('up-x-card-on').checked && !!text;
     $('up-x-card-label').hidden = !$('up-x-card-on').checked;
@@ -924,8 +960,8 @@
     if (!withCard) { openInX(text); return; }
     flash(btn, 'Copied: open X and paste');
   });
-  $('up-x-post').addEventListener('click', () => openInX(xFullText()));
-  $('up-x-copy').addEventListener('click', () => copyText(xFullText(), $('up-x-copy')));
+  $('up-x-post').addEventListener('click', () => openInX(xFullText(true)));
+  $('up-x-copy').addEventListener('click', () => copyText(xFullText(true), $('up-x-copy')));
 
   // --- Product facts & notes: a product's "Did you know?" and its Notes,
   // written here or researched with Claude, then saved and published.
@@ -1376,7 +1412,7 @@
     card.className = 'up-card';
     let imageFile = null;
     window.FactsKit.factImageFile(fact.text).then((file) => { imageFile = file; });
-    const tweet = () => window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact));
+    const tweet = () => window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact), allProducts);
 
     const text = document.createElement('p');
     text.className = 'up-fact-text';

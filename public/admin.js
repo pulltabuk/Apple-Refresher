@@ -371,11 +371,37 @@
     let cardUrl = null;
     let cardTimer = null;
 
+    // The card rides along as the link's preview (see xCardLink in
+    // facts-kit.js), so it is saved to storage as soon as the wording
+    // settles; Post to X waits until it is.
+    let cardKey = null;
+    let cardFor = '';
+    let uploadTimer = null;
+    const cardSig = () => ($x('x-card-label').value.trim() || 'Did you know?') + '\n' + $x('x-text').value.trim();
+    const wantsCard = () => $x('x-card-on').checked && !!$x('x-text').value.trim();
+    const cardReady = () => !wantsCard() || (cardKey && cardFor === cardSig());
+
     function fullText() {
+      const link = $x('x-link-on').checked ? $x('x-link').value.trim() : '';
       return window.FactsKit.xPostText($x('x-text').value, {
         hashtags: $x('x-tags').checked,
-        link: $x('x-link-on').checked ? $x('x-link').value.trim() : '',
+        products: cachedProducts,
+        link: wantsCard() && cardReady() ? window.FactsKit.xCardLink(origin, cardKey, link) : link,
       });
+    }
+
+    function prepareCard() {
+      clearTimeout(uploadTimer);
+      if (!wantsCard() || cardReady()) return;
+      const sig = cardSig();
+      uploadTimer = setTimeout(async () => {
+        const label = $x('x-card-label').value.trim() || 'Did you know?';
+        const key = await window.FactsKit.uploadXCard(client, $x('x-text').value.trim(), label);
+        if (sig !== cardSig()) return;
+        if (key) { cardKey = key; cardFor = sig; }
+        $x('x-post-btn').textContent = key ? 'Post to X' : 'Post to X (card failed to save)';
+        refresh();
+      }, 900);
     }
 
     function refresh() {
@@ -385,7 +411,10 @@
       const len = window.FactsKit.xPostLength(full);
       $x('x-count').textContent = text ? len + ' / 280 characters' + (len > 280 ? ' — too long for X, shorten it a little' : '') : '';
       $x('x-count').classList.toggle('is-over', len > 280);
-      $x('x-post-btn').disabled = !text || len > 280;
+      $x('x-post-btn').disabled = !text || len > 280 || !cardReady();
+      if (text && !cardReady()) $x('x-post-btn').textContent = 'Preparing card\u2026';
+      else if ($x('x-post-btn').textContent === 'Preparing card\u2026') $x('x-post-btn').textContent = 'Post to X';
+      prepareCard();
       $x('x-copy-btn').disabled = !text;
       // The card follows the text, redrawn a moment after typing stops.
       clearTimeout(cardTimer);
@@ -3384,7 +3413,7 @@
       copyBtn.className = 'admin-btn admin-btn--small';
       copyBtn.textContent = 'Copy for Twitter';
       copyBtn.addEventListener('click', () => {
-        const tweetText = window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact));
+        const tweetText = window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact), cachedProducts);
         navigator.clipboard.writeText(tweetText).then(() => {
           copyBtn.textContent = 'Copied!';
           setTimeout(() => { copyBtn.textContent = 'Copy for Twitter'; }, 1500);
@@ -3415,7 +3444,7 @@
       });
       xBtn.addEventListener('click', async () => {
         if (xReady) {
-          const tweetText = window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact));
+          const tweetText = window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact), cachedProducts);
           window.open('https://x.com/intent/post?text=' + encodeURIComponent(tweetText), '_blank', 'noopener');
           return;
         }
