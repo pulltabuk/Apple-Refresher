@@ -2587,3 +2587,7 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .x-after { margin-top: 14px; padding: 14px 16px; background: var(--accent-bg); border: 1px solid #efd9c7; border-radius: 12px; }
 .x-after p { margin: 0 0 10px; }
 .x-after .x-actions { margin: 0; }
+
+/* Homepage hero: the same 14px gap between the countdown column and the
+   tiles as between the tiles themselves (was 2.5rem). */
+.intro-hero-layout { gap: 14px; }
