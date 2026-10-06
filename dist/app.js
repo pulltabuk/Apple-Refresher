@@ -24,7 +24,8 @@
     }
     var ratio = daysSince / avgCycleDays;
     var status = ratio < 0.5 ? 'fresh' : ratio < 1.0 ? 'aging' : 'overdue';
-    return { daysSince: daysSince, avgCycleDays: avgCycleDays, ratio: ratio, status: status, lastRefresh: lastRefresh };
+    // Must match computeStatus() in src/status.js.
+    return { daysSince: daysSince, avgCycleDays: avgCycleDays, ratio: ratio, status: status, lastRefresh: lastRefresh, hasCycle: history.length >= 2 };
   }
 
   function escapeHtmlJS(str) {
@@ -549,7 +550,7 @@
           if (m.kind !== lastKind) {
             var head = document.createElement('p');
             head.className = 'site-search-dropdown-head';
-            head.textContent = m.kind === 'product' ? 'Products' : m.kind === 'category' ? 'Families' : 'Apple Events';
+            head.textContent = m.kind === 'product' ? 'Products' : m.kind === 'category' ? 'Categories' : 'Apple Events';
             dropdown.appendChild(head);
             lastKind = m.kind;
           }
@@ -678,6 +679,7 @@
 
   function badgeExplanationJS(statusInfo) {
     if (!statusInfo) return '';
+    if (!statusInfo.hasCycle) return 'Only one release recorded so far';
     var cycle = pluralJS(statusInfo.avgCycleDays, 'day', 'days');
     if (statusInfo.status === 'overdue') return 'Overdue: this one is usually updated every ' + cycle;
     if (statusInfo.status === 'aging') return 'Getting on: this one is usually updated every ' + cycle;
@@ -784,6 +786,8 @@
   // Must stay in step with heroCycle() in src/templates.js.
   function heroCycleJS(product, status, sortedDates, allProducts) {
     if (sortedDates.length > 1 && status) return { days: status.avgCycleDays, family: null };
+    // One release: no cycle to measure, so no bar (matches heroCycle()).
+    if (sortedDates.length <= 1) return null;
     var avg = familyAvgCycleJS((allProducts || []).filter(function (p) { return (p.category || '') === (product.category || ''); }));
     return avg ? { days: avg, family: product.category || null } : null;
   }
@@ -847,7 +851,7 @@
         '<span class="related-card-text"><span class="related-card-name">' + escapeHtmlJS(p.name) + '</span>' +
         (line ? '<span class="related-card-line">' + line + '</span>' : '') + '</span></a>';
     }).join('');
-    var cat = product.category || 'this family';
+    var cat = product.category || 'this category';
     return '<section class="related-section"><h2>More in ' + escapeHtmlJS(cat) + '</h2>' +
       '<div class="related-grid">' + cards + '</div>' +
       '<p class="see-all"><a class="intro-cta" href="/categories/' + slugifyJS(product.category || 'other') + '/">All ' +
@@ -952,7 +956,7 @@
           '<div class="product-facts">' + heroStatHtmlJS(product, status, heroCycleJS(product, status, sortedDates, allProducts)) +
             '<div class="key-facts-row" data-facts="' + (keyFacts.match(/key-fact-label/g) || []).length + '">' + keyFacts + '</div>' +
           '</div>' +
-          (product.discontinued ? '' : familyCadenceJS(product.category || 'this family',
+          (product.discontinued ? '' : familyCadenceJS(product.category || 'this category',
             allProducts.filter(function (p) { return (p.category || '') === (product.category || ''); }))) +
           (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">' + sanitizeRichTextJS(product.did_you_know) + '</div>' + (product.did_you_know_date ? '<p class="did-you-know-date">As of ' + formatDateJS(String(product.did_you_know_date).slice(0, 7)) + '</p>' : '') + '</aside>' : '') +
           '<dl class="spec-list spec-list--secondary">' + specs + '</dl>' +
@@ -1692,8 +1696,18 @@
   }
 
   // Must match the cycle bar in featuredCardHtml() in src/templates.js.
+  // Must match the one-release panel in featuredCardHtml().
+  function featuredFirstReleaseHtmlJS(product) {
+    var first = (product.refresh_history || []).slice().sort()[0];
+    return '<div class="card-featured-cycle card-featured-cycle--single">' +
+      '<div class="card-featured-cycle-head"><span>Releases so far</span><strong>1</strong></div>' +
+      '<p class="card-featured-cycle-note">The first and only release' + (first ? ', ' + formatDateJS(first) : '') + '. No refresh cycle to go on yet.</p>' +
+    '</div>';
+  }
+
   function featuredCycleHtmlJS(product, statusInfo, daysInfo) {
     if (!statusInfo || !daysInfo || daysInfo.days < 0 || product.discontinued) return '';
+    if (!statusInfo.hasCycle) return featuredFirstReleaseHtmlJS(product);
     var ratio = statusInfo.ratio;
     return '<div class="card-featured-cycle card-featured-cycle--' + statusInfo.status + '">' +
       '<div class="card-featured-cycle-head"><span>Average refresh cycle</span><strong>' + statusInfo.avgCycleDays + ' days</strong></div>' +
@@ -1716,7 +1730,7 @@
       : badgeHtmlJS(product, statusInfo);
     var launch = launchDateJS(product);
     var predecessor = product.previous_model && allProducts ? allProducts.filter(function (p) { return p.slug === product.previous_model; })[0] : null;
-    var expectedDate = statusInfo && !product.discontinued
+    var expectedDate = statusInfo && statusInfo.hasCycle && !product.discontinued
       ? new Date(new Date(statusInfo.lastRefresh).getTime() + statusInfo.avgCycleDays * 86400000)
       : null;
     var expectedPassed = expectedDate ? expectedDate.getTime() < Date.now() : false;
