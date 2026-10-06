@@ -16,3 +16,11 @@
 # downloading every full-size photo.
 [images]
   remote_images = ["https://.*\\.supabase\\.co/storage/v1/object/public/.*"]
+
+# X post cards: /c/<key>/<page> shows the saved card as the link preview,
+# then forwards to <page>. See netlify/functions/card.js.
+[[redirects]]
+  from = "/c/*"
+  to = "/.netlify/functions/card/:splat"
+  status = 200
+  force = true

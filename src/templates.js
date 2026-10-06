@@ -2688,7 +2688,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <input type="text" id="x-link" placeholder="https://applesunset.com/" autocomplete="off" aria-label="Link">
     </div>
     <div class="x-options">
-      <label class="checkbox-label"><input type="checkbox" id="x-card-on"> Make a card image</label>
+      <label class="checkbox-label"><input type="checkbox" id="x-card-on" checked> Make a card image</label>
       <input type="text" id="x-card-label" value="Did you know?" autocomplete="off" aria-label="Card heading">
     </div>
     <p class="admin-hint">How it will look on X:</p>

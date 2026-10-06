@@ -4,15 +4,11 @@
 (function () {
   // The tweet links to the fact's own page (/facts/<id>/), whose preview
   // image is the fact's card, so X shows the card under the tweet.
-  function buildTweetText(factText, link) {
+  function buildTweetText(factText, link, products) {
     const lower = factText.toLowerCase();
     let emoji = '\ud83c\udf4e';
-    const hashtags = ['#Apple'];
     const addTag = (keyword, tag, tagEmoji) => {
-      if (lower.indexOf(keyword) !== -1) {
-        hashtags.push(tag);
-        if (tagEmoji) emoji = tagEmoji;
-      }
+      if (lower.indexOf(keyword) !== -1 && tagEmoji) emoji = tagEmoji;
     };
     addTag('iphone', '#iPhone', '\ud83d\udcf1');
     addTag('apple tv', '#AppleTV', '\ud83d\udcfa');
@@ -23,8 +19,8 @@
     addTag('airpods', '#AirPods', '\ud83c\udfa7');
     addTag('mac', '#Mac', '\ud83d\udcbb');
     addTag('ipad', '#iPad', '\ud83d\udcf2');
-    if (hashtags.length < 3) hashtags.push('#TechFacts');
-    const uniqueHashtags = Array.from(new Set(hashtags)).slice(0, 4);
+    // #Apple and the product's name (see hashtagsFor).
+    const uniqueHashtags = hashtagsFor(factText, products);
 
     const hook = emoji + ' Apple Fact:';
     const footer = uniqueHashtags.join(' ') + '\n' + (link || window.location.host);
@@ -535,22 +531,72 @@
   // text, and a request for Claude to write posts. X only: nothing here
   // is saved or shown on the website.
 
-  function hashtagsFor(text) {
-    const lower = String(text || '').toLowerCase();
+  // The product a post is about: the longest product name it mentions,
+  // ignoring spacing and punctuation ("iPod Hi-Fi" matches "iPod HiFi").
+  function productNamed(text, products) {
+    const squash = (str) => String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const hay = squash(text);
+    let best = null;
+    (products || []).forEach((p) => {
+      const name = squash(p && p.name);
+      if (name.length > 2 && hay.indexOf(name) !== -1 && (!best || name.length > squash(best.name).length)) best = p;
+    });
+    return best;
+  }
+
+  // #Apple plus the product's own name, e.g. "#Apple #iPodHiFi". Without a
+  // product list, or when no product is named, the product line instead.
+  function hashtagsFor(text, products) {
     const tags = ['#Apple'];
-    [['iphone', '#iPhone'], ['ipad', '#iPad'], ['mac', '#Mac'], ['airpods', '#AirPods'], ['watch', '#AppleWatch'],
-      ['vision pro', '#VisionPro'], ['apple tv', '#AppleTV'], ['airtag', '#AirTag'], ['ipod', '#iPod'], ['homepod', '#HomePod']]
-      .forEach(([word, tag]) => { if (lower.indexOf(word) !== -1 && tags.indexOf(tag) === -1) tags.push(tag); });
-    return tags.slice(0, 3);
+    const product = productNamed(text, products);
+    if (product) {
+      const tag = '#' + String(product.name).replace(/[^A-Za-z0-9]+/g, '');
+      if (tag.length > 1 && tag.toLowerCase() !== '#apple') tags.push(tag);
+      return tags;
+    }
+    const lower = String(text || '').toLowerCase();
+    const line = [['vision pro', '#VisionPro'], ['apple tv', '#AppleTV'], ['airtag', '#AirTag'], ['airpods', '#AirPods'], ['homepod', '#HomePod'],
+      ['ipod', '#iPod'], ['iphone', '#iPhone'], ['ipad', '#iPad'], ['watch', '#AppleWatch'], ['mac', '#Mac']]
+      .find(([word]) => lower.indexOf(word) !== -1);
+    if (line) tags.push(line[1]);
+    return tags;
   }
 
   // The text that goes to X: the post, then hashtags and a link if wanted.
   function xPostText(text, opts) {
     const o = opts || {};
     const extras = [];
-    if (o.hashtags) extras.push(hashtagsFor(text).join(' '));
+    if (o.hashtags) extras.push(hashtagsFor(text, o.products).join(' '));
     if (o.link) extras.push(o.link);
     return String(text || '').trim() + (extras.length ? '\n\n' + extras.join('\n') : '');
+  }
+
+  // --- The card under an X post. X can't be handed an image, only a
+  // link, and it shows that link's preview image. So the card is saved
+  // to storage and the post links to /c/<key>/<page>: a tiny page whose
+  // preview is the card, which sends people straight on to <page>.
+  function xCardKey(text, label) {
+    return factKey(String(label || '') + '\n' + String(text || '').trim());
+  }
+
+  async function uploadXCard(client, text, label) {
+    const key = xCardKey(text, label);
+    const file = await factImageFile(String(text || '').trim(), label);
+    if (!file) return null;
+    const { error } = await client.storage.from(CARD_BUCKET).upload('x-cards/' + key + '.png', file, { contentType: 'image/png' });
+    if (error && !(/exist|duplicate/i.test(error.message || '') || error.statusCode === '409')) return null;
+    return key;
+  }
+
+  // The link to post: the card page, forwarding to the chosen page on
+  // this site (the homepage when there is none, or it is elsewhere).
+  function xCardLink(origin, key, link) {
+    let path = '/';
+    try {
+      const url = new URL(link || '/', origin);
+      if (url.origin === new URL(origin).origin) path = url.pathname;
+    } catch (err) { /* not a link: use the homepage */ }
+    return origin + '/c/' + key + path;
   }
 
   // How long X counts it: every link counts as 23 characters.
@@ -628,6 +674,10 @@
     xPostLength,
     xPostPrompt,
     hashtagsFor,
+    productNamed,
+    xCardKey,
+    uploadXCard,
+    xCardLink,
     factsPageHtml,
     productFactCandidates,
     productFactPrompt,
