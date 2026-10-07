@@ -1,15 +1,6 @@
-const CATEGORY_ICONS = {
-  iPhone: `<rect x="13" y="4" width="14" height="32" rx="3"/><line x1="17" y1="31" x2="23" y2="31"/>`,
-  Mac: `<rect x="8" y="9" width="24" height="16" rx="1.5"/><path d="M5 30h30l-2.5-3h-25z"/>`,
-  iPad: `<rect x="7" y="8" width="26" height="24" rx="3"/><line x1="19" y1="27" x2="21" y2="27"/>`,
-  'Apple Watch': `<rect x="12" y="10" width="16" height="20" rx="5"/><rect x="27.5" y="17" width="3" height="6" rx="1"/>`,
-  AirPods: `<path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/>`,
-  'Vision Pro': `<path d="M6 18c0-4 3-6 14-6s14 2 14 6-3 6-14 6S6 22 6 18z"/><circle cx="15" cy="18" r="2.5"/><circle cx="25" cy="18" r="2.5"/>`,
-  'Apple TV': `<rect x="9" y="9" width="22" height="22" rx="4"/><text x="20" y="24" font-size="9" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">TV</text>`,
-  AirTag: `<circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="10.5"/>`,
-  'Apple Pencil': `<path d="M17 6c0-1.5 1.3-2.5 3-2.5s3 1 3 2.5v22l-3 8-3-8V6z"/><line x1="20" y1="9" x2="20" y2="14"/>`,
-  Other: `<rect x="8" y="8" width="24" height="24" rx="4"/>`,
-};
+// The line icons for each product family. Shared with the X post cards
+// (public/facts-kit.js), which draw the same icon.
+const CATEGORY_ICONS = require('../public/facts-kit.js').CATEGORY_ICONS;
 
 let CUSTOM_CATEGORY_ICONS = {};
 
@@ -37,18 +28,7 @@ function assetUrl(file) {
 // typed: "Airpods Pro" -> "AirPods Pro", "Mac Mini" -> "Mac mini". Only
 // the casing changes, so slugs and links stay the same. Must match
 // appleNameJS() in public/app.js.
-const APPLE_WORDS = [
-  [/\bairpods\b/gi, 'AirPods'], [/\bairtag(s?)\b/gi, 'AirTag$1'], [/\bimac\b/gi, 'iMac'], [/\bmacbook\b/gi, 'MacBook'],
-  [/\bhomepod\b/gi, 'HomePod'], [/\biphone\b/gi, 'iPhone'], [/\bipad\b/gi, 'iPad'], [/\bipod\b/gi, 'iPod'],
-  [/\bmac\b/gi, 'Mac'], [/\bapple watch\b/gi, 'Apple Watch'], [/\bapple\b/gi, 'Apple'], [/\bpro\b/gi, 'Pro'], [/\bmax\b/gi, 'Max'], [/\bultra\b/gi, 'Ultra'],
-  [/\bair\b/gi, 'Air'], [/\bse\b/gi, 'SE'], [/\btv\b/gi, 'TV'], [/\bhi-?fi\b/gi, (m) => (m.indexOf('-') !== -1 ? 'Hi-Fi' : 'HiFi')],
-  // "mini" is lower case after Mac, iPad, HomePod and iPhone (iPhone 13 mini).
-  [/\b(Mac|iPad|HomePod|iPhone(?: \d+)?) mini\b/gi, (m, what) => what + ' mini'],
-];
-function appleName(name) {
-  if (name == null) return name;
-  return APPLE_WORDS.reduce((s, [re, to]) => s.replace(re, to), String(name));
-}
+const appleName = require('../public/facts-kit.js').appleName;
 
 function setCustomCategoryIcons(icons) {
   CUSTOM_CATEGORY_ICONS = icons || {};

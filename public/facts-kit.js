@@ -41,6 +41,23 @@
     return full;
   }
 
+  // The line icons for each product family (40x40, drawn as strokes),
+  // used by the site (src/templates.js) and the cards below.
+  const CATEGORY_ICONS = {
+    iPhone: `<rect x="13" y="4" width="14" height="32" rx="3"/><line x1="17" y1="31" x2="23" y2="31"/>`,
+    Mac: `<rect x="8" y="9" width="24" height="16" rx="1.5"/><path d="M5 30h30l-2.5-3h-25z"/>`,
+    iPad: `<rect x="7" y="8" width="26" height="24" rx="3"/><line x1="19" y1="27" x2="21" y2="27"/>`,
+    'Apple Watch': `<rect x="12" y="10" width="16" height="20" rx="5"/><rect x="27.5" y="17" width="3" height="6" rx="1"/>`,
+    AirPods: `<path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/>`,
+    'Vision Pro': `<path d="M6 18c0-4 3-6 14-6s14 2 14 6-3 6-14 6S6 22 6 18z"/><circle cx="15" cy="18" r="2.5"/><circle cx="25" cy="18" r="2.5"/>`,
+    'Apple TV': `<rect x="9" y="9" width="22" height="22" rx="4"/><text x="20" y="24" font-size="9" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">TV</text>`,
+    AirTag: `<circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="10.5"/>`,
+    'Apple Pencil': `<path d="M17 6c0-1.5 1.3-2.5 3-2.5s3 1 3 2.5v22l-3 8-3-8V6z"/><line x1="20" y1="9" x2="20" y2="14"/>`,
+    HomePod: `<path d="M9 17c0-6.5 5-10 11-10s11 3.5 11 10v5c0 7-5 11-11 11S9 29 9 22z"/><ellipse cx="20" cy="12" rx="6" ry="2"/>`,
+    iPod: `<rect x="11" y="4" width="18" height="32" rx="3"/><rect x="14" y="7.5" width="12" height="10" rx="1.2"/><circle cx="20" cy="26.5" r="5"/><circle cx="20" cy="26.5" r="1.5"/>`,
+    Other: `<rect x="8" y="8" width="24" height="24" rx="4"/>`,
+  };
+
   // --- The 1200x675 "Did you know?" card, in the site's sunset colours
   // with the logo. ---
 
@@ -96,9 +113,144 @@
     return lines;
   }
 
-  // Same layout as the original card (small label, big fact, web address),
-  // on the site's sunset colours, with the logo small in the bottom-right.
+  // Apple's own spelling for product and category names (used by the
+  // site via src/templates.js, and on the cards).
+  const APPLE_WORDS = [
+    [/\bairpods\b/gi, 'AirPods'], [/\bairtag(s?)\b/gi, 'AirTag$1'], [/\bimac\b/gi, 'iMac'], [/\bmacbook\b/gi, 'MacBook'],
+    [/\bhomepod\b/gi, 'HomePod'], [/\biphone\b/gi, 'iPhone'], [/\bipad\b/gi, 'iPad'], [/\bipod\b/gi, 'iPod'],
+    [/\bmac\b/gi, 'Mac'], [/\bapple watch\b/gi, 'Apple Watch'], [/\bapple\b/gi, 'Apple'], [/\bpro\b/gi, 'Pro'], [/\bmax\b/gi, 'Max'], [/\bultra\b/gi, 'Ultra'],
+    [/\bair\b/gi, 'Air'], [/\bse\b/gi, 'SE'], [/\btv\b/gi, 'TV'], [/\bhi-?fi\b/gi, (m) => (m.indexOf('-') !== -1 ? 'Hi-Fi' : 'HiFi')],
+    // "mini" is lower case after Mac, iPad, HomePod and iPhone (iPhone 13 mini).
+    [/\b(Mac|iPad|HomePod|iPhone(?: \d+)?) mini\b/gi, (m, what) => what + ' mini'],
+  ];
+  function appleName(name) {
+    if (name == null) return name;
+    return APPLE_WORDS.reduce((s, [re, to]) => s.replace(re, to), String(name));
+  }
+
+  // --- What the card shows. The post's text already says the fact, so
+  // the card shows its subject instead: the product with its icon and
+  // one live figure, or the statistic's key number, never the sentence.
+
+  let cardProducts = [];
+  let cardProductsLoader = null;
+  let cardProductsLoading = null;
+  // admin and the phone app pass a loader; the products are fetched once.
+  function setCardProductsLoader(fn) { cardProductsLoader = fn; }
+  function setCardProducts(list) { cardProducts = list || []; }
+  async function ensureCardProducts() {
+    if (cardProducts.length || !cardProductsLoader) return cardProducts;
+    if (!cardProductsLoading) cardProductsLoading = Promise.resolve(cardProductsLoader()).then((list) => { cardProducts = list || []; }).catch(() => {});
+    await cardProductsLoading;
+    return cardProducts;
+  }
+
+  function iconShapeFor(category) {
+    const key = Object.keys(CATEGORY_ICONS).find((k) => k.toLowerCase() === String(category || '').toLowerCase());
+    return key ? CATEGORY_ICONS[key] : null;
+  }
+
+  // A family named in the text (longest name wins), for a statistic's icon.
+  function categoryNamed(text) {
+    const hay = ' ' + String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ') + ' ';
+    return Object.keys(CATEGORY_ICONS).filter((k) => k !== 'Other' && hay.indexOf(' ' + k.toLowerCase() + ' ') !== -1)
+      .sort((a, b) => b.length - a.length)[0] || null;
+  }
+
+  function cardDate(iso) {
+    const p = String(iso).split('-').map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2] || 1)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  }
+
+  function cardSpanText(fromIso, toIso) {
+    const months = Math.round((new Date(toIso) - new Date(fromIso)) / (86400000 * 30.44));
+    if (months < 24) return months + ' month' + (months === 1 ? '' : 's');
+    const years = Math.round(months / 12);
+    return 'about ' + years + ' years';
+  }
+
+  // One live figure for a product: days since its last release, days
+  // until a coming release, or the year it was discontinued.
+  function productFigure(p) {
+    const today = new Date().toISOString().slice(0, 10);
+    const releases = pastReleases(p);
+    const first = p.original_launch_date || releases[0] || null;
+    const future = (p.refresh_history || []).filter((d) => d > today).sort()[0];
+    if (p.discontinued && p.discontinued_date) {
+      return { big: p.discontinued_date.slice(0, 4), caption: 'the year it was discontinued' + (first ? ', after ' + cardSpanText(first, p.discontinued_date) + ' on sale' : ''), sub: first ? 'First released ' + cardDate(first) : '' };
+    }
+    if (future) {
+      const days = Math.max(0, Math.round((new Date(future) - new Date(today)) / 86400000));
+      return { big: days.toLocaleString('en-GB'), caption: (days === 1 ? 'day' : 'days') + ' until it arrives', sub: 'Coming ' + cardDate(future) };
+    }
+    if (releases.length) {
+      const last = releases[releases.length - 1];
+      const days = Math.round((new Date(today) - new Date(last)) / 86400000);
+      return {
+        big: days.toLocaleString('en-GB'),
+        caption: (days === 1 ? 'day' : 'days') + ' since its last release',
+        sub: releases.length === 1 ? 'Only release: ' + cardDate(last) : releases.length + ' releases since ' + releases[0].slice(0, 4),
+      };
+    }
+    return { big: '', caption: '', sub: '' };
+  }
+
+  // A statistic's key number ("604 days", "55%") and the few words after it.
+  function textFigure(text) {
+    const m = String(text || '').match(/(\d[\d,]*(?:\.\d+)?)(\s?(?:%|per cent|percent|days?|weeks?|months?|years?))?/i);
+    if (!m) return null;
+    const rest = String(text).slice(m.index + m[0].length).split(/[.,;:!?(]/)[0].trim().split(/\s+/).filter(Boolean);
+    const caption = rest.slice(0, 7).join(' ') + (rest.length > 7 ? '…' : '');
+    return { big: (m[1] + (m[2] || '')).replace(/\s?per ?cent/i, '%'), caption, sub: '' };
+  }
+
+  function cardSubject(text) {
+    const product = productNamed(text, cardProducts);
+    if (product) {
+      const fig = productFigure(product);
+      return { title: appleName(product.name), shape: iconShapeFor(product.category) || CATEGORY_ICONS.Other, iconUrl: product.icon_url || null, big: fig.big, caption: fig.caption, sub: fig.sub };
+    }
+    const category = categoryNamed(text);
+    const fig = textFigure(text);
+    return { title: category || 'Apple Sunset', shape: category ? iconShapeFor(category) : null, iconUrl: null, big: fig ? fig.big : '', caption: fig ? fig.caption : '', sub: '' };
+  }
+
+  function loadImage(src, cors) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      if (cors) img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  function iconImage(shape, colour) {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="400" height="400" fill="none" stroke="' + colour + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+      shape.replace(/<text /, '<text fill="' + colour + '" stroke="none" ') + '</svg>';
+    return loadImage('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg), false);
+  }
+
+  // Draws text wrapped to maxWidth in at most maxLines, shrinking the
+  // font until it fits. Returns the y below the last line.
+  function fitText(ctx, text, x, y, maxWidth, weight, size, minSize, maxLines) {
+    let lines;
+    let s = size;
+    for (;;) {
+      ctx.font = weight + ' ' + s + 'px ' + FONT;
+      lines = wrapLines(ctx, text, maxWidth);
+      if (lines.length <= maxLines || s <= minSize) break;
+      s -= 2;
+    }
+    lines = lines.slice(0, maxLines);
+    const lh = Math.round(s * 1.18);
+    lines.forEach((line, i) => ctx.fillText(line, x, y + s + i * lh));
+    return y + s + (lines.length - 1) * lh + Math.round(s * 0.3);
+  }
+
   async function drawFactCanvas(factText, label) {
+    await ensureCardProducts();
+    const subject = cardSubject(factText);
     const logo = await loadLogo();
     const W = 1200;
     const H = 675;
@@ -117,62 +269,90 @@
     bg.addColorStop(1, '#2e1a3d');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
-    // A light shade over the brightest corner for extra contrast.
     const shade = ctx.createLinearGradient(0, 0, W * 0.6, 0);
     shade.addColorStop(0, 'rgba(46, 26, 61, 0.22)');
     shade.addColorStop(1, 'rgba(46, 26, 61, 0)');
     ctx.fillStyle = shade;
     ctx.fillRect(0, 0, W, H);
-    // The header's golden edge along the top.
     ctx.fillStyle = sunsetGradient(ctx, 0, 0, W, 0);
     ctx.fillRect(0, 0, W, 10);
 
+    // Label.
     ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
     ctx.shadowBlur = 12;
     ctx.shadowOffsetY = 2;
-
-    // Label.
     ctx.fillStyle = '#ffffff';
     ctx.textBaseline = 'alphabetic';
-    ctx.font = '700 34px ' + FONT;
-    ctx.fillText(String(label || 'Did you know?').toUpperCase(), PAD, 120);
+    ctx.font = '700 32px ' + FONT;
+    // With nothing but the logo to show, the big "Did you know?" beside it
+    // says it, so the small label would only repeat it.
+    if (subject.big || subject.shape || subject.iconUrl) ctx.fillText(String(label || 'Did you know?').toUpperCase(), PAD, 108);
 
-    // The fact: as large as fits between the label and the footer.
-    const areaTop = 170;
-    const areaBottom = H - 150; // clear of the logo
-    const maxWidth = W - PAD * 2;
-    let size = 56;
-    let lines;
-    let lineHeight;
-    for (;;) {
-      ctx.font = '700 ' + size + 'px ' + FONT;
-      lines = wrapLines(ctx, factText, maxWidth);
-      lineHeight = Math.round(size * 1.26);
-      if (lines.length * lineHeight <= areaBottom - areaTop || size <= 30) break;
-      size -= 2;
+    // The icon tile: the product's own icon, else its family's line icon,
+    // else the Apple Sunset logo.
+    const TILE = 340;
+    const tx = PAD;
+    const ty = 160;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 30;
+    ctx.shadowOffsetY = 8;
+    roundedRect(ctx, tx, ty, TILE, TILE, 44);
+    ctx.fillStyle = '#fff7ef';
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    let art = subject.iconUrl ? await loadImage(subject.iconUrl, true) : null;
+    if (!art && subject.shape) art = await iconImage(subject.shape, '#9c4009');
+    if (art) {
+      const inner = TILE - 70;
+      ctx.drawImage(art, tx + 35, ty + 35, inner, inner);
+    } else if (logo) {
+      ctx.save();
+      roundedRect(ctx, tx, ty, TILE, TILE, 44);
+      ctx.clip();
+      ctx.drawImage(logo, tx, ty, TILE, TILE);
+      ctx.restore();
     }
-    let y = areaTop + size;
-    lines.forEach((line) => {
-      ctx.fillText(line, PAD, y);
-      y += lineHeight;
-    });
+
+    // Beside it: the name, one big figure, and what the figure means.
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 2;
+    const cx = tx + TILE + 64;
+    const cw = W - PAD - cx;
+    ctx.fillStyle = '#ffffff';
+    let y = fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2);
+    if (subject.big) {
+      ctx.fillStyle = sunsetGradient(ctx, cx, 0, cx + cw, 0, SUNSET_WARM);
+      ctx.fillStyle = '#ffd59a';
+      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', 150, 72, 1);
+    } else {
+      // No figure: the label says it all, in big type.
+      ctx.fillStyle = '#ffd59a';
+      y = fitText(ctx, 'Did you know?', cx, y + 4, cw, '800', 96, 60, 1);
+    }
+    ctx.fillStyle = '#ffffff';
+    if (subject.caption) y = fitText(ctx, subject.caption, cx, y, cw, '600', 36, 26, 2);
+    if (subject.sub) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
+      fitText(ctx, subject.sub, cx, y + 2, cw, '500', 28, 22, 1);
+    }
 
     // Web address, bottom-left.
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.font = '500 26px ' + FONT;
     ctx.fillText('applesunset.com', PAD, H - 60);
 
-    // Logo, small, bottom-right.
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-    ctx.shadowBlur = 16;
-    ctx.shadowOffsetY = 4;
-    if (logo) {
+    // Logo, small, bottom-right (unless it's already the big tile).
+    if (logo && (art || !logo)) {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 4;
       const size2 = 76;
       const lx = W - PAD - size2 + 10;
       const ly = H - 50 - size2;
       roundedRect(ctx, lx, ly, size2, size2, 16);
       ctx.fillStyle = '#000';
-      ctx.fill(); // casts the shadow
+      ctx.fill();
       ctx.shadowColor = 'transparent';
       ctx.save();
       roundedRect(ctx, lx, ly, size2, size2, 16);
@@ -181,7 +361,6 @@
       ctx.restore();
     }
     ctx.shadowColor = 'transparent';
-
     return canvas;
   }
 
@@ -576,7 +755,9 @@
   // to storage and the post links to /c/<key>/<page>: a tiny page whose
   // preview is the card, which sends people straight on to <page>.
   function xCardKey(text, label) {
-    return factKey(String(label || '') + '\n' + String(text || '').trim());
+    // "card2": the subject card. Changing it gives every post a new card
+    // address, so X never shows a card drawn in the old design.
+    return factKey('card2\n' + String(label || '') + '\n' + String(text || '').trim());
   }
 
   async function uploadXCard(client, text, label) {
@@ -733,6 +914,11 @@
   }
 
   const FactsKit = {
+    appleName,
+    CATEGORY_ICONS,
+    setCardProducts,
+    setCardProductsLoader,
+    cardSubject,
     dailyFactPool,
     pickDailyFact,
     dailyFactBoxHtml,

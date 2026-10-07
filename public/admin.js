@@ -20,6 +20,10 @@
   let pendingPreorderDate = null;
   let editingSlug = null;
   let cachedProducts = [];
+  // X cards show the product a post is about, so they need the products.
+  if (window.FactsKit && window.FactsKit.setCardProductsLoader) {
+    window.FactsKit.setCardProductsLoader(() => client.from('products').select('*').then((r) => r.data || []));
+  }
   let currentRefreshHistory = [];
   let currentOriginalLaunchDate = null;
   let currentGenerationDetails = {};
@@ -819,6 +823,8 @@
     'Apple TV': '<rect x="9" y="9" width="22" height="22" rx="4"/><text x="20" y="24" font-size="9" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">TV</text>',
     AirTag: '<circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="10.5"/>',
     'Apple Pencil': '<path d="M17 6c0-1.5 1.3-2.5 3-2.5s3 1 3 2.5v22l-3 8-3-8V6z"/><line x1="20" y1="9" x2="20" y2="14"/>',
+    HomePod: '<path d="M9 17c0-6.5 5-10 11-10s11 3.5 11 10v5c0 7-5 11-11 11S9 29 9 22z"/><ellipse cx="20" cy="12" rx="6" ry="2"/>',
+    iPod: '<rect x="11" y="4" width="18" height="32" rx="3"/><rect x="14" y="7.5" width="12" height="10" rx="1.2"/><circle cx="20" cy="26.5" r="5"/><circle cx="20" cy="26.5" r="1.5"/>',
     Other: '<rect x="8" y="8" width="24" height="24" rx="4"/>',
     All: '<rect x="7" y="7" width="11" height="11" rx="2"/><rect x="22" y="7" width="11" height="11" rx="2"/><rect x="7" y="22" width="11" height="11" rx="2"/><rect x="22" y="22" width="11" height="11" rx="2"/>',
   };
@@ -1512,6 +1518,7 @@
       return;
     }
     cachedProducts = data;
+    if (window.FactsKit && window.FactsKit.setCardProducts) window.FactsKit.setCardProducts(data);
     await loadFeaturedOrder();
     updateCategoryOptions();
     renderProductList();

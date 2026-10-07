@@ -6,6 +6,10 @@
 // writes from signed-in users, so the page itself holds no secrets.
 (function () {
   const client = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+  // X cards show the product a post is about, so they need the products.
+  if (window.FactsKit && window.FactsKit.setCardProductsLoader) {
+    window.FactsKit.setCardProductsLoader(() => client.from('products').select('*').then((r) => r.data || []));
+  }
 
   const MAX_PHOTOS = 12;
   const MAX_EDGE = 2560; // longest side in pixels after resizing
