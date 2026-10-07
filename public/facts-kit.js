@@ -138,9 +138,23 @@
   // admin and the phone app pass a loader; the products are fetched once.
   function setCardProductsLoader(fn) { cardProductsLoader = fn; }
   function setCardProducts(list) { cardProducts = list || []; }
+  // Family icons uploaded in admin (category_icons), which win over the
+  // built-in shapes, as on the site.
+  let cardCategoryIcons = {};
+  function setCardCategoryIcons(map) { cardCategoryIcons = map || {}; }
+  function customCategoryIcon(category) {
+    const key = Object.keys(cardCategoryIcons).find((k) => k.toLowerCase() === String(category || '').toLowerCase());
+    return key ? cardCategoryIcons[key] : null;
+  }
+  // Runs the loader once (it also brings the family icons), even when
+  // the products were already handed over with setCardProducts.
   async function ensureCardProducts() {
-    if (cardProducts.length || !cardProductsLoader) return cardProducts;
-    if (!cardProductsLoading) cardProductsLoading = Promise.resolve(cardProductsLoader()).then((list) => { cardProducts = list || []; }).catch(() => {});
+    if (!cardProductsLoader) return cardProducts;
+    if (!cardProductsLoading) {
+      cardProductsLoading = Promise.resolve(cardProductsLoader())
+        .then((list) => { if (list && list.length) cardProducts = list; })
+        .catch(() => {});
+    }
     await cardProductsLoading;
     return cardProducts;
   }
@@ -208,11 +222,11 @@
     const product = productNamed(text, cardProducts);
     if (product) {
       const fig = productFigure(product);
-      return { title: appleName(product.name), shape: iconShapeFor(product.category) || CATEGORY_ICONS.Other, iconUrl: product.icon_url || null, big: fig.big, caption: fig.caption, sub: fig.sub };
+      return { title: appleName(product.name), shape: iconShapeFor(product.category) || CATEGORY_ICONS.Other, iconUrl: product.icon_url || customCategoryIcon(product.category) || null, big: fig.big, caption: fig.caption, sub: fig.sub };
     }
     const category = categoryNamed(text);
     const fig = textFigure(text);
-    return { title: category || 'Apple Sunset', shape: category ? iconShapeFor(category) : null, iconUrl: null, big: fig ? fig.big : '', caption: fig ? fig.caption : '', sub: '' };
+    return { title: category || 'Apple Sunset', shape: category ? iconShapeFor(category) : null, iconUrl: category ? customCategoryIcon(category) : null, big: fig ? fig.big : '', caption: fig ? fig.caption : '', sub: '' };
   }
 
   function loadImage(src, cors) {
@@ -303,8 +317,12 @@
     let art = subject.iconUrl ? await loadImage(subject.iconUrl, true) : null;
     if (!art && subject.shape) art = await iconImage(subject.shape, '#9c4009');
     if (art) {
+      // Fit inside the tile, keeping the icon's own proportions.
       const inner = TILE - 70;
-      ctx.drawImage(art, tx + 35, ty + 35, inner, inner);
+      const ratio = (art.naturalWidth || art.width || 1) / (art.naturalHeight || art.height || 1);
+      const dw = ratio >= 1 ? inner : Math.round(inner * ratio);
+      const dh = ratio >= 1 ? Math.round(inner / ratio) : inner;
+      ctx.drawImage(art, tx + (TILE - dw) / 2, ty + (TILE - dh) / 2, dw, dh);
     } else if (logo) {
       ctx.save();
       roundedRect(ctx, tx, ty, TILE, TILE, 44);
@@ -866,7 +884,11 @@
       if (!p || !p.slug) return;
       const plain = plainText(p.did_you_know);
       if (!plain) return;
-      pool.push({ key: 'p:' + p.slug, html: String(p.did_you_know), plain, slug: p.slug, name: p.name || '' });
+      // Away from its product page a fact needs its product's name; "post"
+      // is the text for X, with the name in front when the fact doesn't
+      // already say it (which also lets the card find the product).
+      const named = productNamed(plain, [{ name: p.name, slug: p.slug }]);
+      pool.push({ key: 'p:' + p.slug, html: String(p.did_you_know), plain, slug: p.slug, name: p.name || '', post: named ? plain : (p.name ? p.name + ': ' + plain : plain) });
     });
     generateFactCandidates(list).forEach((text) => {
       // Numbers left out of the key, so a statistic keeps its place in
@@ -913,8 +935,13 @@
     if (!item) return '';
     const href = item.slug ? '/products/' + encodeURIComponent(item.slug) + '/' : '/facts/';
     const body = item.html ? sanitize(item.html) : escapeHtml(item.plain);
-    return '<p class="fact-label">Did you know?</p>' +
-      '<div class="fact-text" data-fact-key="' + escapeHtml(item.key) + '" data-fact-href="' + href + '" data-fact-name="' + escapeHtml(item.name) + '">' + body + '</div>' +
+    // A product's own fact names its product above it, so it makes sense
+    // on the homepage as well as on that product's page.
+    const subject = item.key.charAt(0) === 'p' && item.name
+      ? '<p class="fact-subject"><a href="' + href + '">' + escapeHtml(item.name) + '</a></p>'
+      : '';
+    return '<p class="fact-label">Did you know?</p>' + subject +
+      '<div class="fact-text" data-fact-key="' + escapeHtml(item.key) + '" data-fact-href="' + href + '" data-fact-name="' + escapeHtml(item.name) + '" data-fact-post="' + escapeHtml(item.post || item.plain) + '">' + body + '</div>' +
       (item.slug ? '<a href="' + href + '" class="fact-more-link fact-related-link">More on the ' + escapeHtml(item.name) + ' &rarr;</a>' : '') +
       '<a href="/facts/" class="fact-more-link">More facts &rarr;</a>' +
       '<button type="button" class="admin-edit-link tweet-btn fact-tweet-btn" style="display:none;">Draft a post for X</button>';
@@ -939,6 +966,7 @@
     appleName,
     CATEGORY_ICONS,
     setCardProducts,
+    setCardCategoryIcons,
     setCardProductsLoader,
     cardSubject,
     dailyFactPool,

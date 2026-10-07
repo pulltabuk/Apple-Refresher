@@ -2691,3 +2691,8 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .fact-admin-pin[hidden], .fact-admin-actions[hidden], .fact-admin-pin button[hidden] { display: none !important; }
 .fact-admin-delete { color: #b42318; }
 .fact-when-row select { font: inherit; font-weight: 500; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+
+/* Homepage fact: the product it is about, above a product's own fact */
+.fact-subject { max-width: 640px; margin: 8px auto 0; font-size: 15px; font-weight: 700; }
+.fact-subject a { color: var(--accent-dark); text-decoration: none; }
+.fact-subject a:hover { text-decoration: underline; }

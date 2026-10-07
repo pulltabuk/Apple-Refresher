@@ -1612,7 +1612,7 @@
   // a site-wide statistic).
   function factPostAngles(box) {
     var el = box.querySelector('.fact-text');
-    var text = el ? el.innerText.replace(/\s+/g, ' ').trim() : '';
+    var text = el ? (el.getAttribute('data-fact-post') || el.innerText).replace(/\s+/g, ' ').trim() : '';
     var name = el ? el.getAttribute('data-fact-name') : '';
     var tags = ['#Apple', hashtag(name)].filter(function (t, i, a) { return t && a.indexOf(t) === i; }).join(' ');
     return [{ body: 'Did you know? ' + text, tags: tags }];
