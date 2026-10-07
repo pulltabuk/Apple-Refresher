@@ -2622,3 +2622,9 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 /* Admin earnings form */
 .earnings-form-row { display: flex; flex-wrap: wrap; gap: 12px; }
 .earnings-form-row label { flex: 1 1 160px; }
+
+/* Homepage earnings line: burnt orange with white text, so it stands out */
+.earnings-next { background: var(--accent); border-color: var(--accent); color: #fff; }
+.earnings-next:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+.earnings-next .earnings-next-label { color: rgba(255, 255, 255, 0.85); }
+.earnings-next .earnings-next-text { color: #fff; }
