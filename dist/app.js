@@ -1948,10 +1948,18 @@
   var builtFactEl = factBoxSection && factBoxSection.querySelector('[data-fact-key]');
   if (builtFactEl && window.FactsKit && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     var factKeyBuilt = builtFactEl.getAttribute('data-fact-key');
-    fetchAllProductsJS()
-      .then(function (products) {
+    Promise.all([
+      fetchAllProductsJS(),
+      fetch(window.SUPABASE_URL + '/rest/v1/facts?select=*', {
+        headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+      }).then(function (res) { return res.json(); }).catch(function () { return []; }),
+    ])
+      .then(function (results) {
+        var products = results[0];
+        var published = Array.isArray(results[1]) ? results[1] : [];
         if (!Array.isArray(products) || !products.length) return;
-        var item = window.FactsKit.dailyFactPool(products).filter(function (f) { return f.key === factKeyBuilt; })[0];
+        // Must match build.js: the same pool, so the same key finds the same fact.
+        var item = window.FactsKit.dailyFactPool(products, published).filter(function (f) { return f.key === factKeyBuilt; })[0];
         if (!item) return;
         factBoxSection.innerHTML = window.FactsKit.dailyFactBoxHtml(item, sanitizeRichTextJS);
         revealAdminEditLinks(factBoxSection.querySelectorAll('.admin-edit-link'));
