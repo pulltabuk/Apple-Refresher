@@ -1742,7 +1742,7 @@ function siteStatsHtml(s) {
   </div>`;
 }
 
-function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, latestFactLink, pageContent, countdown, earningsNext, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, dailyFact, pageContent, countdown, earningsNext, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const featuredSlotHtml = activeEvent
     ? eventCardHtml(activeEvent)
     : heroRotation && heroRotation.length > 1
@@ -1793,9 +1793,11 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
 </section>`
     : '';
 
-  const factSection = `<section class="homepage-section homepage-section--divided" id="fact-section" style="display:${latestFact ? '' : 'none'};">
+  // The day's fact, picked by the build (FactsKit.pickDailyFact). app.js
+  // re-renders it with the same FactsKit.dailyFactBoxHtml.
+  const factSection = `<section class="homepage-section homepage-section--divided" id="fact-section" style="display:${dailyFact ? '' : 'none'};">
   <div class="fact-box" id="fact-box">
-    ${latestFact ? factBoxInnerHtml(latestFact, latestFactLink) : ''}
+    ${FactsKit.dailyFactBoxHtml(dailyFact, (html) => sanitizeRichText(html, siteUrl))}
   </div>
 </section>`;
 
@@ -1828,6 +1830,8 @@ ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
+    // facts-kit.js re-renders the day's fact and drafts its X post.
+    scripts: [`<script src="${assetUrl('facts-kit.js')}" defer></script>`].concat(DEFAULT_SCRIPTS),
   });
 }
 

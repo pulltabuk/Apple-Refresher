@@ -2644,3 +2644,18 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .earnings-table td:last-child { grid-column: 1 / -1; text-align: left; margin-top: 4px; }
   .earnings-table td:empty { display: none; }
 }
+
+/* Homepage "Did you know?": the day's fact can be rich text (a product's
+   own fact), so its paragraphs sit flush; links stay readable. */
+.fact-box .fact-text p { margin: 0; }
+.fact-box .fact-text p + p { margin-top: 0.5em; }
+.fact-box .fact-text a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.fact-box .fact-tweet-btn { display: block; max-width: 640px; margin: 14px auto 0; }
+
+/* Featured tile, one release: the count sits right after its label */
+.card-featured-cycle--single .card-featured-cycle-head { justify-content: flex-start; gap: 8px; }
+
+/* At a glance tiles: everything centred both ways, labels in bold */
+.site-stat { align-items: center !important; justify-content: center !important; text-align: center; }
+.site-stat-label { font-weight: 700; }
+.site-stat-sub { text-align: center; }
