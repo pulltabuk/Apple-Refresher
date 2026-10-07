@@ -674,10 +674,11 @@
   // the same function, so the two always match and the fact never
   // changes while someone is reading.
 
-  // Every product's own "Did you know?" plus the site-wide statistics,
+  // Every product's own "Did you know?", the site-wide statistics and the
+  // facts published from admin,
   // in a fixed shuffled order (by a hash of each key, so it isn't A to Z
   // and doesn't reshuffle when one is added).
-  function dailyFactPool(products) {
+  function dailyFactPool(products, publishedFacts) {
     const list = products || [];
     const pool = [];
     list.forEach((p) => {
@@ -690,6 +691,17 @@
       // Numbers left out of the key, so a statistic keeps its place in
       // the rotation as the counts behind it change.
       pool.push({ key: 's:' + text.replace(/[0-9][0-9,.]*/g, '#'), html: null, plain: text, slug: null, name: '' });
+    });
+    // Facts published from admin or the phone app. One that names a
+    // product links to it (and is left out while that product is in the
+    // big tile); one that repeats a statistic above is skipped.
+    const statShape = (t) => normaliseFact(t).replace(/[0-9][0-9,.]*/g, '#');
+    const statShapes = pool.filter((i) => !i.slug).map((i) => statShape(i.plain));
+    (publishedFacts || []).forEach((f) => {
+      const text = String((f && f.text) || '').trim();
+      if (!f || f.id == null || !text || statShapes.indexOf(statShape(text)) !== -1) return;
+      const named = productNamed(text, list);
+      pool.push({ key: 'f:' + f.id, html: null, plain: text, slug: named ? named.slug : null, name: named ? named.name || '' : '' });
     });
     const seen = {};
     return pool.filter((item) => (seen[item.key] ? false : (seen[item.key] = true)))

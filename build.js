@@ -407,14 +407,14 @@ async function main() {
   const opts = { siteUrl: SITE_URL, supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON_KEY };
 
   // The homepage "Did you know?": one fact a day from every product's own
-  // fact plus the site-wide statistics, chosen from the date so everyone
+  // fact, the site-wide statistics and the published facts, chosen from the date so everyone
   // sees the same one until the next build (daily at 06:10 UTC). The
   // products in the big tile are left out, so one product doesn't
   // appear twice on screen. FACT_DATE (YYYY-MM-DD) overrides the date
   // for testing.
   const FactsKit = require('./public/facts-kit.js');
   const heroSlugs = activeEvent ? [] : (featuredItems.length ? featuredItems.slice(0, 3) : (heroFeatured ? [heroFeatured] : [])).map((i) => i.product.slug);
-  const dailyFact = FactsKit.pickDailyFact(FactsKit.dailyFactPool(products), process.env.FACT_DATE || today, heroSlugs);
+  const dailyFact = FactsKit.pickDailyFact(FactsKit.dailyFactPool(products, facts), process.env.FACT_DATE || today, heroSlugs);
 
   write('index.html', homePage({
     heroFeatured,
