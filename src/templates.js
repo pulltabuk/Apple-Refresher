@@ -2862,6 +2862,16 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <button type="button" id="own-fact-btn" class="admin-btn admin-btn--small admin-btn--primary">Publish</button>
       <button type="button" id="own-fact-x-btn" class="admin-btn admin-btn--small">Post to X only</button>
     </div>
+    <div class="fact-when-row">
+      <label>On the homepage
+        <select id="own-fact-when">
+          <option value="rotation">Take its turn in the daily rotation</option>
+          <option value="today">Show it today</option>
+          <option value="date">Show it on a date&hellip;</option>
+        </select>
+      </label>
+      <input type="date" id="own-fact-date" hidden aria-label="Day to show it on the homepage">
+    </div>
     <p class="admin-hint" id="own-fact-note"></p>
 
     <h3 class="admin-form-section">Published facts</h3>
@@ -3114,6 +3124,15 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
       <p class="up-muted">Facts worked out from your product data. Generate, pick one, tweak the wording if you like, and it goes on the homepage and the Facts page.</p>
       <button type="button" id="up-generate-facts" class="gallery-action gallery-action--primary gallery-action--block">Generate facts</button>
       <p class="up-status" id="up-facts-status" aria-live="polite"></p>
+    </div>
+    <div class="up-card">
+      <span class="up-label">When you publish one, on the homepage</span>
+      <select id="up-fact-when" class="up-select">
+        <option value="rotation">Take its turn in the daily rotation</option>
+        <option value="today">Show it today</option>
+        <option value="date">Show it on a date&hellip;</option>
+      </select>
+      <input type="date" id="up-fact-date" class="up-select" hidden aria-label="Day to show it on the homepage">
     </div>
     <div id="up-fact-choices" class="up-fact-list"></div>
 

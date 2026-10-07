@@ -3602,6 +3602,24 @@
     }
   }
 
+  // The site's day is UTC (the daily build), so "today" here is too.
+  const pinToday = () => new Date().toISOString().slice(0, 10);
+  const niceDay = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  // The homepage day chosen for a new fact: null for the rotation, the
+  // date to pin it to, or false when "on a date" has no date yet.
+  function homepageDay(selectId, dateId) {
+    const when = document.getElementById(selectId).value;
+    if (when === 'today') return pinToday();
+    if (when === 'date') return document.getElementById(dateId).value || false;
+    return null;
+  }
+  document.getElementById('own-fact-when').addEventListener('change', (e) => {
+    const dateEl = document.getElementById('own-fact-date');
+    dateEl.hidden = e.target.value !== 'date';
+    dateEl.min = pinToday();
+    if (!dateEl.hidden && !dateEl.value) dateEl.focus();
+  });
+
   document.getElementById('own-fact-btn').addEventListener('click', async () => {
     const box = document.getElementById('own-fact');
     const note = document.getElementById('own-fact-note');
@@ -3612,17 +3630,28 @@
       note.textContent = 'That fact is already published.';
       return;
     }
+    const pin = homepageDay('own-fact-when', 'own-fact-date');
+    if (pin === false) { note.textContent = 'Pick the day to show it on the homepage.'; return; }
     btn.disabled = true;
-    const { data, error } = await client.from('facts').insert({ text }).select();
-    btn.disabled = false;
+    const { data, error, pinSkipped } = await window.FactsKit.insertFact(client, text, pin);
     if (error) {
+      btn.disabled = false;
       note.textContent = 'Could not publish: ' + error.message;
       return;
     }
     if (data && data[0] && data[0].id) await window.FactsKit.uploadFactCard(client, data[0]);
     box.value = '';
-    note.textContent = 'Added. Press Publish changes to put it on the site.';
+    document.getElementById('own-fact-when').value = 'rotation';
+    document.getElementById('own-fact-date').hidden = true;
+    note.textContent = 'Publishing…';
+    const published = await rebuildSite();
+    btn.disabled = false;
+    note.textContent = (pinSkipped ? 'Published, but not yet on a set day: run supabase-schema-update-30.sql in Supabase first. ' : '') +
+      (published.ok
+        ? (pin === pinToday() ? 'Published. It will be on the homepage in about a minute.' : pin ? 'Published. It will be on the homepage on ' + niceDay(pin) + '.' : 'Published. It will take its turn on the homepage.')
+        : 'Saved, but publishing failed (' + published.error + '). Press Publish changes.');
     loadPublishedFacts();
+    loadFactRotation();
   });
 
   async function loadPublishedFacts() {
@@ -3747,7 +3776,26 @@
         }
         loadPublishedFacts();
       });
+      // The day it shows on the homepage, if one is set; change or clear it.
+      const pinLabel = document.createElement('label');
+      pinLabel.className = 'fact-pin';
+      pinLabel.textContent = 'Homepage day ';
+      const pinInput = document.createElement('input');
+      pinInput.type = 'date';
+      pinInput.value = fact.homepage_date ? String(fact.homepage_date).slice(0, 10) : '';
+      pinInput.title = 'Leave blank to let it take its turn in the rotation';
+      pinInput.addEventListener('change', async () => {
+        const { error: pinError } = await client.from('facts').update({ homepage_date: pinInput.value || null }).eq('id', fact.id);
+        if (pinError) {
+          window.alert(/homepage_date/.test(pinError.message) ? 'Run supabase-schema-update-30.sql in Supabase first.' : 'Could not save: ' + pinError.message);
+          return;
+        }
+        await rebuildSite();
+        loadFactRotation();
+      });
+      pinLabel.appendChild(pinInput);
       row.appendChild(p);
+      row.appendChild(pinLabel);
       row.appendChild(editBtn);
       row.appendChild(xBtn);
       row.appendChild(copyBtn);

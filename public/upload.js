@@ -1331,6 +1331,13 @@
 
   // Saves a fact, makes its tweet card, rebuilds the site. Shared by the
   // generated choices and "Add your own fact". Returns true when saved.
+  if ($('up-fact-when')) {
+    $('up-fact-when').addEventListener('change', (e) => {
+      $('up-fact-date').hidden = e.target.value !== 'date';
+      $('up-fact-date').min = new Date().toISOString().slice(0, 10);
+    });
+  }
+
   async function publishFact(rawText, button) {
     const finalText = (rawText || '').trim().replace(/\s+/g, ' ');
     if (!finalText) return false;
@@ -1338,10 +1345,18 @@
       factsStatus('That fact is already published.', true);
       return false;
     }
+    // The day it goes on the homepage, if one was chosen above.
+    const when = $('up-fact-when') ? $('up-fact-when').value : 'rotation';
+    const today = new Date().toISOString().slice(0, 10);
+    const pin = when === 'today' ? today : when === 'date' ? $('up-fact-date').value : null;
+    if (when === 'date' && !pin) {
+      factsStatus('Pick the day to show it on the homepage first.', true);
+      return false;
+    }
     const label = button.textContent;
     button.disabled = true;
     button.textContent = 'Publishing…';
-    const { data, error } = await client.from('facts').insert({ text: finalText }).select();
+    const { data, error, pinSkipped } = await window.FactsKit.insertFact(client, finalText, pin);
     if (error) {
       button.disabled = false;
       button.textContent = label;
@@ -1351,9 +1366,13 @@
     const row = data && data[0];
     if (row && row.id) await window.FactsKit.uploadFactCard(client, row); // the tweet preview card
     const published = await publishSite();
+    const whenText = pin === today ? 'It will be on the homepage in about a minute.'
+      : pin ? 'It will be on the homepage on ' + new Date(pin + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + '.'
+      : 'It will take its turn on the homepage, and is on the Facts page in about a minute.';
     factsStatus(published.ok
-      ? 'Published. It will be on the homepage and Facts page in about a minute.'
-      : 'Saved, but the site rebuild failed (' + published.error + '). It will appear at the next publish or the morning rebuild.', !published.ok);
+      ? (pinSkipped ? 'Published, but not on a set day yet: run supabase-schema-update-30.sql in Supabase first.' : 'Published. ' + whenText)
+      : 'Saved, but the site rebuild failed (' + published.error + '). It will appear at the next publish or the morning rebuild.', !published.ok || !!pinSkipped);
+    if ($('up-fact-when')) { $('up-fact-when').value = 'rotation'; $('up-fact-date').hidden = true; }
     button.disabled = false;
     button.textContent = label;
     await loadFactData();

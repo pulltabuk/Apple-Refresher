@@ -2667,3 +2667,9 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .fact-rotation-row.is-today .fact-rotation-when { color: var(--accent-dark); }
 .fact-rotation-kind { margin-left: 8px; font-weight: 600; text-transform: none; letter-spacing: 0; }
 .fact-rotation-text { margin: 0; font-size: 14px; }
+
+/* Admin Facts: when a new fact shows on the homepage, and each one's day */
+.fact-when-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 8px 0 4px; }
+.fact-when-row label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
+.fact-pin { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+.fact-pin input { font-size: 12px; padding: 4px 6px; }
