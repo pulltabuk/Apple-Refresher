@@ -1605,11 +1605,23 @@
     return isUrl ? text.length - last.length + 23 : text.length;
   }
 
-  function openPostComposer() {
+  // The homepage "Did you know?" as a post: the fact itself, #Apple plus
+  // the product's own tag, and a link to the product (or to /facts/ for
+  // a site-wide statistic).
+  function factPostAngles(box) {
+    var el = box.querySelector('.fact-text');
+    var text = el ? el.innerText.replace(/\s+/g, ' ').trim() : '';
+    var name = el ? el.getAttribute('data-fact-name') : '';
+    var tags = ['#Apple', hashtag(name)].filter(function (t, i, a) { return t && a.indexOf(t) === i; }).join(' ');
+    return [{ body: 'Did you know? ' + text, tags: tags }];
+  }
+
+  function openPostComposer(e) {
+    var factBox = e && e.currentTarget && e.currentTarget.closest ? e.currentTarget.closest('.fact-box') : null;
     var root = document.querySelector('.product-page') || document;
-    var data = readProductFacts(root);
-    var angles = postAngles(data);
-    var url = window.location.origin + window.location.pathname;
+    var angles = factBox ? factPostAngles(factBox) : postAngles(readProductFacts(root));
+    var factEl = factBox && factBox.querySelector('.fact-text');
+    var url = window.location.origin + (factEl ? factEl.getAttribute('data-fact-href') || '/facts/' : window.location.pathname);
     var index = 0;
 
     var existing = document.querySelector('.post-composer');
@@ -1926,29 +1938,24 @@
     }).catch(function () {});
   }
 
+  // Homepage "Did you know?": the build picked today's fact (see
+  // FactsKit.pickDailyFact). This re-renders that same fact, found by its
+  // key in the live data, with the same FactsKit.dailyFactBoxHtml, so a
+  // wording change shows straight away but the fact itself never
+  // changes while someone is reading. The re-render replaces the "Draft
+  // a post for X" button, so it is revealed and wired again afterwards.
   var factBoxSection = document.getElementById('fact-box');
-  var factSectionWrapper = document.getElementById('fact-section');
-  if (factBoxSection && factSectionWrapper && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-    fetch(window.SUPABASE_URL + '/rest/v1/facts?select=*&order=created_at.desc&limit=1', {
-      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (rows) {
-        var latest = Array.isArray(rows) ? rows[0] : null;
-        if (!latest) {
-          factSectionWrapper.style.display = 'none';
-          return;
-        }
-        factSectionWrapper.style.display = '';
-        // Still the fact the page was built with: keep it as built, link
-        // to its product included. A newer one shows straight away and
-        // gains its link when the site rebuilds a moment later.
-        var builtFact = factBoxSection.querySelector('[data-fact-id]');
-        if (builtFact && builtFact.getAttribute('data-fact-id') === String(latest.id)) return;
-        factBoxSection.innerHTML =
-          '<p class="fact-label">Did you know?</p>' +
-          '<p class="fact-text">' + escapeHtmlJS(latest.text) + '</p>' +
-          '<a href="/facts/" class="fact-more-link">More facts &rarr;</a>';
+  var builtFactEl = factBoxSection && factBoxSection.querySelector('[data-fact-key]');
+  if (builtFactEl && window.FactsKit && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+    var factKeyBuilt = builtFactEl.getAttribute('data-fact-key');
+    fetchAllProductsJS()
+      .then(function (products) {
+        if (!Array.isArray(products) || !products.length) return;
+        var item = window.FactsKit.dailyFactPool(products).filter(function (f) { return f.key === factKeyBuilt; })[0];
+        if (!item) return;
+        factBoxSection.innerHTML = window.FactsKit.dailyFactBoxHtml(item, sanitizeRichTextJS);
+        revealAdminEditLinks(factBoxSection.querySelectorAll('.admin-edit-link'));
+        wireTweetButtons(factBoxSection.querySelectorAll('.tweet-btn'));
       })
       .catch(function () {});
   }

@@ -668,7 +668,62 @@
     ].join('\n');
   }
 
+  // --- The homepage "Did you know?" of the day. The build picks it
+  // (pickDailyFact) and writes it with dailyFactBoxHtml; the homepage's
+  // live refresh re-renders the same fact, found again by its key, with
+  // the same function, so the two always match and the fact never
+  // changes while someone is reading.
+
+  // Every product's own "Did you know?" plus the site-wide statistics,
+  // in a fixed shuffled order (by a hash of each key, so it isn't A to Z
+  // and doesn't reshuffle when one is added).
+  function dailyFactPool(products) {
+    const list = products || [];
+    const pool = [];
+    list.forEach((p) => {
+      if (!p || !p.slug) return;
+      const plain = plainText(p.did_you_know);
+      if (!plain) return;
+      pool.push({ key: 'p:' + p.slug, html: String(p.did_you_know), plain, slug: p.slug, name: p.name || '' });
+    });
+    generateFactCandidates(list).forEach((text) => {
+      // Numbers left out of the key, so a statistic keeps its place in
+      // the rotation as the counts behind it change.
+      pool.push({ key: 's:' + text.replace(/[0-9][0-9,.]*/g, '#'), html: null, plain: text, slug: null, name: '' });
+    });
+    const seen = {};
+    return pool.filter((item) => (seen[item.key] ? false : (seen[item.key] = true)))
+      .sort((a, b) => (factKey(a.key) < factKey(b.key) ? -1 : factKey(a.key) > factKey(b.key) ? 1 : 0));
+  }
+
+  // One step through the pool per day (UTC), so everything shows once
+  // before anything repeats. Products named in excludeSlugs (those in
+  // the big homepage tile) are taken out first.
+  function pickDailyFact(pool, dateStr, excludeSlugs) {
+    const skip = excludeSlugs || [];
+    const usable = (pool || []).filter((item) => !item.slug || skip.indexOf(item.slug) === -1);
+    if (!usable.length) return null;
+    const day = Math.floor(Date.parse(String(dateStr).slice(0, 10) + 'T00:00:00Z') / 86400000);
+    return usable[((day % usable.length) + usable.length) % usable.length];
+  }
+
+  // The box's contents. sanitize is the page's own rich-text cleaner
+  // (sanitizeRichText in the build, sanitizeRichTextJS in the browser).
+  function dailyFactBoxHtml(item, sanitize) {
+    if (!item) return '';
+    const href = item.slug ? '/products/' + encodeURIComponent(item.slug) + '/' : '/facts/';
+    const body = item.html ? sanitize(item.html) : escapeHtml(item.plain);
+    return '<p class="fact-label">Did you know?</p>' +
+      '<div class="fact-text" data-fact-key="' + escapeHtml(item.key) + '" data-fact-href="' + href + '" data-fact-name="' + escapeHtml(item.name) + '">' + body + '</div>' +
+      (item.slug ? '<a href="' + href + '" class="fact-more-link fact-related-link">More on the ' + escapeHtml(item.name) + ' &rarr;</a>' : '') +
+      '<a href="/facts/" class="fact-more-link">More facts &rarr;</a>' +
+      '<button type="button" class="admin-edit-link tweet-btn fact-tweet-btn" style="display:none;">Draft a post for X</button>';
+  }
+
   const FactsKit = {
+    dailyFactPool,
+    pickDailyFact,
+    dailyFactBoxHtml,
     xPostIdeas,
     xPostText,
     xPostLength,
