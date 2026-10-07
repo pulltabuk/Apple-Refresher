@@ -922,8 +922,21 @@
 
   async function openXPosts() {
     show('x');
+    $('up-x-back').hidden = true;
     xRefresh();
   }
+
+  // From the Did you know? screen: the post filled in, with its card, and
+  // a way back.
+  function xFromFact(idea) {
+    show('x');
+    $('up-x-back').hidden = false;
+    $('up-x-text').value = '';
+    $('up-x-card-on').checked = true;
+    $('up-x-tags').checked = true;
+    xUseIdea(idea);
+  }
+  $('up-x-back').addEventListener('click', openFacts);
 
   $('up-x-ideas').addEventListener('click', async () => {
     if (!xIdeas.length) {
@@ -1244,17 +1257,29 @@
     setTimeout(() => { btn.textContent = original; }, 1600);
   }
 
+  let factEvents = [];
+  let factFeaturedOrder = [];
   async function loadFactData() {
-    const [productsRes, factsRes] = await Promise.all([
+    const [productsRes, factsRes, eventsRes, featuredRes] = await Promise.all([
       client.from('products').select('*'),
       client.from('facts').select('*').order('created_at', { ascending: false }),
+      client.from('apple_events').select('*'),
+      client.from('site_content').select('body').eq('id', 'featured').maybeSingle(),
     ]);
     if (!productsRes.error) factProducts = productsRes.data || [];
+    factEvents = eventsRes.data || [];
+    try {
+      const ids = JSON.parse((featuredRes.data && featuredRes.data.body) || '[]');
+      factFeaturedOrder = Array.isArray(ids) ? ids.map(String) : [];
+    } catch (err) {
+      factFeaturedOrder = [];
+    }
     if (factsRes.error) {
       factsStatus('Could not load facts: ' + factsRes.error.message, true);
       return;
     }
     publishedFacts = factsRes.data || [];
+    renderFactRotation();
     renderPublishedFacts();
     makeMissingCards();
   }
@@ -1285,6 +1310,63 @@
       }
     } finally {
       makingCards = false;
+    }
+  }
+
+  const niceDay = (day) => new Date(day + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  // The site's day is UTC (the daily build), so "today" here is too.
+  const utcToday = () => new Date().toISOString().slice(0, 10);
+  const factLink = (text) => {
+    const named = window.FactsKit.productNamed(text, factProducts);
+    return window.location.origin + (named ? '/products/' + named.slug + '/' : '/facts/');
+  };
+
+  // Part 1: the same pool and daily pick the build uses
+  // (FactsKit.dailyFactPool / pickDailyFact), today and the next six days.
+  function renderFactRotation() {
+    const list = $('up-fact-rotation');
+    list.innerHTML = '';
+    // The products in the big homepage tile, as the build picks them:
+    // featured, on sale and with a release date, slot order first, at most 3.
+    const featured = factProducts.filter((p) => p.featured && !p.discontinued && (p.refresh_history || []).length);
+    featured.sort((a, b) => {
+      const ia = factFeaturedOrder.indexOf(String(a.id)); const ib = factFeaturedOrder.indexOf(String(b.id));
+      if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      return String(a.name).localeCompare(String(b.name));
+    });
+    const tileSlugs = featured.slice(0, 3).map((p) => p.slug);
+    const pool = window.FactsKit.dailyFactPool(factProducts, publishedFacts);
+    if (!pool.length) {
+      list.innerHTML = '<p class="up-muted">No facts yet.</p>';
+      return;
+    }
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
+      // An Apple Event in the big tile means no product is there that day.
+      const eventInTile = factEvents.some((e) => e.featured) || factEvents.some((e) => e.event_date >= day);
+      const item = window.FactsKit.pickDailyFact(pool, day, eventInTile ? [] : tileSlugs);
+      if (!item) continue;
+      const card = document.createElement('div');
+      card.className = 'up-card up-rotation-row' + (i === 0 ? ' is-today' : '');
+      const when = document.createElement('p');
+      when.className = 'up-rotation-when';
+      when.textContent = i === 0 ? 'Today' : niceDay(day);
+      const kind = document.createElement('span');
+      kind.className = 'up-x-kind';
+      kind.textContent = item.key.charAt(0) === 'p' ? item.name : item.key.charAt(0) === 'f' ? 'Your fact' : 'Statistic';
+      when.appendChild(kind);
+      const text = document.createElement('p');
+      text.className = 'up-fact-text';
+      text.textContent = item.plain;
+      const toX = actionButton('Post to X', (i === 0 ? 'gallery-action--primary ' : '') + 'gallery-action--block', () => xFromFact({
+        text: item.post || item.plain,
+        link: window.location.origin + (item.slug ? '/products/' + item.slug + '/' : '/facts/'),
+        kind: 'Did you know?',
+      }));
+      card.appendChild(when);
+      card.appendChild(text);
+      card.appendChild(toX);
+      list.appendChild(card);
     }
   }
 
@@ -1411,6 +1493,14 @@
   });
 
   $('up-own-fact').addEventListener('input', () => tweetCount($('up-own-fact'), $('up-own-fact-count')));
+  $('up-own-fact-x').addEventListener('click', () => {
+    const text = $('up-own-fact').value.trim().replace(/\s+/g, ' ');
+    if (!text) {
+      $('up-own-fact').focus();
+      return;
+    }
+    xFromFact({ text, link: factLink(text), kind: 'Did you know?' });
+  });
   $('up-own-fact-use').addEventListener('click', async () => {
     if (await publishFact($('up-own-fact').value, $('up-own-fact-use'))) {
       $('up-own-fact').value = '';
@@ -1439,73 +1529,74 @@
     publishedFacts.forEach((fact) => list.appendChild(publishedFactCard(fact)));
   }
 
+  // Part 3: each published fact with its homepage status, and Post to X
+  // (the X posts screen, card ready), Homepage day, Edit and Delete.
   function publishedFactCard(fact) {
     const card = document.createElement('div');
     card.className = 'up-card';
-    let imageFile = null;
-    window.FactsKit.factImageFile(fact.text).then((file) => { imageFile = file; });
-    const tweet = () => window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact), allProducts);
-
     const text = document.createElement('p');
     text.className = 'up-fact-text';
     text.textContent = fact.text;
     card.appendChild(text);
-    if (fact.created_at) {
-      const date = document.createElement('p');
-      date.className = 'up-fact-date';
-      date.textContent = 'Published ' + new Date(fact.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-      card.appendChild(date);
+
+    const pin = fact.homepage_date ? String(fact.homepage_date).slice(0, 10) : '';
+    const today = utcToday();
+    const meta = document.createElement('p');
+    meta.className = 'up-fact-date';
+    meta.textContent = fact.created_at ? 'Published ' + new Date(fact.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Published';
+    const pill = document.createElement('span');
+    pill.className = 'up-pill' + (pin && pin >= today ? ' is-scheduled' : '');
+    pill.textContent = pin === today ? 'On the homepage today' : pin > today ? 'On the homepage ' + niceDay(pin) : 'In the daily rotation';
+    meta.appendChild(pill);
+    card.appendChild(meta);
+
+    // Homepage day: set, change or clear it.
+    const panel = document.createElement('div');
+    panel.className = 'up-pin-panel';
+    panel.hidden = true;
+    const label = document.createElement('span');
+    label.className = 'up-label';
+    label.textContent = 'Show it on the homepage on';
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.className = 'up-select';
+    dateInput.value = pin;
+    dateInput.min = today;
+    dateInput.setAttribute('aria-label', 'Day to show it on the homepage');
+    const savePin = async (value, btn) => {
+      btn.disabled = true;
+      const { error } = await client.from('facts').update({ homepage_date: value || null }).eq('id', fact.id);
+      if (error) {
+        btn.disabled = false;
+        factsStatus(/homepage_date/.test(error.message) ? 'Run supabase-schema-update-30.sql in Supabase first.' : 'Could not save: ' + error.message, true);
+        return;
+      }
+      const published = await publishSite();
+      factsStatus(published.ok
+        ? (!value ? 'Back in the daily rotation.' : value === today ? 'On the homepage in about a minute.' : 'On the homepage on ' + niceDay(value) + '.')
+        : 'Saved, but the site rebuild failed (' + published.error + ').', !published.ok);
+      loadFactData();
+    };
+    const panelActions = document.createElement('div');
+    panelActions.className = 'up-fact-actions';
+    const saveDay = actionButton('Save day', 'gallery-action--primary', () => {
+      if (dateInput.value) savePin(dateInput.value, saveDay); else dateInput.focus();
+    });
+    const todayBtn = actionButton('Today', '', () => savePin(today, todayBtn));
+    panelActions.appendChild(saveDay);
+    panelActions.appendChild(todayBtn);
+    if (pin) {
+      const clear = actionButton('Back to the daily rotation', 'gallery-action--wide', () => savePin('', clear));
+      panelActions.appendChild(clear);
     }
+    panel.appendChild(label);
+    panel.appendChild(dateInput);
+    panel.appendChild(panelActions);
 
     const actions = document.createElement('div');
     actions.className = 'up-fact-actions';
-
-    // Share: text + image card to the share sheet (pick X there).
-    const send = actionButton('Share with image', 'gallery-action--primary gallery-action--wide', async () => {
-      const data = imageFile && navigator.canShare && navigator.canShare({ files: [imageFile] })
-        ? { text: tweet(), files: [imageFile] }
-        : { text: tweet() };
-      if (navigator.share) {
-        try {
-          await navigator.share(data);
-          return;
-        } catch (err) {
-          if (err && err.name === 'AbortError') return;
-        }
-      }
-      copyText(tweet(), send);
-    });
-    // Post to X links to the fact's page, whose preview is the card. X
-    // remembers a preview for days, so wait until the page is live.
-    const toX = actionButton('Post to X', '', () => openInX(tweet()));
-    toX.disabled = true;
-    toX.textContent = 'Checking card…';
-    (async function waitForPage(tries) {
-      if (!card.isConnected && tries > 0) return;
-      if (await window.FactsKit.factPageLive(fact)) {
-        toX.disabled = false;
-        toX.textContent = 'Post to X';
-        return;
-      }
-      toX.textContent = 'Card ready in a moment…';
-      if (tries < 40) setTimeout(() => waitForPage(tries + 1), 15000);
-      else toX.textContent = 'Card not live yet';
-    })(0);
-    const copy = actionButton('Copy text', '', () => copyText(tweet(), copy));
-    const save = actionButton('Save image', '', async () => {
-      if (imageFile && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
-        try {
-          await navigator.share({ files: [imageFile] }); // the sheet offers Save Image
-          return;
-        } catch (err) {
-          if (err && err.name === 'AbortError') return;
-        }
-      }
-      const link = document.createElement('a');
-      link.href = await window.FactsKit.generateFactImage(fact.text);
-      link.download = 'apple-sunset-fact.png';
-      link.click();
-    });
+    const toX = actionButton('Post to X', 'gallery-action--primary gallery-action--wide', () => xFromFact({ text: fact.text, link: factLink(fact.text), kind: 'Did you know?' }));
+    const dayBtn = actionButton('Homepage day\u2026', '', () => { panel.hidden = !panel.hidden; });
     const edit = actionButton('Edit', '', () => editFact(card, fact));
     const remove = actionButton('Delete', 'gallery-action--danger gallery-action--wide', async () => {
       if (!window.confirm('Delete this fact? It will come off the site.')) return;
@@ -1519,8 +1610,9 @@
       factsStatus(published.ok ? 'Deleted. It will be gone from the site in about a minute.' : 'Deleted, but the site rebuild failed (' + published.error + ').', !published.ok);
       loadFactData();
     });
-    [send, toX, copy, save, edit, remove].forEach((b) => actions.appendChild(b));
+    [toX, dayBtn, edit, remove].forEach((b) => actions.appendChild(b));
     card.appendChild(actions);
+    card.appendChild(panel);
     return card;
   }
 
