@@ -2659,3 +2659,11 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .site-stat { align-items: center !important; justify-content: center !important; text-align: center; }
 .site-stat-label { font-weight: 700; }
 .site-stat-sub { text-align: center; }
+
+/* Admin Facts: the homepage rotation */
+.fact-rotation-row { align-items: center; }
+.fact-rotation-body { flex: 1; min-width: 0; }
+.fact-rotation-when { margin: 0 0 2px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+.fact-rotation-row.is-today .fact-rotation-when { color: var(--accent-dark); }
+.fact-rotation-kind { margin-left: 8px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.fact-rotation-text { margin: 0; font-size: 14px; }
