@@ -3696,19 +3696,32 @@
           await window.FactsKit.uploadFactCard(client, { id: fact.id, text: newText });
           loadPublishedFacts();
         });
-        row.innerHTML = '';
-        row.appendChild(textarea);
-        row.appendChild(saveBtn);
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'admin-btn admin-btn--small';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', () => loadPublishedFacts());
+        const editBox = document.createElement('div');
+        editBox.className = 'fact-admin-edit';
+        editBox.appendChild(textarea);
+        const editActions = document.createElement('div');
+        editActions.className = 'fact-admin-actions';
+        editActions.appendChild(saveBtn);
+        editActions.appendChild(cancelBtn);
+        editBox.appendChild(editActions);
+        p.replaceWith(editBox);
+        actions.hidden = true;
+        textarea.focus();
       });
       const copyBtn = document.createElement('button');
       copyBtn.type = 'button';
       copyBtn.className = 'admin-btn admin-btn--small';
-      copyBtn.textContent = 'Copy for Twitter';
+      copyBtn.textContent = 'Copy text';
       copyBtn.addEventListener('click', () => {
         const tweetText = window.FactsKit.buildTweetText(fact.text, window.FactsKit.factPageUrl(fact), cachedProducts);
         navigator.clipboard.writeText(tweetText).then(() => {
           copyBtn.textContent = 'Copied!';
-          setTimeout(() => { copyBtn.textContent = 'Copy for Twitter'; }, 1500);
+          setTimeout(() => { copyBtn.textContent = 'Copy text'; }, 1500);
         }).catch(() => {
           window.alert('Could not copy automatically, here is the text:\n\n' + tweetText);
         });
@@ -3755,7 +3768,8 @@
       const imageBtn = document.createElement('button');
       imageBtn.type = 'button';
       imageBtn.className = 'admin-btn admin-btn--small';
-      imageBtn.textContent = 'Download image';
+      imageBtn.textContent = 'Image';
+      imageBtn.title = 'Download the card image';
       imageBtn.addEventListener('click', async () => {
         const dataUrl = await generateFactImage(fact.text);
         const link = document.createElement('a');
@@ -3765,10 +3779,10 @@
       });
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
-      deleteBtn.className = 'admin-btn admin-btn--small';
+      deleteBtn.className = 'fact-admin-delete';
       deleteBtn.textContent = 'Delete';
       deleteBtn.addEventListener('click', async () => {
-        if (!window.confirm('Delete this fact?')) return;
+        if (!window.confirm('Delete this fact? It comes off the Facts page and the homepage rotation.')) return;
         const { error: delError } = await client.from('facts').delete().eq('id', fact.id);
         if (delError) {
           window.alert('Delete failed: ' + delError.message);
@@ -3776,31 +3790,76 @@
         }
         loadPublishedFacts();
       });
-      // The day it shows on the homepage, if one is set; change or clear it.
+      // Homepage day: shown as a status pill; "Homepage day…" opens a
+      // small panel to set, change or clear it.
+      const pin = fact.homepage_date ? String(fact.homepage_date).slice(0, 10) : '';
+      const today = new Date().toISOString().slice(0, 10);
+      const pill = document.createElement('span');
+      pill.className = 'fact-admin-pill' + (pin && pin >= today ? ' is-scheduled' : '');
+      pill.textContent = pin === today ? 'On the homepage today'
+        : pin > today ? 'On the homepage ' + new Date(pin + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+        : 'In the daily rotation';
+      const meta = document.createElement('p');
+      meta.className = 'fact-admin-meta';
+      meta.textContent = fact.created_at ? 'Published ' + new Date(fact.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Published';
+      meta.appendChild(pill);
+
+      const pinPanel = document.createElement('div');
+      pinPanel.className = 'fact-admin-pin';
+      pinPanel.hidden = true;
       const pinLabel = document.createElement('label');
-      pinLabel.className = 'fact-pin';
-      pinLabel.textContent = 'Homepage day ';
+      pinLabel.textContent = 'Show it on the homepage on ';
       const pinInput = document.createElement('input');
       pinInput.type = 'date';
-      pinInput.value = fact.homepage_date ? String(fact.homepage_date).slice(0, 10) : '';
-      pinInput.title = 'Leave blank to let it take its turn in the rotation';
-      pinInput.addEventListener('change', async () => {
-        const { error: pinError } = await client.from('facts').update({ homepage_date: pinInput.value || null }).eq('id', fact.id);
+      pinInput.value = pin;
+      pinInput.min = today;
+      pinLabel.appendChild(pinInput);
+      const savePin = async (value) => {
+        const { error: pinError } = await client.from('facts').update({ homepage_date: value || null }).eq('id', fact.id);
         if (pinError) {
           window.alert(/homepage_date/.test(pinError.message) ? 'Run supabase-schema-update-30.sql in Supabase first.' : 'Could not save: ' + pinError.message);
           return;
         }
         await rebuildSite();
+        loadPublishedFacts();
         loadFactRotation();
-      });
-      pinLabel.appendChild(pinInput);
+      };
+      const pinSave = document.createElement('button');
+      pinSave.type = 'button';
+      pinSave.className = 'admin-btn admin-btn--small admin-btn--primary';
+      pinSave.textContent = 'Save';
+      pinSave.addEventListener('click', () => { if (pinInput.value) savePin(pinInput.value); else pinInput.focus(); });
+      const pinToday = document.createElement('button');
+      pinToday.type = 'button';
+      pinToday.className = 'admin-btn admin-btn--small';
+      pinToday.textContent = 'Today';
+      pinToday.addEventListener('click', () => savePin(today));
+      const pinClear = document.createElement('button');
+      pinClear.type = 'button';
+      pinClear.className = 'admin-btn admin-btn--small';
+      pinClear.textContent = 'Back to the rotation';
+      pinClear.hidden = !pin;
+      pinClear.addEventListener('click', () => savePin(''));
+      pinPanel.appendChild(pinLabel);
+      pinPanel.appendChild(pinSave);
+      pinPanel.appendChild(pinToday);
+      pinPanel.appendChild(pinClear);
+      const pinBtn = document.createElement('button');
+      pinBtn.type = 'button';
+      pinBtn.className = 'admin-btn admin-btn--small';
+      pinBtn.textContent = 'Homepage day\u2026';
+      pinBtn.addEventListener('click', () => { pinPanel.hidden = !pinPanel.hidden; if (!pinPanel.hidden) pinInput.focus(); });
+
+      row.className = 'fact-admin-card';
+      p.className = 'fact-admin-text';
+      const actions = document.createElement('div');
+      actions.className = 'fact-admin-actions';
+      [xBtn, copyBtn, imageBtn, editBtn, pinBtn].forEach((btn) => actions.appendChild(btn));
+      actions.appendChild(deleteBtn);
       row.appendChild(p);
-      row.appendChild(pinLabel);
-      row.appendChild(editBtn);
-      row.appendChild(xBtn);
-      row.appendChild(copyBtn);
-      row.appendChild(imageBtn);
-      row.appendChild(deleteBtn);
+      row.appendChild(meta);
+      row.appendChild(actions);
+      row.appendChild(pinPanel);
       listEl.appendChild(row);
     });
   }
