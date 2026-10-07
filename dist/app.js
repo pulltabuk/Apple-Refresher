@@ -318,9 +318,10 @@
       var nextDate = dates[i + 1];
       var gap = nextDate ? timelineGapTextJS(nextDate, date) : '';
       var gapRow = gap ? '<li class="tl-gap"><span class="tl-gap-text">&#8593; ' + gap + '</span></li>' : '';
+      // Must match verticalTimelineHtml(): releases first, then A to Z.
       var ordered = entries.slice().sort(function (a, b) {
         var rank = function (e) { return e.type === 'discontinued' ? 1 : 0; };
-        return rank(a) - rank(b);
+        return rank(a) - rank(b) || String(a.displayName || a.productName).localeCompare(String(b.displayName || b.productName), 'en', { numeric: true, sensitivity: 'base' });
       });
       var lines = ordered.map(function (e) {
         return '<p class="tl-entry"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
