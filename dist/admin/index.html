@@ -67,6 +67,7 @@
       <button type="button" class="admin-tab-btn" data-tab="families">Families</button>
       <button type="button" class="admin-tab-btn" data-tab="gallery">Gallery</button>
       <button type="button" class="admin-tab-btn" data-tab="event">Apple Event</button>
+      <button type="button" class="admin-tab-btn" data-tab="earnings">Earnings</button>
       <button type="button" class="admin-tab-btn" data-tab="facts">Facts</button>
       <button type="button" class="admin-tab-btn" data-tab="x">X posts</button>
       <button type="button" class="admin-tab-btn" data-tab="pagetext">Page text</button>
@@ -464,6 +465,35 @@
   </div>
 
 
+  <div id="tab-earnings" class="admin-tab-panel" style="display:none;">
+    <p class="admin-hint">Apple&rsquo;s quarterly results. The next date shows on the homepage under the countdown (or as the countdown when nothing else is coming up) and at the top of the <a href="/earnings/" target="_blank" rel="noopener">Earnings page</a>. After the call, add Apple&rsquo;s press release link and a one-line headline. Saving publishes the site.</p>
+    <div id="earnings-list-view">
+      <button type="button" id="new-earnings-btn" class="admin-btn admin-btn--primary">Add a quarter</button>
+      <div id="earnings-list" class="admin-list"></div>
+    </div>
+    <div id="earnings-form-view" style="display:none;">
+      <button type="button" id="earnings-back-btn" class="admin-back-link">&larr; Back to earnings</button>
+      <h3 id="earnings-form-title">Add a quarter</h3>
+      <form id="earnings-form" class="admin-form">
+        <div class="earnings-form-row">
+          <label>Fiscal year<input type="number" id="earn_year" min="2000" max="2100" required></label>
+          <label>Quarter<select id="earn_quarter" required><option value="1">Q1 (Oct&ndash;Dec)</option><option value="2">Q2 (Jan&ndash;Mar)</option><option value="3">Q3 (Apr&ndash;Jun)</option><option value="4">Q4 (Jul&ndash;Sep)</option></select></label>
+        </div>
+        <div class="earnings-form-row">
+          <label>Results date<input type="date" id="earn_date" required></label>
+          <label>Results time<input type="text" id="earn_time" value="1:30pm PT" autocomplete="off"></label>
+          <label>Call time<input type="text" id="earn_call" value="2pm PT" autocomplete="off"></label>
+        </div>
+        <label>Quarter ended (optional)<input type="date" id="earn_qend"></label>
+        <label>Apple&rsquo;s press release link (after the call)<input type="url" id="earn_url" placeholder="https://www.apple.com/newsroom/2026/11/apple-reports-fourth-quarter-results/" autocomplete="off"></label>
+        <label>Headline (optional, one line)<input type="text" id="earn_headline" placeholder="e.g. Revenue $112.4bn, up 10%" autocomplete="off"></label>
+        <p id="earnings-error" class="form-error"></p>
+        <button type="submit" class="admin-btn admin-btn--primary">Save and publish</button>
+        <span id="earnings-status" class="admin-hint"></span>
+      </form>
+    </div>
+  </div>
+
   <div id="tab-x" class="admin-tab-panel" style="display:none;">
     <p class="admin-hint">Posts for the Apple Sunset X account only. Nothing here is saved or shown on the website.</p>
 
@@ -610,6 +640,7 @@
       <a href="/gallery/">Gallery</a>
       <a href="/events/">Apple Events</a>
       <a href="/facts/">Facts</a>
+      <a href="/earnings/">Earnings</a>
       <a href="/about/">About us</a>
       <a href="/contact/">Contact</a>
       <a href="/feed.xml">RSS Feed</a>
@@ -624,6 +655,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/facts-kit.js?v=4c4a5c4ea2" defer></script>
-<script src="/admin.js?v=5105e84ca2" defer></script>
+<script src="/admin.js?v=df95377b5e" defer></script>
 </body>
 </html>

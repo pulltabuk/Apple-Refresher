@@ -2591,3 +2591,34 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 /* Homepage hero: the same 14px gap between the countdown column and the
    tiles as between the tiles themselves (was 2.5rem). */
 .intro-hero-layout { gap: 14px; }
+
+/* Homepage: the next earnings, a single line under the countdown */
+.earnings-next { display: flex; flex-direction: column; gap: 3px; margin-top: 10px; padding: 10px 14px; border: 1px solid #f0d9c4; border-radius: 12px; background: #fff; color: var(--text); text-decoration: none; font-size: 14px; }
+.earnings-next:hover { border-color: var(--accent); }
+.earnings-next-text { font-weight: 600; }
+.earnings-next-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent-dark); }
+.intro-hero-text > .earnings-next { order: 3; flex: none; }
+/* When nothing is counting down: the latest release in the same box */
+.countdown--latest .countdown-clock { display: block !important; }
+.countdown--latest .countdown-unit { display: inline-flex !important; flex-direction: row !important; align-items: baseline !important; gap: 8px !important; background: none !important; border: 0 !important; padding: 0 !important; }
+.countdown--latest .countdown-value { font-size: 64px !important; }
+.countdown--latest .countdown-unit-label { font-size: 16px !important; text-transform: none !important; letter-spacing: 0 !important; }
+
+/* /earnings/ */
+.earnings-next-box { margin: 1.25rem 0 2rem; max-width: 560px; }
+.earnings-next-box .countdown { width: 100%; box-sizing: border-box; }
+.earnings-next-note { margin: 0.5rem 0 0; font-size: 14px; color: var(--text-secondary); }
+.earnings-next-note a { color: var(--accent); }
+.earnings-year { font-size: 18px; margin: 2rem 0 0.6rem; }
+.earnings-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.earnings-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+.earnings-table th, .earnings-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.earnings-table thead th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
+.earnings-table tbody th { font-weight: 700; white-space: nowrap; }
+.earnings-table td:last-child { white-space: nowrap; text-align: right; }
+.earnings-table a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.earnings-table a:hover { color: var(--accent-dark); }
+.earnings-footnote { margin-top: 1.5rem; font-size: 13px; color: var(--text-secondary); }
+/* Admin earnings form */
+.earnings-form-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.earnings-form-row label { flex: 1 1 160px; }
