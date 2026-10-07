@@ -542,6 +542,12 @@
   </div>
 
   <div id="tab-facts" class="admin-tab-panel" style="display:none;">
+    <h3 class="admin-form-section">On the homepage</h3>
+    <p class="admin-hint">The homepage &ldquo;Did you know?&rdquo; changes every morning, taking turns through every product&rsquo;s own fact, the statistics below and your published facts (skipping the products in the big featured tile). Here&rsquo;s today&rsquo;s and the next few, if nothing changes. Post to X opens it in the X posts tab, ready to send.</p>
+    <div id="fact-rotation" class="admin-fact-list">Loading&hellip;</div>
+
+    <h3 class="admin-form-section">Make a fact</h3>
+    <p class="admin-hint"><strong>Publish</strong> adds a fact to the Facts page and the homepage rotation. <strong>Post to X only</strong> sends it to the X posts tab without saving it anywhere on the site.</p>
     <p class="admin-hint">Computed from your current product data (release dates, categories, refresh cycles). Only patterns with a reasonable sample size behind them are shown, small datasets won't produce a fact until there's enough to say something real. Regenerate any time you've added more products.</p>
     <button type="button" id="generate-facts-btn" class="admin-btn admin-btn--primary">Generate facts</button>
     <div id="fact-candidates" class="admin-fact-list"></div>
@@ -558,6 +564,7 @@
     <div class="admin-fact-row">
       <textarea id="own-fact" class="admin-fact-textarea" rows="2" placeholder="Paste or type a fact" aria-label="Your fact"></textarea>
       <button type="button" id="own-fact-btn" class="admin-btn admin-btn--small admin-btn--primary">Publish</button>
+      <button type="button" id="own-fact-x-btn" class="admin-btn admin-btn--small">Post to X only</button>
     </div>
     <p class="admin-hint" id="own-fact-note"></p>
 
@@ -655,6 +662,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/facts-kit.js?v=6c44b40044" defer></script>
-<script src="/admin.js?v=df95377b5e" defer></script>
+<script src="/admin.js?v=23a022c822" defer></script>
 </body>
 </html>

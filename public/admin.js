@@ -541,6 +541,16 @@
       }
     }
 
+    // Other tabs (Facts) hand a fact over to post: switch here and fill it in.
+    window.AdminX = {
+      use(idea) {
+        const tabBtn = document.querySelector('.admin-tab-btn[data-tab="x"]');
+        if (tabBtn) tabBtn.click();
+        useIdea(idea);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    };
+
     function useIdea(idea) {
       if ($x('x-text').value.trim() && !window.confirm('Replace the post you are writing with this idea?')) return;
       $x('x-text').value = idea.text;
@@ -687,6 +697,10 @@
       document.querySelectorAll('.admin-tab-btn').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       const tab = btn.getAttribute('data-tab');
+      // The tab goes in the address (#facts), so a refresh comes back to it.
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search + (tab === 'products' ? '' : '#' + tab));
+      }
       document.getElementById('tab-products').style.display = tab === 'products' ? 'block' : 'none';
       document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
       document.getElementById('tab-gallery').style.display = tab === 'gallery' ? 'block' : 'none';
@@ -706,6 +720,7 @@
         loadEvents();
       }
       if (tab === 'earnings') loadEarningsAdmin();
+      if (tab === 'facts') loadFactRotation();
       if (tab === 'facts' && !factsLoaded) {
         factsLoaded = true;
         loadPublishedFacts();
@@ -748,6 +763,10 @@
       editGalleryPhoto(editPhotoId);
     } else {
       showProductList();
+      // Back to the tab in the address, e.g. /admin/#facts after a refresh.
+      const hashTab = window.location.hash.slice(1);
+      const hashBtn = hashTab && document.querySelector('.admin-tab-btn[data-tab="' + hashTab.replace(/[^a-z]/g, '') + '"]');
+      if (hashBtn) hashBtn.click();
     }
   }
 
@@ -3468,8 +3487,17 @@
         if (data && data[0] && data[0].id) await window.FactsKit.uploadFactCard(client, data[0]);
         loadPublishedFacts();
       });
+      const xOnlyBtn = document.createElement('button');
+      xOnlyBtn.type = 'button';
+      xOnlyBtn.className = 'admin-btn admin-btn--small';
+      xOnlyBtn.textContent = 'Post to X only';
+      xOnlyBtn.addEventListener('click', () => {
+        const finalText = textarea.value.trim();
+        if (finalText) window.AdminX.use({ text: finalText, link: window.location.origin + '/facts/', kind: 'Did you know?' });
+      });
       row.appendChild(textarea);
       row.appendChild(publishBtn);
+      row.appendChild(xOnlyBtn);
       listEl.appendChild(row);
     });
   }
@@ -3497,6 +3525,75 @@
   document.getElementById('fact-topic').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('ask-claude-btn').click();
   });
+
+  document.getElementById('own-fact-x-btn').addEventListener('click', () => {
+    const text = document.getElementById('own-fact').value.trim();
+    if (!text) { document.getElementById('own-fact-note').textContent = 'Type or paste a fact first.'; return; }
+    const named = window.FactsKit.productNamed(text, cachedProducts);
+    window.AdminX.use({ text, link: window.location.origin + (named ? '/products/' + named.slug + '/' : '/facts/'), kind: 'Did you know?' });
+  });
+
+  // --- The homepage rotation: the same pool and daily pick the build
+  // uses (FactsKit.dailyFactPool / pickDailyFact), for today and the next
+  // six days, each one ready to post to X.
+  async function loadFactRotation() {
+    const listEl = document.getElementById('fact-rotation');
+    if (!listEl) return;
+    const [factsRes, eventsRes] = await Promise.all([
+      client.from('facts').select('*'),
+      client.from('apple_events').select('*'),
+    ]);
+    const published = factsRes.data || [];
+    const events = eventsRes.data || [];
+    // The products in the big homepage tile, as the build picks them:
+    // featured, on sale and with a release date, slot order first, at most 3.
+    const featured = cachedProducts.filter((p) => p.featured && !p.discontinued && (p.refresh_history || []).length);
+    const order = featuredOrder.map(String);
+    featured.sort((a, b) => {
+      const ia = order.indexOf(String(a.id)); const ib = order.indexOf(String(b.id));
+      if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      return String(a.name).localeCompare(String(b.name));
+    });
+    const tileSlugs = featured.slice(0, 3).map((p) => p.slug);
+    const pool = window.FactsKit.dailyFactPool(cachedProducts, published);
+    listEl.innerHTML = '';
+    if (!pool.length) { listEl.textContent = 'No facts yet.'; return; }
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
+      // An Apple Event in the big tile means no product is there that day.
+      const eventInTile = events.some((e) => e.featured) || events.some((e) => e.event_date >= day);
+      const item = window.FactsKit.pickDailyFact(pool, day, eventInTile ? [] : tileSlugs);
+      if (!item) continue;
+      const row = document.createElement('div');
+      row.className = 'admin-fact-row fact-rotation-row' + (i === 0 ? ' is-today' : '');
+      const when = document.createElement('p');
+      when.className = 'fact-rotation-when';
+      when.textContent = i === 0 ? 'Today' : new Date(day + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      const kind = document.createElement('span');
+      kind.className = 'fact-rotation-kind';
+      kind.textContent = item.key.charAt(0) === 'p' ? item.name + "'s fact" : item.key.charAt(0) === 'f' ? 'Published fact' : 'Statistic';
+      when.appendChild(kind);
+      const text = document.createElement('p');
+      text.className = 'fact-rotation-text';
+      text.textContent = item.plain;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'admin-btn admin-btn--small admin-btn--primary';
+      btn.textContent = 'Post to X';
+      btn.addEventListener('click', () => window.AdminX.use({
+        text: item.plain,
+        link: window.location.origin + (item.slug ? '/products/' + item.slug + '/' : '/facts/'),
+        kind: 'Did you know?',
+      }));
+      const body = document.createElement('div');
+      body.className = 'fact-rotation-body';
+      body.appendChild(when);
+      body.appendChild(text);
+      row.appendChild(body);
+      row.appendChild(btn);
+      listEl.appendChild(row);
+    }
+  }
 
   document.getElementById('own-fact-btn').addEventListener('click', async () => {
     const box = document.getElementById('own-fact');
