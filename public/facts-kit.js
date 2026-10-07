@@ -882,7 +882,7 @@
       const text = String((f && f.text) || '').trim();
       if (!f || f.id == null || !text || statShapes.indexOf(statShape(text)) !== -1) return;
       const named = productNamed(text, list);
-      pool.push({ key: 'f:' + f.id, html: null, plain: text, slug: named ? named.slug : null, name: named ? named.name || '' : '' });
+      pool.push({ key: 'f:' + f.id, html: null, plain: text, slug: named ? named.slug : null, name: named ? named.name || '' : '', pin: f.homepage_date ? String(f.homepage_date).slice(0, 10) : null });
     });
     const seen = {};
     return pool.filter((item) => (seen[item.key] ? false : (seen[item.key] = true)))
@@ -894,7 +894,14 @@
   // the big homepage tile) are taken out first.
   function pickDailyFact(pool, dateStr, excludeSlugs) {
     const skip = excludeSlugs || [];
-    const usable = (pool || []).filter((item) => !item.slug || skip.indexOf(item.slug) === -1);
+    const date = String(dateStr).slice(0, 10);
+    // A fact you've put on the homepage for this day wins outright (even
+    // about a product in the big tile: you chose it). One saved for a
+    // later day stays out of the rotation until then, so it isn't seen
+    // early; after its day it takes its turn like the rest.
+    const pinned = (pool || []).filter((item) => item.pin === date);
+    if (pinned.length) return pinned[pinned.length - 1];
+    const usable = (pool || []).filter((item) => (!item.slug || skip.indexOf(item.slug) === -1) && !(item.pin && item.pin > date));
     if (!usable.length) return null;
     const day = Math.floor(Date.parse(String(dateStr).slice(0, 10) + 'T00:00:00Z') / 86400000);
     return usable[((day % usable.length) + usable.length) % usable.length];
@@ -913,7 +920,22 @@
       '<button type="button" class="admin-edit-link tweet-btn fact-tweet-btn" style="display:none;">Draft a post for X</button>';
   }
 
+  // Publishes a fact, with the day it goes on the homepage if one is
+  // chosen. Without the homepage_date column (supabase-schema-update-30.sql)
+  // it is saved without the day, and pinSkipped says so.
+  async function insertFact(client, text, pinDate) {
+    if (pinDate) {
+      const res = await client.from('facts').insert({ text, homepage_date: pinDate }).select();
+      if (!res.error) return res;
+      if (!/homepage_date/.test(res.error.message || '')) return res;
+      const plain = await client.from('facts').insert({ text }).select();
+      return Object.assign({}, plain, { pinSkipped: true });
+    }
+    return client.from('facts').insert({ text }).select();
+  }
+
   const FactsKit = {
+    insertFact,
     appleName,
     CATEGORY_ICONS,
     setCardProducts,
