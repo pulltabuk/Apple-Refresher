@@ -2376,7 +2376,7 @@ button.generation-name-text:hover { background: var(--accent-bg); }
 .intro-hero-cards .site-stat-num { font-size: 26px; }
 @media (max-width: 560px) {
   .intro-hero-cards .site-stats { grid-column: 1 / -1; grid-row: auto; }
-  .intro-hero-cards .site-stats-row { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; }
+  .intro-hero-cards .site-stats-row { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
 }
 
 /* Stats panel heading, with the Live marker beside it */
