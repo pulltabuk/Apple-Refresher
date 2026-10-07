@@ -489,9 +489,12 @@ function verticalTimelineHtml(product, allProducts) {
 
     // A product being replaced on the same day as its successor reads
     // better with the new thing first.
+    // Same day: releases before discontinuations, then A to Z (numbers
+    // in order, so iPhone 13, iPhone 13 mini, iPhone 13 Pro, iPhone 13 Pro Max).
+    // Must match verticalTimelineHtmlJS() in public/app.js.
     const ordered = entries.slice().sort((a, b) => {
       const rank = (e) => (e.type === 'discontinued' ? 1 : 0);
-      return rank(a) - rank(b);
+      return rank(a) - rank(b) || String(a.displayName || a.productName).localeCompare(String(b.displayName || b.productName), 'en', { numeric: true, sensitivity: 'base' });
     });
     // Every entry here is a release, so a "Refresh" pill only repeats what
     // the timeline already says. Launch, Discontinued and Current each

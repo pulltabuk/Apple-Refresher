@@ -2628,3 +2628,19 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .earnings-next:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
 .earnings-next .earnings-next-label { color: rgba(255, 255, 255, 0.85); }
 .earnings-next .earnings-next-text { color: #fff; }
+
+/* /earnings/ on phones: each quarter as a stacked block, so the press
+   release link is on screen without swiping sideways. */
+@media (max-width: 600px) {
+  .earnings-table { min-width: 0; }
+  .earnings-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .earnings-table, .earnings-table tbody, .earnings-table tr { display: block; width: 100%; }
+  .earnings-table tr { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 2px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .earnings-table th, .earnings-table td { display: block; padding: 0; border: 0; text-align: left; }
+  .earnings-table tbody th { grid-column: 1; }
+  .earnings-table td:nth-of-type(1) { grid-column: 2; text-align: right; color: var(--text-secondary); }
+  .earnings-table td:nth-of-type(2) { display: none; }
+  .earnings-table td:nth-of-type(3) { grid-column: 1 / -1; margin-top: 4px; }
+  .earnings-table td:last-child { grid-column: 1 / -1; text-align: left; margin-top: 4px; }
+  .earnings-table td:empty { display: none; }
+}
