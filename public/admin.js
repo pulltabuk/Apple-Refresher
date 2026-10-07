@@ -361,6 +361,118 @@
     });
   }
 
+  // --- Earnings: Apple's quarterly results (table: earnings). Saving
+  // rebuilds the site so the homepage line and /earnings/ update.
+  let earningsRows = [];
+  let editingEarningsId = null;
+  const earnEl = (id) => document.getElementById(id);
+  function showEarningsForm(show) {
+    earnEl('earnings-list-view').style.display = show ? 'none' : '';
+    earnEl('earnings-form-view').style.display = show ? '' : 'none';
+  }
+  async function loadEarningsAdmin() {
+    const list = earnEl('earnings-list');
+    if (!list) return;
+    list.textContent = 'Loading…';
+    const { data, error } = await client.from('earnings').select('*').order('report_date', { ascending: false });
+    if (error) {
+      list.textContent = 'Could not load earnings: ' + error.message + ' (has supabase-schema-update-29.sql been run in Supabase?)';
+      return;
+    }
+    earningsRows = data || [];
+    list.innerHTML = '';
+    if (!earningsRows.length) { list.textContent = 'No quarters yet.'; return; }
+    const today = new Date().toISOString().slice(0, 10);
+    const table = document.createElement('table');
+    table.className = 'admin-table';
+    table.innerHTML = '<thead><tr><th>Quarter</th><th>Results</th><th>Headline</th><th>Press release</th><th></th></tr></thead>';
+    const tbody = document.createElement('tbody');
+    earningsRows.forEach((row) => {
+      const tr = document.createElement('tr');
+      const cell = (text) => { const td = document.createElement('td'); td.textContent = text; tr.appendChild(td); return td; };
+      cell('Q' + row.fiscal_quarter + ' FY' + row.fiscal_year);
+      cell((row.report_date || '') + (row.report_date >= today ? ' (upcoming)' : ''));
+      cell(row.headline || '—');
+      cell(row.press_release_url ? 'Added' : (row.report_date < today ? 'Missing' : '—'));
+      const actions = document.createElement('td');
+      actions.className = 'admin-row-actions';
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.textContent = 'Edit';
+      edit.addEventListener('click', () => openEarningsForm(row));
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.textContent = 'Delete';
+      del.addEventListener('click', async () => {
+        if (!window.confirm('Delete Q' + row.fiscal_quarter + ' FY' + row.fiscal_year + '?')) return;
+        const { error: delError } = await client.from('earnings').delete().eq('id', row.id);
+        if (delError) { window.alert('Could not delete: ' + delError.message); return; }
+        await rebuildSite();
+        loadEarningsAdmin();
+      });
+      actions.appendChild(edit);
+      actions.appendChild(del);
+      tr.appendChild(actions);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    list.appendChild(table);
+  }
+  function openEarningsForm(row) {
+    editingEarningsId = row ? row.id : null;
+    // A new quarter follows on from the latest one.
+    const latest = earningsRows[0];
+    const nextYear = latest ? (latest.fiscal_quarter === 4 ? latest.fiscal_year + 1 : latest.fiscal_year) : new Date().getFullYear();
+    const nextQuarter = latest ? (latest.fiscal_quarter % 4) + 1 : 1;
+    earnEl('earnings-form-title').textContent = row ? 'Edit Q' + row.fiscal_quarter + ' FY' + row.fiscal_year : 'Add a quarter';
+    earnEl('earn_year').value = row ? row.fiscal_year : nextYear;
+    earnEl('earn_quarter').value = String(row ? row.fiscal_quarter : nextQuarter);
+    earnEl('earn_date').value = row ? row.report_date || '' : '';
+    earnEl('earn_time').value = row ? row.report_time || '' : '1:30pm PT';
+    earnEl('earn_call').value = row ? row.call_time || '' : '2pm PT';
+    earnEl('earn_qend').value = row ? row.quarter_end || '' : '';
+    earnEl('earn_url').value = row ? row.press_release_url || '' : '';
+    earnEl('earn_headline').value = row ? row.headline || '' : '';
+    earnEl('earnings-error').textContent = '';
+    earnEl('earnings-status').textContent = '';
+    showEarningsForm(true);
+  }
+  if (earnEl('earnings-form')) {
+    earnEl('new-earnings-btn').addEventListener('click', () => openEarningsForm(null));
+    earnEl('earnings-back-btn').addEventListener('click', () => showEarningsForm(false));
+    earnEl('earnings-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = earnEl('earn_url').value.trim();
+      if (url && !/^https:\/\//.test(url)) { earnEl('earnings-error').textContent = 'The press release link should start with https://'; return; }
+      const record = {
+        fiscal_year: Number(earnEl('earn_year').value),
+        fiscal_quarter: Number(earnEl('earn_quarter').value),
+        report_date: earnEl('earn_date').value,
+        report_time: earnEl('earn_time').value.trim() || null,
+        call_time: earnEl('earn_call').value.trim() || null,
+        quarter_end: earnEl('earn_qend').value || null,
+        press_release_url: url || null,
+        headline: earnEl('earn_headline').value.trim() || null,
+      };
+      if (!record.fiscal_year || !record.report_date) { earnEl('earnings-error').textContent = 'Add the fiscal year and the results date.'; return; }
+      const query = editingEarningsId
+        ? client.from('earnings').update(record).eq('id', editingEarningsId)
+        : client.from('earnings').insert(record);
+      const { error } = await query;
+      if (error) {
+        earnEl('earnings-error').textContent = /duplicate|unique/i.test(error.message)
+          ? 'That quarter is already listed: edit it instead.'
+          : 'Could not save: ' + error.message;
+        return;
+      }
+      earnEl('earnings-status').textContent = 'Saved. Publishing…';
+      const published = await rebuildSite();
+      earnEl('earnings-status').textContent = published.ok ? 'Saved. Live on the site in about a minute.' : 'Saved, but publishing failed (' + published.error + '). Press Publish changes.';
+      await loadEarningsAdmin();
+      setTimeout(() => showEarningsForm(false), 1200);
+    });
+  }
+
   // --- X posts: for the X account only, nothing is saved or published
   // on the site.
   (function xPosts() {
@@ -579,6 +691,7 @@
       document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
       document.getElementById('tab-gallery').style.display = tab === 'gallery' ? 'block' : 'none';
       document.getElementById('tab-event').style.display = tab === 'event' ? 'block' : 'none';
+      document.getElementById('tab-earnings').style.display = tab === 'earnings' ? 'block' : 'none';
       document.getElementById('tab-facts').style.display = tab === 'facts' ? 'block' : 'none';
       document.getElementById('tab-x').style.display = tab === 'x' ? 'block' : 'none';
       document.getElementById('tab-pagetext').style.display = tab === 'pagetext' ? 'block' : 'none';
@@ -592,6 +705,7 @@
         eventLoaded = true;
         loadEvents();
       }
+      if (tab === 'earnings') loadEarningsAdmin();
       if (tab === 'facts' && !factsLoaded) {
         factsLoaded = true;
         loadPublishedFacts();
@@ -3560,6 +3674,7 @@
       { key: 'gallery', label: 'Gallery page', path: '/gallery/' },
       { key: 'events', label: 'Apple Events page', path: '/events/' },
       { key: 'facts', label: 'Facts page', path: '/facts/' },
+      { key: 'earnings', label: 'Earnings page', path: '/earnings/' },
     ].concat(
       families.map((f) => ({ key: 'category:' + slugify(f), label: f + ' family page', path: '/categories/' + slugify(f) + '/' }))
     );

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { appleName, homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
+const { appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -146,6 +146,20 @@ async function loadFeaturedOrder() {
   }
 }
 
+// Apple's quarterly results. Optional: without the table (see
+// supabase-schema-update-29.sql) the site builds without an earnings page.
+async function loadEarnings() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return [];
+  const { createClient } = require('@supabase/supabase-js');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data, error } = await supabase.from('earnings').select('*').order('report_date', { ascending: false });
+  if (error) {
+    console.log('No earnings table yet (run supabase-schema-update-29.sql); the earnings page will be empty.');
+    return [];
+  }
+  return data || [];
+}
+
 async function loadEvents() {
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     const { createClient } = require('@supabase/supabase-js');
@@ -277,6 +291,16 @@ async function main() {
       countdowns.push({ label: r.product.name, date: r.date, time: null, href: `/products/${r.product.slug}/` });
     });
   countdowns.sort((a, b) => (a.date < b.date ? -1 : 1));
+  // The next quarterly results: a line under the countdown, or the
+  // countdown itself when nothing else is coming up. With neither, the
+  // homepage shows the latest release in that space instead.
+  const earnings = await loadEarnings();
+  const upcomingEarnings = nextEarnings(earnings || [], today);
+  let earningsNext = upcomingEarnings;
+  if (!countdowns.length && upcomingEarnings) {
+    countdowns.push({ label: `Apple ${earningsQuarter(upcomingEarnings)} results`, date: upcomingEarnings.report_date, time: upcomingEarnings.report_time || null, href: '/earnings/' });
+    earningsNext = null;
+  }
   const countdown = countdowns.length ? countdowns : null;
   const galleryPhotos = await loadGalleryPhotos();
 
@@ -397,6 +421,7 @@ async function main() {
     latestFactLink: latestFact ? factRelatedLink(latestFact.text, products, galleryPhotos) : null,
     pageContent: pageContent.home || null,
     countdown,
+    earningsNext,
     ...opts,
   }));
   write('products/index.html', allProductsPage({ items: productsPageItems, pageContent: pageContent.products || null, ...opts }));
@@ -408,6 +433,7 @@ async function main() {
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }), galleryPhotos.map(galleryLastmod).filter(Boolean).sort().pop() || null);
   write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
   write('facts/index.html', factsPage({ facts, pageContent: pageContent.facts || null, ...opts }));
+  write('earnings/index.html', earningsPage({ earnings, pageContent: pageContent.earnings || null, ...opts }));
 
   // One page per fact, whose link preview is the fact's card (made and
   // saved by the app / admin when the fact is published). If a card isn't

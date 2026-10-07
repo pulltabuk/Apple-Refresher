@@ -989,6 +989,7 @@ ${bodyHtml}
       <a href="/gallery/">Gallery</a>
       <a href="/events/">Apple Events</a>
       <a href="/facts/">Facts</a>
+      <a href="/earnings/">Earnings</a>
       <a href="/about/">About us</a>
       <a href="/contact/">Contact</a>
       <a href="/feed.xml">RSS Feed</a>
@@ -1610,7 +1611,7 @@ function countdownHtml(countdown) {
     const target = new Date(item.date + 'T09:00:00');
     const days = Math.max(0, Math.ceil((target.getTime() - Date.now()) / 86400000));
     return `<a class="countdown" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''}>
-    <span class="countdown-label">Counting down to</span>
+    <span class="countdown-label">${escapeHtml(item.kicker || 'Counting down to')}</span>
     <span class="countdown-name">${escapeHtml(item.label)}</span>
     <span class="countdown-clock" data-countdown-clock>
       <span class="countdown-unit"><span class="countdown-value">${days}</span><span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>
@@ -1623,6 +1624,88 @@ function countdownHtml(countdown) {
 // The homepage's at-a-glance counts. Must stay in step with
 // siteStatsJS() / siteStatsHtmlJS() in public/app.js, which refresh them
 // from live data a moment after the page loads.
+// --- Apple's quarterly results (the earnings table) ---
+
+function earningsQuarter(e) {
+  return `Q${e.fiscal_quarter} FY${e.fiscal_year}`;
+}
+
+// The next results still to come (today counts), or null.
+function nextEarnings(earnings, today) {
+  const day = today || new Date().toISOString().slice(0, 10);
+  return (earnings || []).filter((e) => e.report_date && e.report_date >= day)
+    .sort((a, b) => (a.report_date < b.report_date ? -1 : 1))[0] || null;
+}
+
+// The homepage line under the countdown: the next results, days to go.
+function earningsLineHtml(e) {
+  if (!e) return '';
+  const today = new Date().toISOString().slice(0, 10);
+  const days = Math.round((new Date(e.report_date) - new Date(today)) / 86400000);
+  const when = days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
+  return `<a class="earnings-next" href="/earnings/"><span class="earnings-next-label">Next earnings &middot; ${when}</span><span class="earnings-next-text">Apple ${earningsQuarter(e)} results, ${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></a>`;
+}
+
+// When nothing is counting down: the latest release, in the same box.
+function latestReleaseHeroHtml(latest, days) {
+  if (!latest) return '';
+  return `<a class="countdown countdown--latest" href="/products/${escapeHtml(latest.slug)}/">
+    <span class="countdown-label">Latest release</span>
+    <span class="countdown-name">${escapeHtml(latest.name)}</span>
+    <span class="countdown-clock">
+      <span class="countdown-unit"><span class="countdown-value">${days === 0 ? 'Today' : days}</span><span class="countdown-unit-label">${days === 0 ? '' : days === 1 ? 'day ago' : 'days ago'}</span></span>
+    </span>
+    <span class="countdown-date">Released ${formatDate(latest.date)}</span>
+  </a>`;
+}
+
+function earningsPage({ earnings, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const next = nextEarnings(earnings, today);
+  const past = (earnings || []).filter((e) => e !== next && e.report_date < today)
+    .sort((a, b) => (a.report_date < b.report_date ? 1 : -1));
+  const years = [...new Set(past.map((e) => e.fiscal_year))];
+  const nextHtml = next
+    ? `<section class="earnings-next-box">
+  ${countdownHtml({ label: `Apple ${earningsQuarter(next)} results`, date: next.report_date, time: next.report_time || null, href: '#archive', kicker: 'Next results' })}
+  <p class="earnings-next-note">${next.quarter_end ? `Covers the quarter that ended ${formatDate(next.quarter_end)}. ` : ''}${next.call_time ? `Apple discusses the results on a call at ${escapeHtml(next.call_time)}, streamed at <a href="https://investor.apple.com/" rel="noopener" target="_blank">investor.apple.com</a>.` : ''}</p>
+</section>`
+    : '';
+  const row = (e) => `<tr>
+      <th scope="row">${earningsQuarter(e)}</th>
+      <td>${formatDate(e.report_date)}</td>
+      <td>${e.quarter_end ? formatDate(e.quarter_end) : ''}</td>
+      <td>${e.headline ? escapeHtml(e.headline) : ''}</td>
+      <td>${e.press_release_url ? `<a href="${escapeHtml(e.press_release_url)}" rel="noopener" target="_blank">Press release <span aria-hidden="true">&#8599;</span></a>` : ''}</td>
+    </tr>`;
+  const archive = years.map((y) => `<h2 class="earnings-year">Fiscal ${y}</h2>
+<div class="earnings-table-wrap"><table class="earnings-table">
+  <thead><tr><th scope="col">Quarter</th><th scope="col">Results</th><th scope="col">Quarter ended</th><th scope="col">Headline</th><th scope="col"><span class="sr-only">Link</span></th></tr></thead>
+  <tbody>${past.filter((e) => e.fiscal_year === y).map(row).join('')}</tbody>
+</table></div>`).join('\n');
+  const body = `
+<div class="page-header-row">
+  <h1>${pageHeading(pageContent, 'Apple earnings')}</h1>
+  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+</div>
+${pageStandardLine(pageContent, `<p class="page-intro">When Apple next reports its quarterly results, and every past quarter with a link to Apple&rsquo;s own press release.</p>`)}
+${pageIntroHtml(pageContent, siteUrl, 'intro')}
+${nextHtml}
+<div id="archive">${archive || '<p class="page-intro">No past results yet.</p>'}</div>
+<p class="earnings-footnote">Apple&rsquo;s fiscal year ends in late September, so Q1 is the October to December holiday quarter. Figures are as Apple reported them.</p>`;
+  return shell({
+    title: 'Apple earnings dates and results archive | Apple Sunset',
+    description: next
+      ? `Apple reports ${earningsQuarter(next)} results on ${formatDate(next.report_date)}. Every past quarter's results date, headline figure and press release.`
+      : 'Every Apple quarterly results date, headline figure and press release, newest first.',
+    siteUrl,
+    path: '/earnings/',
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
+}
+
 function siteStats(products) {
   const list = products || [];
   const today = new Date().toISOString().slice(0, 10);
@@ -1656,7 +1739,7 @@ function siteStatsHtml(s) {
   </div>`;
 }
 
-function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, latestFactLink, pageContent, countdown, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, latestFact, latestFactLink, pageContent, countdown, earningsNext, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const featuredSlotHtml = activeEvent
     ? eventCardHtml(activeEvent)
     : heroRotation && heroRotation.length > 1
@@ -1718,7 +1801,8 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   <div class="intro-hero-layout">
     <div class="intro-hero-text">
       <h1 class="intro-heading">${pageHeading(pageContent, 'Apple Sunset')}</h1>
-      ${countdownHtml(countdown)}
+      ${countdown ? countdownHtml(countdown) : latestReleaseHeroHtml(stats && stats.latest, stats && stats.latestDays)}
+      ${earningsLineHtml(earningsNext)}
       ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
     </div>
@@ -2330,6 +2414,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <button type="button" class="admin-tab-btn" data-tab="families">Families</button>
       <button type="button" class="admin-tab-btn" data-tab="gallery">Gallery</button>
       <button type="button" class="admin-tab-btn" data-tab="event">Apple Event</button>
+      <button type="button" class="admin-tab-btn" data-tab="earnings">Earnings</button>
       <button type="button" class="admin-tab-btn" data-tab="facts">Facts</button>
       <button type="button" class="admin-tab-btn" data-tab="x">X posts</button>
       <button type="button" class="admin-tab-btn" data-tab="pagetext">Page text</button>
@@ -2688,6 +2773,35 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     </div>
   </div>
 
+
+  <div id="tab-earnings" class="admin-tab-panel" style="display:none;">
+    <p class="admin-hint">Apple&rsquo;s quarterly results. The next date shows on the homepage under the countdown (or as the countdown when nothing else is coming up) and at the top of the <a href="/earnings/" target="_blank" rel="noopener">Earnings page</a>. After the call, add Apple&rsquo;s press release link and a one-line headline. Saving publishes the site.</p>
+    <div id="earnings-list-view">
+      <button type="button" id="new-earnings-btn" class="admin-btn admin-btn--primary">Add a quarter</button>
+      <div id="earnings-list" class="admin-list"></div>
+    </div>
+    <div id="earnings-form-view" style="display:none;">
+      <button type="button" id="earnings-back-btn" class="admin-back-link">&larr; Back to earnings</button>
+      <h3 id="earnings-form-title">Add a quarter</h3>
+      <form id="earnings-form" class="admin-form">
+        <div class="earnings-form-row">
+          <label>Fiscal year<input type="number" id="earn_year" min="2000" max="2100" required></label>
+          <label>Quarter<select id="earn_quarter" required><option value="1">Q1 (Oct&ndash;Dec)</option><option value="2">Q2 (Jan&ndash;Mar)</option><option value="3">Q3 (Apr&ndash;Jun)</option><option value="4">Q4 (Jul&ndash;Sep)</option></select></label>
+        </div>
+        <div class="earnings-form-row">
+          <label>Results date<input type="date" id="earn_date" required></label>
+          <label>Results time<input type="text" id="earn_time" value="1:30pm PT" autocomplete="off"></label>
+          <label>Call time<input type="text" id="earn_call" value="2pm PT" autocomplete="off"></label>
+        </div>
+        <label>Quarter ended (optional)<input type="date" id="earn_qend"></label>
+        <label>Apple&rsquo;s press release link (after the call)<input type="url" id="earn_url" placeholder="https://www.apple.com/newsroom/2026/11/apple-reports-fourth-quarter-results/" autocomplete="off"></label>
+        <label>Headline (optional, one line)<input type="text" id="earn_headline" placeholder="e.g. Revenue $112.4bn, up 10%" autocomplete="off"></label>
+        <p id="earnings-error" class="form-error"></p>
+        <button type="submit" class="admin-btn admin-btn--primary">Save and publish</button>
+        <span id="earnings-status" class="admin-hint"></span>
+      </form>
+    </div>
+  </div>
 
   <div id="tab-x" class="admin-tab-panel" style="display:none;">
     <p class="admin-hint">Posts for the Apple Sunset X account only. Nothing here is saved or shown on the website.</p>
@@ -3133,6 +3247,9 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
 }
 
 module.exports = {
+  earningsPage,
+  nextEarnings,
+  earningsQuarter,
   appleName,
   sanitizeRichText,
   categoryTimelinePoints,
