@@ -22,7 +22,16 @@
   let cachedProducts = [];
   // X cards show the product a post is about, so they need the products.
   if (window.FactsKit && window.FactsKit.setCardProductsLoader) {
-    window.FactsKit.setCardProductsLoader(() => client.from('products').select('*').then((r) => r.data || []));
+    window.FactsKit.setCardProductsLoader(async () => {
+      const [products, icons] = await Promise.all([
+        client.from('products').select('*'),
+        client.from('category_icons').select('*'),
+      ]);
+      const map = {};
+      (icons.data || []).forEach((row) => { if (row.icon_url) map[row.category] = row.icon_url; });
+      window.FactsKit.setCardCategoryIcons(map);
+      return products.data || [];
+    });
   }
   let currentRefreshHistory = [];
   let currentOriginalLaunchDate = null;
@@ -3588,7 +3597,7 @@
       btn.className = 'admin-btn admin-btn--small admin-btn--primary';
       btn.textContent = 'Post to X';
       btn.addEventListener('click', () => window.AdminX.use({
-        text: item.plain,
+        text: item.post || item.plain,
         link: window.location.origin + (item.slug ? '/products/' + item.slug + '/' : '/facts/'),
         kind: 'Did you know?',
       }));
