@@ -2673,3 +2673,21 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .fact-when-row label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
 .fact-pin { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 .fact-pin input { font-size: 12px; padding: 4px 6px; }
+
+/* Admin: published facts as clear cards */
+#published-facts { display: flex; flex-direction: column; gap: 12px; }
+.fact-admin-card { border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; background: #fff; }
+.fact-admin-text { margin: 0; font-size: 16px; line-height: 1.5; font-weight: 600; color: var(--text); }
+.fact-admin-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 12px; font-size: 13px; color: var(--text-secondary); }
+.fact-admin-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #f1efe9; color: var(--text-secondary); }
+.fact-admin-pill.is-scheduled { background: var(--accent); color: #fff; }
+.fact-admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fact-admin-delete { margin-left: auto; background: none; border: 0; padding: 6px 4px; font: inherit; font-size: 13px; font-weight: 600; color: var(--overdue-text); cursor: pointer; }
+.fact-admin-delete:hover { text-decoration: underline; }
+.fact-admin-pin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--accent-bg); font-size: 14px; }
+.fact-admin-pin input { font: inherit; padding: 5px 8px; margin-left: 4px; }
+.fact-admin-edit { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.fact-admin-edit textarea { width: 100%; box-sizing: border-box; }
+.fact-admin-pin[hidden], .fact-admin-actions[hidden], .fact-admin-pin button[hidden] { display: none !important; }
+.fact-admin-delete { color: #b42318; }
+.fact-when-row select { font: inherit; font-weight: 500; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
