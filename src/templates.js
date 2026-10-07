@@ -3045,6 +3045,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
   </section>
 
   <section id="up-x" hidden>
+    <button type="button" id="up-x-back" class="up-back-link" hidden>&lsaquo; Back to Did you know?</button>
     <p class="up-muted up-home-intro">Posts for the Apple Sunset X account only. Nothing here goes on the website.</p>
     <div class="up-card">
       <button type="button" id="up-x-ideas" class="gallery-action gallery-action--primary gallery-action--block">Ideas from my data</button>
@@ -3120,11 +3121,13 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
   </nav>
 
   <section id="up-facts" hidden>
-    <div class="up-card">
-      <p class="up-muted">Facts worked out from your product data. Generate, pick one, tweak the wording if you like, and it goes on the homepage and the Facts page.</p>
-      <button type="button" id="up-generate-facts" class="gallery-action gallery-action--primary gallery-action--block">Generate facts</button>
-      <p class="up-status" id="up-facts-status" aria-live="polite"></p>
-    </div>
+    <p class="up-muted up-home-intro">Three parts: <strong>1</strong> what the homepage shows each day, <strong>2</strong> making a new fact, <strong>3</strong> your published facts. Every <strong>Post to X</strong> opens X posts with the card ready.</p>
+
+    <h2 class="up-section-title"><span class="up-step">1</span>On the homepage</h2>
+    <p class="up-muted up-step-intro">It changes every morning, taking turns through product facts, statistics and your published facts. Today&rsquo;s and the next six days:</p>
+    <div id="up-fact-rotation" class="up-fact-list"><p class="up-muted">Loading&hellip;</p></div>
+
+    <h2 class="up-section-title"><span class="up-step">2</span>Make a fact</h2>
     <div class="up-card">
       <span class="up-label">When you publish one, on the homepage</span>
       <select id="up-fact-when" class="up-select">
@@ -3134,24 +3137,33 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
       </select>
       <input type="date" id="up-fact-date" class="up-select" hidden aria-label="Day to show it on the homepage">
     </div>
+    <div class="up-card">
+      <span class="up-label">From your product data</span>
+      <button type="button" id="up-generate-facts" class="gallery-action gallery-action--primary gallery-action--block">Generate facts</button>
+      <p class="up-status" id="up-facts-status" aria-live="polite"></p>
+    </div>
     <div id="up-fact-choices" class="up-fact-list"></div>
 
     <div class="up-card">
       <span class="up-label">Research a fact with Claude</span>
-      <p class="up-muted">Say what it should be about. Claude opens with a request to find little-known facts, check each against two reliable sources, and skip any you've already published. Copy the one you like into the box below.</p>
+      <p class="up-muted">Say what it should be about. Claude checks each fact against two reliable sources and skips ones you&rsquo;ve published. Copy the one you like into the box below.</p>
       <textarea id="up-fact-topic" class="up-fact-edit up-fact-edit--short" placeholder="e.g. the original iPod" aria-label="What the fact should be about"></textarea>
       <button type="button" id="up-ask-claude" class="gallery-action gallery-action--primary gallery-action--block">Ask Claude</button>
       <p class="up-hint" id="up-ask-claude-note"></p>
     </div>
 
     <div class="up-card">
-      <span class="up-label">Add your own fact</span>
+      <span class="up-label">Write your own</span>
       <textarea id="up-own-fact" class="up-fact-edit" placeholder="Paste or type a fact" aria-label="Your fact"></textarea>
       <p class="up-fact-count" id="up-own-fact-count"></p>
-      <button type="button" id="up-own-fact-use" class="gallery-action gallery-action--primary gallery-action--block">Use this fact</button>
+      <div class="up-fact-actions">
+        <button type="button" id="up-own-fact-use" class="gallery-action gallery-action--primary">Publish</button>
+        <button type="button" id="up-own-fact-x" class="gallery-action">Post to X only</button>
+      </div>
+      <p class="up-hint"><strong>Publish</strong> puts it on the site (homepage as chosen above, and the Facts page). <strong>Post to X only</strong> doesn&rsquo;t save it anywhere.</p>
     </div>
 
-    <h2 class="up-section-title">Published</h2>
+    <h2 class="up-section-title"><span class="up-step">3</span>Published facts</h2>
     <div id="up-fact-published" class="up-fact-list"></div>
   </section>
 
