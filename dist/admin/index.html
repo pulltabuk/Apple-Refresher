@@ -520,8 +520,19 @@
       <label class="checkbox-label"><input type="checkbox" id="x-card-on" checked> Make a card image</label>
       <input type="text" id="x-card-label" value="Did you know?" autocomplete="off" aria-label="Card heading">
     </div>
-    <p class="admin-hint">How it will look on X:</p>
-    <pre id="x-preview" class="x-preview"></pre>
+    <div class="x-card-fields" id="x-card-fields">
+      <label for="x-card-headline">Card headline <span class="admin-hint">the large text, e.g. 1,433 days or 2014. Leave empty for none.</span></label>
+      <input type="text" id="x-card-headline" autocomplete="off" maxlength="24">
+      <label for="x-card-line">Card line <span class="admin-hint">the smaller text below it</span></label>
+      <textarea id="x-card-line" rows="2"></textarea>
+      <p id="x-card-note" class="admin-hint x-card-note" hidden></p>
+    </div>
+    <div class="x-preview-head">
+      <p class="admin-hint">How it will look on X (you can edit it here):</p>
+      <button type="button" id="x-preview-reset" class="admin-btn admin-btn--small" hidden>Reset</button>
+    </div>
+    <textarea id="x-preview" class="x-preview" rows="6" placeholder="Your post will appear here." aria-label="The post as it will look on X"></textarea>
+    <p id="x-preview-note" class="admin-hint" hidden>Edited by hand, so the boxes above no longer change it. Reset rebuilds it from them.</p>
     <p id="x-count" class="admin-hint"></p>
     <img id="x-card" class="x-card" alt="" hidden>
     <div class="x-actions">
@@ -671,7 +682,7 @@
   window.SUPABASE_ANON_KEY = "";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="/facts-kit.js?v=e61d0affe4" defer></script>
-<script src="/admin.js?v=54b4c054c7" defer></script>
+<script src="/facts-kit.js?v=8092494d99" defer></script>
+<script src="/admin.js?v=1603c93396" defer></script>
 </body>
 </html>
