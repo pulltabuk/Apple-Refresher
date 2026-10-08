@@ -63,6 +63,27 @@
 
   // The site header's sunset gradient (styles.css .site-header-bg).
   const SUNSET = [[0, '#f5b942'], [0.3, '#e8752c'], [0.58, '#c8432f'], [0.82, '#7d2a4a'], [1, '#2e1a3d']];
+  // Topic icons for cards that aren't about one product: the composer
+  // offers them by name, and suggests one from the wording.
+  const CARD_ICONS = {
+    calendar: `<rect x="7" y="9" width="26" height="24" rx="3"/><path d="M7 16h26M14 6v6M26 6v6M13 22h3M19 22h3M25 22h3M13 27h3M19 27h3"/>`,
+    clock: `<circle cx="20" cy="20" r="13"/><path d="M20 12v8l5 4"/>`,
+    chart: `<path d="M7 33h26"/><rect x="10" y="21" width="5" height="12" rx="1"/><rect x="18" y="14" width="5" height="19" rx="1"/><rect x="26" y="8" width="5" height="25" rx="1"/>`,
+    invite: `<rect x="7" y="11" width="26" height="18" rx="2"/><path d="M7 13l13 9 13-9"/>`,
+    star: `<path d="M20 7l3.9 8 8.8 1.2-6.4 6.1 1.6 8.7L20 26.8 12.1 31l1.6-8.7-6.4-6.1 8.8-1.2z"/>`,
+    idea: `<path d="M16 30h8M17 34h6M20 6a9 9 0 0 0-5.3 16.3c.9.7 1.5 1.8 1.5 3V26h7.6v-.7c0-1.2.6-2.3 1.5-3A9 9 0 0 0 20 6z"/>`,
+  };
+  const CARD_ICON_NAMES = { calendar: 'Calendar', clock: 'Clock', chart: 'Chart', invite: 'Invitation', star: 'Star', idea: 'Light bulb' };
+  const MONTHS_RE = /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i;
+  function suggestCardIcon(text) {
+    const t = String(text || '');
+    if (/\bon this day\b|\banniversary\b|\bbirthday\b/i.test(t) || MONTHS_RE.test(t) || /\b(19[7-9]\d|20\d\d)\b/.test(t)) return 'calendar';
+    if (/\binvit|\bkeynote\b|\bevent\b/i.test(t)) return 'invite';
+    if (/%|\baverage\b|per ?cent|\btracked\b|\btracking\b|\brecord\b/i.test(t)) return 'chart';
+    if (/\bdays?\b|\bweeks?\b|\bwait/i.test(t)) return 'clock';
+    return 'idea';
+  }
+
   const FONT = '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
   let logoPromise = null;
@@ -210,8 +231,12 @@
   }
 
   // A statistic's key number ("604 days", "55%") and the few words after it.
+  const DATE_RE = /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:,?\s+(?:19|20)\d\d)?\b/i;
   function textFigure(text) {
-    const m = String(text || '').match(/(\d[\d,]*(?:\.\d+)?)(\s?(?:%|per cent|percent|days?|weeks?|months?|years?))?/i);
+    let m = String(text || '').match(/(\d[\d,]*(?:\.\d+)?)(\s?(?:%|per cent|percent|days?|weeks?|months?|years?))?/i);
+    // A date ("8 October 2014") is one headline, not the number 8.
+    const d = String(text || '').match(DATE_RE);
+    if (d && (!m || d.index <= m.index)) m = Object.assign([d[0], d[0].replace(/,/g, ''), ''], { index: d.index });
     if (!m) return null;
     const rest = String(text).slice(m.index + m[0].length).split(/[.,;:!?(]/)[0].trim().split(/\s+/).filter(Boolean);
     const caption = rest.slice(0, 7).join(' ') + (rest.length > 7 ? '…' : '');
@@ -230,7 +255,16 @@
   function cardGuess(text) {
     const subject = cardSubject(text);
     const fig = productNamed(text, cardProducts) ? null : textFigure(text);
-    return { headline: cardHeadline(subject.big), line: (fig && fig.full) || subject.caption || '' };
+    return { headline: cardHeadline(subject.big), line: (fig && fig.full) || subject.caption || '', title: subject.title || '', icon: 'auto' };
+  }
+
+  // What "Automatic" will show, in words, for the composer.
+  function cardAutoIconName(text) {
+    const product = productNamed(text, cardProducts);
+    if (product) return appleName(product.name) + ' icon';
+    const category = categoryNamed(text);
+    if (category) return category + ' icon';
+    return CARD_ICON_NAMES[suggestCardIcon(text)];
   }
 
   function cardSubject(text) {
@@ -241,7 +275,9 @@
     }
     const category = categoryNamed(text);
     const fig = textFigure(text);
-    return { title: category || 'Apple Sunset', shape: category ? iconShapeFor(category) : null, iconUrl: category ? customCategoryIcon(category) : null, big: fig ? fig.big : '', caption: fig ? fig.caption : '', sub: '' };
+    // Not about one family: a topic icon in the tile (the Apple Sunset
+    // logo always sits small in the corner), and no title unless typed.
+    return { title: category || '', shape: category ? iconShapeFor(category) : CARD_ICONS[suggestCardIcon(text)], iconUrl: category ? customCategoryIcon(category) : null, big: fig ? fig.big : '', caption: fig ? fig.caption : '', sub: '' };
   }
 
   function loadImage(src, cors) {
@@ -291,10 +327,17 @@
     await ensureCardProducts();
     const subject = cardSubject(factText);
     const own = !!fields;
+    let emoji = '';
     if (own) {
       subject.big = cardHeadline(fields.headline);
       subject.caption = String(fields.line || '').trim();
       subject.sub = '';
+      if (fields.title !== undefined) subject.title = String(fields.title || '').trim();
+      // The icon: 'auto' (the product's or topic's), a topic icon by
+      // name, or anything else typed, drawn as an emoji.
+      const icon = String(fields.icon || 'auto').trim();
+      if (CARD_ICONS[icon]) { subject.shape = CARD_ICONS[icon]; subject.iconUrl = null; }
+      else if (icon && icon !== 'auto') emoji = icon;
     }
     fitText.cut = false;
     let lineCut = false;
@@ -333,7 +376,7 @@
     ctx.font = '700 32px ' + FONT;
     // With nothing but the logo to show, the big "Did you know?" beside it
     // says it, so the small label would only repeat it.
-    if (subject.big || subject.shape || subject.iconUrl || own) ctx.fillText(String(label || 'Did you know?').toUpperCase(), PAD, 108);
+    if (subject.big || subject.shape || subject.iconUrl || emoji || own) ctx.fillText(String(label || 'Did you know?').toUpperCase(), PAD, 108);
 
     // The icon tile: the product's own icon, else its family's line icon,
     // else the Apple Sunset logo.
@@ -347,9 +390,17 @@
     ctx.fillStyle = '#fff7ef';
     ctx.fill();
     ctx.shadowColor = 'transparent';
-    let art = subject.iconUrl ? await loadImage(subject.iconUrl, true) : null;
-    if (!art && subject.shape) art = await iconImage(subject.shape, '#9c4009');
-    if (art) {
+    let art = emoji ? null : subject.iconUrl ? await loadImage(subject.iconUrl, true) : null;
+    if (!art && !emoji && subject.shape) art = await iconImage(subject.shape, '#9c4009');
+    if (emoji) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '190px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", ' + FONT;
+      ctx.fillStyle = '#9c4009';
+      ctx.fillText(emoji, tx + TILE / 2, ty + TILE / 2 + 10, TILE - 50);
+      ctx.restore();
+    } else if (art) {
       // Fit inside the tile, keeping the icon's own proportions.
       const inner = TILE - 70;
       const ratio = (art.naturalWidth || art.width || 1) / (art.naturalHeight || art.height || 1);
@@ -371,7 +422,7 @@
     const cx = tx + TILE + 64;
     const cw = W - PAD - cx;
     ctx.fillStyle = '#ffffff';
-    let y = fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2);
+    let y = subject.title ? fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2) : ty - 8;
     if (subject.big) {
       ctx.fillStyle = sunsetGradient(ctx, cx, 0, cx + cw, 0, SUNSET_WARM);
       ctx.fillStyle = '#ffd59a';
@@ -401,7 +452,7 @@
     ctx.fillText('applesunset.com', PAD, H - 60);
 
     // Logo, small, bottom-right (unless it's already the big tile).
-    if (logo && (art || !logo)) {
+    if (logo) {
       ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
       ctx.shadowBlur = 16;
       ctx.shadowOffsetY = 4;
@@ -823,7 +874,8 @@
     // "card2": the subject card. Changing it gives every post a new card
     // address, so X never shows a card drawn in the old design. The
     // writer's own headline and line are part of it too.
-    const own = fields ? '\n' + cardHeadline(fields.headline) + '\n' + String(fields.line || '').trim() : '';
+    const own = fields ? '\n' + cardHeadline(fields.headline) + '\n' + String(fields.line || '').trim() +
+      (fields.title !== undefined || fields.icon ? '\n' + String(fields.title || '').trim() + '\n' + String(fields.icon || 'auto').trim() : '') : '';
     return factKey('card2\n' + String(label || '') + '\n' + String(text || '').trim() + own);
   }
 
@@ -1030,6 +1082,9 @@
     productNamed,
     xCardKey,
     cardGuess,
+    CARD_ICON_NAMES,
+    cardAutoIconName,
+    suggestCardIcon,
     cardHeadline,
     xCardPreview,
     uploadXCard,

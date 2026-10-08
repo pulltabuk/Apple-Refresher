@@ -250,7 +250,7 @@ body {
 .up-x-card-fields { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px; background: var(--accent-bg); }
 .up-x-card-fields[hidden], .up-x-preview-head [hidden], #up-x-card-note[hidden], #up-x-preview-note[hidden] { display: none; }
 .up-x-card-fields .up-label .up-hint { font-weight: 400; }
-.up-x-card-fields .up-search, .up-x-card-fields .up-fact-edit { margin: 0; }
+.up-x-card-fields .up-search, .up-x-card-fields .up-fact-edit, .up-x-card-fields .up-select { margin: 0; }
 .up-x-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .up-x-preview-head .up-hint { margin: 0; }
 .up-x-preview-head .gallery-action { min-height: 36px; padding: 0 14px; font-size: 14px; }

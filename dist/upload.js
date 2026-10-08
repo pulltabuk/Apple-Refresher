@@ -829,12 +829,21 @@
   // The card's headline and line: guessed from the post until either is
   // typed in, then exactly what was typed.
   let xCardFieldsOwn = false;
-  const xCardFields = () => ({ headline: $('up-x-card-headline').value, line: $('up-x-card-line').value });
+  const xCardFields = () => ({
+    headline: $('up-x-card-headline').value,
+    line: $('up-x-card-line').value,
+    title: $('up-x-card-title').value,
+    icon: $('up-x-card-emoji').value.trim() || $('up-x-card-icon').value,
+  });
   function xGuessCardFields() {
+    // "Automatic" says which icon it will use.
+    const text = $('up-x-text').value.trim();
+    $('up-x-card-icon').options[0].textContent = 'Automatic' + (text ? ' (' + window.FactsKit.cardAutoIconName(text) + ')' : '');
     if (xCardFieldsOwn) return;
-    const guess = window.FactsKit.cardGuess($('up-x-text').value.trim());
+    const guess = window.FactsKit.cardGuess(text);
     $('up-x-card-headline').value = guess.headline;
     $('up-x-card-line').value = guess.line;
+    $('up-x-card-title').value = guess.title;
   }
   // The X box: built from the fields until it's edited by hand.
   let xPreviewOwn = false;
@@ -934,6 +943,8 @@
     $('up-x-card-label').value = idea.kind || 'Did you know?';
     xCardFieldsOwn = false;
     xPreviewOwn = false;
+    $('up-x-card-emoji').value = '';
+    $('up-x-card-icon').value = 'auto';
     $('up-x-idea-list').innerHTML = '';
     xRefresh();
     $('up-x-text').scrollIntoView({ block: 'center' });
@@ -1005,7 +1016,8 @@
   });
 
   ['up-x-text', 'up-x-link', 'up-x-card-label'].forEach((id) => $(id).addEventListener('input', xRefresh));
-  ['up-x-card-headline', 'up-x-card-line'].forEach((id) => $(id).addEventListener('input', () => { xCardFieldsOwn = true; xRefresh(); }));
+  ['up-x-card-headline', 'up-x-card-line', 'up-x-card-title', 'up-x-card-emoji'].forEach((id) => $(id).addEventListener('input', () => { xCardFieldsOwn = true; xRefresh(); }));
+  $('up-x-card-icon').addEventListener('change', () => { $('up-x-card-emoji').value = ''; xRefresh(); });
   $('up-x-preview').addEventListener('input', () => { xPreviewOwn = true; xUpdateCount(); });
   $('up-x-preview-reset').addEventListener('click', () => { xPreviewOwn = false; xRefresh(); });
   ['up-x-tags', 'up-x-link-on', 'up-x-card-on'].forEach((id) => $(id).addEventListener('change', xRefresh));
