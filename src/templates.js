@@ -637,7 +637,10 @@ function pageStandardLine(pageContent, fallbackHtml) {
 // Editable page text, written in admin. Passed through the same
 // sanitiser as product notes, so only safe formatting survives.
 function notFoundPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
+  // An X card link (/c/<key>/<page>) is served by the card function; if
+  // that ever misses, send the reader straight on to <page> anyway.
   const body = `
+<script>(function(){var a=location.pathname.split('/');if(a[1]==='c'&&/^[0-9a-z]{1,16}$/i.test(a[2]||'')){var p='/'+a.slice(3).join('/');if(!/^[A-Za-z0-9._~/-]*$/.test(p)||p.indexOf('//')===0)p='/';location.replace(p);}})();</script>
 <div class="not-found">
   <h1>That page has gone</h1>
   <p class="page-intro">The product may have been renamed or merged into another line. These will get you back on track.</p>
@@ -2816,8 +2819,19 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <label class="checkbox-label"><input type="checkbox" id="x-card-on" checked> Make a card image</label>
       <input type="text" id="x-card-label" value="Did you know?" autocomplete="off" aria-label="Card heading">
     </div>
-    <p class="admin-hint">How it will look on X:</p>
-    <pre id="x-preview" class="x-preview"></pre>
+    <div class="x-card-fields" id="x-card-fields">
+      <label for="x-card-headline">Card headline <span class="admin-hint">the large text, e.g. 1,433 days or 2014. Leave empty for none.</span></label>
+      <input type="text" id="x-card-headline" autocomplete="off" maxlength="24">
+      <label for="x-card-line">Card line <span class="admin-hint">the smaller text below it</span></label>
+      <textarea id="x-card-line" rows="2"></textarea>
+      <p id="x-card-note" class="admin-hint x-card-note" hidden></p>
+    </div>
+    <div class="x-preview-head">
+      <p class="admin-hint">How it will look on X (you can edit it here):</p>
+      <button type="button" id="x-preview-reset" class="admin-btn admin-btn--small" hidden>Reset</button>
+    </div>
+    <textarea id="x-preview" class="x-preview" rows="6" placeholder="Your post will appear here." aria-label="The post as it will look on X"></textarea>
+    <p id="x-preview-note" class="admin-hint" hidden>Edited by hand, so the boxes above no longer change it. Reset rebuilds it from them.</p>
     <p id="x-count" class="admin-hint"></p>
     <img id="x-card" class="x-card" alt="" hidden>
     <div class="x-actions">

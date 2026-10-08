@@ -215,7 +215,22 @@
     if (!m) return null;
     const rest = String(text).slice(m.index + m[0].length).split(/[.,;:!?(]/)[0].trim().split(/\s+/).filter(Boolean);
     const caption = rest.slice(0, 7).join(' ') + (rest.length > 7 ? '…' : '');
-    return { big: (m[1] + (m[2] || '')).replace(/\s?per ?cent/i, '%'), caption, sub: '' };
+    // The whole rest of the sentence, for the composer to pre-fill.
+    const full = String(text).slice(m.index + m[0].length).replace(/^[\s,;:]+/, '').split(/(?<=[.!?]["\u201d\u2019']?)\s/)[0].trim();
+    return { big: cardHeadline((m[1] + (m[2] || '')).replace(/\s?per ?cent/i, '%')), caption, sub: '', full };
+  }
+
+  // A card headline never ends in a comma, full stop or other punctuation.
+  function cardHeadline(text) {
+    return String(text || '').trim().replace(/[\s,.;:!?\u2013\u2014-]+$/, '');
+  }
+
+  // The card's headline and line as the composer pre-fills them: the
+  // best guess from the text, for the writer to keep or change.
+  function cardGuess(text) {
+    const subject = cardSubject(text);
+    const fig = productNamed(text, cardProducts) ? null : textFigure(text);
+    return { headline: cardHeadline(subject.big), line: (fig && fig.full) || subject.caption || '' };
   }
 
   function cardSubject(text) {
@@ -256,15 +271,33 @@
       if (lines.length <= maxLines || s <= minSize) break;
       s -= 2;
     }
-    lines = lines.slice(0, maxLines);
+    if (lines.length > maxLines) {
+      fitText.cut = true;
+      lines = lines.slice(0, maxLines);
+      // Show the cut, rather than ending mid-sentence as if complete.
+      let last = lines[maxLines - 1];
+      while (last && ctx.measureText(last + '\u2026').width > maxWidth) last = last.replace(/\s*\S+$/, '');
+      lines[maxLines - 1] = (last || '') + '\u2026';
+    }
     const lh = Math.round(s * 1.18);
     lines.forEach((line, i) => ctx.fillText(line, x, y + s + i * lh));
     return y + s + (lines.length - 1) * lh + Math.round(s * 0.3);
   }
 
-  async function drawFactCanvas(factText, label) {
+  // fields: { headline, line } typed by the writer, used as they are in
+  // place of the guess from the text. The canvas's lineCut says whether
+  // the line had to be shortened to fit.
+  async function drawFactCanvas(factText, label, fields) {
     await ensureCardProducts();
     const subject = cardSubject(factText);
+    const own = !!fields;
+    if (own) {
+      subject.big = cardHeadline(fields.headline);
+      subject.caption = String(fields.line || '').trim();
+      subject.sub = '';
+    }
+    fitText.cut = false;
+    let lineCut = false;
     const logo = await loadLogo();
     const W = 1200;
     const H = 675;
@@ -300,7 +333,7 @@
     ctx.font = '700 32px ' + FONT;
     // With nothing but the logo to show, the big "Did you know?" beside it
     // says it, so the small label would only repeat it.
-    if (subject.big || subject.shape || subject.iconUrl) ctx.fillText(String(label || 'Did you know?').toUpperCase(), PAD, 108);
+    if (subject.big || subject.shape || subject.iconUrl || own) ctx.fillText(String(label || 'Did you know?').toUpperCase(), PAD, 108);
 
     // The icon tile: the product's own icon, else its family's line icon,
     // else the Apple Sunset logo.
@@ -343,13 +376,20 @@
       ctx.fillStyle = sunsetGradient(ctx, cx, 0, cx + cw, 0, SUNSET_WARM);
       ctx.fillStyle = '#ffd59a';
       y = fitText(ctx, subject.big, cx, y + 4, cw, '800', 150, 72, 1);
-    } else {
+    } else if (!own) {
       // No figure: the label says it all, in big type.
       ctx.fillStyle = '#ffd59a';
       y = fitText(ctx, 'Did you know?', cx, y + 4, cw, '800', 96, 60, 1);
     }
     ctx.fillStyle = '#ffffff';
-    if (subject.caption) y = fitText(ctx, subject.caption, cx, y, cw, '600', 36, 26, 2);
+    if (subject.caption) {
+      fitText.cut = false;
+      // With no headline, the line takes its space, in larger type.
+      y = own && !subject.big
+        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', 52, 30, 5)
+        : fitText(ctx, subject.caption, cx, y, cw, '600', 36, 26, 2);
+      lineCut = fitText.cut;
+    }
     if (subject.sub) {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
       fitText(ctx, subject.sub, cx, y + 2, cw, '500', 28, 22, 1);
@@ -379,16 +419,23 @@
       ctx.restore();
     }
     ctx.shadowColor = 'transparent';
+    canvas.lineCut = lineCut;
     return canvas;
   }
 
-  async function generateFactImage(factText, label) {
-    return (await drawFactCanvas(factText, label)).toDataURL('image/png');
+  async function generateFactImage(factText, label, fields) {
+    return (await drawFactCanvas(factText, label, fields)).toDataURL('image/png');
+  }
+
+  // The card as an image plus whether its line had to be shortened.
+  async function xCardPreview(factText, label, fields) {
+    const canvas = await drawFactCanvas(factText, label, fields);
+    return { url: canvas.toDataURL('image/png'), lineCut: !!canvas.lineCut };
   }
 
   // The same card as a PNG file, for the iPhone share sheet.
-  async function factImageFile(factText, label) {
-    const canvas = await drawFactCanvas(factText, label);
+  async function factImageFile(factText, label, fields) {
+    const canvas = await drawFactCanvas(factText, label, fields);
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
         resolve(blob ? new File([blob], 'apple-sunset-fact.png', { type: 'image/png' }) : null);
@@ -772,15 +819,17 @@
   // link, and it shows that link's preview image. So the card is saved
   // to storage and the post links to /c/<key>/<page>: a tiny page whose
   // preview is the card, which sends people straight on to <page>.
-  function xCardKey(text, label) {
+  function xCardKey(text, label, fields) {
     // "card2": the subject card. Changing it gives every post a new card
-    // address, so X never shows a card drawn in the old design.
-    return factKey('card2\n' + String(label || '') + '\n' + String(text || '').trim());
+    // address, so X never shows a card drawn in the old design. The
+    // writer's own headline and line are part of it too.
+    const own = fields ? '\n' + cardHeadline(fields.headline) + '\n' + String(fields.line || '').trim() : '';
+    return factKey('card2\n' + String(label || '') + '\n' + String(text || '').trim() + own);
   }
 
-  async function uploadXCard(client, text, label) {
-    const key = xCardKey(text, label);
-    const file = await factImageFile(String(text || '').trim(), label);
+  async function uploadXCard(client, text, label, fields) {
+    const key = xCardKey(text, label, fields);
+    const file = await factImageFile(String(text || '').trim(), label, fields);
     if (!file) return null;
     const { error } = await client.storage.from(CARD_BUCKET).upload('x-cards/' + key + '.png', file, { contentType: 'image/png' });
     if (error && !(/exist|duplicate/i.test(error.message || '') || error.statusCode === '409')) return null;
@@ -968,6 +1017,7 @@
     setCardProducts,
     setCardCategoryIcons,
     setCardProductsLoader,
+    ensureCardProducts,
     cardSubject,
     dailyFactPool,
     pickDailyFact,
@@ -979,6 +1029,9 @@
     hashtagsFor,
     productNamed,
     xCardKey,
+    cardGuess,
+    cardHeadline,
+    xCardPreview,
     uploadXCard,
     xCardLink,
     factsPageHtml,

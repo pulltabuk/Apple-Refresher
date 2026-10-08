@@ -2316,7 +2316,18 @@ body.is-admin .site-search { display: none; }
 .x-text { width: 100%; max-width: 640px; font: inherit; font-size: 15px; line-height: 1.5; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
 .x-options { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 10px 0 0; }
 .x-options input[type="text"] { flex: 1; min-width: 220px; max-width: 420px; font: inherit; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; }
-.x-preview { white-space: pre-wrap; font: inherit; font-size: 15px; line-height: 1.5; max-width: 640px; margin: 4px 0 0; padding: 12px 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; }
+.x-preview { white-space: pre-wrap; font: inherit; font-size: 15px; line-height: 1.5; width: 100%; max-width: 640px; box-sizing: border-box; resize: vertical; color: var(--text); margin: 4px 0 0; padding: 12px 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; }
+.x-preview:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+.x-preview-head { display: flex; align-items: center; gap: 10px; max-width: 640px; margin-top: 10px; }
+.x-preview-head .admin-hint { margin: 0; }
+.x-preview-head .admin-btn[hidden] { display: none; }
+.x-card-fields { display: grid; gap: 4px; max-width: 640px; margin: 10px 0 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+.x-card-fields[hidden] { display: none; }
+.x-card-fields label { font-weight: 600; font-size: 14px; margin-top: 4px; }
+.x-card-fields label .admin-hint { font-weight: 400; margin-left: 4px; }
+.x-card-fields input, .x-card-fields textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; resize: vertical; }
+.x-card-note { color: var(--error, #b42318); font-weight: 600; margin: 4px 0 0; }
+.x-card-note[hidden] { display: none; }
 #x-count.is-over { color: var(--overdue-text); font-weight: 600; }
 .x-card { display: block; width: 100%; max-width: 480px; border-radius: 12px; margin: 8px 0; }
 .x-card[hidden] { display: none; }

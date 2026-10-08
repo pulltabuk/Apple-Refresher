@@ -502,7 +502,21 @@
     let cardKey = null;
     let cardFor = '';
     let uploadTimer = null;
-    const cardSig = () => ($x('x-card-label').value.trim() || 'Did you know?') + '\n' + $x('x-text').value.trim();
+    // The card's headline and line: guessed from the post until the writer
+    // types in either, then exactly what they typed.
+    let cardFieldsOwn = false;
+    const cardFields = () => ({ headline: $x('x-card-headline').value, line: $x('x-card-line').value });
+    function guessCardFields() {
+      if (cardFieldsOwn) return;
+      const guess = window.FactsKit.cardGuess($x('x-text').value.trim());
+      $x('x-card-headline').value = guess.headline;
+      $x('x-card-line').value = guess.line;
+    }
+    // The X box: built from the fields until it's edited by hand.
+    let previewOwn = false;
+    const postText = () => $x('x-preview').value.trim();
+
+    const cardSig = () => ($x('x-card-label').value.trim() || 'Did you know?') + '\n' + $x('x-text').value.trim() + '\n' + JSON.stringify(cardFields());
     const wantsCard = () => $x('x-card-on').checked && !!$x('x-text').value.trim();
     const cardReady = () => !wantsCard() || (cardKey && cardFor === cardSig());
 
@@ -521,7 +535,7 @@
       const sig = cardSig();
       uploadTimer = setTimeout(async () => {
         const label = $x('x-card-label').value.trim() || 'Did you know?';
-        const key = await window.FactsKit.uploadXCard(client, $x('x-text').value.trim(), label);
+        const key = await window.FactsKit.uploadXCard(client, $x('x-text').value.trim(), label, cardFields());
         if (sig !== cardSig()) return;
         if (key) { cardKey = key; cardFor = sig; }
         $x('x-post-btn').textContent = key ? 'Post to X' : 'Post to X (card failed to save)';
@@ -529,27 +543,48 @@
       }, 900);
     }
 
+    // The count and buttons follow whatever is in the X box, as that is
+    // what gets posted.
+    function updateCount() {
+      const post = postText();
+      const len = window.FactsKit.xPostLength(post);
+      $x('x-count').textContent = post ? len + ' / 280 characters' + (len > 280 ? ' — too long for X, shorten it a little' : '') : '';
+      $x('x-count').classList.toggle('is-over', len > 280);
+      $x('x-post-btn').disabled = !post || len > 280 || !cardReady();
+      if (post && !cardReady()) $x('x-post-btn').textContent = 'Preparing card\u2026';
+      else if ($x('x-post-btn').textContent === 'Preparing card\u2026') $x('x-post-btn').textContent = 'Post to X';
+      $x('x-copy-btn').disabled = !post;
+      $x('x-preview-reset').hidden = !previewOwn;
+      $x('x-preview-note').hidden = !previewOwn;
+    }
+
     function refresh() {
       const text = $x('x-text').value.trim();
-      const full = text ? fullText() : '';
-      $x('x-preview').textContent = full || 'Your post will appear here.';
-      const len = window.FactsKit.xPostLength(full);
-      $x('x-count').textContent = text ? len + ' / 280 characters' + (len > 280 ? ' — too long for X, shorten it a little' : '') : '';
-      $x('x-count').classList.toggle('is-over', len > 280);
-      $x('x-post-btn').disabled = !text || len > 280 || !cardReady();
-      if (text && !cardReady()) $x('x-post-btn').textContent = 'Preparing card\u2026';
-      else if ($x('x-post-btn').textContent === 'Preparing card\u2026') $x('x-post-btn').textContent = 'Post to X';
+      guessCardFields();
+      if (!previewOwn) {
+        $x('x-preview').value = text ? fullText() : '';
+      } else if (cardKey && cardReady()) {
+        // Edited by hand: only keep its card link pointing at the latest card.
+        const box = $x('x-preview');
+        const swapped = box.value.replace(new RegExp(origin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/c/[0-9a-z]+/', 'gi'), origin + '/c/' + cardKey + '/');
+        if (swapped !== box.value) box.value = swapped;
+      }
       prepareCard();
-      $x('x-copy-btn').disabled = !text;
+      updateCount();
       // The card follows the text, redrawn a moment after typing stops.
       clearTimeout(cardTimer);
       const wantCard = $x('x-card-on').checked && text;
       $x('x-card').hidden = !wantCard;
       $x('x-card-btn').hidden = !wantCard;
+      $x('x-card-fields').hidden = !$x('x-card-on').checked;
+      if (!wantCard) $x('x-card-note').hidden = true;
       if (wantCard) {
         cardTimer = setTimeout(async () => {
-          cardUrl = await window.FactsKit.generateFactImage(text, $x('x-card-label').value.trim() || 'Did you know?');
+          const card = await window.FactsKit.xCardPreview(text, $x('x-card-label').value.trim() || 'Did you know?', cardFields());
+          cardUrl = card.url;
           $x('x-card').src = cardUrl;
+          $x('x-card-note').hidden = !card.lineCut;
+          $x('x-card-note').textContent = card.lineCut ? 'The card line is too long, so the card cuts it short (\u2026). Shorten it to show it all.' : '';
         }, 300);
       }
     }
@@ -570,6 +605,8 @@
       $x('x-link').value = idea.link || '';
       $x('x-link-on').checked = !!idea.link;
       $x('x-card-label').value = idea.kind || 'Did you know?';
+      cardFieldsOwn = false;
+      previewOwn = false;
       refresh();
       $x('x-text').focus();
     }
@@ -622,11 +659,14 @@
     });
 
     ['x-text', 'x-link', 'x-card-label'].forEach((id) => $x(id).addEventListener('input', refresh));
+    ['x-card-headline', 'x-card-line'].forEach((id) => $x(id).addEventListener('input', () => { cardFieldsOwn = true; refresh(); }));
+    $x('x-preview').addEventListener('input', () => { previewOwn = true; updateCount(); });
+    $x('x-preview-reset').addEventListener('click', () => { previewOwn = false; refresh(); });
     ['x-tags', 'x-link-on', 'x-card-on'].forEach((id) => $x(id).addEventListener('change', refresh));
 
     // The writing fields, always editable when the page is in view (a
     // phone coming back from X can leave them looking stuck).
-    const xFields = ['x-text', 'x-link', 'x-card-label', 'x-topic', 'x-tags', 'x-link-on', 'x-card-on'];
+    const xFields = ['x-text', 'x-link', 'x-card-label', 'x-card-headline', 'x-card-line', 'x-preview', 'x-topic', 'x-tags', 'x-link-on', 'x-card-on'];
     function unlockFields() {
       xFields.forEach((id) => { const el = $x(id); if (el) { el.disabled = false; el.readOnly = false; } });
     }
@@ -639,6 +679,10 @@
       $x('x-link').value = '';
       $x('x-link-on').checked = false;
       $x('x-card-label').value = 'Did you know?';
+      $x('x-card-headline').value = '';
+      $x('x-card-line').value = '';
+      cardFieldsOwn = false;
+      previewOwn = false;
       $x('x-topic').value = '';
       $x('x-ideas').innerHTML = '';
       $x('x-after').hidden = true;
@@ -649,7 +693,7 @@
     }
 
     $x('x-post-btn').addEventListener('click', () => {
-      window.open('https://x.com/intent/post?text=' + encodeURIComponent(fullText()), '_blank', 'noopener');
+      window.open('https://x.com/intent/post?text=' + encodeURIComponent(postText()), '_blank', 'noopener');
       $x('x-after').hidden = false;
     });
     $x('x-clear-btn').addEventListener('click', () => {
@@ -673,7 +717,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
     $x('x-copy-btn').addEventListener('click', () => {
-      const text = fullText();
+      const text = postText();
       const btn = $x('x-copy-btn');
       navigator.clipboard.writeText(text).then(() => {
         btn.textContent = 'Copied!';
