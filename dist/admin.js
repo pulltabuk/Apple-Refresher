@@ -2860,6 +2860,30 @@
         return;
       }
 
+      // A discontinued date of today or later is almost always a slip (a
+      // date picker left on today), and it shows straight away on the
+      // site, so check before saving a new one.
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const storedProduct = editingId ? cachedProducts.find((p) => p.id === editingId) : null;
+      const storedDiscontinued = storedProduct && storedProduct.discontinued ? storedProduct.discontinued_date : null;
+      if (discontinuedDate && discontinuedDate >= todayStr && discontinuedDate !== storedDiscontinued) {
+        const ok = window.confirm('The discontinued date is ' + (discontinuedDate === todayStr ? 'today' : 'in the future') + ' (' + formatAdminDate(discontinuedDate) + ').\n\nIs that right? Press Cancel to change it.');
+        if (!ok) {
+          document.getElementById('step-generations').scrollIntoView({ block: 'center', behavior: 'smooth' });
+          return;
+        }
+      }
+      const prevAction = document.querySelector('input[name="previous_model_action"]:checked');
+      const prevSlug = document.getElementById('previous_model').value;
+      if (prevSlug && prevAction && prevAction.value === 'discontinue') {
+        const prev = cachedProducts.find((p) => p.slug === prevSlug);
+        const prevWhen = currentOriginalLaunchDate || currentRefreshHistory.slice().sort()[0] || null;
+        if (prev && !prev.discontinued && prevWhen && prevWhen >= todayStr) {
+          const ok = window.confirm('This marks the ' + prev.name + ' discontinued on ' + (prevWhen === todayStr ? 'today' : formatAdminDate(prevWhen) + ', which is in the future') + '.\n\nIs that right? Press Cancel to change it.');
+          if (!ok) return;
+        }
+      }
+
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving…';
 
