@@ -3076,8 +3076,19 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
       <input type="url" id="up-x-link" class="up-search" placeholder="https://applesunset.com/" autocomplete="off" aria-label="Link">
       <label class="up-check"><input type="checkbox" id="up-x-card-on" checked> Add a card image</label>
       <input type="text" id="up-x-card-label" class="up-search" value="Did you know?" autocomplete="off" aria-label="Card heading">
-      <p class="up-hint">How it will look on X:</p>
-      <pre id="up-x-preview" class="up-x-preview"></pre>
+      <div class="up-x-card-fields" id="up-x-card-fields">
+        <span class="up-label">Card headline <span class="up-hint">the large text, e.g. 1,433 days. Leave empty for none.</span></span>
+        <input type="text" id="up-x-card-headline" class="up-search" autocomplete="off" maxlength="24" aria-label="Card headline">
+        <span class="up-label">Card line <span class="up-hint">the smaller text below it</span></span>
+        <textarea id="up-x-card-line" class="up-fact-edit up-fact-edit--short" aria-label="Card line"></textarea>
+        <p class="up-hint up-hint--error" id="up-x-card-note" hidden></p>
+      </div>
+      <div class="up-x-preview-head">
+        <p class="up-hint">How it will look on X (you can edit it here):</p>
+        <button type="button" id="up-x-preview-reset" class="gallery-action" hidden>Reset</button>
+      </div>
+      <textarea id="up-x-preview" class="up-fact-edit up-x-preview" placeholder="Your post will appear here." aria-label="The post as it will look on X"></textarea>
+      <p class="up-hint" id="up-x-preview-note" hidden>Edited by hand, so the boxes above no longer change it. Reset rebuilds it from them.</p>
       <p class="up-fact-count" id="up-x-count"></p>
       <img id="up-x-card" class="up-fact-preview" alt="" hidden>
       <div class="up-fact-actions">
