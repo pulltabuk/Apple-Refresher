@@ -838,7 +838,7 @@
   function xGuessCardFields() {
     // "Automatic" says which icon it will use.
     const text = $('up-x-text').value.trim();
-    $('up-x-card-icon').options[0].textContent = 'Automatic' + (text ? ' (' + window.FactsKit.cardAutoIconName(text) + ')' : '');
+    $('up-x-card-icon-auto').textContent = text ? 'Auto uses: ' + window.FactsKit.cardAutoIconName(text) : '';
     if (xCardFieldsOwn) return;
     const guess = window.FactsKit.cardGuess(text);
     $('up-x-card-headline').value = guess.headline;
@@ -958,6 +958,7 @@
     xPreviewOwn = false;
     $('up-x-card-emoji').value = '';
     $('up-x-card-icon').value = 'auto';
+    xMarkIcon();
     $('up-x-idea-list').innerHTML = '';
     xRefresh();
     $('up-x-text').scrollIntoView({ block: 'center' });
@@ -1030,7 +1031,8 @@
 
   ['up-x-text', 'up-x-link', 'up-x-card-label'].forEach((id) => $(id).addEventListener('input', xRefresh));
   ['up-x-card-headline', 'up-x-card-line', 'up-x-card-title', 'up-x-card-emoji'].forEach((id) => $(id).addEventListener('input', () => { xCardFieldsOwn = true; xRefresh(); }));
-  $('up-x-card-icon').addEventListener('change', () => { $('up-x-card-emoji').value = ''; xRefresh(); });
+  window.FactsKit.mountIconPicker($('up-x-card-icon-picker'), $('up-x-card-icon'), $('up-x-card-emoji'), xRefresh);
+  const xMarkIcon = () => { if ($('up-x-card-icon-picker').markPicked) $('up-x-card-icon-picker').markPicked(); };
   $('up-x-preview').addEventListener('input', () => { xPreviewOwn = true; xUpdateCount(); });
   $('up-x-preview-reset').addEventListener('click', () => { xPreviewOwn = false; xRefresh(); });
   ['up-x-tags', 'up-x-link-on', 'up-x-card-on'].forEach((id) => $(id).addEventListener('change', xRefresh));
@@ -1057,6 +1059,7 @@
     ['up-x-text', 'up-x-link', 'up-x-card-title', 'up-x-card-emoji', 'up-x-card-headline', 'up-x-card-line', 'up-x-topic'].forEach((id) => { $(id).value = ''; });
     $('up-x-link-on').checked = false;
     $('up-x-card-icon').value = 'auto';
+    xMarkIcon();
     $('up-x-card-label').value = 'Did you know?';
     $('up-x-idea-list').innerHTML = '';
     xCardFieldsOwn = false;

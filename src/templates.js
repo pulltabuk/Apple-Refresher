@@ -2822,11 +2822,11 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     <div class="x-card-fields" id="x-card-fields">
       <label for="x-card-title">Card title <span class="admin-hint">optional, above the headline, e.g. iPhone 16</span></label>
       <input type="text" id="x-card-title" autocomplete="off" maxlength="40">
-      <label for="x-card-icon">Card icon <span class="admin-hint">what is this post about? The Apple Sunset logo always sits small in the corner.</span></label>
-      <div class="x-card-icon-row">
-        <select id="x-card-icon"><option value="auto">Automatic</option><option value="calendar">Calendar</option><option value="clock">Clock</option><option value="chart">Chart</option><option value="invite">Invitation</option><option value="star">Star</option><option value="idea">Light bulb</option></select>
-        <input type="text" id="x-card-emoji" autocomplete="off" maxlength="8" placeholder="or an emoji, e.g. 🎉" aria-label="Emoji for the card">
-      </div>
+      <label for="x-card-emoji">Card icon <span class="admin-hint">what is this post about? Tap one. The Apple Sunset logo always sits small in the corner.</span></label>
+      <select id="x-card-icon" hidden><option value="auto">Automatic</option></select>
+      <div class="icon-picker" id="x-card-icon-picker"></div>
+      <p class="admin-hint icon-picker-auto" id="x-card-icon-auto"></p>
+      <input type="text" id="x-card-emoji" autocomplete="off" maxlength="16" placeholder="Or type or paste any other emoji" aria-label="Any other emoji for the card">
       <label for="x-card-headline">Card headline <span class="admin-hint">the large text, e.g. 1,433 days or 2014. Leave empty for none.</span></label>
       <input type="text" id="x-card-headline" autocomplete="off" maxlength="24">
       <label for="x-card-line">Card line <span class="admin-hint">the smaller text below it</span></label>
@@ -3091,9 +3091,11 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
       <div class="up-x-card-fields" id="up-x-card-fields">
         <span class="up-label">Card title <span class="up-hint">optional, above the headline, e.g. iPhone 16</span></span>
         <input type="text" id="up-x-card-title" class="up-search" autocomplete="off" maxlength="40" aria-label="Card title">
-        <span class="up-label">Card icon <span class="up-hint">what is this post about? The Apple Sunset logo always sits small in the corner.</span></span>
-        <select id="up-x-card-icon" class="up-select" aria-label="Card icon"><option value="auto">Automatic</option><option value="calendar">Calendar</option><option value="clock">Clock</option><option value="chart">Chart</option><option value="invite">Invitation</option><option value="star">Star</option><option value="idea">Light bulb</option></select>
-        <input type="text" id="up-x-card-emoji" class="up-search" autocomplete="off" maxlength="8" placeholder="or an emoji, e.g. 🎉" aria-label="Emoji for the card">
+        <span class="up-label">Card icon <span class="up-hint">what is this post about? Tap one. The Apple Sunset logo always sits small in the corner.</span></span>
+        <select id="up-x-card-icon" hidden><option value="auto">Automatic</option></select>
+        <div class="icon-picker" id="up-x-card-icon-picker"></div>
+        <p class="up-hint icon-picker-auto" id="up-x-card-icon-auto"></p>
+        <input type="text" id="up-x-card-emoji" class="up-search" autocomplete="off" maxlength="16" placeholder="Or type or paste any other emoji" aria-label="Any other emoji for the card">
         <span class="up-label">Card headline <span class="up-hint">the large text, e.g. 1,433 days. Leave empty for none.</span></span>
         <input type="text" id="up-x-card-headline" class="up-search" autocomplete="off" maxlength="24" aria-label="Card headline">
         <span class="up-label">Card line <span class="up-hint">the smaller text below it</span></span>

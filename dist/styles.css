@@ -2719,3 +2719,11 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .x-emoji { font-size: 20px; line-height: 1; padding: 5px 6px; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; }
 .x-emoji:hover { background: var(--accent-bg); }
 .x-done-row { margin: 18px 0 0; padding-top: 16px; border-top: 1px solid var(--border); max-width: 640px; }
+
+/* Card icon picker (admin X posts and the phone app) */
+.icon-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.icon-pick { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: #9c4009; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.icon-pick--emoji { font-size: 22px; line-height: 1; }
+.icon-pick-auto { font-size: 12px; font-weight: 700; color: var(--text); }
+.icon-pick.is-picked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: #fff7ef; }
+.icon-picker-auto { margin: 2px 0 0; }
