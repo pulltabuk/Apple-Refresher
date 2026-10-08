@@ -1127,7 +1127,9 @@
   // One step through the pool per day (UTC), so everything shows once
   // before anything repeats. Products named in excludeSlugs (those in
   // the big homepage tile) are taken out first.
-  function pickDailyFact(pool, dateStr, excludeSlugs) {
+  // locked: { date, key } of the fact already shown today (saved by the
+  // build), so publishing changes during the day doesn't swap it.
+  function pickDailyFact(pool, dateStr, excludeSlugs, locked) {
     const skip = excludeSlugs || [];
     const date = String(dateStr).slice(0, 10);
     // A fact you've put on the homepage for this day wins outright (even
@@ -1138,6 +1140,10 @@
     if (pinned.length) return pinned[pinned.length - 1];
     const usable = (pool || []).filter((item) => (!item.slug || skip.indexOf(item.slug) === -1) && !(item.pin && item.pin > date));
     if (!usable.length) return null;
+    if (locked && locked.date === date) {
+      const kept = usable.find((item) => item.key === locked.key);
+      if (kept) return kept;
+    }
     const day = Math.floor(Date.parse(String(dateStr).slice(0, 10) + 'T00:00:00Z') / 86400000);
     return usable[((day % usable.length) + usable.length) % usable.length];
   }

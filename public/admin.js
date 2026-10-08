@@ -3662,10 +3662,14 @@
   async function loadFactRotation() {
     const listEl = document.getElementById('fact-rotation');
     if (!listEl) return;
-    const [factsRes, eventsRes] = await Promise.all([
+    const [factsRes, eventsRes, lockRes] = await Promise.all([
       client.from('facts').select('*'),
       client.from('apple_events').select('*'),
+      client.from('site_content').select('body').eq('id', 'daily_fact').maybeSingle(),
     ]);
+    // Today's fact as the build saved it, so the list matches the homepage.
+    let locked = null;
+    try { locked = JSON.parse((lockRes.data && lockRes.data.body) || 'null'); } catch (err) { locked = null; }
     const published = factsRes.data || [];
     const events = eventsRes.data || [];
     // The products in the big homepage tile, as the build picks them:
@@ -3685,7 +3689,7 @@
       const day = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
       // An Apple Event in the big tile means no product is there that day.
       const eventInTile = events.some((e) => e.featured) || events.some((e) => e.event_date >= day);
-      const item = window.FactsKit.pickDailyFact(pool, day, eventInTile ? [] : tileSlugs);
+      const item = window.FactsKit.pickDailyFact(pool, day, eventInTile ? [] : tileSlugs, locked);
       if (!item) continue;
       const row = document.createElement('div');
       row.className = 'admin-fact-row fact-rotation-row' + (i === 0 ? ' is-today' : '');
