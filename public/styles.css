@@ -2310,7 +2310,8 @@ body.is-admin .site-search { display: none; }
 }
 
 /* Admin: X posts */
-.x-source-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
+.x-source-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 14px 0 12px; }
+.x-source-row .admin-btn { padding-left: 18px; padding-right: 18px; }
 .x-source-row .admin-hint { margin: 0; }
 .x-idea-kind { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-dark); margin-bottom: 3px; }
 .x-text { width: 100%; max-width: 640px; font: inherit; font-size: 15px; line-height: 1.5; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
@@ -2710,3 +2711,11 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .fact-subject { max-width: 640px; margin: 8px auto 0; font-size: 15px; font-weight: 700; }
 .fact-subject a { color: var(--accent-dark); text-decoration: none; }
 .fact-subject a:hover { text-decoration: underline; }
+
+/* X posts: quick emoji, and Done */
+.x-emoji-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; max-width: 640px; margin: 6px 0 0; }
+.x-emoji-row .admin-hint { margin: 0 6px 0 0; }
+.x-emoji-row .admin-hint:last-child { margin: 0 0 0 6px; }
+.x-emoji { font-size: 20px; line-height: 1; padding: 5px 6px; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; }
+.x-emoji:hover { background: var(--accent-bg); }
+.x-done-row { margin: 18px 0 0; padding-top: 16px; border-top: 1px solid var(--border); max-width: 640px; }

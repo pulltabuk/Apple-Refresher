@@ -241,7 +241,7 @@
     const rest = String(text).slice(m.index + m[0].length).split(/[.,;:!?(]/)[0].trim().split(/\s+/).filter(Boolean);
     const caption = rest.slice(0, 7).join(' ') + (rest.length > 7 ? '…' : '');
     // The whole rest of the sentence, for the composer to pre-fill.
-    const full = String(text).slice(m.index + m[0].length).replace(/^[\s,;:]+/, '').split(/(?<=[.!?]["\u201d\u2019']?)\s/)[0].trim();
+    const full = String(text).slice(m.index + m[0].length).replace(/^[\s,;:.]+/, '').split(/(?<=[.!?]["\u201d\u2019']?)\s/)[0].trim();
     return { big: cardHeadline((m[1] + (m[2] || '')).replace(/\s?per ?cent/i, '%')), caption, sub: '', full };
   }
 

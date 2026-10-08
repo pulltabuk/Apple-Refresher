@@ -2838,6 +2838,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <button type="button" id="x-preview-reset" class="admin-btn admin-btn--small" hidden>Reset</button>
     </div>
     <textarea id="x-preview" class="x-preview" rows="6" placeholder="Your post will appear here." aria-label="The post as it will look on X"></textarea>
+    <div class="x-emoji-row" id="x-emoji-row"><span class="admin-hint">Add an emoji where the cursor is:</span><button type="button" class="x-emoji" data-emoji="🍎" aria-label="Add 🍎">🍎</button><button type="button" class="x-emoji" data-emoji="📱" aria-label="Add 📱">📱</button><button type="button" class="x-emoji" data-emoji="💻" aria-label="Add 💻">💻</button><button type="button" class="x-emoji" data-emoji="⌚" aria-label="Add ⌚">⌚</button><button type="button" class="x-emoji" data-emoji="🎧" aria-label="Add 🎧">🎧</button><button type="button" class="x-emoji" data-emoji="📅" aria-label="Add 📅">📅</button><button type="button" class="x-emoji" data-emoji="⏳" aria-label="Add ⏳">⏳</button><button type="button" class="x-emoji" data-emoji="🎉" aria-label="Add 🎉">🎉</button><button type="button" class="x-emoji" data-emoji="🔥" aria-label="Add 🔥">🔥</button><button type="button" class="x-emoji" data-emoji="👀" aria-label="Add 👀">👀</button><button type="button" class="x-emoji" data-emoji="🤔" aria-label="Add 🤔">🤔</button><button type="button" class="x-emoji" data-emoji="💯" aria-label="Add 💯">💯</button><button type="button" class="x-emoji" data-emoji="🚀" aria-label="Add 🚀">🚀</button><button type="button" class="x-emoji" data-emoji="✨" aria-label="Add ✨">✨</button><button type="button" class="x-emoji" data-emoji="👇" aria-label="Add 👇">👇</button><span class="admin-hint">(on a Mac, Ctrl + Cmd + Space has them all)</span></div>
     <p id="x-preview-note" class="admin-hint" hidden>Edited by hand, so the boxes above no longer change it. Reset rebuilds it from them.</p>
     <p id="x-count" class="admin-hint"></p>
     <img id="x-card" class="x-card" alt="" hidden>
@@ -2852,10 +2853,13 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <div class="x-actions">
         <button type="button" id="x-another-btn" class="admin-btn admin-btn--primary">Write another</button>
         <button type="button" id="x-edit-btn" class="admin-btn">Keep editing this one</button>
-        <button type="button" id="x-back-btn" class="admin-btn">Back to admin</button>
+        <button type="button" id="x-back-btn" class="admin-btn">Done: back to admin</button>
       </div>
     </div>
     <p class="admin-hint" id="x-note">With a card, it shows under your post on X as the link&rsquo;s preview picture.</p>
+    <div class="x-done-row">
+      <button type="button" id="x-done-btn" class="admin-btn admin-btn--primary">Done: clear and back to admin</button>
+    </div>
   </div>
 
   <div id="tab-facts" class="admin-tab-panel" style="display:none;">
@@ -3100,6 +3104,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
         <button type="button" id="up-x-preview-reset" class="gallery-action" hidden>Reset</button>
       </div>
       <textarea id="up-x-preview" class="up-fact-edit up-x-preview" placeholder="Your post will appear here." aria-label="The post as it will look on X"></textarea>
+      <div class="up-x-emoji-row" id="up-x-emoji-row"><button type="button" class="up-x-emoji" data-emoji="🍎" aria-label="Add 🍎">🍎</button><button type="button" class="up-x-emoji" data-emoji="📱" aria-label="Add 📱">📱</button><button type="button" class="up-x-emoji" data-emoji="💻" aria-label="Add 💻">💻</button><button type="button" class="up-x-emoji" data-emoji="⌚" aria-label="Add ⌚">⌚</button><button type="button" class="up-x-emoji" data-emoji="🎧" aria-label="Add 🎧">🎧</button><button type="button" class="up-x-emoji" data-emoji="📅" aria-label="Add 📅">📅</button><button type="button" class="up-x-emoji" data-emoji="⏳" aria-label="Add ⏳">⏳</button><button type="button" class="up-x-emoji" data-emoji="🎉" aria-label="Add 🎉">🎉</button><button type="button" class="up-x-emoji" data-emoji="🔥" aria-label="Add 🔥">🔥</button><button type="button" class="up-x-emoji" data-emoji="👀" aria-label="Add 👀">👀</button><button type="button" class="up-x-emoji" data-emoji="🤔" aria-label="Add 🤔">🤔</button><button type="button" class="up-x-emoji" data-emoji="💯" aria-label="Add 💯">💯</button><button type="button" class="up-x-emoji" data-emoji="🚀" aria-label="Add 🚀">🚀</button><button type="button" class="up-x-emoji" data-emoji="✨" aria-label="Add ✨">✨</button><button type="button" class="up-x-emoji" data-emoji="👇" aria-label="Add 👇">👇</button></div>
       <p class="up-hint" id="up-x-preview-note" hidden>Edited by hand, so the boxes above no longer change it. Reset rebuilds it from them.</p>
       <p class="up-fact-count" id="up-x-count"></p>
       <img id="up-x-card" class="up-fact-preview" alt="" hidden>
@@ -3109,6 +3114,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
         <button type="button" id="up-x-copy" class="gallery-action">Copy text</button>
       </div>
       <p class="up-hint" id="up-x-note">Share to X with card opens the share sheet: pick X and the card and text go in together. If the text doesn’t appear in X, it’s been copied, so just paste it.</p>
+      <button type="button" id="up-x-done" class="gallery-action gallery-action--block">Done: clear and go back</button>
     </div>
   </section>
 

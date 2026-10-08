@@ -1022,6 +1022,38 @@
   $('up-x-preview-reset').addEventListener('click', () => { xPreviewOwn = false; xRefresh(); });
   ['up-x-tags', 'up-x-link-on', 'up-x-card-on'].forEach((id) => $(id).addEventListener('change', xRefresh));
 
+  // Emoji buttons: added where the cursor is in the X box (the end, if
+  // it hasn't been tapped into), which then counts as edited by hand.
+  let xCaret = null;
+  ['select', 'keyup', 'click'].forEach((ev) => $('up-x-preview').addEventListener(ev, () => {
+    xCaret = [$('up-x-preview').selectionStart, $('up-x-preview').selectionEnd];
+  }));
+  document.querySelectorAll('#up-x-emoji-row .up-x-emoji').forEach((btn) => btn.addEventListener('click', () => {
+    const box = $('up-x-preview');
+    if (!box.value.trim()) return;
+    const [start, end] = xCaret || [box.value.length, box.value.length];
+    box.setRangeText(btn.dataset.emoji, start, end, 'end');
+    xCaret = [box.selectionStart, box.selectionEnd];
+    xPreviewOwn = true;
+    xUpdateCount();
+  }));
+
+  // Done: clear the post and go back where it came from.
+  $('up-x-done').addEventListener('click', () => {
+    const fromFacts = !$('up-x-back').hidden;
+    ['up-x-text', 'up-x-link', 'up-x-card-title', 'up-x-card-emoji', 'up-x-card-headline', 'up-x-card-line', 'up-x-topic'].forEach((id) => { $(id).value = ''; });
+    $('up-x-link-on').checked = false;
+    $('up-x-card-icon').value = 'auto';
+    $('up-x-card-label').value = 'Did you know?';
+    $('up-x-idea-list').innerHTML = '';
+    xCardFieldsOwn = false;
+    xPreviewOwn = false;
+    xCaret = null;
+    xRefresh();
+    if (fromFacts) openFacts();
+    else show('home');
+  });
+
   $('up-x-share').addEventListener('click', async () => {
     const text = xShareText();
     const btn = $('up-x-share');

@@ -273,3 +273,8 @@ body {
 .up-pin-panel[hidden] { display: none; }
 .up-back-link { border: none; background: none; padding: 4px 2px 12px; font: inherit; font-size: 15px; font-weight: 600; color: var(--accent-dark); cursor: pointer; }
 .up-back-link[hidden] { display: none; }
+
+.up-x-emoji-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.up-x-emoji { font-size: 22px; line-height: 1; padding: 6px 7px; border: 1px solid var(--border); border-radius: 10px; background: #fff; -webkit-tap-highlight-color: transparent; }
+.up-x-emoji:active { background: var(--accent-bg); }
+#up-x-done { margin-top: 6px; }
