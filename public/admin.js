@@ -1037,6 +1037,9 @@
   // family, saved as the product's slug. A saved value that no longer
   // matches a product is kept as its own option so nothing is lost.
 
+  // Same family first, then every other product, as one product can
+  // be replaced by another from a different line (iPhone 8 by the iPhone
+  // SE 2nd generation, say).
   function fillProductSelect(selectEl, keepValue) {
     const currentCategory = (document.getElementById('category').value || '').trim().toLowerCase();
     const value = keepValue !== undefined ? keepValue : selectEl.value;
@@ -1045,20 +1048,27 @@
     none.value = '';
     none.textContent = 'None';
     selectEl.appendChild(none);
-    const options = cachedProducts
-      .filter((p) => (p.category || '').trim().toLowerCase() === currentCategory && p.id !== editingId)
-      .sort((a, b) => a.name.localeCompare(b.name));
-    options.forEach((p) => {
-      const opt = document.createElement('option');
-      opt.value = p.slug;
-      opt.textContent = p.name + (p.discontinued ? ' (discontinued)' : '');
-      selectEl.appendChild(opt);
-    });
-    if (value && !options.some((p) => p.slug === value)) {
-      const other = cachedProducts.find((p) => p.slug === value);
+    const others = cachedProducts.filter((p) => p.id !== editingId).sort((a, b) => a.name.localeCompare(b.name));
+    const same = others.filter((p) => (p.category || '').trim().toLowerCase() === currentCategory);
+    const rest = others.filter((p) => (p.category || '').trim().toLowerCase() !== currentCategory);
+    const addGroup = (label, list, withCategory) => {
+      if (!list.length) return;
+      const group = document.createElement('optgroup');
+      group.label = label;
+      list.forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = p.slug;
+        opt.textContent = p.name + (withCategory && p.category ? ' (' + p.category + ')' : '') + (p.discontinued ? ' (discontinued)' : '');
+        group.appendChild(opt);
+      });
+      selectEl.appendChild(group);
+    };
+    addGroup(currentCategory ? 'Same family' : 'Products', same, false);
+    addGroup(same.length ? 'All other products' : 'All products', rest, true);
+    if (value && !others.some((p) => p.slug === value)) {
       const opt = document.createElement('option');
       opt.value = value;
-      opt.textContent = other ? other.name + ' (' + other.category + ')' : value;
+      opt.textContent = value;
       selectEl.appendChild(opt);
     }
     selectEl.value = value || '';
