@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-<link rel="stylesheet" href="/upload.css?v=83c42fefae">
+<link rel="stylesheet" href="/upload.css?v=51652b4f45">
 </head>
 <body>
 <main class="up">
@@ -108,6 +108,7 @@
         <button type="button" id="up-x-preview-reset" class="gallery-action" hidden>Reset</button>
       </div>
       <textarea id="up-x-preview" class="up-fact-edit up-x-preview" placeholder="Your post will appear here." aria-label="The post as it will look on X"></textarea>
+      <div class="up-x-emoji-row" id="up-x-emoji-row"><button type="button" class="up-x-emoji" data-emoji="🍎" aria-label="Add 🍎">🍎</button><button type="button" class="up-x-emoji" data-emoji="📱" aria-label="Add 📱">📱</button><button type="button" class="up-x-emoji" data-emoji="💻" aria-label="Add 💻">💻</button><button type="button" class="up-x-emoji" data-emoji="⌚" aria-label="Add ⌚">⌚</button><button type="button" class="up-x-emoji" data-emoji="🎧" aria-label="Add 🎧">🎧</button><button type="button" class="up-x-emoji" data-emoji="📅" aria-label="Add 📅">📅</button><button type="button" class="up-x-emoji" data-emoji="⏳" aria-label="Add ⏳">⏳</button><button type="button" class="up-x-emoji" data-emoji="🎉" aria-label="Add 🎉">🎉</button><button type="button" class="up-x-emoji" data-emoji="🔥" aria-label="Add 🔥">🔥</button><button type="button" class="up-x-emoji" data-emoji="👀" aria-label="Add 👀">👀</button><button type="button" class="up-x-emoji" data-emoji="🤔" aria-label="Add 🤔">🤔</button><button type="button" class="up-x-emoji" data-emoji="💯" aria-label="Add 💯">💯</button><button type="button" class="up-x-emoji" data-emoji="🚀" aria-label="Add 🚀">🚀</button><button type="button" class="up-x-emoji" data-emoji="✨" aria-label="Add ✨">✨</button><button type="button" class="up-x-emoji" data-emoji="👇" aria-label="Add 👇">👇</button></div>
       <p class="up-hint" id="up-x-preview-note" hidden>Edited by hand, so the boxes above no longer change it. Reset rebuilds it from them.</p>
       <p class="up-fact-count" id="up-x-count"></p>
       <img id="up-x-card" class="up-fact-preview" alt="" hidden>
@@ -117,6 +118,7 @@
         <button type="button" id="up-x-copy" class="gallery-action">Copy text</button>
       </div>
       <p class="up-hint" id="up-x-note">Share to X with card opens the share sheet: pick X and the card and text go in together. If the text doesn’t appear in X, it’s been copied, so just paste it.</p>
+      <button type="button" id="up-x-done" class="gallery-action gallery-action--block">Done: clear and go back</button>
     </div>
   </section>
 
@@ -284,15 +286,15 @@
     <span id="up-user"></span>
     <button type="button" id="up-logout" class="up-link">Sign out</button>
   </footer>
-  <p class="up-version">Version 9bba0b</p>
+  <p class="up-version">Version d6833b</p>
 </main>
 <script>
   window.SUPABASE_URL = "";
   window.SUPABASE_ANON_KEY = "";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
-<script src="/facts-kit.js?v=e9258df4d5" defer></script>
-<script src="/upload.js?v=9bba0b4f6b" defer></script>
+<script src="/facts-kit.js?v=109d085526" defer></script>
+<script src="/upload.js?v=d6833b4fdd" defer></script>
 <script>
   // Keeps the page's files on the phone so it opens instantly from the
   // Home Screen; updates are fetched in the background.

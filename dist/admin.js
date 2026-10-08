@@ -711,7 +711,27 @@
     $x('x-post-btn').addEventListener('click', () => {
       window.open('https://x.com/intent/post?text=' + encodeURIComponent(postText()), '_blank', 'noopener');
       $x('x-after').hidden = false;
+      $x('x-after').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
+    // Emoji buttons: added where the cursor is in the X box (the end, if
+    // it hasn't been clicked into), which then counts as edited by hand.
+    let previewCaret = null;
+    ['select', 'keyup', 'click'].forEach((ev) => $x('x-preview').addEventListener(ev, () => {
+      const box = $x('x-preview');
+      previewCaret = [box.selectionStart, box.selectionEnd];
+    }));
+    document.querySelectorAll('#x-emoji-row .x-emoji').forEach((btn) => btn.addEventListener('click', () => {
+      const box = $x('x-preview');
+      if (!box.value.trim()) return;
+      const [start, end] = previewCaret || [box.value.length, box.value.length];
+      box.setRangeText(btn.dataset.emoji, start, end, 'end');
+      previewCaret = [box.selectionStart, box.selectionEnd];
+      previewOwn = true;
+      updateCount();
+      box.focus();
+    }));
+    // Done: start afresh and go back to the admin's first tab.
+    $x('x-done-btn').addEventListener('click', () => $x('x-back-btn').click());
     $x('x-clear-btn').addEventListener('click', () => {
       if ($x('x-text').value.trim() && !window.confirm('Clear this post and start again?')) return;
       clearPost();
