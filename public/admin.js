@@ -529,13 +529,16 @@
     const cardSig = () => ($x('x-card-label').value.trim() || 'Did you know?') + '\n' + $x('x-text').value.trim() + '\n' + JSON.stringify(cardFields());
     const wantsCard = () => $x('x-card-on').checked && !!$x('x-text').value.trim();
     const cardReady = () => !wantsCard() || (cardKey && cardFor === cardSig());
+    // Whether the saved card's link opened properly when checked; if not,
+    // the post carries the plain link.
+    let cardLinkOk = false;
 
     function fullText() {
       const link = $x('x-link-on').checked ? $x('x-link').value.trim() : '';
       return window.FactsKit.xPostText($x('x-text').value, {
         hashtags: $x('x-tags').checked,
         products: cachedProducts,
-        link: wantsCard() && cardReady() ? window.FactsKit.xCardLink(origin, cardKey, link) : link,
+        link: wantsCard() && cardReady() && cardLinkOk ? window.FactsKit.xCardLink(origin, cardKey, link) : link,
       });
     }
 
@@ -547,8 +550,18 @@
         const label = $x('x-card-label').value.trim() || 'Did you know?';
         const key = await window.FactsKit.uploadXCard(client, $x('x-text').value.trim(), label, cardFields());
         if (sig !== cardSig()) return;
-        if (key) { cardKey = key; cardFor = sig; }
-        $x('x-post-btn').textContent = key ? 'Post to X' : 'Post to X (card failed to save)';
+        const check = key ? await window.FactsKit.checkXCardLink(origin, key) : { ok: false, reason: 'the card didn\u2019t save' };
+        if (sig !== cardSig()) return;
+        cardKey = key || 'none';
+        cardFor = sig;
+        cardLinkOk = check.ok;
+        const note = $x('x-link-note');
+        note.hidden = false;
+        note.classList.toggle('x-card-note', !check.ok);
+        note.textContent = check.ok
+          ? 'Card link checked: it opens and shows the card on X.'
+          : 'The card link isn\u2019t working (' + check.reason + '), so this post uses the plain link instead. You can still download the card and add it to the post in X.';
+        $x('x-post-btn').textContent = 'Post to X';
         refresh();
       }, 900);
     }
@@ -576,9 +589,10 @@
       } else if (cardKey && cardReady()) {
         // Edited by hand: only keep its card link pointing at the latest card.
         const box = $x('x-preview');
-        const swapped = box.value.replace(new RegExp(origin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/c/[0-9a-z]+/', 'gi'), origin + '/c/' + cardKey + '/');
+        const swapped = box.value.replace(new RegExp(origin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/c/[0-9a-z]+/', 'gi'), cardLinkOk && wantsCard() ? origin + '/c/' + cardKey + '/' : origin + '/');
         if (swapped !== box.value) box.value = swapped;
       }
+      if (!wantsCard() || !cardReady()) $x('x-link-note').hidden = true;
       prepareCard();
       updateCount();
       // The card follows the text, redrawn a moment after typing stops.
@@ -704,6 +718,7 @@
       $x('x-after').hidden = true;
       cardKey = null;
       cardFor = '';
+      $x('x-link-note').hidden = true;
       unlockFields();
       refresh();
     }
