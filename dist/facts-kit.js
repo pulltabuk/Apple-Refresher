@@ -231,7 +231,9 @@
   }
 
   // A statistic's key number ("604 days", "55%") and the few words after it.
-  const DATE_RE = /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:,?\s+(?:19|20)\d\d)?\b/i;
+  const MONTH_NAMES = '(?:january|february|march|april|may|june|july|august|september|october|november|december)';
+  // "8 October 2014", "October 8" or "October 8, 2014".
+  const DATE_RE = new RegExp('\\b(?:\\d{1,2}(?:st|nd|rd|th)?\\s+' + MONTH_NAMES + '|' + MONTH_NAMES + '\\s+\\d{1,2}(?:st|nd|rd|th)?\\b)(?:,?\\s+(?:19|20)\\d\\d)?\\b', 'i');
   function textFigure(text) {
     let m = String(text || '').match(/(\d[\d,]*(?:\.\d+)?)(\s?(?:%|per cent|percent|days?|weeks?|months?|years?))?/i);
     // A date ("8 October 2014") is one headline, not the number 8.
@@ -241,7 +243,18 @@
     const rest = String(text).slice(m.index + m[0].length).split(/[.,;:!?(]/)[0].trim().split(/\s+/).filter(Boolean);
     const caption = rest.slice(0, 7).join(' ') + (rest.length > 7 ? '…' : '');
     // The whole rest of the sentence, for the composer to pre-fill.
-    const full = String(text).slice(m.index + m[0].length).replace(/^[\s,;:.]+/, '').split(/(?<=[.!?]["\u201d\u2019']?)\s/)[0].trim();
+    // The rest of the number's own sentence, for the composer to pre-fill;
+    // when the number ends its sentence, the words before it instead.
+    const after = String(text).slice(m.index + m[0].length);
+    let full = /^\s*["\u201d\u2019']?[.!?](\s|$)/.test(after) ? '' : after.replace(/^[\s,;:"'\u201d\u2019)\]]+/, '').split(/(?<=[.!?]["\u201d\u2019']?)\s/)[0].trim();
+    if (!/[a-z]/i.test(full)) {
+      const head = String(text).slice(0, m.index);
+      const starts = [...head.matchAll(/[.!?]["\u201d\u2019']?\s+/g)];
+      full = head.slice(starts.length ? starts[starts.length - 1].index + starts[starts.length - 1][0].length : 0)
+        .replace(/\s*\b(on|in|at|of|since|by|from|for)\s*$/i, '').replace(/[\s,;:]+$/, '').trim();
+      if ((full.match(/"/g) || []).length % 2) full += '"';
+      if (!/[a-z]/i.test(full)) full = '';
+    }
     return { big: cardHeadline((m[1] + (m[2] || '')).replace(/\s?per ?cent/i, '%')), caption, sub: '', full };
   }
 
@@ -899,6 +912,23 @@
     return origin + '/c/' + key + path;
   }
 
+  // Opens a card link the way X will, before it's posted: the card page
+  // must load and name this card, and the card image must load.
+  async function checkXCardLink(origin, key) {
+    try {
+      const res = await fetch(origin + '/c/' + key + '/', { cache: 'no-store' });
+      if (!res.ok) return { ok: false, reason: 'the card page answered ' + res.status };
+      const html = await res.text();
+      const m = html.match(/<meta property="og:image" content="([^"]+)"/);
+      if (!m || m[1].indexOf('x-cards/' + key) === -1) return { ok: false, reason: 'the card page doesn\u2019t show this card' };
+      const img = await loadImage(m[1].replace(/&amp;/g, '&') + '?check=' + Date.now(), true);
+      if (!img) return { ok: false, reason: 'the card image didn\u2019t load' };
+      return { ok: true, reason: '' };
+    } catch (err) {
+      return { ok: false, reason: 'the card page couldn\u2019t be reached' };
+    }
+  }
+
   // How long X counts it: every link counts as 23 characters.
   function xPostLength(full) {
     return String(full || '').replace(/https?:\/\/\S+/g, 'x'.repeat(23)).length;
@@ -1089,6 +1119,7 @@
     xCardPreview,
     uploadXCard,
     xCardLink,
+    checkXCardLink,
     factsPageHtml,
     productFactCandidates,
     productFactPrompt,

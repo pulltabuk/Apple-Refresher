@@ -860,10 +860,11 @@
     return window.FactsKit.xPostText($('up-x-text').value, {
       hashtags: $('up-x-tags').checked,
       products: allProducts,
-      link: withCardLink && xWantsCard() && xCardReady() ? window.FactsKit.xCardLink(window.location.origin, xCardKey, link) : link,
+      link: withCardLink && xWantsCard() && xCardReady() && xCardLinkOk ? window.FactsKit.xCardLink(window.location.origin, xCardKey, link) : link,
     });
   }
 
+  let xCardLinkOk = false;
   function xPrepareCard() {
     clearTimeout(xUploadTimer);
     if (!xWantsCard() || xCardReady()) return;
@@ -872,8 +873,19 @@
       const label = $('up-x-card-label').value.trim() || 'Did you know?';
       const key = await window.FactsKit.uploadXCard(client, $('up-x-text').value.trim(), label, xCardFields());
       if (sig !== xCardSig()) return;
-      if (key) { xCardKey = key; xCardFor = sig; }
-      $('up-x-post').textContent = key ? 'Post to X' : 'Post to X (card failed to save)';
+      // Open the card link the way X will before it's used.
+      const check = key ? await window.FactsKit.checkXCardLink(window.location.origin, key) : { ok: false, reason: 'the card didn\u2019t save' };
+      if (sig !== xCardSig()) return;
+      xCardKey = key || 'none';
+      xCardFor = sig;
+      xCardLinkOk = check.ok;
+      const note = $('up-x-link-note');
+      note.hidden = false;
+      note.classList.toggle('up-hint--error', !check.ok);
+      note.textContent = check.ok
+        ? 'Card link checked: it opens and shows the card on X.'
+        : 'The card link isn\u2019t working (' + check.reason + '), so Post to X uses the plain link. Share to X with card still attaches the card.';
+      $('up-x-post').textContent = 'Post to X';
       xRefresh();
     }, 900);
   }
@@ -891,9 +903,10 @@
     } else if (xCardKey && xCardReady()) {
       // Edited by hand: only keep its card link pointing at the latest card.
       const box = $('up-x-preview');
-      const swapped = box.value.replace(/(\/c\/)[0-9a-z]+\//gi, '$1' + xCardKey + '/');
+      const swapped = xCardLinkOk && xWantsCard() ? box.value.replace(/(\/c\/)[0-9a-z]+\//gi, '$1' + xCardKey + '/') : box.value.replace(/\/c\/[0-9a-z]+\//gi, '/');
       if (swapped !== box.value) box.value = swapped;
     }
+    if (!xWantsCard() || !xCardReady()) $('up-x-link-note').hidden = true;
     xPrepareCard();
     xUpdateCount();
     $('up-x-link').hidden = !$('up-x-link-on').checked;
