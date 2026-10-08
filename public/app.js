@@ -117,10 +117,8 @@
   }
 
   function monthsBetweenJS(a, b) {
-    var start = new Date(a), end = new Date(b);
-    var months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-    if (end.getDate() < start.getDate()) months -= 1;
-    return Math.max(0, months);
+    var days = (new Date(b) - new Date(a)) / 86400000;
+    return Math.max(0, Math.round(days / 30.4375));
   }
 
   function normaliseGroupKeyJS(value) {
@@ -783,9 +781,18 @@
     return out;
   }
 
+  function wikiArticleTitleJS(url) {
+    var m = String(url || '').match(/wikipedia\.org\/wiki\/([^#?]+)/i);
+    if (!m) return null;
+    var title;
+    try { title = decodeURIComponent(m[1]); } catch (err) { title = m[1]; }
+    return title.replace(/_/g, ' ').replace(/^I(Phone|Pad|Pod|Mac|Book|OS|Cloud|Tunes|Watch|Sight)/, 'i$1').trim() || null;
+  }
+
   function externalLinkLabelJS(product) {
     var isWiki = /wikipedia\.org/i.test(product.external_link || '');
-    return product.name + (isWiki ? ' (Wiki)' : '');
+    if (!isWiki) return product.name;
+    return (wikiArticleTitleJS(product.external_link) || product.name) + ' on Wikipedia';
   }
 
   // Must stay in step with heroCycle() in src/templates.js.
@@ -850,6 +857,7 @@
       var st = p.discontinued ? null : computeStatusJS(p);
       var line = p.discontinued
         ? 'Discontinued' + (p.discontinued_date ? ' ' + formatDateJS(p.discontinued_date) : '')
+        : st && st.daysSince < 0 ? 'Coming ' + formatDateJS((p.refresh_history || []).slice().sort().pop())
         : st ? pluralJS(st.daysSince, 'day', 'days') + ' since refresh' : '';
       return '<a class="related-card" href="/products/' + p.slug + '/">' +
         '<span class="related-card-icon">' + productIconJS(p, 28) + '</span>' +
@@ -917,7 +925,7 @@
       specRowJS('Status', product.discontinued ? 'Discontinued' : 'Current'),
       product.discontinued ? specRowJS('Apple support status', appleSupportStatusJS(product)) : '',
       sortedDates.length ? specRowJS('Release type', product.is_new_launch ? 'All-new product' : 'Refresh of an existing model') : '',
-      daysInfo ? specRowJS('Days counted from', pluralJS(daysInfo.days, 'day', 'days') + ' (' + (product.days_basis === 'launch' ? 'first release' : 'latest release') + ')') : '',
+      daysInfo && daysInfo.days >= 0 ? specRowJS('Days counted from', pluralJS(daysInfo.days, 'day', 'days') + ' (' + (product.days_basis === 'launch' ? 'first release' : 'latest release') + ')') : '',
       specRowJS('Chip', escapeHtmlJS(product.chip)),
       specRowJS('Previous model', previousModelHtml),
       specRowJS('Replaced by', replacedByHtml),
@@ -954,8 +962,8 @@
               '</div>' +
             '</div>' +
             '<div class="admin-tools">' +
-              '<a href="/admin/?edit=' + product.id + '" class="admin-edit-link" style="display:none;">Edit this product</a>' +
-              '<button type="button" class="admin-edit-link tweet-btn" data-slug="' + product.slug + '" style="display:none;">Draft a post for X</button>' +
+              '<a class="admin-edit-link" data-admin-href="/admin/?edit=' + product.slug + '" data-admin-label="Edit this product" style="display:none;"></a>' +
+              '<button type="button" class="admin-edit-link tweet-btn" data-slug="' + product.slug + '" style="display:none;" data-admin-label="Draft a post for X"></button>' +
             '</div>' +
           '</div>' +
           '<div class="product-facts">' + heroStatHtmlJS(product, status, heroCycleJS(product, status, sortedDates, allProducts)) +
@@ -1014,7 +1022,7 @@
       return 'roughly every ' + (years % 1 ? whole + '\u00bd' : whole) + ' years';
     };
     var plural = function (n) { return n + (n === 1 ? ' day' : ' days'); };
-    var text = 'Across the ' + past.length + ' releases recorded here, Apple has updated ' + escapeHtmlJS(category) + ' ' + cadence(avg) + '. ';
+    var text = 'Across the ' + past.length + ' release dates recorded here (several products often launch on the same day), Apple has updated ' + escapeHtmlJS(category) + ' ' + cadence(avg) + '. ';
     if (sinceLast > avg * 1.25) text += 'It has now been ' + plural(sinceLast) + ' since the last one, well past the usual gap.';
     else if (sinceLast > avg) text += 'It has now been ' + plural(sinceLast) + ', a little beyond the usual gap.';
     else text += 'The last update was ' + plural(sinceLast) + ' ago, so the next is not due yet.';
@@ -1514,7 +1522,13 @@
     var authClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
     authClient.auth.getSession().then(function (result) {
       if (result.data && result.data.session) {
-        links.forEach(function (el) { el.style.display = ''; });
+        // The page carries no admin link or wording until here, so it's
+        // never seen (or indexed) by anyone else.
+        links.forEach(function (el) {
+          if (el.getAttribute('data-admin-href')) el.setAttribute('href', el.getAttribute('data-admin-href'));
+          if (el.getAttribute('data-admin-label') && !el.textContent) el.textContent = el.getAttribute('data-admin-label');
+          el.style.display = '';
+        });
       }
     });
   }
@@ -2295,7 +2309,7 @@
           '<div class="gallery-photo-header">' +
             '<div class="page-header-row">' +
               '<h1>' + escapeHtmlJS(displayName) + '</h1>' +
-              '<a href="/admin/?editPhoto=' + photo.id + '" class="admin-edit-link" style="display:none;">Edit</a>' +
+              '<a class="admin-edit-link" data-admin-href="/admin/?editPhoto=' + photo.id + '" data-admin-label="Edit" style="display:none;"></a>' +
             '</div>' +
             (photo.date_taken ? '<p class="gallery-photo-date">' + formatDateJS(photo.date_taken) + '</p>' : '') +
             galleryTagsHtmlJS(photo, true) +
@@ -2358,6 +2372,8 @@
         var titleDays = status ? badgeDaysInfoJS(product, status) : null;
         document.title = product.discontinued
           ? product.name + ': discontinued' + (product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '') + ' | Apple Sunset'
+          : status && status.daysSince < 0
+          ? product.name + ': coming ' + formatDateJS((product.refresh_history || []).slice().sort().pop()) + ' | Apple Sunset'
           : status
           ? product.name + ': ' + pluralJS(titleDays ? titleDays.days : status.daysSince, 'day', 'days') + ' since the last update | Apple Sunset'
           : product.name + ' | Apple Sunset';

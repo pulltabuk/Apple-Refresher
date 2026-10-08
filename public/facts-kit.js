@@ -1163,7 +1163,7 @@
       '<div class="fact-text" data-fact-key="' + escapeHtml(item.key) + '" data-fact-href="' + href + '" data-fact-name="' + escapeHtml(item.name) + '" data-fact-post="' + escapeHtml(item.post || item.plain) + '">' + body + '</div>' +
       (item.slug ? '<a href="' + href + '" class="fact-more-link fact-related-link">More on the ' + escapeHtml(item.name) + ' &rarr;</a>' : '') +
       '<a href="/facts/" class="fact-more-link">More facts &rarr;</a>' +
-      '<button type="button" class="admin-edit-link tweet-btn fact-tweet-btn" style="display:none;">Draft a post for X</button>';
+      '<button type="button" class="admin-edit-link tweet-btn fact-tweet-btn" style="display:none;" data-admin-label="Draft a post for X"></button>';
   }
 
   // Publishes a fact, with the day it goes on the homepage if one is

@@ -2459,8 +2459,10 @@
   }
 
   function editProduct(id, options) {
-    const p = cachedProducts.find((x) => x.id === id);
+    // By id, or by slug (the site's "Edit this product" link).
+    const p = cachedProducts.find((x) => x.id === id) || cachedProducts.find((x) => x.slug === id);
     if (!p) return;
+    id = p.id;
     editingId = id;
     editingSlug = p.slug;
     pendingAnnouncedDate = null;
