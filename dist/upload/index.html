@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-<link rel="stylesheet" href="/upload.css?v=0af9a3c5dc">
+<link rel="stylesheet" href="/upload.css?v=83c42fefae">
 </head>
 <body>
 <main class="up">
@@ -92,6 +92,11 @@
       <label class="up-check"><input type="checkbox" id="up-x-card-on" checked> Add a card image</label>
       <input type="text" id="up-x-card-label" class="up-search" value="Did you know?" autocomplete="off" aria-label="Card heading">
       <div class="up-x-card-fields" id="up-x-card-fields">
+        <span class="up-label">Card title <span class="up-hint">optional, above the headline, e.g. iPhone 16</span></span>
+        <input type="text" id="up-x-card-title" class="up-search" autocomplete="off" maxlength="40" aria-label="Card title">
+        <span class="up-label">Card icon <span class="up-hint">what is this post about? The Apple Sunset logo always sits small in the corner.</span></span>
+        <select id="up-x-card-icon" class="up-select" aria-label="Card icon"><option value="auto">Automatic</option><option value="calendar">Calendar</option><option value="clock">Clock</option><option value="chart">Chart</option><option value="invite">Invitation</option><option value="star">Star</option><option value="idea">Light bulb</option></select>
+        <input type="text" id="up-x-card-emoji" class="up-search" autocomplete="off" maxlength="8" placeholder="or an emoji, e.g. 🎉" aria-label="Emoji for the card">
         <span class="up-label">Card headline <span class="up-hint">the large text, e.g. 1,433 days. Leave empty for none.</span></span>
         <input type="text" id="up-x-card-headline" class="up-search" autocomplete="off" maxlength="24" aria-label="Card headline">
         <span class="up-label">Card line <span class="up-hint">the smaller text below it</span></span>
@@ -279,15 +284,15 @@
     <span id="up-user"></span>
     <button type="button" id="up-logout" class="up-link">Sign out</button>
   </footer>
-  <p class="up-version">Version 5930b6</p>
+  <p class="up-version">Version 9bba0b</p>
 </main>
 <script>
   window.SUPABASE_URL = "";
   window.SUPABASE_ANON_KEY = "";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
-<script src="/facts-kit.js?v=8092494d99" defer></script>
-<script src="/upload.js?v=5930b6327e" defer></script>
+<script src="/facts-kit.js?v=7070d71fe1" defer></script>
+<script src="/upload.js?v=9bba0b4f6b" defer></script>
 <script>
   // Keeps the page's files on the phone so it opens instantly from the
   // Home Screen; updates are fetched in the background.

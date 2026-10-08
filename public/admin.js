@@ -505,12 +505,22 @@
     // The card's headline and line: guessed from the post until the writer
     // types in either, then exactly what they typed.
     let cardFieldsOwn = false;
-    const cardFields = () => ({ headline: $x('x-card-headline').value, line: $x('x-card-line').value });
+    const cardFields = () => ({
+      headline: $x('x-card-headline').value,
+      line: $x('x-card-line').value,
+      title: $x('x-card-title').value,
+      icon: $x('x-card-emoji').value.trim() || $x('x-card-icon').value,
+    });
     function guessCardFields() {
+      // "Automatic" says which icon it will use.
+      const text = $x('x-text').value.trim();
+      const auto = $x('x-card-icon').options[0];
+      auto.textContent = 'Automatic' + (text ? ' (' + window.FactsKit.cardAutoIconName(text) + ')' : '');
       if (cardFieldsOwn) return;
-      const guess = window.FactsKit.cardGuess($x('x-text').value.trim());
+      const guess = window.FactsKit.cardGuess(text);
       $x('x-card-headline').value = guess.headline;
       $x('x-card-line').value = guess.line;
+      $x('x-card-title').value = guess.title;
     }
     // The X box: built from the fields until it's edited by hand.
     let previewOwn = false;
@@ -607,6 +617,8 @@
       $x('x-card-label').value = idea.kind || 'Did you know?';
       cardFieldsOwn = false;
       previewOwn = false;
+      $x('x-card-emoji').value = '';
+      $x('x-card-icon').value = 'auto';
       refresh();
       $x('x-text').focus();
     }
@@ -659,14 +671,15 @@
     });
 
     ['x-text', 'x-link', 'x-card-label'].forEach((id) => $x(id).addEventListener('input', refresh));
-    ['x-card-headline', 'x-card-line'].forEach((id) => $x(id).addEventListener('input', () => { cardFieldsOwn = true; refresh(); }));
+    ['x-card-headline', 'x-card-line', 'x-card-title', 'x-card-emoji'].forEach((id) => $x(id).addEventListener('input', () => { cardFieldsOwn = true; refresh(); }));
+    $x('x-card-icon').addEventListener('change', () => { $x('x-card-emoji').value = ''; refresh(); });
     $x('x-preview').addEventListener('input', () => { previewOwn = true; updateCount(); });
     $x('x-preview-reset').addEventListener('click', () => { previewOwn = false; refresh(); });
     ['x-tags', 'x-link-on', 'x-card-on'].forEach((id) => $x(id).addEventListener('change', refresh));
 
     // The writing fields, always editable when the page is in view (a
     // phone coming back from X can leave them looking stuck).
-    const xFields = ['x-text', 'x-link', 'x-card-label', 'x-card-headline', 'x-card-line', 'x-preview', 'x-topic', 'x-tags', 'x-link-on', 'x-card-on'];
+    const xFields = ['x-text', 'x-link', 'x-card-label', 'x-card-headline', 'x-card-line', 'x-card-title', 'x-card-icon', 'x-card-emoji', 'x-preview', 'x-topic', 'x-tags', 'x-link-on', 'x-card-on'];
     function unlockFields() {
       xFields.forEach((id) => { const el = $x(id); if (el) { el.disabled = false; el.readOnly = false; } });
     }
@@ -681,6 +694,9 @@
       $x('x-card-label').value = 'Did you know?';
       $x('x-card-headline').value = '';
       $x('x-card-line').value = '';
+      $x('x-card-title').value = '';
+      $x('x-card-emoji').value = '';
+      $x('x-card-icon').value = 'auto';
       cardFieldsOwn = false;
       previewOwn = false;
       $x('x-topic').value = '';

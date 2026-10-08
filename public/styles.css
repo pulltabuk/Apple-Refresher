@@ -2326,6 +2326,9 @@ body.is-admin .site-search { display: none; }
 .x-card-fields label { font-weight: 600; font-size: 14px; margin-top: 4px; }
 .x-card-fields label .admin-hint { font-weight: 400; margin-left: 4px; }
 .x-card-fields input, .x-card-fields textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; resize: vertical; }
+.x-card-icon-row { display: flex; gap: 8px; }
+.x-card-icon-row select { font: inherit; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.x-card-icon-row input { flex: 1; }
 .x-card-note { color: var(--error, #b42318); font-weight: 600; margin: 4px 0 0; }
 .x-card-note[hidden] { display: none; }
 #x-count.is-over { color: var(--overdue-text); font-weight: 600; }
