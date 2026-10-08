@@ -146,6 +146,32 @@ async function loadFeaturedOrder() {
   }
 }
 
+// The homepage fact already shown today: { date, key }, or null.
+async function loadDailyFactLock() {
+  if (!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)) return null;
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data } = await supabase.from('site_content').select('body').eq('id', 'daily_fact').maybeSingle();
+    const lock = JSON.parse((data && data.body) || 'null');
+    return lock && lock.date && lock.key ? lock : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function saveDailyFactLock(lock) {
+  if (!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)) return;
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { error } = await supabase.from('site_content').upsert({ id: 'daily_fact', body: JSON.stringify(lock) });
+    if (error) console.log('Could not save today\'s homepage fact: ' + error.message);
+  } catch (err) {
+    console.log('Could not save today\'s homepage fact.');
+  }
+}
+
 // Apple's quarterly results. Optional: without the table (see
 // supabase-schema-update-29.sql) the site builds without an earnings page.
 async function loadEarnings() {
@@ -414,7 +440,14 @@ async function main() {
   // for testing.
   const FactsKit = require('./public/facts-kit.js');
   const heroSlugs = activeEvent ? [] : (featuredItems.length ? featuredItems.slice(0, 3) : (heroFeatured ? [heroFeatured] : [])).map((i) => i.product.slug);
-  const dailyFact = FactsKit.pickDailyFact(FactsKit.dailyFactPool(products, facts), process.env.FACT_DATE || today, heroSlugs);
+  // Today's pick is saved (site_content row 'daily_fact'), so a rebuild
+  // later the same day, after publishing a change, keeps the same fact.
+  const factDate = process.env.FACT_DATE || today;
+  const lockedFact = process.env.FACT_DATE ? null : await loadDailyFactLock();
+  const dailyFact = FactsKit.pickDailyFact(FactsKit.dailyFactPool(products, facts), factDate, heroSlugs, lockedFact);
+  if (dailyFact && !process.env.FACT_DATE && !(lockedFact && lockedFact.date === factDate && lockedFact.key === dailyFact.key)) {
+    await saveDailyFactLock({ date: factDate, key: dailyFact.key });
+  }
 
   write('index.html', homePage({
     heroFeatured,

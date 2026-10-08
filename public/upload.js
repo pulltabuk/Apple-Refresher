@@ -1365,15 +1365,19 @@
 
   let factEvents = [];
   let factFeaturedOrder = [];
+  let factLock = null;
   async function loadFactData() {
-    const [productsRes, factsRes, eventsRes, featuredRes] = await Promise.all([
+    const [productsRes, factsRes, eventsRes, featuredRes, lockRes] = await Promise.all([
       client.from('products').select('*'),
       client.from('facts').select('*').order('created_at', { ascending: false }),
       client.from('apple_events').select('*'),
       client.from('site_content').select('body').eq('id', 'featured').maybeSingle(),
+      client.from('site_content').select('body').eq('id', 'daily_fact').maybeSingle(),
     ]);
     if (!productsRes.error) factProducts = productsRes.data || [];
     factEvents = eventsRes.data || [];
+    // Today's fact as the build saved it, so the list matches the homepage.
+    try { factLock = JSON.parse((lockRes.data && lockRes.data.body) || 'null'); } catch (err) { factLock = null; }
     try {
       const ids = JSON.parse((featuredRes.data && featuredRes.data.body) || '[]');
       factFeaturedOrder = Array.isArray(ids) ? ids.map(String) : [];
@@ -1450,7 +1454,7 @@
       const day = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
       // An Apple Event in the big tile means no product is there that day.
       const eventInTile = factEvents.some((e) => e.featured) || factEvents.some((e) => e.event_date >= day);
-      const item = window.FactsKit.pickDailyFact(pool, day, eventInTile ? [] : tileSlugs);
+      const item = window.FactsKit.pickDailyFact(pool, day, eventInTile ? [] : tileSlugs, factLock);
       if (!item) continue;
       const card = document.createElement('div');
       card.className = 'up-card up-rotation-row' + (i === 0 ? ' is-today' : '');
