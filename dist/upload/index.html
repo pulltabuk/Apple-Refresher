@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-<link rel="stylesheet" href="/upload.css?v=51652b4f45">
+<link rel="stylesheet" href="/upload.css?v=7214fa6923">
 </head>
 <body>
 <main class="up">
@@ -94,9 +94,11 @@
       <div class="up-x-card-fields" id="up-x-card-fields">
         <span class="up-label">Card title <span class="up-hint">optional, above the headline, e.g. iPhone 16</span></span>
         <input type="text" id="up-x-card-title" class="up-search" autocomplete="off" maxlength="40" aria-label="Card title">
-        <span class="up-label">Card icon <span class="up-hint">what is this post about? The Apple Sunset logo always sits small in the corner.</span></span>
-        <select id="up-x-card-icon" class="up-select" aria-label="Card icon"><option value="auto">Automatic</option><option value="calendar">Calendar</option><option value="clock">Clock</option><option value="chart">Chart</option><option value="invite">Invitation</option><option value="star">Star</option><option value="idea">Light bulb</option></select>
-        <input type="text" id="up-x-card-emoji" class="up-search" autocomplete="off" maxlength="8" placeholder="or an emoji, e.g. 🎉" aria-label="Emoji for the card">
+        <span class="up-label">Card icon <span class="up-hint">what is this post about? Tap one. The Apple Sunset logo always sits small in the corner.</span></span>
+        <select id="up-x-card-icon" hidden><option value="auto">Automatic</option></select>
+        <div class="icon-picker" id="up-x-card-icon-picker"></div>
+        <p class="up-hint icon-picker-auto" id="up-x-card-icon-auto"></p>
+        <input type="text" id="up-x-card-emoji" class="up-search" autocomplete="off" maxlength="16" placeholder="Or type or paste any other emoji" aria-label="Any other emoji for the card">
         <span class="up-label">Card headline <span class="up-hint">the large text, e.g. 1,433 days. Leave empty for none.</span></span>
         <input type="text" id="up-x-card-headline" class="up-search" autocomplete="off" maxlength="24" aria-label="Card headline">
         <span class="up-label">Card line <span class="up-hint">the smaller text below it</span></span>
@@ -287,15 +289,15 @@
     <span id="up-user"></span>
     <button type="button" id="up-logout" class="up-link">Sign out</button>
   </footer>
-  <p class="up-version">Version b11762</p>
+  <p class="up-version">Version 6136b9</p>
 </main>
 <script>
   window.SUPABASE_URL = "";
   window.SUPABASE_ANON_KEY = "";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
-<script src="/facts-kit.js?v=da38d08cf5" defer></script>
-<script src="/upload.js?v=b117629ea9" defer></script>
+<script src="/facts-kit.js?v=33ec7ce752" defer></script>
+<script src="/upload.js?v=6136b9abde" defer></script>
 <script>
   // Keeps the page's files on the phone so it opens instantly from the
   // Home Screen; updates are fetched in the background.

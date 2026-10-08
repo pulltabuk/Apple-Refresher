@@ -278,3 +278,11 @@ body {
 .up-x-emoji { font-size: 22px; line-height: 1; padding: 6px 7px; border: 1px solid var(--border); border-radius: 10px; background: #fff; -webkit-tap-highlight-color: transparent; }
 .up-x-emoji:active { background: var(--accent-bg); }
 #up-x-done { margin-top: 6px; }
+
+/* Card icon picker (admin X posts and the phone app) */
+.icon-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.icon-pick { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: #9c4009; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.icon-pick--emoji { font-size: 22px; line-height: 1; }
+.icon-pick-auto { font-size: 12px; font-weight: 700; color: var(--text); }
+.icon-pick.is-picked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: #fff7ef; }
+.icon-picker-auto { margin: 2px 0 0; }

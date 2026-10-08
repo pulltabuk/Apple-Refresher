@@ -68,21 +68,103 @@
   const CARD_ICONS = {
     calendar: `<rect x="7" y="9" width="26" height="24" rx="3"/><path d="M7 16h26M14 6v6M26 6v6M13 22h3M19 22h3M25 22h3M13 27h3M19 27h3"/>`,
     clock: `<circle cx="20" cy="20" r="13"/><path d="M20 12v8l5 4"/>`,
+    hourglass: `<path d="M12 6h16M12 34h16M14 6c0 8 12 8 12 14s-12 6-12 14M26 6c0 8-12 8-12 14s12 6 12 14"/>`,
     chart: `<path d="M7 33h26"/><rect x="10" y="21" width="5" height="12" rx="1"/><rect x="18" y="14" width="5" height="19" rx="1"/><rect x="26" y="8" width="5" height="25" rx="1"/>`,
+    up: `<path d="M6 30l9-9 6 6 13-13"/><path d="M26 14h8v8"/>`,
+    down: `<path d="M6 12l9 9 6-6 13 13"/><path d="M26 28h8v-8"/>`,
+    money: `<circle cx="20" cy="20" r="13"/><path d="M24.5 14.5c-1-1.4-2.6-2-4.5-2-2.6 0-4.2 1.3-4.2 3.2 0 4.6 8.7 2.6 8.7 7.3 0 2-1.9 3.5-4.6 3.5-1.9 0-3.6-.7-4.6-2.2M20 9.5v3M20 26.5v3.5"/>`,
+    tag: `<path d="M7 7h12l14 14-12 12L7 19z"/><circle cx="13.5" cy="13.5" r="2"/>`,
     invite: `<rect x="7" y="11" width="26" height="18" rx="2"/><path d="M7 13l13 9 13-9"/>`,
+    megaphone: `<path d="M8 17v6h5l11 7V10l-11 7z"/><path d="M28 15a6 6 0 0 1 0 10M13 23l2 8h4l-2-7"/>`,
+    rumour: `<path d="M8 9h24v16H18l-7 6v-6H8z"/><path d="M17.5 14.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M20 21.5v.5"/>`,
+    eye: `<path d="M5 20s5-9 15-9 15 9 15 9-5 9-15 9S5 20 5 20z"/><circle cx="20" cy="20" r="4"/>`,
+    box: `<path d="M20 6l13 6v16l-13 6-13-6V12z"/><path d="M7 12l13 6 13-6M20 18v16"/>`,
+    store: `<path d="M7 15h26l-2-7H9z"/><path d="M9 15v17h22V15M17 32v-8h6v8"/>`,
+    home: `<path d="M7 19L20 8l13 11"/><path d="M10 17v15h20V17M17 32v-8h6v8"/>`,
+    rocket: `<path d="M20 5c5 4 7 10 6 17l-6 5-6-5c-1-7 1-13 6-17z"/><circle cx="20" cy="15" r="2.5"/><path d="M14 22l-4 4 2 5 4-3M26 22l4 4-2 5-4-3M18 30l2 5 2-5"/>`,
+    sparkle: `<path d="M20 6l2.5 9.5L32 18l-9.5 2.5L20 30l-2.5-9.5L8 18l9.5-2.5z"/><path d="M31 6v5M28.5 8.5h5"/>`,
     star: `<path d="M20 7l3.9 8 8.8 1.2-6.4 6.1 1.6 8.7L20 26.8 12.1 31l1.6-8.7-6.4-6.1 8.8-1.2z"/>`,
+    trophy: `<path d="M13 8h14v6a7 7 0 0 1-14 0z"/><path d="M13 10H8a5 5 0 0 0 5 6M27 10h5a5 5 0 0 1-5 6M20 21v6M15 32h10M17 27h6v5h-6z"/>`,
+    fire: `<path d="M20 5c1 6 8 9 8 17a8 8 0 0 1-16 0c0-4 2-6 3-8 1 3 3 4 3 4 0-5 0-9 2-13z"/>`,
+    heart: `<path d="M20 32S7 24 7 15a6.5 6.5 0 0 1 13-2 6.5 6.5 0 0 1 13 2c0 9-13 17-13 17z"/>`,
+    refresh: `<path d="M31 17a11 11 0 0 0-20-4M9 23a11 11 0 0 0 20 4"/><path d="M11 7v6h6M29 33v-6h-6"/>`,
+    warning: `<path d="M20 6l15 26H5z"/><path d="M20 15v8M20 27v.5"/>`,
+    sunset: `<path d="M6 28h28M10 32h20"/><path d="M11 28a9 9 0 0 1 18 0"/><path d="M20 9v4M9 15l3 2.5M31 15l-3 2.5"/>`,
+    chip: `<rect x="11" y="11" width="18" height="18" rx="2"/><rect x="16" y="16" width="8" height="8"/><path d="M15 6v5M20 6v5M25 6v5M15 29v5M20 29v5M25 29v5M6 15h5M6 20h5M6 25h5M29 15h5M29 20h5M29 25h5"/>`,
+    battery: `<rect x="6" y="13" width="25" height="14" rx="2.5"/><path d="M34 18v4"/><rect x="9" y="16" width="12" height="8" rx="1"/>`,
+    camera: `<path d="M7 13h6l2-3h10l2 3h6v17H7z"/><circle cx="20" cy="21" r="5"/>`,
+    music: `<path d="M16 28V10l14-3v18"/><circle cx="12.5" cy="28" r="3.5"/><circle cx="26.5" cy="25" r="3.5"/>`,
+    globe: `<circle cx="20" cy="20" r="13"/><path d="M7 20h26M20 7c4 4 4 22 0 26M20 7c-4 4-4 22 0 26"/>`,
     idea: `<path d="M16 30h8M17 34h6M20 6a9 9 0 0 0-5.3 16.3c.9.7 1.5 1.8 1.5 3V26h7.6v-.7c0-1.2.6-2.3 1.5-3A9 9 0 0 0 20 6z"/>`,
   };
-  const CARD_ICON_NAMES = { calendar: 'Calendar', clock: 'Clock', chart: 'Chart', invite: 'Invitation', star: 'Star', idea: 'Light bulb' };
+  const CARD_ICON_NAMES = {
+    calendar: 'Calendar', clock: 'Clock', hourglass: 'Hourglass', chart: 'Chart', up: 'Going up', down: 'Going down',
+    money: 'Money', tag: 'Price tag', invite: 'Invitation', megaphone: 'Announcement', rumour: 'Rumour', eye: 'Spotted',
+    box: 'Box', store: 'Store', home: 'Home', rocket: 'Launch', sparkle: 'New', star: 'Star', trophy: 'Record',
+    fire: 'Hot', heart: 'Love', refresh: 'Refresh', warning: 'Warning', sunset: 'Sunset', chip: 'Chip',
+    battery: 'Battery', camera: 'Camera', music: 'Music', globe: 'World', idea: 'Light bulb',
+  };
+  // Quick emoji for the card's icon (any other can be typed).
+  const CARD_EMOJI = ['🍎', '📱', '💻', '⌚', '🎧', '📅', '⏳', '🎉', '🔥', '👀', '🤔', '💯', '🚀', '✨', '💌', '📦', '🏠', '🛍️', '💰', '📈', '📉', '⚠️', '🏆', '❤️', '🎵', '📷', '🔋', '🌅', '🗞️', '🤫'];
   const MONTHS_RE = /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i;
   function suggestCardIcon(text) {
     const t = String(text || '');
+    if (/\brumou?r|\breported(ly)?\b|\bleak|\bsources say\b|\bexpected to\b/i.test(t)) return 'rumour';
+    if (/\bearnings\b|\brevenue\b|\bprofit\b|[$£€]\s?\d|\bbillion\b/i.test(t)) return 'money';
     if (/\bon this day\b|\banniversary\b|\bbirthday\b/i.test(t) || MONTHS_RE.test(t) || /\b(19[7-9]\d|20\d\d)\b/.test(t)) return 'calendar';
     if (/\binvit|\bkeynote\b|\bevent\b/i.test(t)) return 'invite';
-    if (/%|\baverage\b|per ?cent|\btracked\b|\btracking\b|\brecord\b/i.test(t)) return 'chart';
+    if (/\bdiscontinued\b|\bkilled\b|\bend of the line\b/i.test(t)) return 'warning';
+    if (/\blongest\b|\brecord\b|\bmost\b|\bfirst ever\b/i.test(t)) return 'trophy';
+    if (/\bprice\b|\bcosts?\b/i.test(t)) return 'tag';
+    if (/\bsmart home\b|\bhome\b/i.test(t)) return 'home';
+    if (/\bstores?\b/i.test(t)) return 'store';
+    if (/%|\baverage\b|per ?cent|\btracked\b|\btracking\b/i.test(t)) return 'chart';
+    if (/\blaunch|\breleased?\b|\bannounced?\b/i.test(t)) return 'rocket';
     if (/\bdays?\b|\bweeks?\b|\bwait/i.test(t)) return 'clock';
     return 'idea';
   }
+
+  // The card icon picker in the X composers (admin and phone app): every
+  // icon and quick emoji as a button, kept in step with the select (icon
+  // by name, or "auto") and the emoji box (anything else).
+  function mountIconPicker(box, select, emojiInput, onChange) {
+    if (!box || box.dataset.ready) return;
+    box.dataset.ready = '1';
+    Object.keys(CARD_ICONS).forEach((key) => {
+      if (![...select.options].some((o) => o.value === key)) select.add(new Option(CARD_ICON_NAMES[key], key));
+    });
+    const make = (value, inner, label, isEmoji) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'icon-pick' + (isEmoji ? ' icon-pick--emoji' : '');
+      btn.dataset.value = value;
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+      btn.innerHTML = inner;
+      btn.addEventListener('click', () => {
+        if (isEmoji) { select.value = 'auto'; emojiInput.value = value; }
+        else { select.value = value; emojiInput.value = ''; }
+        mark();
+        onChange();
+      });
+      box.appendChild(btn);
+      return btn;
+    };
+    const svg = (shape) => '<svg viewBox="0 0 40 40" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + shape + '</svg>';
+    const auto = make('auto', '<span class="icon-pick-auto">Auto</span>', 'Automatic', false);
+    Object.keys(CARD_ICONS).forEach((key) => make(key, svg(CARD_ICONS[key]), CARD_ICON_NAMES[key], false));
+    CARD_EMOJI.forEach((e) => make(e, e, 'Emoji ' + e, true));
+    function mark() {
+      const emoji = emojiInput.value.trim();
+      [...box.children].forEach((b) => b.classList.toggle('is-picked', emoji ? b.dataset.value === emoji : b.dataset.value === select.value));
+    }
+    box.markPicked = mark;
+    box.autoButton = auto;
+    emojiInput.addEventListener('input', () => { if (emojiInput.value.trim()) select.value = 'auto'; mark(); });
+    select.addEventListener('change', mark);
+    mark();
+  }
+
 
   const FONT = '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
@@ -1113,6 +1195,7 @@
     xCardKey,
     cardGuess,
     CARD_ICON_NAMES,
+    mountIconPicker,
     cardAutoIconName,
     suggestCardIcon,
     cardHeadline,

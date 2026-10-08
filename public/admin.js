@@ -514,8 +514,7 @@
     function guessCardFields() {
       // "Automatic" says which icon it will use.
       const text = $x('x-text').value.trim();
-      const auto = $x('x-card-icon').options[0];
-      auto.textContent = 'Automatic' + (text ? ' (' + window.FactsKit.cardAutoIconName(text) + ')' : '');
+      $x('x-card-icon-auto').textContent = text ? 'Auto uses: ' + window.FactsKit.cardAutoIconName(text) : '';
       if (cardFieldsOwn) return;
       const guess = window.FactsKit.cardGuess(text);
       $x('x-card-headline').value = guess.headline;
@@ -633,6 +632,7 @@
       previewOwn = false;
       $x('x-card-emoji').value = '';
       $x('x-card-icon').value = 'auto';
+      markIcon();
       refresh();
       $x('x-text').focus();
     }
@@ -686,7 +686,8 @@
 
     ['x-text', 'x-link', 'x-card-label'].forEach((id) => $x(id).addEventListener('input', refresh));
     ['x-card-headline', 'x-card-line', 'x-card-title', 'x-card-emoji'].forEach((id) => $x(id).addEventListener('input', () => { cardFieldsOwn = true; refresh(); }));
-    $x('x-card-icon').addEventListener('change', () => { $x('x-card-emoji').value = ''; refresh(); });
+    window.FactsKit.mountIconPicker($x('x-card-icon-picker'), $x('x-card-icon'), $x('x-card-emoji'), refresh);
+    const markIcon = () => { if ($x('x-card-icon-picker').markPicked) $x('x-card-icon-picker').markPicked(); };
     $x('x-preview').addEventListener('input', () => { previewOwn = true; updateCount(); });
     $x('x-preview-reset').addEventListener('click', () => { previewOwn = false; refresh(); });
     ['x-tags', 'x-link-on', 'x-card-on'].forEach((id) => $x(id).addEventListener('change', refresh));
@@ -711,6 +712,7 @@
       $x('x-card-title').value = '';
       $x('x-card-emoji').value = '';
       $x('x-card-icon').value = 'auto';
+      markIcon();
       cardFieldsOwn = false;
       previewOwn = false;
       $x('x-topic').value = '';
