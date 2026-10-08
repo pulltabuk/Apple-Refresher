@@ -437,8 +437,8 @@
       fitText.cut = false;
       // With no headline, the line takes its space, in larger type.
       y = own && !subject.big
-        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', 52, 30, 5)
-        : fitText(ctx, subject.caption, cx, y, cw, '600', 36, 26, 2);
+        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', 58, 38, 4)
+        : fitText(ctx, subject.caption, cx, y, cw, '700', 46, 34, 3);
       lineCut = fitText.cut;
     }
     if (subject.sub) {
