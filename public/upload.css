@@ -246,7 +246,14 @@ body {
 
 /* X posts */
 .up-x-kind { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-dark); margin-bottom: 3px; }
-.up-x-preview { white-space: pre-wrap; font: inherit; font-size: 15px; line-height: 1.5; margin: 0; padding: 12px 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow-wrap: anywhere; }
+.up-x-preview { white-space: pre-wrap; font: inherit; font-size: 15px; line-height: 1.5; margin: 0; padding: 12px 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow-wrap: anywhere; min-height: 150px; }
+.up-x-card-fields { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px; background: var(--accent-bg); }
+.up-x-card-fields[hidden], .up-x-preview-head [hidden], #up-x-card-note[hidden], #up-x-preview-note[hidden] { display: none; }
+.up-x-card-fields .up-label .up-hint { font-weight: 400; }
+.up-x-card-fields .up-search, .up-x-card-fields .up-fact-edit { margin: 0; }
+.up-x-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.up-x-preview-head .up-hint { margin: 0; }
+.up-x-preview-head .gallery-action { min-height: 36px; padding: 0 14px; font-size: 14px; }
 
 /* Facts: when a newly published fact goes on the homepage */
 .up-select { display: block; width: 100%; box-sizing: border-box; margin-top: 8px; padding: 12px; font: inherit; font-size: 16px; border: 1px solid #d8d4ca; border-radius: 12px; background: #fff; }

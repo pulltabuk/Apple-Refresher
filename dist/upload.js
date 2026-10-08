@@ -826,7 +826,23 @@
   let xCardFor = '';
   let xUploadTimer = null;
   let xProductsLoading = false;
-  const xCardSig = () => ($('up-x-card-label').value.trim() || 'Did you know?') + '\n' + $('up-x-text').value.trim();
+  // The card's headline and line: guessed from the post until either is
+  // typed in, then exactly what was typed.
+  let xCardFieldsOwn = false;
+  const xCardFields = () => ({ headline: $('up-x-card-headline').value, line: $('up-x-card-line').value });
+  function xGuessCardFields() {
+    if (xCardFieldsOwn) return;
+    const guess = window.FactsKit.cardGuess($('up-x-text').value.trim());
+    $('up-x-card-headline').value = guess.headline;
+    $('up-x-card-line').value = guess.line;
+  }
+  // The X box: built from the fields until it's edited by hand.
+  let xPreviewOwn = false;
+  const xPostBox = () => $('up-x-preview').value.trim();
+  // For the share sheet, which attaches the card itself: the box with
+  // its card link turned back into the plain page link.
+  const xShareText = () => xPostBox().replace(/\/c\/[0-9a-z]+\//gi, '/');
+  const xCardSig = () => ($('up-x-card-label').value.trim() || 'Did you know?') + '\n' + $('up-x-text').value.trim() + '\n' + JSON.stringify(xCardFields());
   const xWantsCard = () => $('up-x-card-on').checked && !!$('up-x-text').value.trim();
   const xCardReady = () => !xWantsCard() || (xCardKey && xCardFor === xCardSig());
 
@@ -845,7 +861,7 @@
     const sig = xCardSig();
     xUploadTimer = setTimeout(async () => {
       const label = $('up-x-card-label').value.trim() || 'Did you know?';
-      const key = await window.FactsKit.uploadXCard(client, $('up-x-text').value.trim(), label);
+      const key = await window.FactsKit.uploadXCard(client, $('up-x-text').value.trim(), label, xCardFields());
       if (sig !== xCardSig()) return;
       if (key) { xCardKey = key; xCardFor = sig; }
       $('up-x-post').textContent = key ? 'Post to X' : 'Post to X (card failed to save)';
@@ -860,29 +876,54 @@
       xProductsLoading = true;
       client.from('products').select('*').then(({ data }) => { if (data && data.length) { allProducts = data; xRefresh(); } });
     }
-    const full = text ? xFullText(true) : '';
-    $('up-x-preview').textContent = full || 'Your post will appear here.';
-    const len = window.FactsKit.xPostLength(full);
-    $('up-x-count').textContent = text ? len + ' / 280 characters' + (len > 280 ? ' — too long for X' : '') : '';
-    $('up-x-count').classList.toggle('up-fact-count--over', len > 280);
-    ['up-x-share', 'up-x-post', 'up-x-copy'].forEach((id) => { $(id).disabled = !text || len > 280; });
-    if (text && !xCardReady()) { $('up-x-post').disabled = true; $('up-x-post').textContent = 'Preparing card\u2026'; }
-    else if ($('up-x-post').textContent === 'Preparing card\u2026') $('up-x-post').textContent = 'Post to X';
+    xGuessCardFields();
+    if (!xPreviewOwn) {
+      $('up-x-preview').value = text ? xFullText(true) : '';
+    } else if (xCardKey && xCardReady()) {
+      // Edited by hand: only keep its card link pointing at the latest card.
+      const box = $('up-x-preview');
+      const swapped = box.value.replace(/(\/c\/)[0-9a-z]+\//gi, '$1' + xCardKey + '/');
+      if (swapped !== box.value) box.value = swapped;
+    }
     xPrepareCard();
+    xUpdateCount();
     $('up-x-link').hidden = !$('up-x-link-on').checked;
     const wantCard = $('up-x-card-on').checked && !!text;
     $('up-x-card-label').hidden = !$('up-x-card-on').checked;
+    $('up-x-card-fields').hidden = !$('up-x-card-on').checked;
     $('up-x-card').hidden = !wantCard;
+    if (!wantCard) $('up-x-card-note').hidden = true;
     $('up-x-share').textContent = $('up-x-card-on').checked ? 'Share to X with card' : 'Share to X';
     clearTimeout(xCardTimer);
     xCardFile = null;
     if (wantCard) {
       xCardTimer = setTimeout(async () => {
         const label = $('up-x-card-label').value.trim() || 'Did you know?';
-        $('up-x-card').src = await window.FactsKit.generateFactImage(text, label);
-        xCardFile = await window.FactsKit.factImageFile(text, label);
+        const card = await window.FactsKit.xCardPreview(text, label, xCardFields());
+        $('up-x-card').src = card.url;
+        $('up-x-card-note').hidden = !card.lineCut;
+        $('up-x-card-note').textContent = card.lineCut ? 'The card line is too long, so the card cuts it short (\u2026). Shorten it to show it all.' : '';
+        xCardFile = await window.FactsKit.factImageFile(text, label, xCardFields());
       }, 300);
     }
+  }
+
+  // The count and buttons follow whatever is in the X box, as that is
+  // what gets posted.
+  function xUpdateCount() {
+    const post = xPostBox();
+    const len = window.FactsKit.xPostLength(post);
+    $('up-x-count').textContent = post ? len + ' / 280 characters' + (len > 280 ? ' — too long for X' : '') : '';
+    $('up-x-count').classList.toggle('up-fact-count--over', len > 280);
+    ['up-x-share', 'up-x-post', 'up-x-copy'].forEach((id) => { $(id).disabled = !post || len > 280; });
+    if (post && !xCardReady()) { $('up-x-post').disabled = true; $('up-x-post').textContent = 'Preparing card\u2026'; }
+    else if ($('up-x-post').textContent === 'Preparing card\u2026') $('up-x-post').textContent = 'Post to X';
+    $('up-x-preview-reset').hidden = !xPreviewOwn;
+    $('up-x-preview-note').hidden = !xPreviewOwn;
+    // Tall enough to show the whole post, hashtags and link included.
+    const box = $('up-x-preview');
+    box.style.height = 'auto';
+    box.style.height = (box.scrollHeight + 2) + 'px';
   }
 
   function xUseIdea(idea) {
@@ -891,6 +932,8 @@
     $('up-x-link').value = idea.link || '';
     $('up-x-link-on').checked = !!idea.link;
     $('up-x-card-label').value = idea.kind || 'Did you know?';
+    xCardFieldsOwn = false;
+    xPreviewOwn = false;
     $('up-x-idea-list').innerHTML = '';
     xRefresh();
     $('up-x-text').scrollIntoView({ block: 'center' });
@@ -962,17 +1005,20 @@
   });
 
   ['up-x-text', 'up-x-link', 'up-x-card-label'].forEach((id) => $(id).addEventListener('input', xRefresh));
+  ['up-x-card-headline', 'up-x-card-line'].forEach((id) => $(id).addEventListener('input', () => { xCardFieldsOwn = true; xRefresh(); }));
+  $('up-x-preview').addEventListener('input', () => { xPreviewOwn = true; xUpdateCount(); });
+  $('up-x-preview-reset').addEventListener('click', () => { xPreviewOwn = false; xRefresh(); });
   ['up-x-tags', 'up-x-link-on', 'up-x-card-on'].forEach((id) => $(id).addEventListener('change', xRefresh));
 
   $('up-x-share').addEventListener('click', async () => {
-    const text = xFullText();
+    const text = xShareText();
     const btn = $('up-x-share');
     // Copied first, in case the app picked from the share sheet drops it.
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(() => {});
     if ($('up-x-card-on').checked && !xCardFile) {
       clearTimeout(xCardTimer);
       const label = $('up-x-card-label').value.trim() || 'Did you know?';
-      xCardFile = await window.FactsKit.factImageFile($('up-x-text').value.trim(), label);
+      xCardFile = await window.FactsKit.factImageFile($('up-x-text').value.trim(), label, xCardFields());
     }
     const withCard = $('up-x-card-on').checked && xCardFile && navigator.canShare && navigator.canShare({ files: [xCardFile] });
     if (navigator.share) {
@@ -986,8 +1032,8 @@
     if (!withCard) { openInX(text); return; }
     flash(btn, 'Copied: open X and paste');
   });
-  $('up-x-post').addEventListener('click', () => openInX(xFullText(true)));
-  $('up-x-copy').addEventListener('click', () => copyText(xFullText(true), $('up-x-copy')));
+  $('up-x-post').addEventListener('click', () => openInX(xPostBox()));
+  $('up-x-copy').addEventListener('click', () => copyText(xPostBox(), $('up-x-copy')));
 
   // --- Product facts & notes: a product's "Did you know?" and its Notes,
   // written here or researched with Claude, then saved and published.
