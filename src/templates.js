@@ -312,12 +312,11 @@ function generationsSectionHtml(product) {
   </div>`;
 }
 
+// To the nearest month: 21 Sep 2018 to 20 Sep 2019 is 12 months, not 11.
+// Keep in step with monthsBetweenJS() in public/app.js.
 function monthsBetween(a, b) {
-  const start = new Date(a);
-  const end = new Date(b);
-  let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-  if (end.getDate() < start.getDate()) months -= 1;
-  return Math.max(0, months);
+  const days = (new Date(b) - new Date(a)) / 86400000;
+  return Math.max(0, Math.round(days / 30.4375));
 }
 
 function normaliseGroupKey(value) {
@@ -711,7 +710,7 @@ function categoryStatsSentence(category, items) {
     return `roughly every ${years % 1 ? whole + '\u00bd' : whole} years`;
   };
 
-  const parts = [`Across the ${past.length} releases recorded here, Apple has updated ${escapeHtml(category)} ${cadence(avg)}.`];
+  const parts = [`Across the ${past.length} release dates recorded here (several products often launch on the same day), Apple has updated ${escapeHtml(category)} ${cadence(avg)}.`];
   if (sinceLast > avg * 1.25) {
     parts.push(`It has now been ${plural(sinceLast, 'day', 'days')} since the last one, well past the usual gap.`);
   } else if (sinceLast > avg) {
@@ -1182,7 +1181,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   <div class="gallery-photo-header">
     <div class="page-header-row">
       <h1>${escapeHtml(displayName)}</h1>
-      <a href="/admin/?editPhoto=${photo.id}" class="admin-edit-link" style="display:none;">Edit</a>
+      <a class="admin-edit-link" data-admin-href="/admin/?editPhoto=${photo.id}" data-admin-label="Edit" style="display:none;"></a>
     </div>
     ${photo.date_taken ? `<p class="gallery-photo-date">${formatDate(photo.date_taken)}</p>` : ''}
     ${galleryTagsHtml(photo, true)}
@@ -1248,7 +1247,7 @@ function galleryPage({ photos, pageContent, siteUrl, supabaseUrl, supabaseAnonKe
     ? `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Gallery')}</h1>
-  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+  <a class="admin-edit-link" data-admin-href="/admin/" data-admin-label="Admin" style="display:none;"></a>
 </div>
 ${pageStandardLine(pageContent, `<p class="page-intro">Photos taken along the way, in Apple Stores and elsewhere.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
@@ -1263,7 +1262,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     : `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Gallery')}</h1>
-  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+  <a class="admin-edit-link" data-admin-href="/admin/" data-admin-label="Admin" style="display:none;"></a>
 </div>
 <p class="page-intro">No photos yet. Add some in <a href="/admin/">/admin/</a>.</p>`;
   return shell({
@@ -1448,7 +1447,7 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
 <article class="event-detail-page">
   <div class="page-header-row">
     <h1>${escapeHtml(event.heading)}</h1>
-    <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+    <a class="admin-edit-link" data-admin-href="/admin/" data-admin-label="Admin" style="display:none;"></a>
   </div>
   ${dateText ? `<p class="page-intro">${escapeHtml(dateText)}</p>` : ''}
   ${event.image_url ? `<img class="event-detail-image" src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}
@@ -1471,7 +1470,7 @@ function eventsPage({ events, productsBySlug, pageContent, siteUrl, supabaseUrl,
   const body = `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Apple Events')}</h1>
-  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+  <a class="admin-edit-link" data-admin-href="/admin/" data-admin-label="Admin" style="display:none;"></a>
 </div>
 ${pageStandardLine(pageContent, `<p class="page-intro">A running record of every Apple Event announced here, and what was revealed at each one.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
@@ -1498,7 +1497,7 @@ function factsPage({ facts, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }
   const body = `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Facts')}</h1>
-  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+  <a class="admin-edit-link" data-admin-href="/admin/" data-admin-label="Admin" style="display:none;"></a>
 </div>
 ${pageStandardLine(pageContent, `<p class="page-intro">Every &ldquo;Did you know?&rdquo; from the Apple Sunset homepage, newest first.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
@@ -1672,7 +1671,7 @@ function earningsPage({ earnings, pageContent, siteUrl, supabaseUrl, supabaseAno
   const body = `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Apple earnings')}</h1>
-  <a href="/admin/" class="admin-edit-link" style="display:none;">Admin</a>
+  <a class="admin-edit-link" data-admin-href="/admin/" data-admin-label="Admin" style="display:none;"></a>
 </div>
 ${pageStandardLine(pageContent, `<p class="page-intro">When Apple next reports its quarterly results, and every past quarter with a link to Apple&rsquo;s own press release.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
@@ -2039,6 +2038,8 @@ function relatedProductsHtml(product, productsBySlug, statusBySlug) {
     const status = statusBySlug ? statusBySlug[p.slug] : null;
     const line = p.discontinued
       ? `Discontinued${p.discontinued_date ? ' ' + formatDate(p.discontinued_date) : ''}`
+      : status && status.daysSince < 0
+      ? `Coming ${formatDate((p.refresh_history || []).slice().sort().pop())}`
       : status
       ? `${plural(status.daysSince, 'day', 'days')} since refresh`
       : '';
@@ -2121,9 +2122,21 @@ function heroStatHtml(product, statusInfo, cycleDays) {
   return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> ${info.days === 1 ? 'day' : 'days'} ${info.suffix}${bar}</p>`;
 }
 
+// A Wikipedia link is named after the article it opens: Wikipedia often
+// covers several models in one ("iPhone 7" for the iPhone 7 Plus too).
+// Keep in step with externalLinkLabelJS() in public/app.js.
+function wikiArticleTitle(url) {
+  const m = String(url || '').match(/wikipedia\.org\/wiki\/([^#?]+)/i);
+  if (!m) return null;
+  let title;
+  try { title = decodeURIComponent(m[1]); } catch (err) { title = m[1]; }
+  return title.replace(/_/g, ' ').replace(/^I(Phone|Pad|Pod|Mac|Book|OS|Cloud|Tunes|Watch|Sight)/, 'i$1').trim() || null;
+}
+
 function externalLinkLabel(product) {
   const isWiki = /wikipedia\.org/i.test(product.external_link || '');
-  return `${product.name}${isWiki ? ' (Wiki)' : ''}`;
+  if (!isWiki) return product.name;
+  return `${wikiArticleTitle(product.external_link) || product.name} on Wikipedia`;
 }
 
 function productPage({ product, status, history, productsBySlug, statusBySlug, galleryPhotos, ogImage, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -2210,7 +2223,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     specRow('Status', product.discontinued ? 'Discontinued' : 'Current'),
     product.discontinued ? specRow('Apple support status', appleSupportStatus(product)) : '',
     sortedDates.length ? specRow('Release type', product.is_new_launch ? 'All-new product' : 'Refresh of an existing model') : '',
-    daysInfo ? specRow('Days counted from', `${plural(daysInfo.days, 'day', 'days')} (${product.days_basis === 'launch' ? 'first release' : 'latest release'})`) : '',
+    daysInfo && daysInfo.days >= 0 ? specRow('Days counted from', `${plural(daysInfo.days, 'day', 'days')} (${product.days_basis === 'launch' ? 'first release' : 'latest release'})`) : '',
     specRow('Chip', escapeHtml(product.chip)),
     specRow('Previous model', previousModelHtml),
     specRow('Replaced by', replacedByHtml),
@@ -2251,8 +2264,8 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
           </div>
         </div>
         <div class="admin-tools">
-          <a href="/admin/?edit=${product.id}" class="admin-edit-link" style="display:none;">Edit this product</a>
-          <button type="button" class="admin-edit-link tweet-btn" data-slug="${product.slug}" style="display:none;">Draft a post for X</button>
+          <a class="admin-edit-link" data-admin-href="/admin/?edit=${product.slug}" data-admin-label="Edit this product" style="display:none;"></a>
+          <button type="button" class="admin-edit-link tweet-btn" data-slug="${product.slug}" style="display:none;" data-admin-label="Draft a post for X"></button>
         </div>
       </div>
 
@@ -2291,8 +2304,11 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   <p class="report-line"><a class="report-link" href="/contact/?topic=Correction&amp;page=${encodeURIComponent(product.name)}&amp;url=${encodeURIComponent(`/products/${product.slug}/`)}">Something not right on this page? Tell us</a></p>
 </article>`;
 
+  const comingOn = status && status.daysSince < 0 ? (product.refresh_history || []).slice().sort().pop() : null;
   const description = product.discontinued
     ? `${product.name} was discontinued${product.discontinued_date ? ` in ${formatDate(product.discontinued_date)}` : ''}${launch ? `, after launching in ${formatDate(launch)}` : ''}.${successor ? ` It was replaced by the ${successor.name}.` : ''}`
+    : comingOn
+    ? `${product.name} is coming ${formatDate(comingOn)}. See every generation and the full release history.`
     : status
     ? `${product.name} was last refreshed ${plural(status.daysSince, 'day', 'days')} ago. See every generation and the full release history.`
     : `${product.name} on Apple Sunset.`;
@@ -2300,6 +2316,8 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   return shell({
     title: product.discontinued
       ? `${product.name}: discontinued${product.discontinued_date ? ' ' + formatDate(product.discontinued_date) : ''} | Apple Sunset`
+      : comingOn
+      ? `${product.name}: coming ${formatDate(comingOn)} | Apple Sunset`
       : status
       ? `${product.name}: ${plural(daysInfo ? daysInfo.days : status.daysSince, 'day', 'days')} since the last update | Apple Sunset`
       : `${product.name} | Apple Sunset`,
