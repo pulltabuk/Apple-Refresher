@@ -2792,3 +2792,16 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 @media (min-width: 701px) {
   .intro-hero-cards .event-hero .event-hero-cta { margin-top: auto; }
 }
+
+.icon-pick--image { padding: 3px; }
+.icon-pick--image img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
+
+/* Just announced, with a long line-up (up to 12): compact chips, and on
+   laptops the artwork steps aside to make room. */
+.event-hero-products--many { flex-direction: row; flex-wrap: wrap; gap: 5px; }
+.event-hero-products--many li { font-size: 13px; padding: 5px 9px; border-radius: 999px; }
+@media (min-width: 701px) {
+  .intro-hero-cards .event-hero--many .event-hero-art { display: none; }
+  .intro-hero-cards .event-hero--many .event-hero-products--many li { font-size: 12px; padding: 4px 8px; }
+}
+.event-hero-products--many .event-hero-more { align-self: center; padding: 0 4px; }

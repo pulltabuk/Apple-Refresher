@@ -633,6 +633,14 @@
       $x('x-card-emoji').value = '';
       $x('x-card-icon').value = 'auto';
       markIcon();
+      // An event's idea brings its own card: artwork, name and countdown.
+      if (window.FactsKit.applyIdeaCard(idea, {
+        title: $x('x-card-title'), headline: $x('x-card-headline'), line: $x('x-card-line'),
+        emoji: $x('x-card-emoji'), select: $x('x-card-icon'), picker: $x('x-card-icon-picker'),
+      }, refresh)) {
+        cardFieldsOwn = true;
+        $x('x-card-on').checked = true;
+      }
       refresh();
       $x('x-text').focus();
     }
@@ -661,7 +669,7 @@
       $x('x-ideas-btn').textContent = ideas.length > 6 ? 'More ideas' : 'Ideas from my data';
     }
 
-    $x('x-ideas-btn').addEventListener('click', () => {
+    $x('x-ideas-btn').addEventListener('click', async () => {
       if (!ideas.length) {
         ideas = window.FactsKit.xPostIdeas(cachedProducts, origin);
         // Mixed up, so each batch has a bit of everything.
@@ -669,6 +677,9 @@
           const j = Math.floor(Math.random() * (i + 1));
           [ideas[i], ideas[j]] = [ideas[j], ideas[i]];
         }
+        // A coming, live or just-held Apple Event goes first.
+        const { data: events } = await client.from('apple_events').select('*');
+        ideas = window.FactsKit.eventPostIdeas(events || [], origin).concat(ideas);
         shown = 0;
       }
       showIdeas();
@@ -3413,7 +3424,8 @@
       dateTd.textContent = event.event_date || '\u2014';
 
       const statusTd = document.createElement('td');
-      statusTd.textContent = event.event_date && event.event_date >= today ? 'Upcoming' : 'Past';
+      const phase = window.FactsKit.eventPhase(event, Date.now());
+      statusTd.textContent = phase === 'upcoming' ? 'Upcoming' : phase === 'live' ? 'Live now' : phase === 'recap' ? 'Just held (on the homepage)' : event.event_date ? 'Past' : '\u2014';
 
       const actionsTd = document.createElement('td');
       actionsTd.className = 'admin-row-actions';
@@ -3425,6 +3437,12 @@
       deleteBtn.type = 'button';
       deleteBtn.textContent = 'Delete';
       deleteBtn.addEventListener('click', () => deleteEvent(event.id));
+      // A ready-made post with the event's own card, in the X posts tab.
+      const xBtn = document.createElement('button');
+      xBtn.type = 'button';
+      xBtn.textContent = 'Post to X';
+      xBtn.addEventListener('click', () => window.AdminX.use(window.FactsKit.eventPostIdea(event, { origin: window.location.origin })));
+      actionsTd.appendChild(xBtn);
       actionsTd.appendChild(editBtn);
       actionsTd.appendChild(deleteBtn);
 
