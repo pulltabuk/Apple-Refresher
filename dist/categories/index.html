@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta name="generated" content="2026-10-09T14:55:22.340Z">
+<meta name="generated" content="2026-10-09T15:07:54.473Z">
 </head>
 <body>
 <header class="site-header-bg">
@@ -43,7 +43,7 @@
       <a href="/facts/">Facts</a>
       <form class="site-search" action="/products/" method="get">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="search" name="search" placeholder="Search products" aria-label="Search products">
+        <input type="search" name="search" placeholder="Search the site" aria-label="Search the site" autocomplete="off">
       </form>
     </nav>
   </div>
@@ -53,7 +53,18 @@
 <h1>Browse by category</h1>
 <p class="page-intro">Every product line on the site, current and discontinued.</p>
 
-<div class="category-list" id="category-list"><a class="crow" href="/categories/airpods/" data-category="AirPods">
+<div class="controls-row category-controls">
+  <input type="search" id="category-search" class="search-input" placeholder="Search categories or products…" aria-label="Search categories or products">
+  <select id="category-sort" class="sort-select" aria-label="Sort categories">
+    <option value="name">A to Z</option>
+    <option value="next">Next release soonest</option>
+    <option value="latest">Most recently updated</option>
+    <option value="wait">Longest since a release</option>
+    <option value="count">Most products</option>
+  </select>
+</div>
+<p id="category-no-results" class="page-intro category-no-results" hidden>No categories or products match your search.</p>
+<div class="category-list" id="category-list"><a class="crow" href="/categories/airpods/" data-category="AirPods" data-name="AirPods" data-search="AirPods AirPods Max AirPods Pro AirPods" data-line="current" data-next="1792713600000" data-latest="1758240000000" data-count="3">
   <span class="crow-icon"><svg class="placeholder-icon" viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/></svg></span>
   <span class="crow-main">
     <span class="crow-name">AirPods</span>
@@ -62,7 +73,7 @@
   </span>
   <span class="crow-next crow-next--coming"><span class="crow-next-value">23 Oct 2026</span><span class="crow-next-caption">next release</span></span>
 </a>
-<a class="crow" href="/categories/apple-watch/" data-category="Apple Watch">
+<a class="crow" href="/categories/apple-watch/" data-category="Apple Watch" data-name="Apple Watch" data-search="Apple Watch Apple Watch Ultra" data-line="current" data-next="1789689600000" data-latest="1758240000000" data-count="1">
   <span class="crow-icon"><svg class="placeholder-icon" viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="12" y="10" width="16" height="20" rx="5"/><rect x="27.5" y="17" width="3" height="6" rx="1"/></svg></span>
   <span class="crow-main">
     <span class="crow-name">Apple Watch</span>
@@ -71,7 +82,7 @@
   </span>
   <span class="crow-next crow-next--due" title="Based on 3 release dates, about every 364 days"><span class="crow-next-value">Due now</span><span class="crow-next-caption">expected Sept 2026</span></span>
 </a>
-<a class="crow" href="/categories/ipad/" data-category="iPad">
+<a class="crow" href="/categories/ipad/" data-category="iPad" data-name="iPad" data-search="iPad iPad Air" data-line="current" data-next="1830816000000" data-latest="1773273600000" data-count="1">
   <span class="crow-icon"><svg class="placeholder-icon" viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="8" width="26" height="24" rx="3"/><line x1="19" y1="27" x2="21" y2="27"/></svg></span>
   <span class="crow-main">
     <span class="crow-name">iPad</span>
@@ -80,7 +91,7 @@
   </span>
   <span class="crow-next crow-next--next" title="Based on 2 release dates, about every 666 days"><span class="crow-next-value">Jan 2028</span><span class="crow-next-caption">next expected</span></span>
 </a>
-<a class="crow" href="/categories/iphone/" data-category="iPhone">
+<a class="crow" href="/categories/iphone/" data-category="iPhone" data-name="iPhone" data-search="iPhone iPhone 17 Pro" data-line="current" data-next="1789689600000" data-latest="1758240000000" data-count="1">
   <span class="crow-icon"><svg class="placeholder-icon" viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="13" y="4" width="14" height="32" rx="3"/><line x1="17" y1="31" x2="23" y2="31"/></svg></span>
   <span class="crow-main">
     <span class="crow-name">iPhone</span>
@@ -89,7 +100,7 @@
   </span>
   <span class="crow-next crow-next--due" title="Based on 3 release dates, about every 364 days"><span class="crow-next-value">Due now</span><span class="crow-next-caption">expected Sept 2026</span></span>
 </a>
-<a class="crow" href="/categories/mac/" data-category="Mac">
+<a class="crow" href="/categories/mac/" data-category="Mac" data-name="Mac" data-search="Mac Mac mini MacBook Air MacBook (12-inch)" data-line="current" data-next="1839110400000" data-latest="1786752000000" data-count="3">
   <span class="crow-icon"><svg class="placeholder-icon" viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="9" width="24" height="16" rx="1.5"/><path d="M5 30h30l-2.5-3h-25z"/></svg></span>
   <span class="crow-main">
     <span class="crow-name">Mac</span>
@@ -98,7 +109,7 @@
   </span>
   <span class="crow-next crow-next--next" title="Based on 8 release dates, about every 606 days"><span class="crow-next-value">Apr 2028</span><span class="crow-next-caption">next expected</span></span>
 </a>
-<a class="crow" href="/categories/other/" data-category="Other">
+<a class="crow" href="/categories/other/" data-category="Other" data-name="Other" data-search="Other iPod touch HomePod (1st generation)" data-line="gone" data-next="" data-latest="1559001600000" data-count="2">
   <span class="crow-icon"><svg class="placeholder-icon" viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="24" height="24" rx="4"/></svg></span>
   <span class="crow-main">
     <span class="crow-name">Other</span>
