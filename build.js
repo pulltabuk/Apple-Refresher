@@ -543,6 +543,7 @@ async function main() {
       category,
       current: inCategory.filter((i) => !i.product.discontinued).length,
       discontinued: inCategory.filter((i) => i.product.discontinued).length,
+      items: inCategory,
     };
   });
   write('categories/index.html', categoriesIndexPage({ groups, pageContent: pageContent.categories || null, ...opts }));
