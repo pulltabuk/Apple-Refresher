@@ -1967,21 +1967,71 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
   });
 }
 
-function categoriesIndexPage({ groups, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const tiles = groups.map(({ category, current, discontinued }) => {
-    const total = current + discontinued;
-    return `<a class="category-tile" href="/categories/${slugify(category)}/">
-  <div class="category-tile-icon">${categoryIcon(category)}</div>
-  <p class="category-tile-name">${escapeHtml(category)}</p>
-  <p class="category-tile-count">${total}</p>
-  <p class="category-tile-caption">Product${total === 1 ? '' : 's'}</p>
+// One row per family on the categories page. Where a product row asks
+// "how long has it been?", this asks "what's next for the family?": the
+// latest release, a New tag for 30 days after one, and when the next is
+// due, from the same family-wide average gap the category page quotes.
+function categoryRowHtml({ category, items }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const products = items.map((i) => i.product);
+  const current = products.filter((p) => !p.discontinued);
+  const total = products.length;
+  const gone = total - current.length;
+  const past = Array.from(new Set(products.flatMap((p) => p.refresh_history || []))).filter((d) => d <= today).sort();
+  const lastDate = past[past.length - 1] || null;
+  const cad = familyCadence(items);
+  const sinceLast = lastDate ? Math.round((new Date(today) - new Date(lastDate)) / 86400000) : null;
+  const isNew = sinceLast != null && sinceLast <= 30;
+
+  let latest = 'No releases recorded yet';
+  if (lastDate) {
+    const names = products.filter((p) => (p.refresh_history || []).indexOf(lastDate) !== -1).map((p) => p.name).sort((a, b) => a.localeCompare(b));
+    const who = names.length > 2 ? `${names[0]} and ${names.length - 1} others` : names.join(' and ');
+    const ago = `<span class="crow-nowrap">${sinceLast === 0 ? 'today' : `${sinceLast.toLocaleString('en-GB')} ${sinceLast === 1 ? 'day' : 'days'} ago`}</span>`;
+    latest = current.length
+      ? `Latest: <strong>${escapeHtml(who)}</strong> &middot; ${ago}`
+      : `Last release: <strong>${escapeHtml(who)}</strong> &middot; ${new Date(lastDate).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}`;
+  }
+  const count = gone === 0 ? plural(total, 'product', 'products')
+    : gone === total ? (total === 1 ? '1 product, discontinued' : `${total} products, all discontinued`)
+    : `${plural(total, 'product', 'products')} &middot; ${gone} discontinued`;
+
+  const monthYear = (ms) => new Date(ms).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+  const upcoming = current.flatMap((p) => p.refresh_history || []).filter((d) => d > today).sort()[0];
+  let next;
+  if (!current.length) {
+    const year = products.map((p) => p.discontinued_date).filter(Boolean).sort().pop();
+    next = year ? { kind: 'gone', value: year.slice(0, 4), caption: 'line discontinued' } : { kind: 'gone', value: '', caption: 'Line discontinued' };
+  } else if (upcoming) {
+    next = { kind: 'coming', value: formatDate(upcoming), caption: 'next release' };
+  } else if (!cad) {
+    next = { kind: 'early', value: '', caption: past.length === 1 ? 'Only one release so far' : 'Too early to tell' };
+  } else {
+    const due = new Date(lastDate).getTime() + cad.avg * 86400000;
+    const why = `Based on ${cad.releases} release dates, about every ${plural(cad.avg, 'day', 'days')}`;
+    if (due > new Date(today).getTime()) next = { kind: 'next', value: monthYear(due), caption: 'next expected', why };
+    else if (sinceLast <= cad.avg * 1.25) next = { kind: 'due', value: 'Due now', caption: `expected ${monthYear(due)}`, why };
+    else next = { kind: 'overdue', value: 'Overdue', caption: `was expected ${monthYear(due)}`, why };
+  }
+  return `<a class="crow" href="/categories/${slugify(category)}/">
+  <span class="crow-icon${CUSTOM_CATEGORY_ICONS && Object.keys(CUSTOM_CATEGORY_ICONS).some((k) => k.toLowerCase() === String(category).toLowerCase()) ? ' crow-icon--img' : ''}">${categoryIcon(category, 28)}</span>
+  <span class="crow-main">
+    <span class="crow-name">${escapeHtml(category)}${isNew ? ' <span class="crow-new">New</span>' : ''}</span>
+    <span class="crow-latest">${latest}</span>
+    <span class="crow-count">${count}</span>
+  </span>
+  <span class="crow-next crow-next--${next.kind}"${next.why ? ` title="${escapeHtml(next.why)}"` : ''}>${next.value ? `<span class="crow-next-value">${escapeHtml(next.value)}</span>` : ''}<span class="crow-next-caption">${escapeHtml(next.caption)}</span></span>
 </a>`;
-  }).join('\n');
+}
+
+function categoriesIndexPage({ groups, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const rows = groups.map(categoryRowHtml).join('\n');
   const body = `
 <h1>${pageHeading(pageContent, 'Browse by category')}</h1>
 ${pageStandardLine(pageContent, `<p class="page-intro">Every product line on the site, current and discontinued.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
-<div class="category-grid">${tiles}</div>`;
+<div class="category-list">${rows}</div>
+<p class="category-list-note">&ldquo;Next expected&rdquo; is the latest release plus the family&rsquo;s average gap between releases.</p>`;
   return shell({
     title: 'Categories — Apple Sunset',
     description: 'Browse Apple products by category: iPhone, Mac, iPad, Apple Watch, AirPods, Vision Pro and more.',
