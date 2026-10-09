@@ -1707,6 +1707,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .site-search-dropdown { max-height: min(70vh, 560px); overflow-y: auto; }
 @media (min-width: 861px) { .site-search-dropdown { left: auto; width: max(100%, 340px); } }
 .site-search-thumb { width: 22px; height: 22px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--accent-bg); }
+.site-search-thumb--none { display: inline-grid; place-items: center; color: var(--accent-dark); border: 1px solid #f0d9c4; box-sizing: border-box; }
 .site-search-page-dot { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; background: #f3efe8; color: var(--text-secondary); font-size: 12px; }
 
 /* ---------- Products still to arrive ---------- */
