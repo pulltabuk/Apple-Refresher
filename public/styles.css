@@ -2727,3 +2727,68 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .icon-pick-auto { font-size: 12px; font-weight: 700; color: var(--text); }
 .icon-pick.is-picked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: #fff7ef; }
 .icon-picker-auto { margin: 2px 0 0; }
+
+/* Homepage hero: the Apple Event tile (eventHeroHtml in facts-kit.js).
+   Counting down, then live, then what was announced, for two days. */
+.event-hero { position: relative; gap: 12px; background: #fff; border-color: #e7cdb6; box-shadow: none; container-type: inline-size; }
+.event-hero:hover { border-color: var(--accent); }
+.event-hero-kicker { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #fff; background: var(--accent); padding: 4px 10px; border-radius: 999px; }
+.event-hero-kicker--live { background: #c4271b; }
+.event-hero-dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: site-stats-pulse 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .event-hero-dot { animation: none; } }
+.event-hero-art { position: relative; display: block; overflow: hidden; border-radius: 12px; background: #f3f1ec; aspect-ratio: 16 / 9; }
+.event-hero-art-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(60px) saturate(1.15); transform: scale(2.2); opacity: 0.6; }
+.event-hero-art-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.event-hero-head { display: flex; flex-direction: column; gap: 4px; }
+.event-hero-title { margin: 0; font-size: 22px; line-height: 1.15; font-weight: 800; }
+.event-hero-link, .event-hero-link:hover { color: var(--text); text-decoration: none; }
+/* The whole tile opens the event's page; the buttons and product links
+   sit above that and go where they say. */
+.event-hero-link::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.event-hero-when { margin: 0; font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+.event-hero-uk { font-weight: 500; white-space: nowrap; }
+.event-hero-countdown { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.event-hero-countdown .countdown-unit { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 2px; background: var(--accent-bg); border-radius: 10px; color: var(--accent-dark); }
+.event-hero-countdown .countdown-value { font-size: 26px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.event-hero-countdown .countdown-unit-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85; }
+@container (max-width: 250px) {
+  .event-hero-countdown { grid-template-columns: 1fr 1fr; }
+  .event-hero-countdown .countdown-value { font-size: 30px; }
+}
+.event-hero-note { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text-secondary); }
+.event-hero-products { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.event-hero-products li { font-size: 14px; font-weight: 600; line-height: 1.3; padding: 8px 10px; background: var(--accent-bg); border-radius: 8px; color: var(--accent-dark); }
+.event-hero-products a { position: relative; z-index: 1; color: var(--accent-dark); }
+.event-hero-products a:hover { text-decoration: underline; }
+.event-hero-products .event-hero-more { background: none; padding: 0 2px; font-weight: 500; color: var(--text-secondary); }
+.event-hero-cta { position: relative; z-index: 1; display: block; padding: 11px 10px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 700; line-height: 1.3; text-align: center; text-decoration: none; text-wrap: balance; }
+@container (max-width: 250px) { .event-hero-cta { font-size: 13px; padding: 10px 8px; } }
+.event-hero-cta:hover { background: var(--accent-dark); color: #fff; }
+.event-hero-cta--quiet { background: var(--accent-bg); color: var(--accent-dark); }
+.event-hero-cta--quiet:hover { background: #f6dcc6; color: var(--accent-dark); }
+.event-hero--live { border-color: #c4271b; box-shadow: 0 0 0 1px #c4271b; }
+.event-hero--live .event-hero-cta { background: #c4271b; }
+/* Side by side, the tile is as tall as the at-a-glance box: the artwork
+   takes the spare height, so there's no empty space at the bottom. */
+@media (min-width: 701px) {
+  .intro-hero-cards .event-hero { padding: 1rem; }
+  .intro-hero-cards .event-hero .event-hero-art { aspect-ratio: auto; flex: 1 1 120px; min-height: 110px; }
+}
+
+/* An event's page: the countdown while it is still to come */
+.event-detail-countdown { max-width: 420px; margin: 0 0 1.25rem; }
+.event-detail-countdown[hidden] { display: none; }
+.event-detail-countdown-label { margin: 0 0 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-dark); }
+.event-detail-countdown-label span { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--text-secondary); }
+
+/* Phones: the countdown's clock as four tiles, like the event tile's. */
+@media (max-width: 700px) {
+  .intro-hero-text > .countdown { width: 100%; box-sizing: border-box; }
+  .intro-hero-text > .countdown:not(.countdown--latest) .countdown-clock { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; width: 100%; }
+  .intro-hero-text > .countdown:not(.countdown--latest) .countdown-unit { flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 2px; background: #fff; border-radius: 10px; border: 1px solid #f0d9c4; }
+  .intro-hero-text > .countdown:not(.countdown--latest) .countdown-value { font-size: 26px; }
+  .intro-hero-text > .countdown:not(.countdown--latest) .countdown-unit-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+}
+@media (min-width: 701px) {
+  .intro-hero-cards .event-hero .event-hero-cta { margin-top: auto; }
+}

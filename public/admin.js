@@ -3551,6 +3551,15 @@
       return;
     }
     loadEvents();
+    const published = await rebuildSite();
+    eventStatus(published.ok ? 'Deleted. The site updates in about a minute.' : 'Deleted, but the site rebuild didn\u2019t start (' + published.error + '). Press Publish changes.', !published.ok);
+  }
+
+  function eventStatus(text, isError) {
+    const el = document.getElementById('event-status');
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = isError ? 'var(--overdue-text)' : '';
   }
 
   eventForm.addEventListener('submit', async (e) => {
@@ -3593,6 +3602,9 @@
       renderEventProducts();
       await loadEvents();
       showEventList();
+      eventStatus('Saved. Updating the site\u2026');
+      const published = await rebuildSite();
+      eventStatus(published.ok ? 'Saved. The homepage and event pages update in about a minute.' : 'Saved, but the site rebuild didn\u2019t start (' + published.error + '). Press Publish changes.', !published.ok);
     } catch (err) {
       window.alert('Something went wrong saving this event: ' + err.message);
     }
