@@ -515,9 +515,9 @@
       var headers = { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY };
       searchProductsPromise = window.SUPABASE_URL && window.SUPABASE_ANON_KEY
         ? Promise.all([
-            fetch(window.SUPABASE_URL + '/rest/v1/products?select=id,name,slug,category,icon_url,discontinued', { headers })
+            fetch(window.SUPABASE_URL + '/rest/v1/products?select=id,name,slug,category,icon_url,discontinued,refresh_history', { headers })
               .then(function (res) { return res.json(); }).then(appleNamesJS).catch(function () { return []; }),
-            fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=id,heading,event_date,announced_products', { headers })
+            fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=id,heading,event_date,announced_products,image_url', { headers })
               .then(function (res) { return res.json(); }).catch(function () { return []; }),
             fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=id,caption,tags,location,country,date_taken,image_url,image_urls', { headers })
               .then(function (res) { return res.json(); }).catch(function () { return []; }),
@@ -638,7 +638,14 @@
             iconHtml: categoryIconJS(name, 22), note: count + (count === 1 ? ' product' : ' products') });
         });
 
+        // Current products first, then the most recently released.
+        var today = new Date().toISOString().slice(0, 10);
+        var lastOut = function (p) { return (p.refresh_history || []).filter(function (d) { return d <= today; }).sort().pop() || ''; };
         products.filter(function (p) { return matchesSearchJS(p.name + ' ' + (p.category || ''), query); })
+          .sort(function (a, b) {
+            if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
+            return lastOut(b).localeCompare(lastOut(a)) || a.name.localeCompare(b.name);
+          })
           .forEach(function (p) {
             matches.push({ kind: 'product', label: p.name, href: '/products/' + p.slug + '/',
               iconHtml: productIconJS(p, 22), note: p.discontinued ? 'Discontinued' : '' });
@@ -650,7 +657,7 @@
           var when = ev.event_date ? formatDateJS(ev.event_date) + ' ' + String(ev.event_date).slice(0, 4) : '';
           if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' ') + ' ' + when, query)) return;
           matches.push({ kind: 'event', label: ev.heading || 'Apple Event', href: '/events/' + eventSlugJS(ev) + '/',
-            iconHtml: '<span class="site-search-event-dot" aria-hidden="true"></span>',
+            iconHtml: ev.image_url ? searchThumbHtmlJS(ev.image_url) : '<span class="site-search-event-dot" aria-hidden="true"></span>',
             note: ev.event_date ? formatDateJS(ev.event_date) : '' });
         });
 
