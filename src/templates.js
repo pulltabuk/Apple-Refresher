@@ -979,7 +979,7 @@ ${extraJsonLd ? `<script type="application/ld+json">${JSON.stringify(extraJsonLd
       <a href="/facts/">Facts</a>
       <form class="site-search" action="/products/" method="get">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="search" name="search" placeholder="Search products" aria-label="Search products">
+        <input type="search" name="search" placeholder="Search the site" aria-label="Search the site" autocomplete="off">
       </form>
     </nav>
   </div>
@@ -2015,7 +2015,11 @@ function categoryRowHtml({ category, items }) {
     else if (sinceLast <= cad.avg * 1.25) next = { kind: 'due', value: 'Due now', caption: `expected ${monthYear(due)}`, why };
     else next = { kind: 'overdue', value: 'Overdue', caption: `was expected ${monthYear(due)}`, why };
   }
-  return `<a class="crow" href="/categories/${slugify(category)}/" data-category="${escapeHtml(category)}">
+  // Sort keys for the search and sort controls above the list.
+  const nextAt = next.kind === 'coming' ? new Date(upcoming).getTime()
+    : next.kind === 'next' || next.kind === 'due' || next.kind === 'overdue' ? new Date(lastDate).getTime() + cad.avg * 86400000 : '';
+  const sortData = `data-name="${escapeHtml(category)}" data-search="${escapeHtml([category].concat(products.map((p) => p.name)).join(' '))}" data-line="${current.length ? 'current' : 'gone'}" data-next="${nextAt}" data-latest="${lastDate ? new Date(lastDate).getTime() : ''}" data-count="${total}"`;
+  return `<a class="crow" href="/categories/${slugify(category)}/" data-category="${escapeHtml(category)}" ${sortData}>
   <span class="crow-icon">${categoryIcon(category, 28)}</span>
   <span class="crow-main">
     <span class="crow-name">${escapeHtml(category)}${isNew ? ' <span class="crow-new">New</span>' : ''}</span>
@@ -2032,6 +2036,17 @@ function categoriesIndexPage({ groups, pageContent, siteUrl, supabaseUrl, supaba
 <h1>${pageHeading(pageContent, 'Browse by category')}</h1>
 ${pageStandardLine(pageContent, `<p class="page-intro">Every product line on the site, current and discontinued.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
+<div class="controls-row category-controls">
+  <input type="search" id="category-search" class="search-input" placeholder="Search categories or products…" aria-label="Search categories or products">
+  <select id="category-sort" class="sort-select" aria-label="Sort categories">
+    <option value="name">A to Z</option>
+    <option value="next">Next release soonest</option>
+    <option value="latest">Most recently updated</option>
+    <option value="wait">Longest since a release</option>
+    <option value="count">Most products</option>
+  </select>
+</div>
+<p id="category-no-results" class="page-intro category-no-results" hidden>No categories or products match your search.</p>
 <div class="category-list" id="category-list">${rows}</div>
 <p class="category-list-note">&ldquo;Next expected&rdquo; is the latest release plus the family&rsquo;s average gap between releases.</p>`;
   return shell({

@@ -519,14 +519,17 @@
               .then(function (res) { return res.json(); }).then(appleNamesJS).catch(function () { return []; }),
             fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=id,heading,event_date,announced_products', { headers })
               .then(function (res) { return res.json(); }).catch(function () { return []; }),
-          ]).then(function (both) {
+            fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=id,caption,tags,location,country,date_taken,image_url,image_urls', { headers })
+              .then(function (res) { return res.json(); }).catch(function () { return []; }),
+          ]).then(function (all) {
             searchProductsCache = {
-              products: Array.isArray(both[0]) ? both[0] : [],
-              events: Array.isArray(both[1]) ? both[1] : [],
+              products: Array.isArray(all[0]) ? all[0] : [],
+              events: Array.isArray(all[1]) ? all[1] : [],
+              albums: Array.isArray(all[2]) ? all[2] : [],
             };
             return searchProductsCache;
           })
-        : Promise.resolve({ products: [], events: [] });
+        : Promise.resolve({ products: [], events: [], albums: [] });
       return searchProductsPromise;
     }
 
@@ -545,15 +548,15 @@
       if (!matches.length) {
         var empty = document.createElement('div');
         empty.className = 'site-search-dropdown-empty';
-        empty.textContent = query ? 'No products match "' + query + '"' : 'Start typing a product name';
+        empty.textContent = query ? 'Nothing on the site matches "' + query + '"' : 'Search products, events and photos';
         dropdown.appendChild(empty);
       } else {
         var lastKind = null;
-        matches.slice(0, 10).forEach(function (m) {
+        matches.forEach(function (m) {
           if (m.kind !== lastKind) {
             var head = document.createElement('p');
             head.className = 'site-search-dropdown-head';
-            head.textContent = m.kind === 'product' ? 'Products' : m.kind === 'category' ? 'Categories' : 'Apple Events';
+            head.textContent = SEARCH_GROUP_LABELS_JS[m.kind] || '';
             dropdown.appendChild(head);
             lastKind = m.kind;
           }
@@ -568,6 +571,22 @@
       activeDropdown = dropdown;
     }
 
+    // The header search covers the whole site. Each group is capped so
+    // one busy group can't push the others out of sight.
+    var SEARCH_GROUP_LABELS_JS = { category: 'Categories', product: 'Products', event: 'Apple Events', album: 'Photo albums', page: 'Pages' };
+    var SEARCH_GROUP_CAPS_JS = { category: 3, product: 6, event: 4, album: 4, page: 3 };
+    var SEARCH_PAGES_JS = [
+      { label: 'All products', href: '/products/', words: 'every product list tracker refresh' },
+      { label: 'Discontinued products', href: '/discontinued/', words: 'discontinued retired ended' },
+      { label: 'Browse by category', href: '/categories/', words: 'categories families lines' },
+      { label: 'Photo Gallery', href: '/gallery/', words: 'photos gallery albums pictures' },
+      { label: 'Apple Events', href: '/events/', words: 'events keynote wwdc launch special event' },
+      { label: 'Facts', href: '/facts/', words: 'facts did you know statistics stats' },
+      { label: 'Apple earnings', href: '/earnings/', words: 'earnings results revenue quarter financial' },
+      { label: 'About Apple Sunset', href: '/about/', words: 'about who' },
+      { label: 'Contact', href: '/contact/', words: 'contact email get in touch message' },
+    ];
+
     siteSearchInput.addEventListener('input', function () {
       var query = siteSearchInput.value.trim().toLowerCase();
       if (!query) {
@@ -575,8 +594,11 @@
         return;
       }
       fetchSearchProducts().then(function (data) {
+        // Typing on while the data loads: answer only the latest query.
+        if (siteSearchInput.value.trim().toLowerCase() !== query) return;
         var products = data.products || [];
         var events = data.events || [];
+        var albums = data.albums || [];
         var matches = [];
 
         // Families first: one row that covers every product in it.
@@ -599,15 +621,38 @@
               iconHtml: productIconJS(p, 22), note: p.discontinued ? 'Discontinued' : '' });
           });
 
-        // An event matches on its title or on anything announced there.
-        events.forEach(function (ev) {
+        // An event matches on its title, its date or anything announced there.
+        events.slice().sort(function (a, b) { return String(b.event_date || '').localeCompare(String(a.event_date || '')); }).forEach(function (ev) {
           var announced = (ev.announced_products || []).map(function (a) { return typeof a === 'string' ? a : a.name; });
-          if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' '), query)) return;
+          var when = ev.event_date ? formatDateJS(ev.event_date) + ' ' + String(ev.event_date).slice(0, 4) : '';
+          if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' ') + ' ' + when, query)) return;
           matches.push({ kind: 'event', label: ev.heading || 'Apple Event', href: '/events/' + eventSlugJS(ev) + '/',
             iconHtml: '<span class="site-search-event-dot" aria-hidden="true"></span>',
             note: ev.event_date ? formatDateJS(ev.event_date) : '' });
         });
 
+        // A photo album matches on its caption, tags, place or year. The
+        // id address redirects to the album's own page.
+        albums.slice().sort(function (a, b) { return String(b.date_taken || '').localeCompare(String(a.date_taken || '')); }).forEach(function (al) {
+          var text = [al.caption, al.location, al.country, String(al.date_taken || '').slice(0, 4)].concat(al.tags || []).filter(Boolean).join(' ');
+          if (!matchesSearchJS(text, query)) return;
+          var cover = (al.image_urls && al.image_urls[0]) || al.image_url;
+          matches.push({ kind: 'album', label: al.caption || (al.tags && al.tags[0]) || 'Photo album', href: '/gallery/' + al.id + '/',
+            iconHtml: cover ? '<img class="site-search-thumb" src="' + escapeHtmlJS(cdnImageJS(cover, 96)) + '" alt="" loading="lazy">' : '<span class="site-search-event-dot" aria-hidden="true"></span>',
+            note: al.location || (al.date_taken ? String(al.date_taken).slice(0, 4) : '') });
+        });
+
+        SEARCH_PAGES_JS.forEach(function (pg) {
+          if (!matchesSearchJS(pg.label + ' ' + pg.words, query)) return;
+          matches.push({ kind: 'page', label: pg.label, href: pg.href,
+            iconHtml: '<span class="site-search-page-dot" aria-hidden="true">&rarr;</span>', note: '' });
+        });
+
+        var perKind = {};
+        matches = matches.filter(function (m) {
+          perKind[m.kind] = (perKind[m.kind] || 0) + 1;
+          return perKind[m.kind] <= SEARCH_GROUP_CAPS_JS[m.kind];
+        });
         renderSearchDropdown(matches, query);
       });
     });
@@ -626,9 +671,10 @@
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         activeDropdownIndex = Math.max(activeDropdownIndex - 1, 0);
-      } else if (e.key === 'Enter' && activeDropdownIndex >= 0) {
+      } else if (e.key === 'Enter') {
+        // Enter opens the highlighted result, or the top one.
         e.preventDefault();
-        window.location.href = links[activeDropdownIndex].getAttribute('href');
+        window.location.href = links[Math.max(activeDropdownIndex, 0)].getAttribute('href');
         return;
       } else if (e.key === 'Escape') {
         closeSearchDropdown();
@@ -641,6 +687,14 @@
 
     document.addEventListener('click', function (e) {
       if (!siteSearchForm.contains(e.target)) closeSearchDropdown();
+    });
+
+    // The form's own submit only reaches the products page, so keep
+    // people on the results instead.
+    siteSearchForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var first = activeDropdown && activeDropdown.querySelector('a');
+      if (first) window.location.href = first.getAttribute('href');
     });
   }
 
@@ -2098,7 +2152,11 @@
       else if (sinceLast <= cad.avg * 1.25) next = { kind: 'due', value: 'Due now', caption: 'expected ' + monthYear(due), why: why };
       else next = { kind: 'overdue', value: 'Overdue', caption: 'was expected ' + monthYear(due), why: why };
     }
-    return '<a class="crow" href="/categories/' + slugifyJS(category) + '/" data-category="' + escapeHtmlJS(category) + '">' +
+    var nextAt = next.kind === 'coming' ? new Date(upcoming).getTime()
+      : next.kind === 'next' || next.kind === 'due' || next.kind === 'overdue' ? new Date(lastDate).getTime() + cad.avg * 86400000 : '';
+    var sortData = 'data-name="' + escapeHtmlJS(category) + '" data-search="' + escapeHtmlJS([category].concat(products.map(function (p) { return p.name; })).join(' ')) +
+      '" data-line="' + (current.length ? 'current' : 'gone') + '" data-next="' + nextAt + '" data-latest="' + (lastDate ? new Date(lastDate).getTime() : '') + '" data-count="' + total + '"';
+    return '<a class="crow" href="/categories/' + slugifyJS(category) + '/" data-category="' + escapeHtmlJS(category) + '" ' + sortData + '>' +
       '<span class="crow-icon">' + categoryIconJS(category, 28) + '</span>' +
       '<span class="crow-main">' +
         '<span class="crow-name">' + escapeHtmlJS(category) + (isNew ? ' <span class="crow-new">New</span>' : '') + '</span>' +
@@ -2111,6 +2169,43 @@
   }
 
   var categoryList = document.getElementById('category-list');
+  var categorySearch = document.getElementById('category-search');
+  var categorySort = document.getElementById('category-sort');
+
+  // Filter and order the panels in place, so it works on the built list
+  // and again after the live redraw.
+  function applyCategoryControlsJS() {
+    if (!categoryList) return;
+    var query = categorySearch ? categorySearch.value.trim() : '';
+    var mode = categorySort ? categorySort.value : 'name';
+    var rows = Array.prototype.slice.call(categoryList.querySelectorAll('.crow'));
+    var num = function (el, key) { var v = el.getAttribute('data-' + key); return v === '' || v == null ? null : Number(v); };
+    var byName = function (a, b) { return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name')); };
+    // Lines that have ended, or have no date to go on, always sit last.
+    var emptyLast = function (x, y, cmp) { return x == null && y == null ? 0 : x == null ? 1 : y == null ? -1 : cmp(x, y); };
+    rows.sort(function (a, b) {
+      var r = 0;
+      if (mode === 'next') r = emptyLast(num(a, 'next'), num(b, 'next'), function (x, y) { return x - y; });
+      else if (mode === 'latest') r = emptyLast(num(a, 'latest'), num(b, 'latest'), function (x, y) { return y - x; });
+      else if (mode === 'wait') {
+        var ga = a.getAttribute('data-line') === 'gone', gb = b.getAttribute('data-line') === 'gone';
+        r = ga !== gb ? (ga ? 1 : -1) : emptyLast(num(a, 'latest'), num(b, 'latest'), function (x, y) { return x - y; });
+      } else if (mode === 'count') r = num(b, 'count') - num(a, 'count');
+      return r || byName(a, b);
+    });
+    var shown = 0;
+    rows.forEach(function (row) {
+      var hit = !query || matchesSearchJS(row.getAttribute('data-search'), query);
+      row.hidden = !hit;
+      if (hit) shown++;
+      categoryList.appendChild(row);
+    });
+    var none = document.getElementById('category-no-results');
+    if (none) none.hidden = shown > 0;
+  }
+  if (categorySearch) categorySearch.addEventListener('input', applyCategoryControlsJS);
+  if (categorySort) categorySort.addEventListener('change', applyCategoryControlsJS);
+
   if (categoryList && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     fetchAllProductsJS().then(function (products) {
       if (!Array.isArray(products) || !products.length) return;
@@ -2121,6 +2216,7 @@
         return categoryRowHtmlJS(c, products.filter(function (p) { return p.category === c; }));
       }).join('\n');
       refreshCustomIconsInDomJS();
+      applyCategoryControlsJS();
     }).catch(function () {});
   }
 
