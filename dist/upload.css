@@ -52,7 +52,9 @@ body {
 .up-form label, .up-label { display: flex; flex-direction: column; gap: 6px; font-size: 15px; font-weight: 600; }
 .up-form input[type="text"],
 .up-form input[type="email"],
-.up-form input[type="password"] {
+.up-form input[type="password"],
+.up-form input[type="url"],
+.up-form input[type="date"] {
   font: inherit;
   font-size: 17px; /* 16px+ stops iOS zooming in on focus */
   font-weight: 400;
@@ -289,3 +291,16 @@ body {
 
 .icon-pick--image { padding: 3px; }
 .icon-pick--image img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
+
+/* Apple Events */
+.up-form input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 50px; text-align: left; }
+.up-ev-art { border-radius: 12px; overflow: hidden; background: var(--border); aspect-ratio: 16 / 9; }
+.up-ev-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.up-ev-products { display: flex; flex-direction: column; gap: 6px; }
+.up-ev-products:empty { display: none; }
+.up-ev-prod { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 6px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+.up-ev-prod-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.up-ev-star, .up-ev-remove { width: 40px; height: 40px; flex-shrink: 0; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 20px; line-height: 1; cursor: pointer; color: var(--text-secondary); -webkit-tap-highlight-color: transparent; }
+.up-ev-star[aria-pressed="true"] { color: var(--accent); }
+.up-ev-remove { font-size: 24px; }
+.up-ev-badge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--accent); color: #fff; vertical-align: 1px; }

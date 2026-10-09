@@ -27,7 +27,7 @@
   const SUGGESTED_TAG_LIMIT = 16;
 
   const $ = (id) => document.getElementById(id);
-  const sections = { loading: $('up-loading'), login: $('up-login'), home: $('up-home'), x: $('up-x'), products: $('up-products'), product: $('up-product'), main: $('up-main'), library: $('up-library'), facts: $('up-facts'), done: $('up-done') };
+  const sections = { loading: $('up-loading'), login: $('up-login'), home: $('up-home'), x: $('up-x'), products: $('up-products'), product: $('up-product'), events: $('up-events'), event: $('up-event'), main: $('up-main'), library: $('up-library'), facts: $('up-facts'), done: $('up-done') };
 
   // Photos already on the site have a url and no file.
   let photos = []; // { id, file, preview, status: 'working'|'done'|'error', url, error, promise }
@@ -86,6 +86,7 @@
       : name === 'facts' ? 'Did you know?'
       : name === 'products' || name === 'product' ? 'Product facts'
       : name === 'x' ? 'X posts'
+      : name === 'events' || name === 'event' ? 'Apple Events'
       : name === 'library' || (name === 'main' && editingId) ? 'Edit albums'
       : name === 'done' ? 'Done'
       : 'Add photos';
@@ -809,6 +810,7 @@
   $('up-go-facts').addEventListener('click', openFacts);
   $('up-go-products').addEventListener('click', openProducts);
   $('up-go-x').addEventListener('click', openXPosts);
+  $('up-go-events').addEventListener('click', () => openEvents());
 
   // --- X posts: for the X account only, nothing is saved or published on
   // the site. Ideas come from the products; the card goes to the X app
@@ -996,8 +998,13 @@
     $('up-x-ideas').textContent = xIdeas.length > 5 ? 'More ideas' : 'Ideas from my data';
   }
 
+  // Where the X screen's back link and Done return to: the Did you know?
+  // screen or an event, or the menu when opened from there.
+  let xReturnTo = null;
+
   async function openXPosts() {
     show('x');
+    xReturnTo = null;
     $('up-x-back').hidden = true;
     xRefresh();
   }
@@ -1006,13 +1013,15 @@
   // a way back.
   function xFromFact(idea) {
     show('x');
+    xReturnTo = openFacts;
+    $('up-x-back').textContent = '\u2039 Back to Did you know?';
     $('up-x-back').hidden = false;
     $('up-x-text').value = '';
     $('up-x-card-on').checked = true;
     $('up-x-tags').checked = true;
     xUseIdea(idea);
   }
-  $('up-x-back').addEventListener('click', openFacts);
+  $('up-x-back').addEventListener('click', () => (xReturnTo || openFacts)());
 
   $('up-x-ideas').addEventListener('click', async () => {
     if (!xIdeas.length) {
@@ -1066,7 +1075,7 @@
 
   // Done: clear the post and go back where it came from.
   $('up-x-done').addEventListener('click', () => {
-    const fromFacts = !$('up-x-back').hidden;
+    const returnTo = $('up-x-back').hidden ? null : xReturnTo;
     ['up-x-text', 'up-x-link', 'up-x-card-title', 'up-x-card-emoji', 'up-x-card-headline', 'up-x-card-line', 'up-x-topic'].forEach((id) => { $(id).value = ''; });
     $('up-x-link-on').checked = false;
     $('up-x-card-icon').value = 'auto';
@@ -1077,7 +1086,7 @@
     xPreviewOwn = false;
     xCaret = null;
     xRefresh();
-    if (fromFacts) openFacts();
+    if (returnTo) returnTo();
     else show('home');
   });
 
@@ -1804,6 +1813,286 @@
     tweetCount(area, count);
     area.focus();
   }
+
+  // --- Apple Events: the same fields as the admin's Events tab ---
+
+  let evList = [];
+  let evEditingId = null;
+  let evProducts = []; // { name, featured }
+  let evImageUrl = '';
+  let evUploading = false;
+
+  function evStatus(id, text, isError) {
+    const el = $(id);
+    el.textContent = text || '';
+    el.classList.toggle('up-status--error', !!isError);
+  }
+
+  function evDateText(ev) {
+    if (!ev.event_date) return '';
+    const d = new Date(String(ev.event_date).slice(0, 10) + 'T12:00:00Z');
+    return isNaN(d) ? ev.event_date : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  }
+
+  async function openEvents(message, isError) {
+    show('events');
+    evStatus('up-ev-list-status', message || '', isError);
+    if (!evList.length) $('up-ev-count').textContent = 'Loading…';
+    const { data, error } = await client.from('apple_events').select('*').order('event_date', { ascending: false });
+    if (error) {
+      $('up-ev-count').textContent = 'Could not load events: ' + error.message;
+      return;
+    }
+    evList = (data || []).slice().sort((a, b) => String(b.event_date || '').localeCompare(String(a.event_date || '')));
+    renderEvents();
+  }
+
+  function renderEvents() {
+    const list = $('up-ev-list');
+    list.innerHTML = '';
+    $('up-ev-count').textContent = evList.length ? evList.length + (evList.length === 1 ? ' event' : ' events') + '. Tap one to edit it or post it to X.' : 'No events yet.';
+    const now = Date.now();
+    evList.forEach((ev) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'up-set';
+      if (ev.image_url) {
+        const img = document.createElement('img');
+        img.alt = '';
+        thumbImg(img, ev.image_url, 128);
+        btn.appendChild(img);
+      } else {
+        const none = document.createElement('span');
+        none.className = 'up-set-noimg';
+        btn.appendChild(none);
+      }
+      const text = document.createElement('span');
+      text.className = 'up-set-text';
+      const title = document.createElement('span');
+      title.className = 'up-set-title';
+      title.textContent = ev.heading || 'Untitled event';
+      const meta = document.createElement('span');
+      meta.className = 'up-set-meta';
+      const phase = window.FactsKit.eventPhase(ev, now);
+      const phaseText = phase === 'upcoming' ? 'Coming up' : phase === 'live' ? 'Live now' : phase === 'recap' ? 'Just held' : 'Past';
+      meta.textContent = [evDateText(ev), phaseText, ev.featured ? 'First on the homepage' : ''].filter(Boolean).join(' · ');
+      text.appendChild(title);
+      text.appendChild(meta);
+      btn.appendChild(text);
+      btn.addEventListener('click', () => openEventForm(ev));
+      list.appendChild(btn);
+    });
+  }
+
+  async function evLoadProductNames() {
+    if (!allProducts.length) {
+      const { data } = await client.from('products').select('*');
+      allProducts = data || [];
+    }
+    const names = Array.from(new Set(allProducts.map((p) => p.name).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+    const list = $('up-ev-product-options');
+    list.innerHTML = '';
+    names.forEach((n) => { const o = document.createElement('option'); o.value = n; list.appendChild(o); });
+  }
+
+  function evRenderArt() {
+    $('up-ev-art').hidden = !evImageUrl;
+    if (evImageUrl) $('up-ev-art-img').src = evImageUrl;
+    $('up-ev-file-label').textContent = evImageUrl ? 'Change the artwork' : 'Choose the event artwork';
+  }
+
+  function evRenderProducts() {
+    const box = $('up-ev-products');
+    box.innerHTML = '';
+    evProducts.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = 'up-ev-prod';
+      const star = document.createElement('button');
+      star.type = 'button';
+      star.className = 'up-ev-star';
+      star.textContent = p.featured ? '★' : '☆';
+      star.setAttribute('aria-pressed', p.featured ? 'true' : 'false');
+      star.setAttribute('aria-label', 'Show ' + p.name + ' on the event card');
+      star.addEventListener('click', () => { evProducts[i].featured = !evProducts[i].featured; evRenderProducts(); });
+      const name = document.createElement('span');
+      name.className = 'up-ev-prod-name';
+      name.textContent = p.name;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'up-ev-remove';
+      remove.textContent = '×';
+      remove.setAttribute('aria-label', 'Remove ' + p.name);
+      remove.addEventListener('click', () => { evProducts.splice(i, 1); evRenderProducts(); });
+      row.appendChild(star);
+      row.appendChild(name);
+      row.appendChild(remove);
+      box.appendChild(row);
+    });
+  }
+
+  // What the typed time means in the UK, worked out the way the site does.
+  function evTimeEcho() {
+    const date = $('up-ev-date').value;
+    const time = $('up-ev-time').value.trim();
+    let text = '';
+    if (date && !time) text = 'With no time, 10am PT is assumed.';
+    else if (date && time) {
+      const uk = window.FactsKit.eventUkTime({ event_date: date, event_time: time });
+      const start = window.FactsKit.eventStartMs({ event_date: date, event_time: time });
+      text = uk ? 'That’s ' + uk + '.' : isNaN(start) ? 'Couldn’t read that time. Try e.g. 10am PT or 6pm BST.' : '';
+    }
+    $('up-ev-time-echo').textContent = text;
+  }
+  $('up-ev-date').addEventListener('input', evTimeEcho);
+  $('up-ev-time').addEventListener('input', evTimeEcho);
+
+  function openEventForm(ev) {
+    evEditingId = ev ? ev.id : null;
+    $('up-ev-form-title').textContent = ev ? 'Edit event' : 'Add an event';
+    $('up-ev-heading').value = ev ? ev.heading || '' : '';
+    $('up-ev-date').value = ev && ev.event_date ? String(ev.event_date).slice(0, 10) : '';
+    $('up-ev-time').value = ev ? ev.event_time || '' : '';
+    $('up-ev-url').value = ev ? ev.event_url || '' : '';
+    $('up-ev-featured').checked = !!(ev && ev.featured);
+    evImageUrl = ev ? ev.image_url || '' : '';
+    evProducts = ev ? (ev.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : { name: p.name, featured: !!p.featured })) : [];
+    $('up-ev-new-product').value = '';
+    $('up-ev-more').hidden = !ev;
+    evStatus('up-ev-status', '');
+    $('up-ev-art-note').classList.remove('up-hint--error');
+    evRenderArt();
+    evRenderProducts();
+    evTimeEcho();
+    show('event');
+    evLoadProductNames();
+  }
+
+  // A "Still needed" note goes as soon as the form is being filled in.
+  ['input', 'change'].forEach((type) => $('up-ev-form').addEventListener(type, () => {
+    if (/^Still needed/.test($('up-ev-status').textContent)) evStatus('up-ev-status', '');
+  }));
+
+  $('up-ev-new').addEventListener('click', () => openEventForm(null));
+  $('up-ev-back').addEventListener('click', () => openEvents());
+
+  function evAddProduct() {
+    const input = $('up-ev-new-product');
+    const value = input.value.trim();
+    if (!value) return;
+    if (!evProducts.some((p) => p.name.toLowerCase() === value.toLowerCase())) evProducts.push({ name: value, featured: false });
+    input.value = '';
+    evRenderProducts();
+  }
+  $('up-ev-add-product').addEventListener('click', evAddProduct);
+  $('up-ev-new-product').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); evAddProduct(); }
+  });
+
+  // PNG artwork keeps its transparency; anything else is resized and
+  // re-saved like the gallery photos, which also drops location data.
+  $('up-ev-file').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const note = $('up-ev-art-note');
+    evUploading = true;
+    $('up-ev-file-label').textContent = 'Uploading…';
+    note.classList.remove('up-hint--error');
+    try {
+      let blob = file;
+      let ext = 'png';
+      if (!(file.type === 'image/png' && file.size <= 8 * 1024 * 1024)) { blob = await prepareImage(file); ext = 'jpg'; }
+      const path = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '-event.' + ext;
+      const { error } = await client.storage.from('product-images').upload(path, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg' });
+      if (error) throw error;
+      evImageUrl = client.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+      note.textContent = 'Artwork uploaded.';
+    } catch (err) {
+      note.textContent = 'Upload failed: ' + (err.message || err) + '. Try again.';
+      note.classList.add('up-hint--error');
+    }
+    evUploading = false;
+    evRenderArt();
+  });
+
+  $('up-ev-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (evUploading) { evStatus('up-ev-status', 'Wait for the artwork to finish uploading.', true); return; }
+    const pending = $('up-ev-new-product').value.trim();
+    if (pending) evAddProduct();
+    const payload = {
+      heading: $('up-ev-heading').value.trim(),
+      image_url: evImageUrl || null,
+      event_date: $('up-ev-date').value || null,
+      event_time: $('up-ev-time').value.trim() || null,
+      event_url: $('up-ev-url').value.trim() || null,
+      featured: $('up-ev-featured').checked,
+      announced_products: evProducts,
+    };
+    const missing = [!payload.image_url && 'the artwork', !payload.heading && 'a title', !payload.event_date && 'the date'].filter(Boolean);
+    if (missing.length) {
+      evStatus('up-ev-status', 'Still needed: ' + missing.join(', ') + '.', true);
+      return;
+    }
+    const btn = $('up-ev-save');
+    btn.disabled = true;
+    evStatus('up-ev-status', 'Saving…');
+    try {
+      const result = evEditingId
+        ? await client.from('apple_events').update(payload).eq('id', evEditingId)
+        : await client.from('apple_events').insert(payload).select();
+      if (result.error) throw result.error;
+      if (!evEditingId) {
+        const row = Array.isArray(result.data) ? result.data[0] : result.data;
+        evEditingId = row && row.id ? row.id : null;
+      }
+      // Only one event can go first on the homepage.
+      if (payload.featured) {
+        const others = evList.filter((ev) => ev.featured && ev.id !== evEditingId);
+        for (const other of others) {
+          const clear = await client.from('apple_events').update({ featured: false }).eq('id', other.id);
+          if (clear.error) console.error('Could not un-feature an event:', clear.error);
+        }
+      }
+      const { data } = await client.from('apple_events').select('*').order('event_date', { ascending: false });
+      evList = (data || []).slice().sort((a, b) => String(b.event_date || '').localeCompare(String(a.event_date || '')));
+      $('up-ev-form-title').textContent = 'Edit event';
+      $('up-ev-more').hidden = !evEditingId;
+      evStatus('up-ev-status', 'Saved. Publishing…');
+      const published = await publishSite();
+      evStatus('up-ev-status', published.ok
+        ? 'Saved and published. The homepage and event page update in a minute or two. Tap Post to X below to promote it.'
+        : 'Saved, but publishing didn’t start (' + published.error + '). It will go live with the next publish or the morning rebuild.', !published.ok);
+    } catch (err) {
+      evStatus('up-ev-status', 'Could not save: ' + (err.message || err), true);
+    }
+    btn.disabled = false;
+  });
+
+  $('up-ev-delete').addEventListener('click', async () => {
+    if (!evEditingId || !window.confirm('Delete this event? This cannot be undone.')) return;
+    const { error } = await client.from('apple_events').delete().eq('id', evEditingId);
+    if (error) { evStatus('up-ev-status', 'Could not delete: ' + error.message, true); return; }
+    evEditingId = null;
+    evList = [];
+    const published = await publishSite();
+    openEvents(published.ok ? 'Deleted. The site updates in a minute or two.' : 'Deleted, but publishing didn’t start (' + published.error + ').', !published.ok);
+  });
+
+  // A ready-made post with the event's own card, back to the event after.
+  $('up-ev-x').addEventListener('click', () => {
+    const ev = evList.find((x) => x.id === evEditingId);
+    if (!ev) return;
+    show('x');
+    xReturnTo = () => show('event');
+    $('up-x-back').textContent = '‹ Back to the event';
+    $('up-x-back').hidden = false;
+    $('up-x-text').value = '';
+    $('up-x-card-on').checked = true;
+    $('up-x-tags').checked = true;
+    xUseIdea(window.FactsKit.eventPostIdea(ev, { origin: window.location.origin }));
+  });
+
 
   start();
 })();
