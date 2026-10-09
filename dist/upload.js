@@ -959,6 +959,14 @@
     $('up-x-card-emoji').value = '';
     $('up-x-card-icon').value = 'auto';
     xMarkIcon();
+    // An event's idea brings its own card: artwork, name and countdown.
+    if (window.FactsKit.applyIdeaCard(idea, {
+      title: $('up-x-card-title'), headline: $('up-x-card-headline'), line: $('up-x-card-line'),
+      emoji: $('up-x-card-emoji'), select: $('up-x-card-icon'), picker: $('up-x-card-icon-picker'),
+    }, xRefresh)) {
+      xCardFieldsOwn = true;
+      $('up-x-card-on').checked = true;
+    }
     $('up-x-idea-list').innerHTML = '';
     xRefresh();
     $('up-x-text').scrollIntoView({ block: 'center' });
@@ -1019,6 +1027,9 @@
         const j = Math.floor(Math.random() * (i + 1));
         [xIdeas[i], xIdeas[j]] = [xIdeas[j], xIdeas[i]];
       }
+      // A coming, live or just-held Apple Event goes first.
+      const { data: events } = await client.from('apple_events').select('*');
+      xIdeas = window.FactsKit.eventPostIdeas(events || [], window.location.origin).concat(xIdeas);
       xShown = 0;
     }
     xShowIdeas();

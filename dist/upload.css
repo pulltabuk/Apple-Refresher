@@ -286,3 +286,6 @@ body {
 .icon-pick-auto { font-size: 12px; font-weight: 700; color: var(--text); }
 .icon-pick.is-picked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: #fff7ef; }
 .icon-picker-auto { margin: 2px 0 0; }
+
+.icon-pick--image { padding: 3px; }
+.icon-pick--image img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }

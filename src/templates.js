@@ -118,21 +118,10 @@ function galleryPhotoSlug(photo) {
   return slug || String(photo.id);
 }
 
+// SEO-friendly event URL: heading plus month and year, e.g.
+// "surprise-and-shine-september-2026" (shared with facts-kit.js).
 function eventSlug(event) {
-  // SEO-friendly event URL: heading plus month and year, e.g.
-  // "surprise-and-shine-september-2026". Falls back to the UUID if an
-  // event somehow has no heading, so a page is always reachable.
-  const heading = slugify(String(event.heading || '').replace(/['\u2019]/g, ''));
-  let datePart = '';
-  if (event.event_date) {
-    const d = new Date(event.event_date);
-    if (!isNaN(d)) {
-      const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-      datePart = months[d.getUTCMonth()] + '-' + d.getUTCFullYear();
-    }
-  }
-  const slug = [heading, datePart].filter(Boolean).join('-');
-  return slug || String(event.id);
+  return FactsKit.eventSlug(event);
 }
 
 function readableSlugFallback(value) {

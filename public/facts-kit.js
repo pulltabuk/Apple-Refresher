@@ -432,6 +432,8 @@
       // name, or anything else typed, drawn as an emoji.
       const icon = String(fields.icon || 'auto').trim();
       if (CARD_ICONS[icon]) { subject.shape = CARD_ICONS[icon]; subject.iconUrl = null; }
+      // An image (an event's artwork); the invitation icon if it won't load.
+      else if (/^(https?:)?\/\//i.test(icon) || /^\/[^/]/.test(icon)) { subject.iconUrl = icon; subject.shape = CARD_ICONS.invite; subject.iconFill = true; }
       else if (icon && icon !== 'auto') emoji = icon;
     }
     fitText.cut = false;
@@ -494,6 +496,17 @@
       ctx.font = '190px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", ' + FONT;
       ctx.fillStyle = '#9c4009';
       ctx.fillText(emoji, tx + TILE / 2, ty + TILE / 2 + 10, TILE - 50);
+      ctx.restore();
+    } else if (art && subject.iconFill && subject.iconUrl) {
+      // An event's artwork fills the tile, trimmed to a square from the
+      // middle, where Apple puts the emblem.
+      const iw = art.naturalWidth || art.width || 1;
+      const ih = art.naturalHeight || art.height || 1;
+      const side = Math.min(iw, ih);
+      ctx.save();
+      roundedRect(ctx, tx, ty, TILE, TILE, 44);
+      ctx.clip();
+      ctx.drawImage(art, (iw - side) / 2, (ih - side) / 2, side, side, tx, ty, TILE, TILE);
       ctx.restore();
     } else if (art) {
       // Fit inside the tile, keeping the icon's own proportions.
@@ -938,6 +951,10 @@
   // product list, or when no product is named, the product line instead.
   function hashtagsFor(text, products) {
     const tags = ['#Apple'];
+    if (/\bapple event\b|\bkeynote\b|\bevent\b/i.test(String(text || ''))) {
+      tags.push('#AppleEvent');
+      return tags;
+    }
     const product = productNamed(text, products);
     if (product) {
       const tag = '#' + String(product.name).replace(/[^A-Za-z0-9]+/g, '');
@@ -1282,6 +1299,130 @@
       unit(Math.floor((secs % 3600) / 60), 'mins') + unit(secs % 60, 'secs', 'countdown-unit--secs');
   }
 
+  // The event's page address, e.g. "welcome-home-october-2026". The build
+  // (eventSlug in src/templates.js) uses this; app.js keeps a copy.
+  function eventSlug(event) {
+    const heading = String(event.heading || '').replace(/['\u2019]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '');
+    let datePart = '';
+    const d = event.event_date ? new Date(event.event_date) : null;
+    if (d && !isNaN(d)) {
+      const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+      datePart = months[d.getUTCMonth()] + '-' + d.getUTCFullYear();
+    }
+    return [heading, datePart].filter(Boolean).join('-') || String(event.id);
+  }
+
+  // A ready-made X post about an event, with its card: the event's own
+  // artwork in the tile, its name, and how long to go (or that it's live,
+  // or what was announced). opts: origin, now.
+  function eventPostIdea(event, opts) {
+    const o = opts || {};
+    const now = o.now == null ? Date.now() : o.now;
+    const origin = o.origin || 'https://applesunset.com';
+    const phase = eventPhase(event, now) || 'upcoming';
+    const start = eventStartMs(event);
+    const name = String(event.heading || 'Apple Event').trim();
+    const quoted = '\u201c' + name + '\u201d';
+    const day = eventDayText(event);
+    const longDay = (() => {
+      const d = new Date(String(event.event_date).slice(0, 10) + 'T12:00:00Z');
+      return isNaN(d) ? day : d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).replace(',', '');
+    })();
+    const uk = eventUkTime(event);
+    const time = event.event_time ? ' at ' + event.event_time + (uk ? ' (' + uk + ')' : '') : '';
+    const products = (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p)).filter((p) => p && p.name);
+    const names = products.filter((p) => p.featured).map((p) => p.name).concat(products.filter((p) => !p.featured).map((p) => p.name));
+    const listOf = (list) => (list.length < 2 ? list.join('') : list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1]);
+    const icon = event.image_url ? (/^https?:\/\//i.test(event.image_url) ? event.image_url : origin + event.image_url) : 'invite';
+    const link = origin + '/events/' + eventSlug(event) + '/';
+    const whenLine = [day, event.event_time].filter(Boolean).join(' \u00b7 ') + (uk ? ' (' + uk + ')' : '');
+    let text;
+    let card;
+    if (phase === 'upcoming') {
+      // Calendar days to go, as it is in the UK: Friday to Tuesday is 4.
+      const todayUk = new Date(now + tzOffsetMs('Europe/London', now)).toISOString().slice(0, 10);
+      const days = Math.round((Date.parse(String(event.event_date).slice(0, 10)) - Date.parse(todayUk)) / 86400000);
+      text = 'It\u2019s official: Apple\u2019s next event, ' + quoted + ', is on ' + longDay + time + '. Follow the countdown, then see everything announced, on Apple Sunset.';
+      card = { label: 'Apple Event', title: name, headline: days > 1 ? days + ' days' : days === 1 ? 'Tomorrow' : 'Today', line: whenLine, icon };
+    } else if (phase === 'live') {
+      text = 'Apple\u2019s ' + quoted + ' event is live now. Everything announced will be on Apple Sunset.';
+      card = { label: 'Apple Event', title: name, headline: 'Live now', line: whenLine, icon };
+    } else {
+      let shown = names.slice();
+      text = '';
+      while (shown.length) {
+        text = 'Everything Apple announced at its ' + quoted + ' event: ' + listOf(shown.length < names.length ? shown.concat(['more']) : shown) + '.';
+        if (text.length <= 230) break;
+        shown = shown.slice(0, -1);
+      }
+      if (!names.length) text = 'Apple\u2019s ' + quoted + ' event, ' + longDay + '. Everything announced is on Apple Sunset.';
+      card = {
+        label: phase === 'recap' ? 'Just announced' : 'Apple Event',
+        title: name,
+        headline: names.length ? names.length + ' new product' + (names.length === 1 ? '' : 's') : day,
+        line: names.length ? listOf(names.slice(0, 3).concat(names.length > 3 ? ['more'] : [])) : whenLine,
+        icon,
+      };
+    }
+    return { kind: card.label, text, link, card };
+  }
+
+  // Post ideas for the events worth posting about now: coming in the next
+  // 60 days, live, or held in the last two days. Soonest first.
+  function eventPostIdeas(events, origin, now) {
+    const t = now == null ? Date.now() : now;
+    return (events || [])
+      .map((event) => ({ event, start: eventStartMs(event), phase: eventPhase(event, t) }))
+      .filter((x) => x.phase && x.phase !== 'past' && !(x.phase === 'upcoming' && x.start - t > 60 * 86400000))
+      .sort((a, b) => a.start - b.start)
+      .map((x) => eventPostIdea(x.event, { origin, now: t }));
+  }
+
+  // Puts an idea's own card (an event's: its artwork, name and countdown)
+  // into an X composer's card fields. els: title, headline, line, emoji,
+  // select and picker. Returns false when the idea has none.
+  function applyIdeaCard(idea, els, onChange) {
+    const card = idea && idea.card;
+    if (!card) return false;
+    els.title.value = card.title || '';
+    els.headline.value = card.headline || '';
+    els.line.value = card.line || '';
+    els.emoji.value = '';
+    const icon = String(card.icon || 'auto');
+    if (CARD_ICONS[icon] || icon === 'auto') {
+      els.select.value = icon;
+    } else {
+      addIconPickerImage(els.picker, els.select, els.emoji, icon, 'Event artwork', onChange);
+      els.select.value = icon;
+    }
+    if (els.picker && els.picker.markPicked) els.picker.markPicked();
+    return true;
+  }
+
+  // An image choice in the card icon picker (an event's artwork).
+  function addIconPickerImage(box, select, emojiInput, url, label, onChange) {
+    if (!box || !select || !url) return;
+    if (![...select.options].some((o) => o.value === url)) select.add(new Option(label || 'Image', url));
+    if ([...box.children].some((b) => b.dataset.value === url)) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-pick icon-pick--image';
+    btn.dataset.value = url;
+    btn.title = label || 'Image';
+    btn.setAttribute('aria-label', label || 'Image');
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    btn.appendChild(img);
+    btn.addEventListener('click', () => {
+      select.value = url;
+      emojiInput.value = '';
+      if (box.markPicked) box.markPicked();
+      if (onChange) onChange();
+    });
+    box.insertBefore(btn, box.children[1] || null);
+  }
+
   // The countdown on its own (the event's page), while it is still to come.
   function eventCountdownHtml(event, now) {
     const start = eventStartMs(event);
@@ -1335,17 +1476,18 @@
         .concat(named.filter((p) => !p.featured).sort((a, b) => a.name.localeCompare(b.name)));
       const bySlugName = {};
       (o.products || []).forEach((p) => { if (p && p.name && p.slug) bySlugName[p.name.toLowerCase()] = p.slug; });
-      const shown = ordered.slice(0, 4);
+      const shown = ordered.slice(0, 12);
       const more = ordered.length - shown.length;
       middle = ordered.length
-        ? '<ul class="event-hero-products">' + shown.map((p) => {
+        ? '<ul class="event-hero-products' + (shown.length > 4 ? ' event-hero-products--many' : '') + '">' + shown.map((p) => {
             const slug = bySlugName[p.name.toLowerCase()];
             return '<li>' + (slug ? '<a href="/products/' + escapeHtml(slug) + '/">' + escapeHtml(p.name) + '</a>' : escapeHtml(p.name)) + '</li>';
           }).join('') + (more > 0 ? '<li class="event-hero-more">+' + more + ' more</li>' : '') + '</ul>'
         : '<p class="event-hero-note">What Apple announced is being added now.</p>';
       cta = '<a class="event-hero-cta" href="' + href + '">' + (ordered.length ? 'See everything announced' : 'Go to the event page') + ' <span aria-hidden="true">&rarr;</span></a>';
     }
-    return '<article class="card card--featured card--event event-hero event-hero--' + phase + '" data-event-hero data-phase-until="' + until + '">' +
+    const many = phase === 'recap' && (event.announced_products || []).length > 4;
+    return '<article class="card card--featured card--event event-hero event-hero--' + phase + (many ? ' event-hero--many' : '') + '" data-event-hero data-phase-until="' + until + '">' +
       kicker + art +
       '<div class="event-hero-head"><h2 class="event-hero-title"><a class="event-hero-link" href="' + href + '">' + title + '</a></h2>' +
       '<p class="event-hero-when">' + whenLine + '</p></div>' +
@@ -1359,6 +1501,10 @@
     pickHeroEvent,
     eventHeroHtml,
     eventCountdownHtml,
+    eventSlug,
+    eventPostIdea,
+    eventPostIdeas,
+    applyIdeaCard,
     eventUkTime,
     insertFact,
     appleName,
