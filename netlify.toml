@@ -6,10 +6,10 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# Rebuild every morning so day counters stay accurate and a finished
-# countdown clears itself. 06:10 UTC, a quiet time for the site.
+# Rebuild just after midnight UTC so day counters are right for the whole
+# day (pages also refresh them live) and a finished countdown clears itself.
 [functions."daily-build"]
-  schedule = "10 6 * * *"
+  schedule = "5 0 * * *"
 
 # Lets Netlify's Image CDN (/.netlify/images) resize photos stored in
 # Supabase, so the phone upload page can show small thumbnails instead of

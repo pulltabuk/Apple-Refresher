@@ -2804,3 +2804,6 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-cards .event-hero--many .event-hero-products--many li { font-size: 12px; padding: 4px 8px; }
 }
 .event-hero-products--many .event-hero-more { align-self: center; padding: 0 4px; }
+
+.contact-email-line { margin: -0.25rem 0 1.25rem; }
+.footer-email { margin-top: 4px; }

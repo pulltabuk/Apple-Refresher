@@ -802,7 +802,7 @@
     const years = days / 365.25;
     if (years >= 1.75) return 'about ' + (Math.round(years * 2) / 2).toString().replace('.5', '½') + ' years';
     if (days >= 60) return 'about ' + Math.round(days / 30.44) + ' months';
-    return days + ' days';
+    return days + (days === 1 ? ' day' : ' days');
   }
   function daysBetweenIso(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
   function longDate(iso) { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); }
@@ -828,7 +828,7 @@
       out.push('The ' + name + ' went on sale ' + spanText(daysBetweenIso(info.announced, latest)) + ' after Apple announced it, on ' + longDate(info.announced) + '.');
     }
     if (latest && info.preorder && info.preorder < latest) {
-      out.push('Pre-orders for the ' + name + ' opened ' + daysBetweenIso(info.preorder, latest) + ' days before it reached customers on ' + longDate(latest) + '.');
+      out.push('Pre-orders for the ' + name + ' opened ' + (function (n) { return n + (n === 1 ? ' day' : ' days'); })(daysBetweenIso(info.preorder, latest)) + ' before it reached customers on ' + longDate(latest) + '.');
     }
     if (releases.length >= 2) {
       const gaps = releases.slice(1).map((d, i) => daysBetweenIso(releases[i], d)).filter((g) => g > 0);
@@ -916,15 +916,37 @@
 
   // The Facts page: every fact published to the homepage, newest first.
   // Product "Did you know?" notes stay on their product pages.
-  function factsPageHtml(facts) {
+  // A published fact is fixed text, so one that states a site statistic
+  // ("tracking 19 Apple products") goes out of date as products are added.
+  // With the products to hand, such a fact takes the statistic's current
+  // wording and numbers (marked live), and two versions of the same
+  // statistic show once, the newest. Facts come newest first.
+  function liveFacts(facts, products) {
     const list = (facts || []).filter((f) => f && f.id && String(f.text || '').trim());
+    if (!products || !products.length) return list;
+    const shape = (t) => normaliseFact(t).replace(/[0-9][0-9,.]*/g, '#');
+    const current = {};
+    generateFactCandidates(products).forEach((text) => { current[shape(text)] = text; });
+    const seen = {};
+    return list.reduce((out, f) => {
+      const s = shape(f.text);
+      if (!current[s]) { out.push(f); return out; }
+      if (seen[s]) return out;
+      seen[s] = true;
+      out.push(Object.assign({}, f, { text: current[s], live: true }));
+      return out;
+    }, []);
+  }
+
+  function factsPageHtml(facts, products) {
+    const list = liveFacts(facts, products);
     if (!list.length) return '';
     return '<div class="facts-grid">' + list.map((f) => {
       const href = '/facts/' + encodeURIComponent(String(f.id)) + '/';
       const day = String(f.created_at || '').slice(0, 10);
       return '<article class="fact-card fact-card--product">' +
         '<p class="fact-text">' + escapeHtml(f.text) + '</p>' +
-        (/^\d{4}-\d{2}-\d{2}$/.test(day) ? '<p class="fact-date">' + Number(day.slice(8)) + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(day.slice(5, 7)) - 1] + ' ' + day.slice(0, 4) + '</p>' : '') +
+        (f.live ? '<p class="fact-date">Kept up to date</p>' : /^\d{4}-\d{2}-\d{2}$/.test(day) ? '<p class="fact-date">' + Number(day.slice(8)) + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(day.slice(5, 7)) - 1] + ' ' + day.slice(0, 4) + '</p>' : '') +
         '<a class="fact-more-link" href="' + href + '">Read more &rarr;</a>' +
         '</article>';
     }).join('') + '</div>';
@@ -1069,7 +1091,7 @@
       .slice(0, 5)
       .forEach(({ p, r, last }) => {
         const days = daysBetweenDates(last, today);
-        let text = 'It’s been ' + days.toLocaleString('en-GB') + ' days since Apple last updated the ' + p.name + '.';
+        let text = 'It’s been ' + days.toLocaleString('en-GB') + (days === 1 ? ' day' : ' days') + ' since Apple last updated the ' + p.name + '.';
         if (r.length >= 2) {
           const gaps = r.slice(1).map((d, i) => daysBetweenDates(r[i], d)).filter((g) => g > 0);
           const avg = gaps.length ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length) : 0;
@@ -1293,7 +1315,7 @@
   }
   function eventClockUnits(ms) {
     const secs = Math.max(0, Math.floor(ms / 1000));
-    const unit = (value, label, cls) => '<span class="countdown-unit' + (cls ? ' ' + cls : '') + '"><span class="countdown-value">' + value + '</span><span class="countdown-unit-label">' + label + '</span></span>';
+    const unit = (value, label, cls) => '<span class="countdown-unit' + (cls ? ' ' + cls : '') + '"><span class="countdown-value">' + value + '</span> <span class="countdown-unit-label">' + label + '</span></span>';
     const days = Math.floor(secs / 86400);
     return unit(days, days === 1 ? 'day' : 'days') + unit(Math.floor((secs % 86400) / 3600), 'hours') +
       unit(Math.floor((secs % 3600) / 60), 'mins') + unit(secs % 60, 'secs', 'countdown-unit--secs');
@@ -1423,6 +1445,16 @@
     box.insertBefore(btn, box.children[1] || null);
   }
 
+  // "in 24 days", "tomorrow" or "today" until a date, counted in UK
+  // calendar days (the homepage's earnings line; app.js keeps it current).
+  function daysUntilText(dateStr, now) {
+    const t = now == null ? Date.now() : now;
+    const todayUk = new Date(t + tzOffsetMs('Europe/London', t)).toISOString().slice(0, 10);
+    const days = Math.round((Date.parse(String(dateStr).slice(0, 10)) - Date.parse(todayUk)) / 86400000);
+    if (isNaN(days)) return '';
+    return days <= 0 ? 'today' : days === 1 ? 'tomorrow' : 'in ' + days + ' days';
+  }
+
   // The countdown on its own (the event's page), while it is still to come.
   function eventCountdownHtml(event, now) {
     const start = eventStartMs(event);
@@ -1503,6 +1535,8 @@
     eventHeroHtml,
     eventCountdownHtml,
     eventSlug,
+    liveFacts,
+    daysUntilText,
     eventPostIdea,
     eventPostIdeas,
     applyIdeaCard,

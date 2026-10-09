@@ -138,8 +138,12 @@ function slugify(str) {
     .replace(/(^-+|-+$)/g, '');
 }
 
+// The latest thing that has actually happened to a product (a coming
+// release doesn't count): the feed's date and the sitemap's lastmod.
 function mostRecentActivityDate(product) {
-  const dates = [product.discontinued && product.discontinued_date, ...(product.refresh_history || [])].filter(Boolean);
+  const today = new Date().toISOString().slice(0, 10);
+  const dates = [product.discontinued && product.discontinued_date, ...(product.refresh_history || [])]
+    .filter((d) => d && String(d).slice(0, 10) <= today);
   if (!dates.length) return null;
   return dates.sort().reverse()[0];
 }
@@ -153,9 +157,14 @@ function rssFeedXml({ allItems, siteUrl }) {
     .slice(0, 40);
   const items = withDates.map(({ product, date }) => {
     const link = `${siteUrl}/products/${product.slug}/`;
-    const desc = product.discontinued
-      ? `${product.name} was discontinued.`
-      : `${product.name} was refreshed.`;
+    // Say what happened on that date: discontinued, first released, or a
+    // later release.
+    const first = (product.refresh_history || []).slice().sort()[0];
+    const desc = product.discontinued && product.discontinued_date === date
+      ? `${product.name} was discontinued on ${formatDate(date)}.`
+      : date === (product.original_launch_date || first)
+      ? `${product.name} was released on ${formatDate(date)}.`
+      : `A new ${product.name} was released on ${formatDate(date)}.`;
     let pubDate;
     try {
       pubDate = new Date(date).toUTCString();
@@ -171,11 +180,14 @@ function rssFeedXml({ allItems, siteUrl }) {
   </item>`;
   }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
   <title>Apple Sunset — Recent Refreshes &amp; Discontinuations</title>
   <link>${siteUrl}</link>
+  <atom:link href="${siteUrl}/feed.xml" rel="self" type="application/rss+xml"/>
   <description>Recently refreshed and discontinued Apple products, tracked by Apple Sunset.</description>
+  <language>en-gb</language>
+  <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
 ${items}
 </channel>
 </rss>
@@ -692,7 +704,7 @@ function categoryStatsSentence(category, items) {
   // Half-year precision reads naturally ("every 3½ years") without
   // rounding 3.5 up to a misleading 4.
   const cadence = (d) => {
-    if (d < 330) return `roughly every ${Math.max(1, Math.round(d / 30.4))} months`;
+    if (d < 330) { const m = Math.max(1, Math.round(d / 30.4)); return m === 1 ? 'about once a month' : `roughly every ${m} months`; }
     const years = Math.round((d / 365.25) * 2) / 2;
     if (years === 1) return 'about once a year';
     const whole = Math.floor(years);
@@ -700,12 +712,19 @@ function categoryStatsSentence(category, items) {
   };
 
   const parts = [`Across the ${past.length} release dates recorded here (several products often launch on the same day), Apple has updated ${escapeHtml(category)} ${cadence(avg)}.`];
+  // Name the release this counts from: on a product page it can be a
+  // different product in the family, and an unnamed number reads as this
+  // product's own count. Keep in step with familyCadenceJS() in app.js.
+  const lastDate = past[past.length - 1];
+  const lastNames = items.filter((i) => (i.product.refresh_history || []).indexOf(lastDate) !== -1).map((i) => i.product.name).sort((a, b) => a.localeCompare(b));
+  const who = lastNames.length > 2 ? `the ${lastNames[0]} and others` : lastNames.length ? `the ${lastNames.join(' and the ')}` : '';
+  const latest = `The latest ${escapeHtml(category)} release${who ? `, ${escapeHtml(who)},` : ''} was ${plural(sinceLast, 'day', 'days')} ago`;
   if (sinceLast > avg * 1.25) {
-    parts.push(`It has now been ${plural(sinceLast, 'day', 'days')} since the last one, well past the usual gap.`);
+    parts.push(`${latest}, well past the usual gap.`);
   } else if (sinceLast > avg) {
-    parts.push(`It has now been ${plural(sinceLast, 'day', 'days')}, a little beyond the usual gap.`);
+    parts.push(`${latest}, a little beyond the usual gap.`);
   } else {
-    parts.push(`The last update was ${plural(sinceLast, 'day', 'days')} ago, so the next is not due yet.`);
+    parts.push(`${latest}, so the next is not due yet.`);
   }
   return `<p class="page-stats">${parts.join(' ')}</p>`;
 }
@@ -741,7 +760,7 @@ function overdueRowHtml(product, statusInfo) {
   return `<li><a class="overdue-row overdue-row--${statusInfo.status}" href="/products/${product.slug}/">
     <span class="overdue-row-icon">${productIcon(product, 36)}</span>
     <span class="overdue-row-main"><span class="overdue-row-name">${escapeHtml(product.name)}</span></span>
-    <span class="overdue-row-days"><strong>${statusInfo.daysSince}</strong> days</span>
+    <span class="overdue-row-days"><strong>${statusInfo.daysSince}</strong> ${statusInfo.daysSince === 1 ? 'day' : 'days'}</span>
   </a></li>`;
 }
 
@@ -786,6 +805,14 @@ const DEFAULT_SCRIPTS = [
 ];
 
 
+// When this copy of the site was built, in every page's head: tells a
+// fresh page from a cached one.
+const BUILT_AT = new Date().toISOString();
+
+// Where people can reach Apple Sunset: the contact page, the footer and
+// the site's structured data.
+const CONTACT_EMAIL = 'infoswiper@yahoo.com';
+
 function contactPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   // Handled by Netlify Forms: the form is detected in the built HTML at
   // deploy time, so there is no server code. The honeypot field catches
@@ -794,6 +821,7 @@ function contactPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
   <h1>Get in touch</h1>
   <p class="page-intro">Spotted something wrong, know a date we have missed, or want to suggest a product? Send us a note and we will read every one.</p>
+  <p class="contact-email-line">Prefer email? Write to <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
 
   <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/contact/thanks/" class="contact-form">
     <input type="hidden" name="form-name" value="contact">
@@ -922,6 +950,7 @@ ${noindex ? '<meta name="robots" content="noindex">' : '<meta name="robots" cont
       name: 'Apple Sunset',
       url: siteUrl,
       logo: `${siteUrl}/logo.png`,
+      email: CONTACT_EMAIL,
     },
   ],
 })}</script>
@@ -929,6 +958,7 @@ ${extraJsonLd ? `<script type="application/ld+json">${JSON.stringify(extraJsonLd
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
+<meta name="generated" content="${BUILT_AT}">
 </head>
 <body${bodyClass}>
 <header class="site-header-bg">
@@ -970,6 +1000,7 @@ ${bodyHtml}
       <a href="/feed.xml">RSS Feed</a>
     </nav>
     <p>Apple Sunset is an independent tracker and is not affiliated with Apple Inc.</p>
+    <p class="footer-email">Email <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p>
   </div>
 </footer>
 <script>
@@ -1253,7 +1284,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
   <h1>${pageHeading(pageContent, 'Gallery')}</h1>
   <a class="admin-edit-link" data-admin-href="/admin/" data-admin-label="Admin" style="display:none;"></a>
 </div>
-<p class="page-intro">No photos yet. Add some in <a href="/admin/">/admin/</a>.</p>`;
+<p class="page-intro">No photos yet.</p>`;
   return shell({
     title: 'Gallery — Apple Sunset',
     description: 'Photos taken along the way, in Apple Stores and elsewhere.',
@@ -1266,7 +1297,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 }
 
 function emptyState(what) {
-  return `<p class="page-intro">No ${what} yet. Add one in <a href="/admin/">/admin/</a> to see it here.</p>`;
+  return `<p class="page-intro">No ${what} yet.</p>`;
 }
 
 function upcomingExtras(product) {
@@ -1295,11 +1326,11 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
             // server-rendered day count is the fallback if scripts are off.
             const away = due ? daysUntil(due) : null;
             const fallback = away !== null && away > 0
-              ? `<span class="countdown-unit"><span class="countdown-value">${away}</span><span class="countdown-unit-label">${away === 1 ? 'day' : 'days'}</span></span>`
+              ? `<span class="countdown-unit"><span class="countdown-value">${away}</span> <span class="countdown-unit-label">${away === 1 ? 'day' : 'days'}</span></span>`
               : '<span class="countdown-unit"><span class="countdown-value">Today</span></span>';
             return `<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="${due}"><span class="product-countdown-clock" data-product-countdown-clock>${fallback}</span><span class="card-featured-count-due">Coming ${formatDate(due)}</span></div>`;
           })()
-        : `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span><span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`)
+        : `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span> <span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`)
     : productBadge(product, statusInfo);
   const launch = launchDate(product);
   const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
@@ -1323,7 +1354,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
     ? singleHtml
     : statusInfo && daysInfo && daysInfo.days >= 0 && !product.discontinued
     ? `<div class="card-featured-cycle card-featured-cycle--${statusInfo.status}">
-      <div class="card-featured-cycle-head"><span>Average refresh cycle</span><strong>${statusInfo.avgCycleDays} days</strong></div>
+      <div class="card-featured-cycle-head"><span>Average refresh cycle</span><strong>${plural(statusInfo.avgCycleDays, 'day', 'days')}</strong></div>
       <div class="card-featured-cycle-bar"><span style="width:${Math.min(100, Math.round(statusInfo.ratio * 100))}%"></span></div>
       <p class="card-featured-cycle-note">${statusInfo.ratio >= 1 ? `${statusInfo.ratio.toFixed(1)}&times; the usual wait` : `${Math.round(statusInfo.ratio * 100)}% of the usual wait`}</p>
     </div>`
@@ -1408,7 +1439,7 @@ function eventArchiveCardHtml(event, productsBySlug) {
       ? `<a class="pill pill--link" href="/products/${match.slug}/">${escapeHtml(p.name)}</a>`
       : `<span class="pill">${escapeHtml(p.name)}</span>`;
   }).join('') + (remaining > 0 ? `<span class="pill pill--muted">+${remaining} more</span>` : '');
-  const inner = `<div class="card-image">${event.image_url ? `<img src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}</div>
+  const inner = `<div class="card-image">${event.image_url ? `<img src="${escapeHtml(event.image_url)}" alt="">` : ''}</div>
     <p class="card-name">${escapeHtml(event.heading)}</p>
     ${dateText ? `<p class="card-meta">${escapeHtml(dateText)}</p>` : ''}`;
   // data-search lets the page filter match the announced products as
@@ -1439,7 +1470,7 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
   </div>
   ${dateText ? `<p class="page-intro">${escapeHtml(dateText)}</p>` : ''}
   ${FactsKit.eventCountdownHtml(event)}
-  ${event.image_url ? `<img class="event-detail-image" src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}
+  ${event.image_url ? `<img class="event-detail-image" src="${escapeHtml(event.image_url)}" alt="">` : ''}
   ${productsList ? `<h2>What was announced</h2>${productsList}` : ''}
   ${event.event_url ? `<p><a class="intro-cta" href="${escapeHtml(event.event_url)}" target="_blank" rel="noopener">Watch on Apple's site</a></p>` : ''}
   <p><a href="/events/" class="gallery-nav-link">&larr; All Apple Events</a></p>
@@ -1463,7 +1494,7 @@ function eventsPage({ events, productsBySlug, pageContent, siteUrl, supabaseUrl,
 </div>
 ${pageStandardLine(pageContent, `<p class="page-intro">A running record of every Apple Event announced here, and what was revealed at each one.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
-<p id="no-events" class="page-intro" style="display:${events.length ? 'none' : ''};">No events yet. Add one in <a href="/admin/">/admin/</a>.</p>
+${events.length ? '' : '<p id="no-events" class="page-intro">No events yet.</p>'}
 <div class="card-grid" id="grid" data-mode="events">
   ${events.map((event) => eventArchiveCardHtml(event, productsBySlug)).join('\n')}
 </div>`;
@@ -1481,8 +1512,8 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 // Statistics worked out from every product, then each product's own
 // "Did you know?". Built by the same code (public/facts-kit.js) that
 // the page's live refresh uses.
-function factsPage({ facts, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const inner = FactsKit.factsPageHtml(facts);
+function factsPage({ facts, products, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const inner = FactsKit.factsPageHtml(facts, products);
   const body = `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Facts')}</h1>
@@ -1490,7 +1521,7 @@ function factsPage({ facts, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }
 </div>
 ${pageStandardLine(pageContent, `<p class="page-intro">Every &ldquo;Did you know?&rdquo; from the Apple Sunset homepage, newest first.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
-<p id="no-facts" class="page-intro" style="display:${inner ? 'none' : ''};">Nothing here yet.</p>
+${inner ? '' : '<p id="no-facts" class="page-intro">Nothing here yet.</p>'}
 <div id="facts-list" class="facts-list" data-mode="facts">${inner}</div>`;
   return shell({
     title: 'Facts — Apple Sunset',
@@ -1506,13 +1537,15 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 
 // One fact's own page. Its main job is the link preview: tweets link
 // here, and X shows the fact's card (og:image) under the tweet.
-function factPage({ fact, cardUrl, related, siteUrl, supabaseUrl, supabaseAnonKey }) {
+function factPage({ fact: savedFact, products, cardUrl, related, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  // A statistic shows its current numbers (FactsKit.liveFacts).
+  const fact = (FactsKit.liveFacts([savedFact], products)[0]) || savedFact;
   const path = `/facts/${fact.id}/`;
   const body = `
 <article class="fact-page">
   <p class="fact-label">Did you know?</p>
   <h1 class="fact-page-text">${escapeHtml(fact.text)}</h1>
-  ${cardUrl ? `<img class="fact-page-card" src="${escapeHtml(cardUrl)}" alt="${escapeHtml(fact.text)}" width="1200" height="675">` : ''}
+  ${cardUrl ? `<img class="fact-page-card" src="${escapeHtml(cardUrl)}" alt="" width="1200" height="675">` : ''}
   ${factRelatedLinkHtml(related)}
   <a href="/facts/" class="fact-more-link">More facts &rarr;</a>
 </article>`;
@@ -1582,13 +1615,15 @@ function countdownHtml(countdown) {
   const items = Array.isArray(countdown) ? countdown : [countdown];
   if (!items.length) return '';
   return items.map((item) => {
-    const target = new Date(item.date + 'T09:00:00');
-    const days = Math.max(0, Math.ceil((target.getTime() - Date.now()) / 86400000));
+    // Whole days to go, as the ticking clock shows them: to the time
+    // given (e.g. "1:30pm PT"), else 8am UK on the day.
+    const target = item.time ? FactsKit.eventStartMs({ event_date: item.date, event_time: item.time }) : Date.parse(item.date + 'T07:00:00Z');
+    const days = Math.max(0, Math.floor((target - Date.now()) / 86400000));
     return `<a class="countdown" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''}>
     <span class="countdown-label">${escapeHtml(item.kicker || 'Counting down to')}</span>
     <span class="countdown-name">${escapeHtml(item.label)}</span>
     <span class="countdown-clock" data-countdown-clock>
-      <span class="countdown-unit"><span class="countdown-value">${days}</span><span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>
+      <span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>
     </span>
     <span class="countdown-date">${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}</span>
   </a>`;
@@ -1615,9 +1650,9 @@ function nextEarnings(earnings, today) {
 function earningsLineHtml(e) {
   if (!e) return '';
   const today = new Date().toISOString().slice(0, 10);
-  const days = Math.round((new Date(e.report_date) - new Date(today)) / 86400000);
-  const when = days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
-  return `<a class="earnings-next" href="/earnings/"><span class="earnings-next-label">Next earnings &middot; ${when}</span><span class="earnings-next-text">Apple ${earningsQuarter(e)} results, ${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></a>`;
+  // UK calendar days, kept current in the browser by app.js.
+  const when = FactsKit.daysUntilText(e.report_date);
+  return `<a class="earnings-next" href="/earnings/"><span class="earnings-next-label">Next earnings &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span><span class="earnings-next-text">Apple ${earningsQuarter(e)} results, ${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></a>`;
 }
 
 // When nothing is counting down: the latest release, in the same box.
@@ -1627,7 +1662,7 @@ function latestReleaseHeroHtml(latest, days) {
     <span class="countdown-label">Latest release</span>
     <span class="countdown-name">${escapeHtml(latest.name)}</span>
     <span class="countdown-clock">
-      <span class="countdown-unit"><span class="countdown-value">${days === 0 ? 'Today' : days}</span><span class="countdown-unit-label">${days === 0 ? '' : days === 1 ? 'day ago' : 'days ago'}</span></span>
+      <span class="countdown-unit"><span class="countdown-value">${days === 0 ? 'Today' : days}</span> <span class="countdown-unit-label">${days === 0 ? '' : days === 1 ? 'day ago' : 'days ago'}</span></span>
     </span>
     <span class="countdown-date">Released ${formatDate(latest.date)}</span>
   </a>`;
@@ -1701,7 +1736,7 @@ function siteStats(products) {
 
 function siteStatsHtml(s) {
   if (!s || !s.total) return '';
-  const stat = (href, num, label, extra) => `<a class="site-stat" href="${href}"><span class="site-stat-num">${num}</span><span class="site-stat-label">${label}</span>${extra || ''}</a>`;
+  const stat = (href, num, label, extra) => `<a class="site-stat" href="${href}"><span class="site-stat-num">${num}</span> <span class="site-stat-label">${label}</span>${extra || ''}</a>`;
   return `<div class="site-stats" id="site-stats">
     <div class="site-stats-head"><h2 class="site-stats-title">Apple Sunset at a glance</h2><span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span></div>
     <div class="site-stats-row">
@@ -1877,7 +1912,7 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
 </div>`
     : `
 <h1>${pageHeading(pageContent, 'Discontinued products')}</h1>
-<p class="page-intro">Nothing here yet. Tick Discontinued on a product in <a href="/admin/">/admin/</a> and give it a discontinued date, and it'll appear here.</p>`;
+<p class="page-intro">No discontinued products yet.</p>`;
   return shell({
     title: 'Discontinued Apple products — Apple Sunset',
     description: 'An archive of the Apple products that have been discontinued: when they launched, when they went, how long they lasted, and what replaced them.',

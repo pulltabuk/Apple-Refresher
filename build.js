@@ -441,7 +441,7 @@ async function main() {
 
   // The homepage "Did you know?": one fact a day from every product's own
   // fact, the site-wide statistics and the published facts, chosen from the date so everyone
-  // sees the same one until the next build (daily at 06:10 UTC). The
+  // sees the same one until the next build (daily at 00:05 UTC). The
   // products in the big tile are left out, so one product doesn't
   // appear twice on screen. FACT_DATE (YYYY-MM-DD) overrides the date
   // for testing.
@@ -480,7 +480,7 @@ async function main() {
   write('photo-licence/index.html', photoLicencePage(opts));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }), galleryPhotos.map(galleryLastmod).filter(Boolean).sort().pop() || null);
   write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
-  write('facts/index.html', factsPage({ facts, pageContent: pageContent.facts || null, ...opts }));
+  write('facts/index.html', factsPage({ facts, products, pageContent: pageContent.facts || null, ...opts }));
   write('earnings/index.html', earningsPage({ earnings, pageContent: pageContent.earnings || null, ...opts }));
 
   // One page per fact, whose link preview is the fact's card (made and
@@ -491,7 +491,7 @@ async function main() {
       ? `${SUPABASE_URL}/storage/v1/object/public/product-images/fact-cards/${fact.id}-${factKey(fact.text)}.png`
       : null;
     const cardExists = cardUrl ? await urlExists(cardUrl) : false;
-    write(`facts/${fact.id}/index.html`, factPage({ fact, cardUrl: cardExists ? cardUrl : null, related: factRelatedLink(fact.text, products, galleryPhotos), ...opts }));
+    write(`facts/${fact.id}/index.html`, factPage({ fact, products, cardUrl: cardExists ? cardUrl : null, related: factRelatedLink(fact.text, products, galleryPhotos), ...opts }));
   }
   const eventSlugRedirects = [];
   const usedEventSlugs = new Set();
