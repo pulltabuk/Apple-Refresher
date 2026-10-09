@@ -1452,10 +1452,11 @@
       : phase === 'recap'
       ? '<span class="event-hero-kicker">Just announced</span>'
       : '<span class="event-hero-kicker">Apple Event</span>';
-    // The artwork fills whatever height the tile has: shown whole, over a
-    // soft blurred copy of itself, so any shape of image looks intended.
+    // The artwork fills its frame, trimmed from the middle where Apple puts
+    // the emblem (as on the X card). No blurred backdrop: iPhone Safari
+    // can't reliably blur a large image and flickers.
     const art = event.image_url
-      ? '<span class="event-hero-art"><img class="event-hero-art-bg" src="' + escapeHtml(event.image_url) + '" alt="" aria-hidden="true"><img class="event-hero-art-img" src="' + escapeHtml(event.image_url) + '" alt=""></span>'
+      ? '<span class="event-hero-art"><img class="event-hero-art-img" src="' + escapeHtml(event.image_url) + '" alt=""></span>'
       : '';
     const whenLine = phase === 'recap'
       ? 'Held ' + escapeHtml(day)
