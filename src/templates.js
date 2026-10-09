@@ -1971,6 +1971,8 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
 // "how long has it been?", this asks "what's next for the family?": the
 // latest release, a New tag for 30 days after one, and when the next is
 // due, from the same family-wide average gap the category page quotes.
+// Keep in step with categoryRowHtmlJS() in app.js, which redraws the list
+// live so a product saved in the admin shows up straight away.
 function categoryRowHtml({ category, items }) {
   const today = new Date().toISOString().slice(0, 10);
   const products = items.map((i) => i.product);
@@ -1990,22 +1992,22 @@ function categoryRowHtml({ category, items }) {
     const ago = `<span class="crow-nowrap">${sinceLast === 0 ? 'today' : `${sinceLast.toLocaleString('en-GB')} ${sinceLast === 1 ? 'day' : 'days'} ago`}</span>`;
     latest = current.length
       ? `Latest: <strong>${escapeHtml(who)}</strong> &middot; ${ago}`
-      : `Last release: <strong>${escapeHtml(who)}</strong> &middot; ${new Date(lastDate).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}`;
+      : `Last release: <strong>${escapeHtml(who)}</strong> &middot; <span class="crow-nowrap">${formatDate(lastDate)}</span>`;
   }
   const count = gone === 0 ? plural(total, 'product', 'products')
     : gone === total ? (total === 1 ? '1 product, discontinued' : `${total} products, all discontinued`)
     : `${plural(total, 'product', 'products')} &middot; ${gone} discontinued`;
 
-  const monthYear = (ms) => new Date(ms).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+  const monthYear = (ms) => new Date(ms).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', timeZone: 'UTC' });
   const upcoming = current.flatMap((p) => p.refresh_history || []).filter((d) => d > today).sort()[0];
   let next;
   if (!current.length) {
     const year = products.map((p) => p.discontinued_date).filter(Boolean).sort().pop();
-    next = year ? { kind: 'gone', value: year.slice(0, 4), caption: 'line discontinued' } : { kind: 'gone', value: '', caption: 'Line discontinued' };
+    next = year ? { kind: 'gone', value: year.slice(0, 4), caption: 'line discontinued' } : { kind: 'gone', value: 'Discontinued', caption: 'whole line' };
   } else if (upcoming) {
     next = { kind: 'coming', value: formatDate(upcoming), caption: 'next release' };
   } else if (!cad) {
-    next = { kind: 'early', value: '', caption: past.length === 1 ? 'Only one release so far' : 'Too early to tell' };
+    next = past.length === 1 ? { kind: 'early', value: 'Only one release', caption: 'so far' } : { kind: 'early', value: 'Too early', caption: 'to tell' };
   } else {
     const due = new Date(lastDate).getTime() + cad.avg * 86400000;
     const why = `Based on ${cad.releases} release dates, about every ${plural(cad.avg, 'day', 'days')}`;
@@ -2013,14 +2015,14 @@ function categoryRowHtml({ category, items }) {
     else if (sinceLast <= cad.avg * 1.25) next = { kind: 'due', value: 'Due now', caption: `expected ${monthYear(due)}`, why };
     else next = { kind: 'overdue', value: 'Overdue', caption: `was expected ${monthYear(due)}`, why };
   }
-  return `<a class="crow" href="/categories/${slugify(category)}/">
-  <span class="crow-icon${CUSTOM_CATEGORY_ICONS && Object.keys(CUSTOM_CATEGORY_ICONS).some((k) => k.toLowerCase() === String(category).toLowerCase()) ? ' crow-icon--img' : ''}">${categoryIcon(category, 28)}</span>
+  return `<a class="crow" href="/categories/${slugify(category)}/" data-category="${escapeHtml(category)}">
+  <span class="crow-icon">${categoryIcon(category, 28)}</span>
   <span class="crow-main">
     <span class="crow-name">${escapeHtml(category)}${isNew ? ' <span class="crow-new">New</span>' : ''}</span>
     <span class="crow-latest">${latest}</span>
     <span class="crow-count">${count}</span>
   </span>
-  <span class="crow-next crow-next--${next.kind}"${next.why ? ` title="${escapeHtml(next.why)}"` : ''}>${next.value ? `<span class="crow-next-value">${escapeHtml(next.value)}</span>` : ''}<span class="crow-next-caption">${escapeHtml(next.caption)}</span></span>
+  <span class="crow-next crow-next--${next.kind}"${next.why ? ` title="${escapeHtml(next.why)}"` : ''}><span class="crow-next-value">${escapeHtml(next.value)}</span><span class="crow-next-caption">${escapeHtml(next.caption)}</span></span>
 </a>`;
 }
 
@@ -2030,7 +2032,7 @@ function categoriesIndexPage({ groups, pageContent, siteUrl, supabaseUrl, supaba
 <h1>${pageHeading(pageContent, 'Browse by category')}</h1>
 ${pageStandardLine(pageContent, `<p class="page-intro">Every product line on the site, current and discontinued.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
-<div class="category-list">${rows}</div>
+<div class="category-list" id="category-list">${rows}</div>
 <p class="category-list-note">&ldquo;Next expected&rdquo; is the latest release plus the family&rsquo;s average gap between releases.</p>`;
   return shell({
     title: 'Categories — Apple Sunset',
