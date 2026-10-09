@@ -294,9 +294,11 @@ async function main() {
   const facts = await loadFacts();
   const latestFact = facts[0] || null;
   const today = new Date().toISOString().slice(0, 10);
-  const upcomingEvents = events.filter((e) => e.event_date >= today).sort((a, b) => (a.event_date < b.event_date ? -1 : 1));
-  // A pinned event wins; otherwise the next one by date, as before.
-  const activeEvent = events.find((e) => e.featured) || upcomingEvents[0] || null;
+  // The hero's Apple Event (public/facts-kit.js, shared with the live
+  // refresh): counting down, live, then "just announced" until two days
+  // after it starts. A pinned event wins over the others in that window.
+  const FactsKit = require('./public/facts-kit.js');
+  const activeEvent = FactsKit.pickHeroEvent(events, Date.now());
 
   // The hero countdown: the featured event if it is still to come,
   // otherwise the nearest future release date across every product.
@@ -307,9 +309,14 @@ async function main() {
   // opted in via "Show in the countdown" in admin. Products are only
   // included while their release date is still ahead, so nothing has to
   // be unticked afterwards.
+  // The hero event counts down in its own tile, so it isn't repeated
+  // here; another event still to come (rare) gets a countdown here.
   const countdowns = [];
-  if (activeEvent && activeEvent.event_date >= today) {
-    countdowns.push({ label: activeEvent.heading || 'Apple Event', date: activeEvent.event_date, time: activeEvent.event_time || null, href: '/events/' });
+  const nextOtherEvent = events
+    .filter((e) => e !== activeEvent && FactsKit.eventPhase(e, Date.now()) === 'upcoming')
+    .sort((a, b) => FactsKit.eventStartMs(a) - FactsKit.eventStartMs(b))[0];
+  if (nextOtherEvent) {
+    countdowns.push({ label: nextOtherEvent.heading || 'Apple Event', date: nextOtherEvent.event_date, time: nextOtherEvent.event_time || null, href: `/events/${eventSlug(nextOtherEvent)}/` });
   }
   futureReleases
     .filter((r) => r.product.in_countdown)
@@ -438,7 +445,6 @@ async function main() {
   // products in the big tile are left out, so one product doesn't
   // appear twice on screen. FACT_DATE (YYYY-MM-DD) overrides the date
   // for testing.
-  const FactsKit = require('./public/facts-kit.js');
   const heroSlugs = activeEvent ? [] : (featuredItems.length ? featuredItems.slice(0, 3) : (heroFeatured ? [heroFeatured] : [])).map((i) => i.product.slug);
   // Today's pick is saved (site_content row 'daily_fact'), so a rebuild
   // later the same day, after publishing a change, keeps the same fact.

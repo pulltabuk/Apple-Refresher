@@ -428,7 +428,8 @@
   </div>
 
   <div id="tab-event" class="admin-tab-panel" style="display:none;">
-    <p class="admin-hint">Whichever event has the soonest upcoming date automatically replaces the regular featured product on the homepage until that date passes, then it becomes part of this permanent archive and the site goes back to showing a featured product on its own, no need to remove anything manually.</p>
+    <p class="admin-hint">The next event takes the big tile on the homepage on its own: it counts down to the start, shows <strong>Live now</strong> with a Watch live button while it&rsquo;s on, then <strong>Just announced</strong> with the products you add here, linking to the event&rsquo;s page, for 48 hours after it starts. Then the featured products come back. Nothing to remove by hand. Saving here updates the site in about a minute.</p>
+    <p class="admin-hint" id="event-status" aria-live="polite"></p>
     <div id="event-list-view">
       <button id="new-event-btn" class="admin-btn admin-btn--primary">Add new event</button>
       <div id="event-list" class="admin-list"></div>
@@ -448,8 +449,8 @@
         <input type="hidden" id="event_image_url">
         <label>Event date<input type="date" id="event_date" autocomplete="off"></label>
         <label class="checkbox-label"><input type="checkbox" id="event_featured"> &#9733; Feature this event on the homepage</label>
-        <p class="admin-hint">Only one event can be featured. Leave this unticked and the homepage shows the next event by date, as it does now.</p>
-        <label>Event time (optional, your own wording, e.g. "10am PT")<input type="text" id="event_time" placeholder="10am PT" autocomplete="off"></label>
+        <p class="admin-hint">Only needed if two events overlap: a featured one goes first. Either way an event leaves the homepage 48 hours after it starts.</p>
+        <label>Event time, with its time zone, e.g. "10am PT" (the countdown and the UK time are worked out from it; with no time, 10am PT is assumed)<input type="text" id="event_time" placeholder="10am PT" autocomplete="off"></label>
         <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/" autocomplete="off"></label>
         <div class="admin-subfield">
           <span class="admin-subfield-label">Announced products (optional, add once you know what was revealed)</span>
@@ -694,7 +695,7 @@
   window.SUPABASE_ANON_KEY = "";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="/facts-kit.js?v=65688764ee" defer></script>
-<script src="/admin.js?v=6c5518600a" defer></script>
+<script src="/facts-kit.js?v=528985fcd8" defer></script>
+<script src="/admin.js?v=7980de1195" defer></script>
 </body>
 </html>

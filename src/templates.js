@@ -1388,15 +1388,14 @@ function galleryStripItemHtml(photo) {
   </a>`;
 }
 
-function eventCardHtml(event) {
-  const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
-  const inner = `${event.image_url ? `<img class="card-event-image" src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}
-  <p class="card-event-title">${escapeHtml(event.heading)}</p>
-  ${dateText ? `<p class="card-event-date">${escapeHtml(dateText)}</p>` : ''}
-  <span class="card-featured-label card-featured-label--bottom">Apple Event</span>`;
-  return event.event_url
-    ? `<a class="card card--featured card--event" href="${escapeHtml(event.event_url)}" target="_blank" rel="noopener">${inner}</a>`
-    : `<article class="card card--featured card--event">${inner}</article>`;
+// The Apple Event in the hero: counting down, live, then what was
+// announced. Built by public/facts-kit.js, which the live refresh in
+// app.js also uses, so the two always match.
+function eventHeroTileHtml(event, productsBySlug) {
+  return FactsKit.eventHeroHtml(event, {
+    href: `/events/${eventSlug(event)}/`,
+    products: Object.values(productsBySlug || {}).map((p) => ({ name: p.name, slug: p.slug })),
+  });
 }
 
 function normalizedAnnouncedProducts(event) {
@@ -1450,6 +1449,7 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
     <a class="admin-edit-link" data-admin-href="/admin/" data-admin-label="Admin" style="display:none;"></a>
   </div>
   ${dateText ? `<p class="page-intro">${escapeHtml(dateText)}</p>` : ''}
+  ${FactsKit.eventCountdownHtml(event)}
   ${event.image_url ? `<img class="event-detail-image" src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.heading)}">` : ''}
   ${productsList ? `<h2>What was announced</h2>${productsList}` : ''}
   ${event.event_url ? `<p><a class="intro-cta" href="${escapeHtml(event.event_url)}" target="_blank" rel="noopener">Watch on Apple's site</a></p>` : ''}
@@ -1726,7 +1726,7 @@ function siteStatsHtml(s) {
 
 function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, dailyFact, pageContent, countdown, earningsNext, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const featuredSlotHtml = activeEvent
-    ? eventCardHtml(activeEvent)
+    ? eventHeroTileHtml(activeEvent, productsBySlug)
     : heroRotation && heroRotation.length > 1
     // Every featured product is built in; the script after the hero shows
     // one at random on each visit, so the tile rotates without a swap.
@@ -2745,7 +2745,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   </div>
 
   <div id="tab-event" class="admin-tab-panel" style="display:none;">
-    <p class="admin-hint">Whichever event has the soonest upcoming date automatically replaces the regular featured product on the homepage until that date passes, then it becomes part of this permanent archive and the site goes back to showing a featured product on its own, no need to remove anything manually.</p>
+    <p class="admin-hint">The next event takes the big tile on the homepage on its own: it counts down to the start, shows <strong>Live now</strong> with a Watch live button while it&rsquo;s on, then <strong>Just announced</strong> with the products you add here, linking to the event&rsquo;s page, for 48 hours after it starts. Then the featured products come back. Nothing to remove by hand. Saving here updates the site in about a minute.</p>
+    <p class="admin-hint" id="event-status" aria-live="polite"></p>
     <div id="event-list-view">
       <button id="new-event-btn" class="admin-btn admin-btn--primary">Add new event</button>
       <div id="event-list" class="admin-list"></div>
@@ -2765,8 +2766,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <input type="hidden" id="event_image_url">
         <label>Event date<input type="date" id="event_date" autocomplete="off"></label>
         <label class="checkbox-label"><input type="checkbox" id="event_featured"> &#9733; Feature this event on the homepage</label>
-        <p class="admin-hint">Only one event can be featured. Leave this unticked and the homepage shows the next event by date, as it does now.</p>
-        <label>Event time (optional, your own wording, e.g. "10am PT")<input type="text" id="event_time" placeholder="10am PT" autocomplete="off"></label>
+        <p class="admin-hint">Only needed if two events overlap: a featured one goes first. Either way an event leaves the homepage 48 hours after it starts.</p>
+        <label>Event time, with its time zone, e.g. "10am PT" (the countdown and the UK time are worked out from it; with no time, 10am PT is assumed)<input type="text" id="event_time" placeholder="10am PT" autocomplete="off"></label>
         <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/" autocomplete="off"></label>
         <div class="admin-subfield">
           <span class="admin-subfield-label">Announced products (optional, add once you know what was revealed)</span>

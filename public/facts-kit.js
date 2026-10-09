@@ -1180,7 +1180,186 @@
     return client.from('facts').insert({ text }).select();
   }
 
+  // --- Apple Events in the homepage hero ---
+  // Shared by the build (homePage in src/templates.js) and the page's live
+  // refresh (app.js), so both always pick the same event and show it in
+  // the same state: counting down, live, then "just announced" for two
+  // days, after which the featured products take the tile back.
+  const EVENT_ZONES = {
+    PT: 'America/Los_Angeles', PST: 'America/Los_Angeles', PDT: 'America/Los_Angeles',
+    MT: 'America/Denver', MST: 'America/Denver', MDT: 'America/Denver',
+    CT: 'America/Chicago', CST: 'America/Chicago', CDT: 'America/Chicago',
+    ET: 'America/New_York', EST: 'America/New_York', EDT: 'America/New_York',
+    UK: 'Europe/London', BST: 'Europe/London', GMT: 'UTC', UTC: 'UTC',
+    CET: 'Europe/Paris', CEST: 'Europe/Paris',
+  };
+  const EVENT_LIVE_MS = 2 * 3600000; // "Live now" for the first two hours
+  const EVENT_RECAP_MS = 48 * 3600000; // "Just announced" until 48 hours after the start
+
+  function tzOffsetMs(zone, utcMs) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(new Date(utcMs));
+    const v = {};
+    parts.forEach((part) => { v[part.type] = part.value; });
+    return Date.UTC(+v.year, +v.month - 1, +v.day, +v.hour % 24, +v.minute, +v.second) - utcMs;
+  }
+  function zonedToUtc(y, mo, d, h, mi, zone) {
+    const guess = Date.UTC(y, mo - 1, d, h, mi);
+    try {
+      // Twice, in case the day sits on a clock change.
+      return guess - tzOffsetMs(zone, guess - tzOffsetMs(zone, guess));
+    } catch (err) {
+      return guess;
+    }
+  }
+  // "10am PT", "10:00 a.m. PT", "17:00 UTC" and so on.
+  function eventTimeParts(timeText) {
+    const m = timeText && String(timeText).replace(/\./g, '').match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*([A-Za-z]{2,4})?/i);
+    if (!m) return null;
+    let hour = +m[1];
+    const min = +(m[2] || 0);
+    const ampm = (m[3] || '').toLowerCase();
+    if (ampm === 'pm' && hour < 12) hour += 12;
+    if (ampm === 'am' && hour === 12) hour = 0;
+    if (hour > 23 || min > 59) return null;
+    return { hour, min, zone: m[4] ? EVENT_ZONES[m[4].toUpperCase()] || null : null };
+  }
+  // The moment an event starts. With no readable time, or no time zone,
+  // Pacific time is assumed (10am when there's no time at all), which is
+  // when and where Apple's events almost always begin.
+  function eventStartMs(event) {
+    const bits = String((event && event.event_date) || '').slice(0, 10).split('-').map(Number);
+    if (bits.length < 3 || bits.some((n) => isNaN(n))) return NaN;
+    const t = eventTimeParts(event.event_time) || { hour: 10, min: 0, zone: null };
+    return zonedToUtc(bits[0], bits[1], bits[2], t.hour, t.min, t.zone || 'America/Los_Angeles');
+  }
+  function eventPhase(event, now) {
+    const start = eventStartMs(event);
+    if (isNaN(start)) return null;
+    const t = now == null ? Date.now() : now;
+    if (t < start) return 'upcoming';
+    if (t < start + EVENT_LIVE_MS) return 'live';
+    if (t < start + EVENT_RECAP_MS) return 'recap';
+    return 'past';
+  }
+  // The event for the hero: of those not yet two days past their start,
+  // a pinned one first, otherwise the soonest.
+  function pickHeroEvent(events, now) {
+    const t = now == null ? Date.now() : now;
+    const live = (events || [])
+      .map((event) => ({ event, start: eventStartMs(event) }))
+      .filter((x) => !isNaN(x.start) && t < x.start + EVENT_RECAP_MS)
+      .sort((a, b) => a.start - b.start);
+    const pick = live.find((x) => x.event.featured) || live[0];
+    return pick ? pick.event : null;
+  }
+
+  function clockText(hour, min) {
+    return (hour % 12 || 12) + (min ? ':' + String(min).padStart(2, '0') : '') + (hour < 12 ? 'am' : 'pm');
+  }
+  // When it is in the UK, for an event timed in another zone, e.g. "6pm UK".
+  function eventUkTime(event) {
+    const t = eventTimeParts(event && event.event_time);
+    if (!t || !t.zone || t.zone === 'Europe/London' || t.zone === 'UTC') return '';
+    const start = eventStartMs(event);
+    if (isNaN(start)) return '';
+    const local = new Date(start + tzOffsetMs('Europe/London', start));
+    const sameDay = local.toISOString().slice(0, 10) === String(event.event_date).slice(0, 10);
+    const day = sameDay ? '' : ' ' + local.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' });
+    return clockText(local.getUTCHours(), local.getUTCMinutes()) + day + ' UK';
+  }
+  function eventDayText(event) {
+    const d = new Date(String(event.event_date).slice(0, 10) + 'T12:00:00Z');
+    return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).replace(',', '');
+  }
+  function eventClockUnits(ms) {
+    const secs = Math.max(0, Math.floor(ms / 1000));
+    const unit = (value, label, cls) => '<span class="countdown-unit' + (cls ? ' ' + cls : '') + '"><span class="countdown-value">' + value + '</span><span class="countdown-unit-label">' + label + '</span></span>';
+    const days = Math.floor(secs / 86400);
+    return unit(days, days === 1 ? 'day' : 'days') + unit(Math.floor((secs % 86400) / 3600), 'hours') +
+      unit(Math.floor((secs % 3600) / 60), 'mins') + unit(secs % 60, 'secs', 'countdown-unit--secs');
+  }
+
+  // The countdown on its own (the event's page), while it is still to come.
+  function eventCountdownHtml(event, now) {
+    const start = eventStartMs(event);
+    const t = now == null ? Date.now() : now;
+    if (isNaN(start) || t >= start) return '';
+    const uk = eventUkTime(event);
+    return '<div class="event-detail-countdown" data-countdown-box><p class="event-detail-countdown-label">Starts in' + (uk ? ' <span>(' + escapeHtml(uk) + ')</span>' : '') + '</p>' +
+      '<div class="event-hero-countdown" data-countdown-at="' + start + '" role="timer" aria-label="Time until the event">' + eventClockUnits(start - t) + '</div></div>';
+  }
+
+  // The hero tile. opts: href (the event's page on this site), products
+  // (every product as { name, slug }, to link what was announced) and now.
+  function eventHeroHtml(event, opts) {
+    const o = opts || {};
+    const now = o.now == null ? Date.now() : o.now;
+    const start = eventStartMs(event);
+    const phase = eventPhase(event, now) || 'upcoming';
+    const href = o.href || '/events/';
+    const title = escapeHtml(event.heading || 'Apple Event');
+    const day = eventDayText(event);
+    const uk = eventUkTime(event);
+    const watchUrl = event.event_url ? escapeHtml(event.event_url) : '';
+    const onApple = /(^|\.)apple\.com$/i.test((String(event.event_url || '').match(/^https?:\/\/([^/]+)/i) || [])[1] || '');
+    const until = phase === 'upcoming' ? start : phase === 'live' ? start + EVENT_LIVE_MS : start + EVENT_RECAP_MS;
+    const kicker = phase === 'live'
+      ? '<span class="event-hero-kicker event-hero-kicker--live"><span class="event-hero-dot" aria-hidden="true"></span>Live now</span>'
+      : phase === 'recap'
+      ? '<span class="event-hero-kicker">Just announced</span>'
+      : '<span class="event-hero-kicker">Apple Event</span>';
+    // The artwork fills whatever height the tile has: shown whole, over a
+    // soft blurred copy of itself, so any shape of image looks intended.
+    const art = event.image_url
+      ? '<span class="event-hero-art"><img class="event-hero-art-bg" src="' + escapeHtml(event.image_url) + '" alt="" aria-hidden="true"><img class="event-hero-art-img" src="' + escapeHtml(event.image_url) + '" alt=""></span>'
+      : '';
+    const whenLine = phase === 'recap'
+      ? 'Held ' + escapeHtml(day)
+      : escapeHtml([day, event.event_time].filter(Boolean).join(' · ')) + (uk ? ' <span class="event-hero-uk">(' + escapeHtml(uk) + ')</span>' : '');
+    let middle = '';
+    let cta = '';
+    if (phase === 'upcoming') {
+      middle = '<div class="event-hero-countdown" data-countdown-at="' + start + '" role="timer" aria-label="Time until the event">' + eventClockUnits(start - now) + '</div>';
+      cta = watchUrl
+        ? '<a class="event-hero-cta" href="' + watchUrl + '" target="_blank" rel="noopener">' + (onApple ? 'Watch on apple.com' : 'Where to watch') + ' <span aria-hidden="true">&#8599;</span></a>'
+        : '<a class="event-hero-cta event-hero-cta--quiet" href="' + href + '">Event details <span aria-hidden="true">&rarr;</span></a>';
+    } else if (phase === 'live') {
+      middle = '<p class="event-hero-note">It&rsquo;s on now. Everything Apple announces will be added here afterwards.</p>';
+      cta = '<a class="event-hero-cta" href="' + (watchUrl || href) + '"' + (watchUrl ? ' target="_blank" rel="noopener"' : '') + '>Watch live' + (watchUrl ? ' <span aria-hidden="true">&#8599;</span>' : '') + '</a>';
+    } else {
+      const named = (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p)).filter((p) => p && p.name);
+      const ordered = named.filter((p) => p.featured).sort((a, b) => a.name.localeCompare(b.name))
+        .concat(named.filter((p) => !p.featured).sort((a, b) => a.name.localeCompare(b.name)));
+      const bySlugName = {};
+      (o.products || []).forEach((p) => { if (p && p.name && p.slug) bySlugName[p.name.toLowerCase()] = p.slug; });
+      const shown = ordered.slice(0, 4);
+      const more = ordered.length - shown.length;
+      middle = ordered.length
+        ? '<ul class="event-hero-products">' + shown.map((p) => {
+            const slug = bySlugName[p.name.toLowerCase()];
+            return '<li>' + (slug ? '<a href="/products/' + escapeHtml(slug) + '/">' + escapeHtml(p.name) + '</a>' : escapeHtml(p.name)) + '</li>';
+          }).join('') + (more > 0 ? '<li class="event-hero-more">+' + more + ' more</li>' : '') + '</ul>'
+        : '<p class="event-hero-note">What Apple announced is being added now.</p>';
+      cta = '<a class="event-hero-cta" href="' + href + '">' + (ordered.length ? 'See everything announced' : 'Go to the event page') + ' <span aria-hidden="true">&rarr;</span></a>';
+    }
+    return '<article class="card card--featured card--event event-hero event-hero--' + phase + '" data-event-hero data-phase-until="' + until + '">' +
+      kicker + art +
+      '<div class="event-hero-head"><h2 class="event-hero-title"><a class="event-hero-link" href="' + href + '">' + title + '</a></h2>' +
+      '<p class="event-hero-when">' + whenLine + '</p></div>' +
+      middle + cta +
+    '</article>';
+  }
+
   const FactsKit = {
+    eventStartMs,
+    eventPhase,
+    pickHeroEvent,
+    eventHeroHtml,
+    eventCountdownHtml,
+    eventUkTime,
     insertFact,
     appleName,
     CATEGORY_ICONS,

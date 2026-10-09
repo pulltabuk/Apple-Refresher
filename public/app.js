@@ -1824,29 +1824,14 @@
     '</article>';
   }
 
-  function eventCardHtmlJS(event) {
-    var dateText = [formatDateJS(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
-    var inner = (event.image_url ? '<img class="card-event-image" src="' + escapeHtmlJS(event.image_url) + '" alt="' + escapeHtmlJS(event.heading) + '">' : '') +
-      '<p class="card-event-title">' + escapeHtmlJS(event.heading) + '</p>' +
-      (dateText ? '<p class="card-event-date">' + escapeHtmlJS(dateText) + '</p>' : '') +
-      '<span class="card-featured-label card-featured-label--bottom">Apple Event</span>';
-    return event.event_url
-      ? '<a class="card card--featured card--event" href="' + escapeHtmlJS(event.event_url) + '" target="_blank" rel="noopener">' + inner + '</a>'
-      : '<article class="card card--featured card--event">' + inner + '</article>';
-  }
-
-  function fetchActiveEventJS() {
+  // Every event; the hero's pick (FactsKit.pickHeroEvent) is made from these.
+  function fetchEventsJS() {
     return fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=*&order=event_date.asc', {
       headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
     })
       .then(function (res) { return res.json(); })
-      .then(function (rows) {
-        if (!Array.isArray(rows)) return null;
-        var today = new Date().toISOString().slice(0, 10);
-        var upcoming = rows.filter(function (e) { return e.event_date >= today; });
-        return upcoming[0] || null;
-      })
-      .catch(function () { return null; });
+      .then(function (rows) { return Array.isArray(rows) ? rows : []; })
+      .catch(function () { return []; });
   }
 
   // Must stay in step with siteStats() / siteStatsHtml() in src/templates.js.
@@ -1903,10 +1888,27 @@
         return Array.isArray(ids) ? ids.map(String) : [];
       })
       .catch(function () { return []; });
-    Promise.all([fetchAllProductsJS(), fetchActiveEventJS(), featuredOrderReq]).then(function (results) {
-      var products = results[0];
-      var activeEvent = results[1];
-      var featuredOrder = results[2];
+    Promise.all([fetchAllProductsJS(), fetchEventsJS(), featuredOrderReq]).then(function (results) {
+      heroData = { products: results[0], events: results[1], featuredOrder: results[2] };
+      renderHeroCards();
+    }).catch(function () {});
+
+    // An event tile changes with the clock (counting down, live, just
+    // announced, then gone), so it is redrawn when its stage ends.
+    setInterval(function () {
+      var tile = heroCardsSection.querySelector('[data-event-hero]');
+      var until = tile ? Number(tile.getAttribute('data-phase-until')) : 0;
+      if (heroData && until && Date.now() >= until) renderHeroCards();
+    }, 1000);
+  }
+
+  var heroData = null;
+  function renderHeroCards() {
+    if (!heroData || !Array.isArray(heroData.products)) return;
+    {
+      var products = heroData.products;
+      var activeEvent = window.FactsKit ? window.FactsKit.pickHeroEvent(heroData.events, Date.now()) : null;
+      var featuredOrder = heroData.featuredOrder;
       var statsEl = document.getElementById('site-stats');
       if (statsEl && Array.isArray(products) && products.length) statsEl.outerHTML = siteStatsHtmlJS(siteStatsJS(products));
       var active = products.filter(function (p) { return !p.discontinued; });
@@ -1946,12 +1948,18 @@
         heroRest = heroRest.concat(pickRandomJS(releasedOnly.filter(function (i) { return i !== heroFeatured && heroRest.indexOf(i) === -1; }), 2 - heroRest.length));
       }
 
-      var featuredSlotHtml = activeEvent ? eventCardHtmlJS(activeEvent) : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');
+      // Must match eventHeroTileHtml() in src/templates.js.
+      var featuredSlotHtml = activeEvent
+        ? window.FactsKit.eventHeroHtml(activeEvent, {
+            href: '/events/' + eventSlugJS(activeEvent) + '/',
+            products: products.map(function (p) { return { name: p.name, slug: p.slug }; }),
+          })
+        : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');
       // Must match homePage(): the featured tile, then the Live counts panel.
       heroCardsSection.innerHTML =
         featuredSlotHtml +
         siteStatsHtmlJS(siteStatsJS(products));
-    }).catch(function () {});
+    }
   }
 
   // Homepage "Did you know?": the build picked today's fact (see
@@ -2597,9 +2605,26 @@
       clock.innerHTML = unit(days, days === 1 ? 'day' : 'days') +
         unit(hours, 'hours') + unit(mins, 'mins') + unit(secs % 60, 'secs', true);
     }
+    // A clock given its exact moment (the hero's Apple Event, from
+    // FactsKit.eventStartMs): the same four units, stopping at zero, where
+    // the event tile takes over and shows the event as live.
+    function renderAt(el) {
+      var raw = Number(el.getAttribute('data-countdown-at')) - Date.now();
+      if (isNaN(raw)) return;
+      // On an event's page, the countdown goes once the event starts.
+      var box = raw <= 0 && el.closest ? el.closest('[data-countdown-box]') : null;
+      if (box) { box.hidden = true; return; }
+      var left = Math.max(0, raw);
+      var secs = Math.floor(left / 1000);
+      var days = Math.floor(secs / 86400);
+      el.innerHTML = unit(days, days === 1 ? 'day' : 'days') + unit(Math.floor((secs % 86400) / 3600), 'hours') +
+        unit(Math.floor((secs % 3600) / 60), 'mins') + unit(secs % 60, 'secs', true);
+    }
     function tickAll() {
       var els = document.querySelectorAll('[data-countdown]');
       for (var i = 0; i < els.length; i++) render(els[i]);
+      var at = document.querySelectorAll('[data-countdown-at]');
+      for (var j = 0; j < at.length; j++) renderAt(at[j]);
     }
     tickAll();
     setInterval(tickAll, 1000);
