@@ -1089,7 +1089,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .crow-next--due .crow-next-value { color: var(--aging-text); }
 .crow-next--overdue .crow-next-value { color: var(--overdue-text); }
 .crow-next--gone .crow-next-value { color: var(--text-secondary); }
-.crow-next--early .crow-next-value { font-size: 18px; color: var(--accent); }
+.crow-next--early .crow-next-value { font-size: 18px; }
 .crow-nowrap { white-space: nowrap; }
 .category-list-note { margin-top: 1rem; font-size: 12px; color: var(--text-secondary); }
 @media (max-width: 600px) {
