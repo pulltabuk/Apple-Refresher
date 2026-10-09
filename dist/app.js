@@ -564,11 +564,34 @@
           link.href = m.href;
           link.innerHTML = m.iconHtml + '<span>' + escapeHtmlJS(m.label) + '</span>' +
             (m.note ? '<span class="site-search-note">' + escapeHtmlJS(m.note) + '</span>' : '');
+          wireSearchThumbJS(link.querySelector('img.site-search-thumb'));
           dropdown.appendChild(link);
         });
       }
       siteSearchForm.appendChild(dropdown);
       activeDropdown = dropdown;
+    }
+
+    // An album's cover, small and square from the image CDN. If the CDN
+    // can't serve it, the original; if that fails too, a photo icon
+    // rather than a broken image.
+    var SEARCH_PHOTO_ICON_JS = '<span class="site-search-thumb site-search-thumb--none" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg></span>';
+    function searchThumbHtmlJS(url) {
+      var cdn = cdnImageJS(url, 96);
+      var src = cdn === url ? url : cdn + '&h=96&fit=cover';
+      return '<img class="site-search-thumb" src="' + escapeHtmlJS(src) + '" data-full="' + escapeHtmlJS(url) + '" alt="">';
+    }
+    function wireSearchThumbJS(img) {
+      if (!img) return;
+      img.addEventListener('error', function () {
+        if (img.getAttribute('src') !== img.getAttribute('data-full')) {
+          img.setAttribute('src', img.getAttribute('data-full'));
+          return;
+        }
+        var holder = document.createElement('span');
+        holder.innerHTML = SEARCH_PHOTO_ICON_JS;
+        img.replaceWith(holder.firstChild);
+      });
     }
 
     // The header search covers the whole site. Each group is capped so
@@ -638,7 +661,7 @@
           if (!matchesSearchJS(text, query)) return;
           var cover = (al.image_urls && al.image_urls[0]) || al.image_url;
           matches.push({ kind: 'album', label: al.caption || (al.tags && al.tags[0]) || 'Photo album', href: '/gallery/' + al.id + '/',
-            iconHtml: cover ? '<img class="site-search-thumb" src="' + escapeHtmlJS(cdnImageJS(cover, 96)) + '" alt="" loading="lazy">' : '<span class="site-search-event-dot" aria-hidden="true"></span>',
+            iconHtml: cover ? searchThumbHtmlJS(cover) : SEARCH_PHOTO_ICON_JS,
             note: al.location || (al.date_taken ? String(al.date_taken).slice(0, 4) : '') });
         });
 
