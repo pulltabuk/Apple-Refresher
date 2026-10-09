@@ -711,19 +711,60 @@
     var discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
     var lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetweenJS(launch, product.discontinued_date) : '';
     var decade = product.discontinued && product.discontinued_date ? Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10 + 's' : '';
-    var meta = launch && product.discontinued && product.discontinued_date
-      ? '<p class="card-meta card-meta--lifespan">Lived ' + lifespanTextJS(launch, product.discontinued_date) + '</p>'
-      : '';
     return (
       '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-wait="' + (days !== '' ? statusInfo.ratio.toFixed(3) : '') + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
-        '<a class="card-link" href="/products/' + product.slug + '/">' +
-          '<div class="card-name-row">' + productIconJS(product, 36) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
-          badgeHtmlJS(product, statusInfo) +
-          meta +
-        '</a>' +
-        pillJS(product.category) +
+        productRowInnerJS(product, statusInfo) +
       '</article>'
     );
+  }
+
+  // Must match productRowInner() in src/templates.js.
+  var ROW_STATUS_LABELS_JS = { fresh: 'Recently updated', aging: 'Getting on', overdue: 'Overdue' };
+  function productRowInnerJS(product, statusInfo) {
+    var launch = launchDateJS(product);
+    var releases = (product.refresh_history || []).slice().sort();
+    var todayIso = new Date().toISOString().slice(0, 10);
+    var lastDone = releases.filter(function (d) { return d <= todayIso; }).pop();
+    var meta = [escapeHtmlJS(product.category || '')];
+    var figure = '';
+    var status = '';
+    var bar = '';
+    if (product.discontinued) {
+      if (launch && product.discontinued_date) meta.push('Lived ' + lifespanTextJS(launch, product.discontinued_date));
+      if (launch) meta.push('Released ' + formatDateJS(launch));
+      var year = product.discontinued_date ? String(product.discontinued_date).slice(0, 4) : '';
+      figure = year
+        ? '<span class="prow-num">' + year + '</span> <span class="prow-unit">discontinued ' + escapeHtmlJS(formatDateJS(product.discontinued_date).replace(/ \d{4}$/, '')) + '</span>'
+        : '<span class="prow-unit">Discontinued</span>';
+      status = '<span class="prow-status prow-status--discontinued">Discontinued</span>';
+    } else if (statusInfo) {
+      var info = badgeDaysInfoJS(product, statusInfo);
+      if (info.days < 0) {
+        var due = releases[releases.length - 1];
+        meta.push(lastDone ? 'Last released ' + formatDateJS(lastDone) : 'New product');
+        figure = '<span class="prow-unit">Coming</span> <span class="prow-num prow-num--date">' + (due ? escapeHtmlJS(formatDateJS(due)) : 'soon') + '</span>';
+        status = '<span class="prow-status prow-status--upcoming">Coming soon</span>';
+      } else {
+        meta.push(statusInfo.hasCycle ? 'Last released ' + formatDateJS(lastDone || launch) : 'Only release ' + formatDateJS(lastDone || launch));
+        figure = '<span class="prow-num">' + info.days.toLocaleString('en-GB') + '</span> <span class="prow-unit">' + (info.days === 1 ? 'day' : 'days') + ' ' + info.suffix + '</span>';
+        if (statusInfo.hasCycle) {
+          status = '<span class="prow-status prow-status--' + statusInfo.status + '">' + (ROW_STATUS_LABELS_JS[statusInfo.status] || '') + '</span>';
+          bar = '<span class="prow-bar prow-bar--' + statusInfo.status + '" title="' + escapeHtmlJS(badgeExplanationJS(statusInfo)) + '"><span style="width:' + Math.min(100, Math.round(statusInfo.ratio * 100)) + '%"></span></span>';
+        }
+      }
+    } else {
+      meta.push('No release date yet');
+    }
+    return '<a class="card-link prow" href="/products/' + product.slug + '/">' +
+      '<span class="prow-icon">' + productIconJS(product, 32) + '</span>' +
+      '<span class="prow-main">' +
+        '<span class="card-name">' + escapeHtmlJS(product.name) + '</span>' +
+        '<span class="prow-meta">' + meta.filter(Boolean).join(' &middot; ') + '</span>' +
+        bar +
+      '</span>' +
+      status +
+      '<span class="prow-figure">' + figure + '</span>' +
+    '</a>';
   }
 
   function leagueRowHtmlJS(product, statusInfo, rank) {

@@ -2807,3 +2807,50 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 
 .contact-email-line { margin: -0.25rem 0 1.25rem; }
 .footer-email { margin-top: 4px; }
+
+/* All products and Discontinued: a list, one row per product, the number
+   that matters lined up on the right (productRowInner in templates.js). */
+.card-grid.product-list { display: grid; grid-template-columns: 1fr; gap: 0; border-top: 1px solid var(--border); }
+.product-list > .card { display: block; padding: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: none; box-shadow: none; height: auto; gap: 0; }
+.product-list > .card:hover { background: #fbf7f2; border-color: var(--border); }
+.product-list .products-status-divider { margin: 1.25rem 0 0; padding: 0 0 8px; border-top: 0; border-bottom: 1px solid var(--border); }
+.product-list .products-status-divider--current { margin-top: 0.25rem; }
+.card-grid.product-list .card .prow { display: grid; text-align: left; grid-template-columns: 40px minmax(0, 1fr) 150px 150px; align-items: center; gap: 4px 16px; padding: 14px 8px; color: var(--text); text-decoration: none; }
+.prow-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
+.prow-icon svg, .prow-icon img { width: 32px; height: 32px; }
+.prow-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.prow .card-name { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.25; color: var(--text); }
+.prow-meta { font-size: 13px; color: var(--text-secondary); line-height: 1.35; }
+.prow-bar { display: block; height: 5px; max-width: 260px; margin-top: 4px; border-radius: 999px; background: #efece4; overflow: hidden; }
+.prow-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--fresh-text); }
+.prow-bar--aging > span { background: var(--aging-text); }
+.prow-bar--overdue > span { background: var(--overdue-text); }
+.prow-status { justify-self: start; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; background: #efece4; color: var(--text-secondary); }
+.prow-status--fresh { background: var(--fresh-bg, #e6f2e8); color: var(--fresh-text); }
+.prow-status--aging { background: var(--aging-bg, #fbf0d9); color: var(--aging-text); }
+.prow-status--overdue { background: var(--overdue-bg, #fbe3df); color: var(--overdue-text); }
+.prow-status--upcoming { background: var(--accent-bg); color: var(--accent-dark); }
+.prow-figure { grid-column: 4; display: flex; flex-direction: column; align-items: flex-end; text-align: right; line-height: 1.1; }
+.prow-num { font-size: 26px; font-weight: 800; color: var(--accent-dark); font-variant-numeric: tabular-nums; }
+.prow-num--date { font-size: 17px; }
+.prow-unit { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.card--discontinued .prow-num { color: var(--text-secondary); font-size: 22px; }
+/* Every row on the Discontinued page is discontinued, so the pill adds nothing there. */
+.card-grid[data-mode="discontinued"] .prow-status--discontinued { display: none; }
+.card--discontinued .card-name { color: var(--text); }
+/* Phones: icon, name and details, the number on the right with the
+   status under it. */
+@media (max-width: 700px) {
+  .card-grid.product-list .card .prow { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 2px 12px; padding: 12px 2px; align-items: start; }
+  .prow-icon { grid-column: 1; grid-row: 1 / span 2; width: 32px; height: 32px; margin-top: 2px; }
+  .prow-icon svg, .prow-icon img { width: 28px; height: 28px; }
+  .prow .card-name { font-size: 15px; }
+  .prow-meta { font-size: 12px; }
+  .prow-figure { grid-column: 3; grid-row: 1; }
+  .prow-status { grid-column: 3; grid-row: 2; justify-self: end; align-self: start; font-size: 11px; padding: 3px 8px; }
+  .prow-main { grid-column: 2; grid-row: 1 / span 2; }
+  .prow-num { font-size: 22px; }
+  .prow-num--date { font-size: 14px; }
+  .prow-unit { font-size: 11px; }
+  .prow-bar { max-width: none; }
+}
