@@ -3194,6 +3194,11 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
         <span class="up-home-title">Product facts &amp; notes</span>
         <span class="up-home-desc">Write or research them</span>
       </button>
+      <button type="button" class="up-home-tile" id="up-go-events">
+        <span class="up-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 12.6l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z" fill="currentColor"/></svg></span>
+        <span class="up-home-title">Apple Events</span>
+        <span class="up-home-desc">Add or edit an event</span>
+      </button>
       <button type="button" class="up-home-tile" id="up-go-x">
         <span class="up-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 4l16 16M20 4L4 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
         <span class="up-home-title">X posts</span>
@@ -3296,6 +3301,61 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
       <button type="button" id="up-pf-save" class="gallery-action gallery-action--primary gallery-action--block">Save and publish</button>
       <p class="up-status" id="up-pf-status" aria-live="polite"></p>
     </div>
+  </section>
+
+  <section id="up-events" hidden>
+    <div class="up-card">
+      <button type="button" id="up-ev-new" class="gallery-action gallery-action--primary gallery-action--block">Add an event</button>
+      <p class="up-hint" id="up-ev-count"></p>
+      <p class="up-status" id="up-ev-list-status" aria-live="polite"></p>
+    </div>
+    <div id="up-ev-list" class="up-library-list"></div>
+  </section>
+
+  <section id="up-event" hidden>
+    <div class="up-editing">
+      <button type="button" id="up-ev-back" class="up-link">&larr; All events</button>
+      <h2 id="up-ev-form-title">Add an event</h2>
+    </div>
+    <form id="up-ev-form" class="up-form" novalidate>
+      <div class="up-card">
+        <div class="up-ev-art" id="up-ev-art" hidden><img id="up-ev-art-img" alt=""></div>
+        <label for="up-ev-file" class="gallery-action gallery-action--primary gallery-action--block" id="up-ev-file-label">Choose the event artwork</label>
+        <input type="file" id="up-ev-file" accept="image/*" class="up-file-input">
+        <p class="up-hint" id="up-ev-art-note">Apple&rsquo;s invite artwork. It shows on the homepage, the event page and its X card.</p>
+      </div>
+
+      <div class="up-card">
+        <label>Title<input type="text" id="up-ev-heading" placeholder="e.g. Apple Event: It&rsquo;s Glowtime" autocomplete="off" enterkeyhint="next"></label>
+        <label>Date<input type="date" id="up-ev-date"></label>
+        <label>Time, with its time zone<input type="text" id="up-ev-time" placeholder="e.g. 10am PT" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
+        <p class="up-hint" id="up-ev-time-echo" aria-live="polite"></p>
+        <label>Apple&rsquo;s event page (optional)<input type="url" id="up-ev-url" placeholder="https://www.apple.com/apple-events/" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
+      </div>
+
+      <div class="up-card">
+        <span class="up-label">Announced products (optional)</span>
+        <div id="up-ev-products" class="up-ev-products"></div>
+        <div class="up-add-tag">
+          <input type="text" id="up-ev-new-product" list="up-ev-product-options" placeholder="e.g. iPhone 18 Pro" autocomplete="off" enterkeyhint="done" aria-label="Announced product">
+          <button type="button" id="up-ev-add-product" class="gallery-action">Add</button>
+        </div>
+        <datalist id="up-ev-product-options"></datalist>
+        <p class="up-hint">Add them once Apple reveals them. Tap the star to show a product on the event&rsquo;s card.</p>
+      </div>
+
+      <div class="up-card">
+        <label class="up-check"><input type="checkbox" id="up-ev-featured"> Put this event first on the homepage</label>
+        <p class="up-hint">Only matters if two events overlap. Every event leaves the homepage 48 hours after it starts.</p>
+        <button type="submit" class="gallery-action gallery-action--primary gallery-action--block" id="up-ev-save">Save and publish</button>
+        <p class="up-status" id="up-ev-status" aria-live="polite"></p>
+      </div>
+
+      <div class="up-card" id="up-ev-more" hidden>
+        <button type="button" id="up-ev-x" class="gallery-action gallery-action--block">Post to X</button>
+        <button type="button" id="up-ev-delete" class="gallery-action gallery-action--danger gallery-action--block">Delete this event</button>
+      </div>
+    </form>
   </section>
 
   <nav class="up-tabs" id="up-tabs" role="tablist" hidden>
