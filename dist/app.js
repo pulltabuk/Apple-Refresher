@@ -894,20 +894,10 @@
       })
       .slice(0, 6);
     if (!siblings.length) return '';
-    var cards = siblings.map(function (p) {
-      var st = p.discontinued ? null : computeStatusJS(p);
-      var line = p.discontinued
-        ? 'Discontinued' + (p.discontinued_date ? ' ' + formatDateJS(p.discontinued_date) : '')
-        : st && st.daysSince < 0 ? 'Coming ' + formatDateJS((p.refresh_history || []).slice().sort().pop())
-        : st ? pluralJS(st.daysSince, 'day', 'days') + ' since refresh' : '';
-      return '<a class="related-card" href="/products/' + p.slug + '/">' +
-        '<span class="related-card-icon">' + productIconJS(p, 28) + '</span>' +
-        '<span class="related-card-text"><span class="related-card-name">' + escapeHtmlJS(p.name) + '</span>' +
-        (line ? '<span class="related-card-line">' + line + '</span>' : '') + '</span></a>';
-    }).join('');
+    var rows = siblings.map(function (p) { return cardHtmlJS(p, p.discontinued ? null : computeStatusJS(p)); }).join('');
     var cat = product.category || 'this category';
     return '<section class="related-section"><h2>More in ' + escapeHtmlJS(cat) + '</h2>' +
-      '<div class="related-grid">' + cards + '</div>' +
+      '<div class="card-grid product-list related-list">' + rows + '</div>' +
       '<p class="see-all"><a class="intro-cta" href="/categories/' + slugifyJS(product.category || 'other') + '/">All ' +
       escapeHtmlJS(product.category || 'products') + ' &rarr;</a></p></section>';
   }
@@ -948,7 +938,7 @@
         return (info.announced ? keyFactJS('Announced', formatDateJS(info.announced)) : '') +
                (info.preorder ? keyFactJS('Pre-orders opened', formatDateJS(info.preorder)) : '');
       })(),
-      keyFactJS('Launch price', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
+      keyFactJS('Launch price from', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
       keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null),
       keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days') : null),
       (function () {
@@ -1851,7 +1841,7 @@
     var expectedPassed = expectedDate ? expectedDate.getTime() < Date.now() : false;
     var nextExpected = expectedDate ? expectedDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }) : null;
     var detailRows = [];
-    if (product.price) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price</span> ' + escapeHtmlJS(formatPriceJS(product.price)) + '</div>');
+    if (product.price) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price from</span> ' + escapeHtmlJS(formatPriceJS(product.price)) + '</div>');
     if (launch) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ' + formatDateJS(launch) + '</div>');
     if (product.discontinued && product.discontinued_date) {
       detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ' + formatDateJS(product.discontinued_date) + '</div>');

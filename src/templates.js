@@ -1403,7 +1403,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
     </div>`
     : '';
   const detailRows = [
-    product.price ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price</span> ${escapeHtml(formatPrice(product.price))}</div>` : '',
+    product.price ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price from</span> ${escapeHtml(formatPrice(product.price))}</div>` : '',
     extras.announced ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Announced</span> ${formatDate(extras.announced)}</div>` : '',
     extras.preorder ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Pre-orders open</span> ${formatDate(extras.preorder)}</div>` : '',
     launch ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ${formatDate(launch)}</div>` : '',
@@ -2101,26 +2101,10 @@ function relatedProductsHtml(product, productsBySlug, statusBySlug) {
     })
     .slice(0, 6);
   if (!siblings.length) return '';
-  const cards = siblings.map((p) => {
-    const status = statusBySlug ? statusBySlug[p.slug] : null;
-    const line = p.discontinued
-      ? `Discontinued${p.discontinued_date ? ' ' + formatDate(p.discontinued_date) : ''}`
-      : status && status.daysSince < 0
-      ? `Coming ${formatDate((p.refresh_history || []).slice().sort().pop())}`
-      : status
-      ? `${plural(status.daysSince, 'day', 'days')} since refresh`
-      : '';
-    return `<a class="related-card" href="/products/${p.slug}/">
-      <span class="related-card-icon">${productIcon(p, 28)}</span>
-      <span class="related-card-text">
-        <span class="related-card-name">${escapeHtml(p.name)}</span>
-        ${line ? `<span class="related-card-line">${line}</span>` : ''}
-      </span>
-    </a>`;
-  }).join('\n');
+  const rows = siblings.map((p) => cardHtml(p, statusBySlug ? statusBySlug[p.slug] : null)).join('\n');
   return `<section class="related-section">
     <h2>More in ${escapeHtml(product.category || 'this category')}</h2>
-    <div class="related-grid">${cards}</div>
+    <div class="card-grid product-list related-list">${rows}</div>
     <p class="see-all"><a class="intro-cta" href="/categories/${slugify(product.category || 'other')}/">All ${escapeHtml(product.category || 'products')} &rarr;</a></p>
   </section>`;
 }
@@ -2271,7 +2255,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
         info.preorder ? keyFact('Pre-orders opened', formatDate(info.preorder)) : '',
       ].join('');
     })(),
-    keyFact('Launch price', product.price ? escapeHtml(formatPrice(product.price)) : null),
+    keyFact('Launch price from', product.price ? escapeHtml(formatPrice(product.price)) : null),
     keyFact('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDate(product.original_launch_date) : null),
     keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}` : null),
     (() => {
