@@ -2813,8 +2813,10 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .card-grid.product-list { display: grid; grid-template-columns: 1fr; gap: 0; border-top: 1px solid var(--border); }
 .product-list > .card { display: block; padding: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: none; box-shadow: none; height: auto; gap: 0; }
 .product-list > .card:hover { background: #fbf7f2; border-color: var(--border); }
-.product-list .products-status-divider { margin: 1.25rem 0 0; padding: 0 0 8px; border-top: 0; border-bottom: 1px solid var(--border); }
-.product-list .products-status-divider--current { margin-top: 0.25rem; }
+.product-list .products-status-divider { margin: 1.5rem 0 0; padding: 9px 14px; border: 0; border-radius: 8px; background: var(--accent); }
+.product-list .products-status-divider--current { margin-top: 0; }
+.card-grid.product-list:has(> .products-status-divider:first-child) { border-top: 0; }
+.product-list .products-status-divider .products-status-divider-label { color: #fff; font-size: 13px; letter-spacing: 0.06em; }
 .card-grid.product-list .card .prow { display: grid; text-align: left; grid-template-columns: 40px minmax(0, 1fr) 150px 150px; align-items: center; gap: 4px 16px; padding: 14px 8px; color: var(--text); text-decoration: none; }
 .prow-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
 .prow-icon svg, .prow-icon img { width: 32px; height: 32px; }
