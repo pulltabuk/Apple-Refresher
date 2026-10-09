@@ -1023,17 +1023,60 @@ function cardHtml(product, statusInfo) {
   const discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
   const lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetween(launch, product.discontinued_date) : '';
   const decade = product.discontinued && product.discontinued_date ? `${Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10}s` : '';
-  const meta = launch && product.discontinued && product.discontinued_date
-    ? `<p class="card-meta card-meta--lifespan">Lived ${lifespanText(launch, product.discontinued_date)}</p>`
-    : '';
   return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-wait="${days !== '' ? statusInfo.ratio.toFixed(3) : ''}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
-  <a class="card-link" href="/products/${product.slug}/">
-        <div class="card-name-row">${productIcon(product, 36)}<p class="card-name">${escapeHtml(product.name)}</p></div>
-    ${productBadge(product, statusInfo)}
-    ${meta}
-  </a>
-  ${categoryPill(product.category)}
+  ${productRowInner(product, statusInfo)}
 </article>`;
+}
+
+// A product as a row in the All products and Discontinued lists: icon,
+// name, family and dates, how far through its usual wait it is, and the
+// one number that matters on the right. Keep in step with
+// productRowInnerJS() in public/app.js.
+const ROW_STATUS_LABELS = { fresh: 'Recently updated', aging: 'Getting on', overdue: 'Overdue' };
+function productRowInner(product, statusInfo) {
+  const launch = launchDate(product);
+  const releases = (product.refresh_history || []).slice().sort();
+  const lastDone = releases.filter((d) => d <= new Date().toISOString().slice(0, 10)).pop();
+  const meta = [escapeHtml(product.category || '')];
+  let figure = '';
+  let status = '';
+  let bar = '';
+  if (product.discontinued) {
+    if (launch && product.discontinued_date) meta.push(`Lived ${lifespanText(launch, product.discontinued_date)}`);
+    if (launch) meta.push(`Released ${formatDate(launch)}`);
+    const year = product.discontinued_date ? String(product.discontinued_date).slice(0, 4) : '';
+    figure = year
+      ? `<span class="prow-num">${year}</span> <span class="prow-unit">discontinued ${escapeHtml(formatDate(product.discontinued_date).replace(/ \d{4}$/, ''))}</span>`
+      : '<span class="prow-unit">Discontinued</span>';
+    status = '<span class="prow-status prow-status--discontinued">Discontinued</span>';
+  } else if (statusInfo) {
+    const info = badgeDaysInfo(product, statusInfo);
+    if (info.days < 0) {
+      const due = releases[releases.length - 1];
+      meta.push(lastDone ? `Last released ${formatDate(lastDone)}` : 'New product');
+      figure = `<span class="prow-unit">Coming</span> <span class="prow-num prow-num--date">${due ? escapeHtml(formatDate(due)) : 'soon'}</span>`;
+      status = '<span class="prow-status prow-status--upcoming">Coming soon</span>';
+    } else {
+      meta.push(statusInfo.hasCycle ? `Last released ${formatDate(lastDone || launch)}` : `Only release ${formatDate(lastDone || launch)}`);
+      figure = `<span class="prow-num">${info.days.toLocaleString('en-GB')}</span> <span class="prow-unit">${info.days === 1 ? 'day' : 'days'} ${info.suffix}</span>`;
+      if (statusInfo.hasCycle) {
+        status = `<span class="prow-status prow-status--${statusInfo.status}">${ROW_STATUS_LABELS[statusInfo.status] || ''}</span>`;
+        bar = `<span class="prow-bar prow-bar--${statusInfo.status}" title="${escapeHtml(badgeExplanation(statusInfo))}"><span style="width:${Math.min(100, Math.round(statusInfo.ratio * 100))}%"></span></span>`;
+      }
+    }
+  } else {
+    meta.push('No release date yet');
+  }
+  return `<a class="card-link prow" href="/products/${product.slug}/">
+    <span class="prow-icon">${productIcon(product, 32)}</span>
+    <span class="prow-main">
+      <span class="card-name">${escapeHtml(product.name)}</span>
+      <span class="prow-meta">${meta.filter(Boolean).join(' &middot; ')}</span>
+      ${bar}
+    </span>
+    ${status}
+    <span class="prow-figure">${figure}</span>
+  </a>`;
 }
 
 function filterBar(key, values, labels, counts, totalCount, showAll = true, allLabel = 'All') {
@@ -1875,7 +1918,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 </div>
 <h2 id="sort-heading" class="sort-heading">Longest wait first, discontinued last</h2>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
-<div class="card-grid" id="grid" data-mode="all">
+<div class="card-grid product-list" id="grid" data-mode="all">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
 </div>
 <div id="pagination" class="pagination"></div>`
@@ -1907,7 +1950,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 </div>
 ${filterBar('decade', decades, null, decadeCounts, items.length)}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
-<div class="card-grid" id="grid" data-mode="discontinued">
+<div class="card-grid product-list" id="grid" data-mode="discontinued">
   ${items.map((p) => cardHtml(p, null)).join('\n')}
 </div>`
     : `
