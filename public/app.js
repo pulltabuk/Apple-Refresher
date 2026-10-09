@@ -2048,6 +2048,82 @@
       .catch(function () {});
   }
 
+  // --- Live refresh: the categories page. Must stay in step with
+  // categoryRowHtml() in src/templates.js.
+
+  function categoryRowHtmlJS(category, products) {
+    var today = new Date().toISOString().slice(0, 10);
+    var current = products.filter(function (p) { return !p.discontinued; });
+    var total = products.length;
+    var gone = total - current.length;
+    var all = [];
+    products.forEach(function (p) { (p.refresh_history || []).forEach(function (d) { if (all.indexOf(d) === -1) all.push(d); }); });
+    var past = all.filter(function (d) { return d <= today; }).sort();
+    var lastDate = past[past.length - 1] || null;
+    var toDays = function (a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); };
+    var cad = past.length < 2 ? null : { releases: past.length, avg: Math.round(toDays(past[0], past[past.length - 1]) / (past.length - 1)) };
+    var sinceLast = lastDate ? toDays(lastDate, today) : null;
+    var isNew = sinceLast != null && sinceLast <= 30;
+
+    var latest = 'No releases recorded yet';
+    if (lastDate) {
+      var names = products.filter(function (p) { return (p.refresh_history || []).indexOf(lastDate) !== -1; })
+        .map(function (p) { return p.name; }).sort(function (a, b) { return a.localeCompare(b); });
+      var who = names.length > 2 ? names[0] + ' and ' + (names.length - 1) + ' others' : names.join(' and ');
+      var ago = '<span class="crow-nowrap">' + (sinceLast === 0 ? 'today' : sinceLast.toLocaleString('en-GB') + ' ' + (sinceLast === 1 ? 'day' : 'days') + ' ago') + '</span>';
+      latest = current.length
+        ? 'Latest: <strong>' + escapeHtmlJS(who) + '</strong> &middot; ' + ago
+        : 'Last release: <strong>' + escapeHtmlJS(who) + '</strong> &middot; <span class="crow-nowrap">' + formatDateJS(lastDate) + '</span>';
+    }
+    var count = gone === 0 ? pluralJS(total, 'product', 'products')
+      : gone === total ? (total === 1 ? '1 product, discontinued' : total + ' products, all discontinued')
+      : pluralJS(total, 'product', 'products') + ' &middot; ' + gone + ' discontinued';
+
+    var monthYear = function (ms) { return new Date(ms).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', timeZone: 'UTC' }); };
+    var upcoming = [];
+    current.forEach(function (p) { (p.refresh_history || []).forEach(function (d) { if (d > today) upcoming.push(d); }); });
+    upcoming = upcoming.sort()[0];
+    var next;
+    if (!current.length) {
+      var year = products.map(function (p) { return p.discontinued_date; }).filter(Boolean).sort().pop();
+      next = year ? { kind: 'gone', value: String(year).slice(0, 4), caption: 'line discontinued' } : { kind: 'gone', value: 'Discontinued', caption: 'whole line' };
+    } else if (upcoming) {
+      next = { kind: 'coming', value: formatDateJS(upcoming), caption: 'next release' };
+    } else if (!cad) {
+      next = past.length === 1 ? { kind: 'early', value: 'Only one release', caption: 'so far' } : { kind: 'early', value: 'Too early', caption: 'to tell' };
+    } else {
+      var due = new Date(lastDate).getTime() + cad.avg * 86400000;
+      var why = 'Based on ' + cad.releases + ' release dates, about every ' + pluralJS(cad.avg, 'day', 'days');
+      if (due > new Date(today).getTime()) next = { kind: 'next', value: monthYear(due), caption: 'next expected', why: why };
+      else if (sinceLast <= cad.avg * 1.25) next = { kind: 'due', value: 'Due now', caption: 'expected ' + monthYear(due), why: why };
+      else next = { kind: 'overdue', value: 'Overdue', caption: 'was expected ' + monthYear(due), why: why };
+    }
+    return '<a class="crow" href="/categories/' + slugifyJS(category) + '/" data-category="' + escapeHtmlJS(category) + '">' +
+      '<span class="crow-icon">' + categoryIconJS(category, 28) + '</span>' +
+      '<span class="crow-main">' +
+        '<span class="crow-name">' + escapeHtmlJS(category) + (isNew ? ' <span class="crow-new">New</span>' : '') + '</span>' +
+        '<span class="crow-latest">' + latest + '</span>' +
+        '<span class="crow-count">' + count + '</span>' +
+      '</span>' +
+      '<span class="crow-next crow-next--' + next.kind + '"' + (next.why ? ' title="' + escapeHtmlJS(next.why) + '"' : '') + '>' +
+        '<span class="crow-next-value">' + escapeHtmlJS(next.value) + '</span><span class="crow-next-caption">' + escapeHtmlJS(next.caption) + '</span></span>' +
+    '</a>';
+  }
+
+  var categoryList = document.getElementById('category-list');
+  if (categoryList && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+    fetchAllProductsJS().then(function (products) {
+      if (!Array.isArray(products) || !products.length) return;
+      var names = [];
+      products.forEach(function (p) { if (names.indexOf(p.category) === -1) names.push(p.category); });
+      names.sort(function (a, b) { return String(a).localeCompare(String(b)); });
+      categoryList.innerHTML = names.map(function (c) {
+        return categoryRowHtmlJS(c, products.filter(function (p) { return p.category === c; }));
+      }).join('\n');
+      refreshCustomIconsInDomJS();
+    }).catch(function () {});
+  }
+
   // --- Live refresh: any card grid (/products/, /discontinued/, a
   // category page). The grid's data-mode says which products belong.
 
