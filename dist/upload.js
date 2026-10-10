@@ -1943,6 +1943,14 @@
     }
     $('up-ev-time-echo').textContent = text;
   }
+  function evSummaryCount() {
+    const n = $('up-ev-summary').value.trim().length;
+    $('up-ev-summary-count').textContent = n
+      ? n + ' characters' + (n > 300 ? ', longer than the 300 or so that reads best' : '') + '. Shown on the event page and in Google results.'
+      : 'Shown on the event page and in Google results.';
+  }
+  $('up-ev-summary').addEventListener('input', evSummaryCount);
+
   $('up-ev-date').addEventListener('input', evTimeEcho);
   $('up-ev-time').addEventListener('input', evTimeEcho);
 
@@ -1953,6 +1961,8 @@
     $('up-ev-date').value = ev && ev.event_date ? String(ev.event_date).slice(0, 10) : '';
     $('up-ev-time').value = ev ? ev.event_time || '' : '';
     $('up-ev-url').value = ev ? ev.event_url || '' : '';
+    $('up-ev-summary').value = ev ? ev.summary || '' : '';
+    evSummaryCount();
     $('up-ev-featured').checked = !!(ev && ev.featured);
     evImageUrl = ev ? ev.image_url || '' : '';
     evProducts = ev ? (ev.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : { name: p.name, featured: !!p.featured })) : [];
@@ -2029,6 +2039,11 @@
       featured: $('up-ev-featured').checked,
       announced_products: evProducts,
     };
+    // Sent when there is one, or once the column exists, so saving still
+    // works before supabase-schema-update-31.sql has been run.
+    const summaryText = $('up-ev-summary').value.trim();
+    const editingEvent = evEditingId ? evList.find((x) => x.id === evEditingId) : null;
+    if (summaryText || (editingEvent && 'summary' in editingEvent)) payload.summary = summaryText || null;
     const missing = [!payload.image_url && 'the artwork', !payload.heading && 'a title', !payload.event_date && 'the date'].filter(Boolean);
     if (missing.length) {
       evStatus('up-ev-status', 'Still needed: ' + missing.join(', ') + '.', true);
@@ -2064,7 +2079,9 @@
         ? 'Saved and published. The homepage and event page update in a minute or two. Tap Post to X below to promote it.'
         : 'Saved, but publishing didn’t start (' + published.error + '). It will go live with the next publish or the morning rebuild.', !published.ok);
     } catch (err) {
-      evStatus('up-ev-status', 'Could not save: ' + (err.message || err), true);
+      evStatus('up-ev-status', /summary/.test(err.message || '')
+        ? 'Could not save the summary yet: the database needs supabase-schema-update-31.sql running first. Clear the summary to save the rest.'
+        : 'Could not save: ' + (err.message || err), true);
     }
     btn.disabled = false;
   });

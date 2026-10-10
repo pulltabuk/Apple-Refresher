@@ -517,7 +517,7 @@
         ? Promise.all([
             fetch(window.SUPABASE_URL + '/rest/v1/products?select=id,name,slug,category,icon_url,discontinued,refresh_history', { headers })
               .then(function (res) { return res.json(); }).then(appleNamesJS).catch(function () { return []; }),
-            fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=id,heading,event_date,announced_products,image_url', { headers })
+            fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=*', { headers })
               .then(function (res) { return res.json(); }).catch(function () { return []; }),
             fetch(window.SUPABASE_URL + '/rest/v1/gallery_photos?select=id,caption,tags,location,country,date_taken,image_url,image_urls', { headers })
               .then(function (res) { return res.json(); }).catch(function () { return []; }),
@@ -655,7 +655,7 @@
         events.slice().sort(function (a, b) { return String(b.event_date || '').localeCompare(String(a.event_date || '')); }).forEach(function (ev) {
           var announced = (ev.announced_products || []).map(function (a) { return typeof a === 'string' ? a : a.name; });
           var when = ev.event_date ? formatDateJS(ev.event_date) + ' ' + String(ev.event_date).slice(0, 4) : '';
-          if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' ') + ' ' + when, query)) return;
+          if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' ') + ' ' + when + ' ' + (ev.summary || ''), query)) return;
           matches.push({ kind: 'event', label: ev.heading || 'Apple Event', href: '/events/' + eventSlugJS(ev) + '/',
             iconHtml: ev.image_url ? searchThumbHtmlJS(ev.image_url) : '<span class="site-search-event-dot" aria-hidden="true"></span>',
             note: ev.event_date ? formatDateJS(ev.event_date) : '' });

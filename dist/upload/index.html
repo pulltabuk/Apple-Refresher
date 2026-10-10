@@ -197,6 +197,8 @@
         <label>Time, with its time zone<input type="text" id="up-ev-time" placeholder="e.g. 10am PT" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
         <p class="up-hint" id="up-ev-time-echo" aria-live="polite"></p>
         <label>Apple&rsquo;s event page (optional)<input type="url" id="up-ev-url" placeholder="https://www.apple.com/apple-events/" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
+        <label>Summary (optional)<textarea id="up-ev-summary" class="up-fact-edit up-fact-edit--short" placeholder="A line or two on what Apple announced"></textarea></label>
+        <p class="up-hint" id="up-ev-summary-count">Shown on the event page and in Google results.</p>
       </div>
 
       <div class="up-card">
@@ -349,7 +351,7 @@
     <span id="up-user"></span>
     <button type="button" id="up-logout" class="up-link">Sign out</button>
   </footer>
-  <p class="up-version">Version 3f7cf5</p>
+  <p class="up-version">Version a836dd</p>
 </main>
 <script>
   window.SUPABASE_URL = "";
@@ -357,7 +359,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
 <script src="/facts-kit.js?v=3c2d9b47b1" defer></script>
-<script src="/upload.js?v=3f7cf584fa" defer></script>
+<script src="/upload.js?v=a836dd875d" defer></script>
 <script>
   // Keeps the page's files on the phone so it opens instantly from the
   // Home Screen; updates are fetched in the background.
