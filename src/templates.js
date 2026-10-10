@@ -1495,6 +1495,8 @@ function eventArchiveCardHtml(event, productsBySlug) {
 }
 
 function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  // Written in the admin or the phone app; also the page's description.
+  const summary = String(event.summary || '').trim();
   const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
   const sortedProducts = normalizedAnnouncedProducts(event).map((p) => p.name).sort((a, b) => a.localeCompare(b));
   const productsList = sortedProducts.length
@@ -1514,13 +1516,14 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
   ${dateText ? `<p class="page-intro">${escapeHtml(dateText)}</p>` : ''}
   ${FactsKit.eventCountdownHtml(event)}
   ${event.image_url ? `<img class="event-detail-image" src="${escapeHtml(event.image_url)}" alt="">` : ''}
+  ${summary ? `<p class="event-summary">${escapeHtml(summary).replace(/\n+/g, '<br>')}</p>` : ''}
   ${productsList ? `<h2>What was announced</h2>${productsList}` : ''}
   ${event.event_url ? `<p><a class="intro-cta" href="${escapeHtml(event.event_url)}" target="_blank" rel="noopener">Watch on Apple's site</a></p>` : ''}
   <p><a href="/events/" class="gallery-nav-link">&larr; All Apple Events</a></p>
 </article>`;
   return shell({
     title: `${event.heading} — Apple Sunset`,
-    description: `${event.heading}${dateText ? `, ${dateText}` : ''}. ${sortedProducts.length ? 'Announced: ' + sortedProducts.join(', ') + '.' : 'The date, time and what Apple announced, tracked by Apple Sunset.'}`,
+    description: `${event.heading}${dateText ? `, ${dateText}` : ''}. ${summary ? summary.replace(/\s+/g, ' ') : sortedProducts.length ? 'Announced: ' + sortedProducts.join(', ') + '.' : 'The date, time and what Apple announced, tracked by Apple Sunset.'}`,
     siteUrl,
     path: `/events/${eventSlug(event)}/`,
     bodyHtml: body,
@@ -2887,6 +2890,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <p class="admin-hint">Only needed if two events overlap: a featured one goes first. Either way an event leaves the homepage 48 hours after it starts.</p>
         <label>Event time, with its time zone, e.g. "10am PT" (the countdown and the UK time are worked out from it; with no time, 10am PT is assumed)<input type="text" id="event_time" placeholder="10am PT" autocomplete="off"></label>
         <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/" autocomplete="off"></label>
+        <label>Summary (optional): a line or two on what happened, shown on the event page and in Google results<textarea id="event_summary" rows="3" placeholder="e.g. Apple unveiled iPhone 18 Pro with a new camera system, alongside Apple Watch Series 12."></textarea></label>
+        <p class="admin-hint" id="event-summary-count"></p>
         <div class="admin-subfield">
           <span class="admin-subfield-label">Announced products (optional, add once you know what was revealed)</span>
           <ul id="event-products-list" class="refresh-history-list"></ul>
@@ -3331,6 +3336,8 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
         <label>Time, with its time zone<input type="text" id="up-ev-time" placeholder="e.g. 10am PT" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
         <p class="up-hint" id="up-ev-time-echo" aria-live="polite"></p>
         <label>Apple&rsquo;s event page (optional)<input type="url" id="up-ev-url" placeholder="https://www.apple.com/apple-events/" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
+        <label>Summary (optional)<textarea id="up-ev-summary" class="up-fact-edit up-fact-edit--short" placeholder="A line or two on what Apple announced"></textarea></label>
+        <p class="up-hint" id="up-ev-summary-count">Shown on the event page and in Google results.</p>
       </div>
 
       <div class="up-card">

@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta name="generated" content="2026-10-09T15:36:45.820Z">
+<meta name="generated" content="2026-10-10T06:53:50.845Z">
 </head>
 <body class="is-admin">
 <header class="site-header-bg">
@@ -453,6 +453,8 @@
         <p class="admin-hint">Only needed if two events overlap: a featured one goes first. Either way an event leaves the homepage 48 hours after it starts.</p>
         <label>Event time, with its time zone, e.g. "10am PT" (the countdown and the UK time are worked out from it; with no time, 10am PT is assumed)<input type="text" id="event_time" placeholder="10am PT" autocomplete="off"></label>
         <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/" autocomplete="off"></label>
+        <label>Summary (optional): a line or two on what happened, shown on the event page and in Google results<textarea id="event_summary" rows="3" placeholder="e.g. Apple unveiled iPhone 18 Pro with a new camera system, alongside Apple Watch Series 12."></textarea></label>
+        <p class="admin-hint" id="event-summary-count"></p>
         <div class="admin-subfield">
           <span class="admin-subfield-label">Announced products (optional, add once you know what was revealed)</span>
           <ul id="event-products-list" class="refresh-history-list"></ul>
@@ -698,6 +700,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/facts-kit.js?v=3c2d9b47b1" defer></script>
-<script src="/admin.js?v=e4f31b9026" defer></script>
+<script src="/admin.js?v=84431ae0a5" defer></script>
 </body>
 </html>

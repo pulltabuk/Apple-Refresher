@@ -1815,7 +1815,9 @@ body.is-admin .site-search { display: none; }
   display: inline-block;
   animation: countdown-tick 0.5s ease-out;
   min-width: 1.6em;
+  text-align: center;
 }
+.product-countdown-clock .countdown-unit--secs .countdown-value { text-align: left; }
 @media (prefers-reduced-motion: reduce) {
   .countdown-unit--secs .countdown-value { animation: none; }
 }
@@ -2867,3 +2869,6 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .prow-unit { font-size: 11px; }
   .prow-bar { max-width: none; }
 }
+
+/* An event's summary, under its artwork */
+.event-summary { margin: 1.25rem 0 0; font-size: 18px; line-height: 1.55; color: var(--text); max-width: 68ch; }

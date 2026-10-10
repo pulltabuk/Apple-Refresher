@@ -3539,6 +3539,8 @@
     document.getElementById('event_date').value = event.event_date || '';
     document.getElementById('event_time').value = event.event_time || '';
     document.getElementById('event_url').value = event.event_url || '';
+    document.getElementById('event_summary').value = event.summary || '';
+    updateEventSummaryCount();
     document.getElementById('event_featured').checked = !!event.featured;
     currentEventProducts = (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p));
     renderEventImageThumb();
@@ -3553,9 +3555,17 @@
     currentEventProducts = [];
     renderEventImageThumb();
     renderEventProducts();
+    updateEventSummaryCount();
     document.getElementById('event-form-title').textContent = 'Add event';
     showEventForm();
   }
+
+  // A running count, since a summary reads best at a line or two.
+  function updateEventSummaryCount() {
+    const n = document.getElementById('event_summary').value.trim().length;
+    document.getElementById('event-summary-count').textContent = n ? n + ' characters' + (n > 300 ? ', longer than the 300 or so that reads best' : '') : '';
+  }
+  document.getElementById('event_summary').addEventListener('input', updateEventSummaryCount);
 
   document.getElementById('new-event-btn').addEventListener('click', startNewEvent);
 
@@ -3591,6 +3601,11 @@
       featured: document.getElementById('event_featured').checked,
       announced_products: currentEventProducts,
     };
+    // Sent when there is one, or once the column exists, so saving still
+    // works before supabase-schema-update-31.sql has been run.
+    const summaryText = document.getElementById('event_summary').value.trim();
+    const editingEvent = editingEventId ? cachedEvents.find((ev) => ev.id === editingEventId) : null;
+    if (summaryText || (editingEvent && 'summary' in editingEvent)) payload.summary = summaryText || null;
     if (!payload.heading || !payload.image_url || !payload.event_date) {
       window.alert('Title, image, and event date are all needed.');
       return;
@@ -3600,7 +3615,9 @@
         ? await client.from('apple_events').update(payload).eq('id', editingEventId)
         : await client.from('apple_events').insert(payload);
       if (result.error) {
-        window.alert(/featured/.test(result.error.message || '')
+        window.alert(/summary/.test(result.error.message || '')
+          ? 'Save failed: run supabase-schema-update-31.sql in Supabase first, so events can have a summary.'
+          : /featured/.test(result.error.message || '')
           ? 'Save failed: run supabase-schema-update-24.sql in Supabase first.'
           : 'Save failed: ' + result.error.message);
         return;
