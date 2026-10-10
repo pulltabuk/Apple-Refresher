@@ -316,10 +316,30 @@
   const MONTH_NAMES = '(?:january|february|march|april|may|june|july|august|september|october|november|december)';
   // "8 October 2014", "October 8" or "October 8, 2014".
   const DATE_RE = new RegExp('\\b(?:\\d{1,2}(?:st|nd|rd|th)?\\s+' + MONTH_NAMES + '|' + MONTH_NAMES + '\\s+\\d{1,2}(?:st|nd|rd|th)?\\b)(?:,?\\s+(?:19|20)\\d\\d)?\\b', 'i');
+  // Numbers that are part of a name, not a figure: "iPhone 11", "Series
+  // 9", "M4", "4th generation" and every product name on the site.
+  function maskModelNumbers(text) {
+    const blank = (str) => str.replace(/[^\s]/g, '\u2002');
+    let out = String(text || '');
+    (cardProducts || []).map((p) => String((p && p.name) || '')).filter((n) => /\d/.test(n) && n.length > 2)
+      .sort((a, b) => b.length - a.length)
+      .forEach((n) => {
+        const re = new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*'), 'gi');
+        out = out.replace(re, blank);
+      });
+    return out
+      .replace(/\b(?:iPhone|iPad|iPod|iMac|Mac|MacBook|AirPods|HomePod|Watch|Series|Gen)\s?\d{1,2}[a-z]{0,2}\b/gi, blank)
+      .replace(/\b[MAS]\d{1,2}\b/g, blank)
+      .replace(/\b\d{1,2}(?:st|nd|rd|th)[\s-]+gen(?:eration)?\b/gi, blank);
+  }
+
   function textFigure(text) {
-    let m = String(text || '').match(/(\d[\d,]*(?:\.\d+)?)(\s?(?:%|per cent|percent|days?|weeks?|months?|years?))?/i);
+    const masked = maskModelNumbers(text);
+    // A price keeps its currency and size: "$699", "£1.2bn".
+    let m = masked.match(/([$\u00a3\u20ac]\s?)?(\d[\d,]*(?:\.\d+)?)(\s?(?:bn|billion|million|m)\b)?(\s?(?:%|(?:per cent|percent|days?|weeks?|months?|years?)\b))?/i);
+    if (m) m = Object.assign([m[0], (m[1] || '').replace(/\s/g, '') + m[2] + (m[3] || ''), m[4] || ''], { index: m.index });
     // A date ("8 October 2014") is one headline, not the number 8.
-    const d = String(text || '').match(DATE_RE);
+    const d = masked.match(DATE_RE);
     if (d && (!m || d.index <= m.index)) m = Object.assign([d[0], d[0].replace(/,/g, ''), ''], { index: d.index });
     if (!m) return null;
     const rest = String(text).slice(m.index + m[0].length).split(/[.,;:!?(]/)[0].trim().split(/\s+/).filter(Boolean);
@@ -349,8 +369,8 @@
   // best guess from the text, for the writer to keep or change.
   function cardGuess(text) {
     const subject = cardSubject(text);
-    const fig = productNamed(text, cardProducts) ? null : textFigure(text);
-    return { headline: cardHeadline(subject.big), line: (fig && fig.full) || subject.caption || '', title: subject.title || '', icon: 'auto' };
+    const fig = textFigure(text);
+    return { headline: cardHeadline(subject.big), line: (fig && fig.big === subject.big && fig.full) || subject.caption || '', title: subject.title || '', icon: 'auto' };
   }
 
   // What "Automatic" will show, in words, for the composer.
@@ -365,8 +385,11 @@
   function cardSubject(text) {
     const product = productNamed(text, cardProducts);
     if (product) {
-      const fig = productFigure(product);
-      return { title: appleName(product.name), shape: iconShapeFor(product.category) || CATEGORY_ICONS.Other, iconUrl: product.icon_url || customCategoryIcon(product.category) || null, big: fig.big, caption: fig.caption, sub: fig.sub };
+      // The text's own figure when it has one, so the card says what the
+      // post says; otherwise the product's live figure.
+      const own = textFigure(text);
+      const fig = own || productFigure(product);
+      return { title: appleName(product.name), shape: iconShapeFor(product.category) || CATEGORY_ICONS.Other, iconUrl: product.icon_url || customCategoryIcon(product.category) || null, big: fig.big, caption: fig.caption, sub: fig.sub || '' };
     }
     const category = categoryNamed(text);
     const fig = textFigure(text);
@@ -958,13 +981,20 @@
 
   // The product a post is about: the longest product name it mentions,
   // ignoring spacing and punctuation ("iPod Hi-Fi" matches "iPod HiFi").
+  // The product a text is about: the one it names first ("The iPhone 11
+  // cost less than the iPhone XR" is about the iPhone 11), and of names
+  // starting at the same place the longest ("iPhone 11 Pro" over "iPhone 11").
   function productNamed(text, products) {
     const squash = (str) => String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
     const hay = squash(text);
     let best = null;
+    let bestAt = Infinity;
     (products || []).forEach((p) => {
       const name = squash(p && p.name);
-      if (name.length > 2 && hay.indexOf(name) !== -1 && (!best || name.length > squash(best.name).length)) best = p;
+      if (name.length <= 2) return;
+      const at = hay.indexOf(name);
+      if (at === -1) return;
+      if (at < bestAt || (at === bestAt && name.length > squash(best.name).length)) { best = p; bestAt = at; }
     });
     return best;
   }

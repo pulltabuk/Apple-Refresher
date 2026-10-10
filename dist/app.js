@@ -1998,6 +1998,27 @@
     return ordered.concat(rest).slice(0, 3);
   }
 
+  // iPhone Safari has no scroll anchoring: when a live redraw changes the
+  // height of something above where the reader is, the page jumps. Chrome
+  // holds the reader's place itself; elsewhere this does, by keeping the
+  // first thing on screen that survives the change where it was.
+  var NATIVE_SCROLL_ANCHORING = !!(window.CSS && CSS.supports && CSS.supports('overflow-anchor', 'auto'));
+  function keepPlaceJS(change) {
+    if (NATIVE_SCROLL_ANCHORING || !(window.scrollY > 0) || !document.elementFromPoint) { change(); return; }
+    var x = Math.round(window.innerWidth / 2);
+    var probes = [8, Math.round(window.innerHeight / 2), window.innerHeight - 8].map(function (y) {
+      var el = document.elementFromPoint(x, y);
+      return el ? { el: el, top: el.getBoundingClientRect().top } : null;
+    }).filter(Boolean);
+    change();
+    for (var i = 0; i < probes.length; i++) {
+      if (!probes[i].el.isConnected) continue;
+      var moved = probes[i].el.getBoundingClientRect().top - probes[i].top;
+      if (Math.abs(moved) >= 1) window.scrollBy(0, moved);
+      return;
+    }
+  }
+
   var heroCardsSection = document.getElementById('hero-cards');
   if (heroCardsSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     var featuredOrderReq = fetch(window.SUPABASE_URL + '/rest/v1/site_content?select=body&id=eq.featured', {
@@ -2031,7 +2052,7 @@
       var activeEvent = window.FactsKit ? window.FactsKit.pickHeroEvent(heroData.events, Date.now()) : null;
       var featuredOrder = heroData.featuredOrder;
       var statsEl = document.getElementById('site-stats');
-      if (statsEl && Array.isArray(products) && products.length) statsEl.outerHTML = siteStatsHtmlJS(siteStatsJS(products));
+      if (statsEl && Array.isArray(products) && products.length) keepPlaceJS(function () { statsEl.outerHTML = siteStatsHtmlJS(siteStatsJS(products)); });
       var active = products.filter(function (p) { return !p.discontinued; });
       var withStatus = active
         .map(function (p) { return { product: p, status: computeStatusJS(p) }; })
@@ -2077,9 +2098,11 @@
           })
         : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');
       // Must match homePage(): the featured tile, then the Live counts panel.
-      heroCardsSection.innerHTML =
-        featuredSlotHtml +
-        siteStatsHtmlJS(siteStatsJS(products));
+      keepPlaceJS(function () {
+        heroCardsSection.innerHTML =
+          featuredSlotHtml +
+          siteStatsHtmlJS(siteStatsJS(products));
+      });
     }
   }
 
@@ -2106,7 +2129,7 @@
         // Must match build.js: the same pool, so the same key finds the same fact.
         var item = window.FactsKit.dailyFactPool(products, published).filter(function (f) { return f.key === factKeyBuilt; })[0];
         if (!item) return;
-        factBoxSection.innerHTML = window.FactsKit.dailyFactBoxHtml(item, sanitizeRichTextJS);
+        keepPlaceJS(function () { factBoxSection.innerHTML = window.FactsKit.dailyFactBoxHtml(item, sanitizeRichTextJS); });
         revealAdminEditLinks(factBoxSection.querySelectorAll('.admin-edit-link'));
         wireTweetButtons(factBoxSection.querySelectorAll('.tweet-btn'));
       })
@@ -2127,7 +2150,7 @@
         var built = Array.prototype.map.call(galleryStripSection.querySelectorAll('a.gallery-strip-item'), function (a) { return a.getAttribute('href'); });
         if (built.length && built.length === Math.min(10, photos.length) && built.every(function (h) { return live.indexOf(h) !== -1; })) return;
         var picks = pickRandomJS(photos, 10);
-        galleryStripSection.innerHTML = picks.map(galleryStripItemHtmlJS).join('');
+        keepPlaceJS(function () { galleryStripSection.innerHTML = picks.map(galleryStripItemHtmlJS).join(''); });
       })
       .catch(function () {});
   }
@@ -2864,10 +2887,12 @@
         unit(Math.floor((secs % 3600) / 60), 'mins') + unit(secs % 60, 'secs', true);
     }
     function tickAll() {
-      var els = document.querySelectorAll('[data-countdown]');
-      for (var i = 0; i < els.length; i++) render(els[i]);
-      var at = document.querySelectorAll('[data-countdown-at]');
-      for (var j = 0; j < at.length; j++) renderAt(at[j]);
+      keepPlaceJS(function () {
+        var els = document.querySelectorAll('[data-countdown]');
+        for (var i = 0; i < els.length; i++) render(els[i]);
+        var at = document.querySelectorAll('[data-countdown-at]');
+        for (var j = 0; j < at.length; j++) renderAt(at[j]);
+      });
     }
     tickAll();
     setInterval(tickAll, 1000);
