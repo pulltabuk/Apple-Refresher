@@ -304,3 +304,23 @@ body {
 .up-ev-star[aria-pressed="true"] { color: var(--accent); }
 .up-ev-remove { font-size: 24px; }
 .up-ev-badge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--accent); color: #fff; vertical-align: 1px; }
+
+/* The event summary's formatting toolbar and editor */
+.up-rt-toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.up-rt-toolbar button {
+  min-width: 44px; height: 40px; padding: 0 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: #fff; color: var(--text);
+  font: inherit; font-size: 16px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.up-rt-toolbar button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.up-rt-toolbar .up-rt-clear { margin-left: auto; font-size: 14px; color: var(--error); border-color: var(--error); }
+.up-rt-editor {
+  min-height: 110px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: #fff; color: var(--text); font-size: 17px; line-height: 1.5; font-weight: 400;
+  -webkit-user-select: text; user-select: text; overflow-wrap: anywhere;
+}
+.up-rt-editor:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+.up-rt-editor:empty::before { content: attr(data-placeholder); color: var(--text-secondary); }
+.up-rt-editor p { margin: 0 0 0.6em; }
+.up-rt-editor p:last-child { margin-bottom: 0; }
+.up-rt-editor a { color: var(--accent-dark); }

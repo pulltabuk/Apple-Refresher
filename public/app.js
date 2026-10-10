@@ -655,7 +655,7 @@
         events.slice().sort(function (a, b) { return String(b.event_date || '').localeCompare(String(a.event_date || '')); }).forEach(function (ev) {
           var announced = (ev.announced_products || []).map(function (a) { return typeof a === 'string' ? a : a.name; });
           var when = ev.event_date ? formatDateJS(ev.event_date) + ' ' + String(ev.event_date).slice(0, 4) : '';
-          if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' ') + ' ' + when + ' ' + (ev.summary || ''), query)) return;
+          if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' ') + ' ' + when + ' ' + String(ev.summary || '').replace(/<[^>]+>/g, ' '), query)) return;
           matches.push({ kind: 'event', label: ev.heading || 'Apple Event', href: '/events/' + eventSlugJS(ev) + '/',
             iconHtml: ev.image_url ? searchThumbHtmlJS(ev.image_url) : '<span class="site-search-event-dot" aria-hidden="true"></span>',
             note: ev.event_date ? formatDateJS(ev.event_date) : '' });
@@ -1638,20 +1638,60 @@
 
   // --- Reveal "Edit this product" to the logged-in admin only.
 
+  // iPhone Safari has no scroll anchoring: when a live redraw changes the
+  // height of something above where the reader is, the page jumps. Chrome
+  // holds the reader's place itself; elsewhere this does, by keeping the
+  // first thing on screen that survives the change where it was.
+  var NATIVE_SCROLL_ANCHORING = !!(window.CSS && CSS.supports && CSS.supports('overflow-anchor', 'auto'));
+  function keepPlaceJS(change) {
+    if (NATIVE_SCROLL_ANCHORING || !(window.scrollY > 0) || !document.elementFromPoint) { change(); return; }
+    var x = Math.round(window.innerWidth / 2);
+    var probes = [8, Math.round(window.innerHeight / 2), window.innerHeight - 8].map(function (y) {
+      var el = document.elementFromPoint(x, y);
+      return el ? { el: el, top: el.getBoundingClientRect().top } : null;
+    }).filter(Boolean);
+    change();
+    for (var i = 0; i < probes.length; i++) {
+      if (!probes[i].el.isConnected) continue;
+      var moved = probes[i].el.getBoundingClientRect().top - probes[i].top;
+      if (Math.abs(moved) >= 1) window.scrollBy(0, moved);
+      return;
+    }
+  }
+
+  // Whether the visitor is signed in to the admin, asked once per page:
+  // null until known.
+  var adminSignedIn = null;
+  var adminSessionPromise = null;
+  function adminSessionJS() {
+    if (!adminSessionPromise) {
+      adminSessionPromise = (window.SUPABASE_URL && window.SUPABASE_ANON_KEY && window.supabase
+        ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY).auth.getSession()
+            .then(function (result) { return !!(result.data && result.data.session); })
+            .catch(function () { return false; })
+        : Promise.resolve(false)).then(function (yes) { adminSignedIn = yes; return yes; });
+    }
+    return adminSessionPromise;
+  }
+
   function revealAdminEditLinks(links) {
     if (!links.length || !window.SUPABASE_URL || !window.SUPABASE_ANON_KEY || !window.supabase) return;
-    var authClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-    authClient.auth.getSession().then(function (result) {
-      if (result.data && result.data.session) {
-        // The page carries no admin link or wording until here, so it's
-        // never seen (or indexed) by anyone else.
-        links.forEach(function (el) {
+    // The page carries no admin link or wording until here, so it's
+    // never seen (or indexed) by anyone else. Showing them adds height,
+    // so the reader's place is kept; once the answer is known, links in a
+    // redrawn section appear in the same step instead of a moment later.
+    function show() {
+      keepPlaceJS(function () {
+        Array.prototype.forEach.call(links, function (el) {
           if (el.getAttribute('data-admin-href')) el.setAttribute('href', el.getAttribute('data-admin-href'));
           if (el.getAttribute('data-admin-label') && !el.textContent) el.textContent = el.getAttribute('data-admin-label');
           el.style.display = '';
         });
-      }
-    });
+      });
+    }
+    if (adminSignedIn === true) { show(); return; }
+    if (adminSignedIn === false) return;
+    adminSessionJS().then(function (yes) { if (yes) show(); });
   }
 
   // --- Draft a post for X, admin only ---
@@ -1998,27 +2038,6 @@
     return ordered.concat(rest).slice(0, 3);
   }
 
-  // iPhone Safari has no scroll anchoring: when a live redraw changes the
-  // height of something above where the reader is, the page jumps. Chrome
-  // holds the reader's place itself; elsewhere this does, by keeping the
-  // first thing on screen that survives the change where it was.
-  var NATIVE_SCROLL_ANCHORING = !!(window.CSS && CSS.supports && CSS.supports('overflow-anchor', 'auto'));
-  function keepPlaceJS(change) {
-    if (NATIVE_SCROLL_ANCHORING || !(window.scrollY > 0) || !document.elementFromPoint) { change(); return; }
-    var x = Math.round(window.innerWidth / 2);
-    var probes = [8, Math.round(window.innerHeight / 2), window.innerHeight - 8].map(function (y) {
-      var el = document.elementFromPoint(x, y);
-      return el ? { el: el, top: el.getBoundingClientRect().top } : null;
-    }).filter(Boolean);
-    change();
-    for (var i = 0; i < probes.length; i++) {
-      if (!probes[i].el.isConnected) continue;
-      var moved = probes[i].el.getBoundingClientRect().top - probes[i].top;
-      if (Math.abs(moved) >= 1) window.scrollBy(0, moved);
-      return;
-    }
-  }
-
   var heroCardsSection = document.getElementById('hero-cards');
   if (heroCardsSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     var featuredOrderReq = fetch(window.SUPABASE_URL + '/rest/v1/site_content?select=body&id=eq.featured', {
@@ -2129,8 +2148,21 @@
         // Must match build.js: the same pool, so the same key finds the same fact.
         var item = window.FactsKit.dailyFactPool(products, published).filter(function (f) { return f.key === factKeyBuilt; })[0];
         if (!item) return;
-        keepPlaceJS(function () { factBoxSection.innerHTML = window.FactsKit.dailyFactBoxHtml(item, sanitizeRichTextJS); });
-        revealAdminEditLinks(factBoxSection.querySelectorAll('.admin-edit-link'));
+        // Nothing to do when the wording is unchanged: redrawing would
+        // only hide and re-show its admin button, moving the page twice.
+        var fresh = document.createElement('div');
+        fresh.innerHTML = window.FactsKit.dailyFactBoxHtml(item, sanitizeRichTextJS);
+        var sameText = function (sel) {
+          var a = factBoxSection.querySelector(sel), b = fresh.querySelector(sel);
+          return (a ? a.textContent.replace(/\s+/g, ' ').trim() : '') === (b ? b.textContent.replace(/\s+/g, ' ').trim() : '') &&
+            (a ? a.innerHTML.replace(/\s+/g, ' ').trim() : '') === (b ? b.innerHTML.replace(/\s+/g, ' ').trim() : '');
+        };
+        if (sameText('.fact-text') && sameText('.fact-subject')) return;
+        keepPlaceJS(function () {
+          factBoxSection.innerHTML = fresh.innerHTML;
+          if (adminSignedIn === true) revealAdminEditLinks(factBoxSection.querySelectorAll('.admin-edit-link'));
+        });
+        if (adminSignedIn !== true) revealAdminEditLinks(factBoxSection.querySelectorAll('.admin-edit-link'));
         wireTweetButtons(factBoxSection.querySelectorAll('.tweet-btn'));
       })
       .catch(function () {});

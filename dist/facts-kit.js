@@ -1249,6 +1249,31 @@
     return client.from('facts').insert({ text }).select();
   }
 
+  // An event summary in and out of the admin's and the phone app's
+  // formatting editors. Older summaries are plain text, whose lines
+  // become paragraphs; an editor holding no words saves as empty.
+  function summaryToEditorHtml(summary) {
+    const raw = String(summary || '').trim();
+    if (!raw) return '';
+    if (/<[a-z][^>]*>/i.test(raw)) return raw;
+    return raw.split(/\n+/).map((line) => line.trim()).filter(Boolean).map((line) => '<p>' + escapeHtml(line) + '</p>').join('');
+  }
+  function summaryFromEditor(editor) {
+    if (!editor || !String(editor.textContent || '').trim()) return null;
+    return editor.innerHTML.trim();
+  }
+  function summaryLengthNote(editor) {
+    // A paragraph break counts as a space, whether or not the editor is
+    // on screen (innerText would ignore breaks while it is hidden).
+    let n = 0;
+    if (editor) {
+      const words = document.createElement('div');
+      words.innerHTML = String(editor.innerHTML || '').replace(/<\/(p|div)>|<br\s*\/?>/gi, ' ');
+      n = String(words.textContent || '').replace(/\s+/g, ' ').trim().length;
+    }
+    return n ? n + ' characters' + (n > 300 ? ', longer than the 300 or so that reads best' : '') : '';
+  }
+
   // --- Apple Events in the homepage hero ---
   // Shared by the build (homePage in src/templates.js) and the page's live
   // refresh (app.js), so both always pick the same event and show it in
@@ -1590,6 +1615,9 @@
     productNamed,
     xCardKey,
     cardGuess,
+    summaryToEditorHtml,
+    summaryFromEditor,
+    summaryLengthNote,
     CARD_ICON_NAMES,
     mountIconPicker,
     cardAutoIconName,

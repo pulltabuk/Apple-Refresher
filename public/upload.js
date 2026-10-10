@@ -1943,13 +1943,75 @@
     }
     $('up-ev-time-echo').textContent = text;
   }
+  const SUMMARY_HINT = 'Shown on the event page and in Google results. Select words, then tap B to make them bold.';
   function evSummaryCount() {
-    const n = $('up-ev-summary').value.trim().length;
-    $('up-ev-summary-count').textContent = n
-      ? n + ' characters' + (n > 300 ? ', longer than the 300 or so that reads best' : '') + '. Shown on the event page and in Google results.'
-      : 'Shown on the event page and in Google results.';
+    const note = window.FactsKit.summaryLengthNote($('up-ev-summary'));
+    $('up-ev-summary-count').textContent = note ? note + '. ' + SUMMARY_HINT : SUMMARY_HINT;
   }
   $('up-ev-summary').addEventListener('input', evSummaryCount);
+
+  // The summary's formatting toolbar. Tapping a button mustn't take the
+  // focus (and the selected words) away from the summary first.
+  (function summaryToolbar() {
+    const editor = $('up-ev-summary');
+    const toolbar = document.querySelector('.up-rt-toolbar');
+    if (!editor || !toolbar) return;
+    try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (err) { /* older browsers */ }
+    const inEditor = () => { const sel = window.getSelection(); return !!(sel && sel.rangeCount && editor.contains(sel.anchorNode)); };
+    const placeCaretAtEnd = () => {
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    };
+    function markButtons() {
+      toolbar.querySelectorAll('[data-cmd="bold"], [data-cmd="italic"], [data-cmd="underline"]').forEach((btn) => {
+        let on = false;
+        try { on = inEditor() && document.queryCommandState(btn.getAttribute('data-cmd')); } catch (err) { on = false; }
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+    toolbar.querySelectorAll('button').forEach((btn) => {
+      ['pointerdown', 'mousedown'].forEach((type) => btn.addEventListener(type, (e) => e.preventDefault()));
+      btn.addEventListener('click', () => {
+        const cmd = btn.getAttribute('data-cmd');
+        if (cmd === 'clear') {
+          if (!editor.textContent.trim() || !window.confirm('Remove all formatting from the summary? The words stay.')) return;
+          editor.innerHTML = window.FactsKit.summaryToEditorHtml(editor.innerText.replace(/\n{2,}/g, '\n'));
+        } else {
+          editor.focus();
+          if (!inEditor()) placeCaretAtEnd();
+          if (cmd === 'link') {
+            const url = (window.prompt('Link address (starting https://)') || '').trim();
+            if (!url) return;
+            const sel = window.getSelection();
+            if (sel && !sel.isCollapsed) document.execCommand('createLink', false, url);
+            else {
+              const a = document.createElement('a');
+              a.href = url;
+              a.textContent = url;
+              document.execCommand('insertHTML', false, a.outerHTML + '&nbsp;');
+            }
+          } else {
+            document.execCommand(cmd);
+          }
+        }
+        evSummaryCount();
+        markButtons();
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+    document.addEventListener('selectionchange', markButtons);
+    // Pasted text comes in plain, so it takes the site's own style.
+    editor.addEventListener('paste', (e) => {
+      const text = e.clipboardData && e.clipboardData.getData('text/plain');
+      if (text == null) return;
+      e.preventDefault();
+      document.execCommand('insertText', false, text);
+    });
+  })();
 
   $('up-ev-date').addEventListener('input', evTimeEcho);
   $('up-ev-time').addEventListener('input', evTimeEcho);
@@ -1961,7 +2023,7 @@
     $('up-ev-date').value = ev && ev.event_date ? String(ev.event_date).slice(0, 10) : '';
     $('up-ev-time').value = ev ? ev.event_time || '' : '';
     $('up-ev-url').value = ev ? ev.event_url || '' : '';
-    $('up-ev-summary').value = ev ? ev.summary || '' : '';
+    $('up-ev-summary').innerHTML = window.FactsKit.summaryToEditorHtml(ev ? ev.summary : '');
     evSummaryCount();
     $('up-ev-featured').checked = !!(ev && ev.featured);
     evImageUrl = ev ? ev.image_url || '' : '';
@@ -2041,7 +2103,7 @@
     };
     // Sent when there is one, or once the column exists, so saving still
     // works before supabase-schema-update-31.sql has been run.
-    const summaryText = $('up-ev-summary').value.trim();
+    const summaryText = window.FactsKit.summaryFromEditor($('up-ev-summary'));
     const editingEvent = evEditingId ? evList.find((x) => x.id === evEditingId) : null;
     if (summaryText || (editingEvent && 'summary' in editingEvent)) payload.summary = summaryText || null;
     const missing = [!payload.image_url && 'the artwork', !payload.heading && 'a title', !payload.event_date && 'the date'].filter(Boolean);
