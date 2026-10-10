@@ -940,9 +940,11 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .event-detail-page { max-width: 640px; margin: 1.5rem auto 0; }
 .event-detail-image { width: 100%; border-radius: 12px; display: block; margin: 1rem 0; }
 .event-products-list { list-style: none; margin: 0.75rem 0 1.5rem; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.event-products-list li { font-size: 15px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; }
-.event-products-list a { color: var(--accent); text-decoration: none; font-weight: 500; }
-.event-products-list a:hover { text-decoration: underline; }
+.event-products-list li { font-size: 15px; }
+.event-product-link, .event-product-plain { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }
+.event-product-link { color: var(--accent-dark); font-weight: 600; text-decoration: none; transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease; -webkit-tap-highlight-color: transparent; }
+.event-product-go { margin-left: auto; font-weight: 700; }
+.event-product-link:hover, .event-product-link:focus-visible, .event-product-link:active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .gallery-photo-header { padding-bottom: 1.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
 .gallery-photo-header h1 { font-size: 24px; margin: 0; }
 .gallery-photo-date { font-size: 14px; color: var(--text-secondary); margin: 6px 0 0; }
@@ -2870,5 +2872,6 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .prow-bar { max-width: none; }
 }
 
-/* An event's summary, under its artwork */
-.event-summary { margin: 1.25rem 0 0; font-size: 18px; line-height: 1.55; color: var(--text); max-width: 68ch; }
+/* An event's summary, under its artwork, set like the site's other copy */
+.event-summary { margin: 1.25rem 0 0; }
+.event-summary a { color: var(--accent-dark); }

@@ -1494,17 +1494,48 @@ function eventArchiveCardHtml(event, productsBySlug) {
 </article>`;
 }
 
+// An event's summary: formatted in the admin or the phone app (bold,
+// italic, links), or plain text from before the editors had a toolbar,
+// whose line breaks become paragraphs.
+function eventSummaryHtml(summary, siteUrl) {
+  const raw = String(summary || '').trim();
+  if (!raw) return '';
+  if (/<[a-z][^>]*>/i.test(raw)) {
+    // Words typed before the first paragraph break come without a <p>;
+    // wrap them so every paragraph is spaced the same.
+    return sanitizeRichText(raw, siteUrl).split(/(<p>[\s\S]*?<\/p>)/)
+      .map((part) => (/^<p>/.test(part) ? part : part.replace(/^(\s|<br>)+|(\s|<br>)+$/g, '') ? `<p>${part.replace(/^(\s|<br>)+|(\s|<br>)+$/g, '')}</p>` : ''))
+      .filter((part) => part && part.replace(/<\/?p>|<br>|&nbsp;|\s/g, '')).join('');
+  }
+  return raw.split(/\n+/).map((line) => line.trim()).filter(Boolean).map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+}
+
+// The summary as plain words, for the page's description.
+function eventSummaryText(summary) {
+  return String(summary || '')
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<\/?(p|div)\b[^>]*>|<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ').trim();
+}
+
 function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
   // Written in the admin or the phone app; also the page's description.
-  const summary = String(event.summary || '').trim();
+  const summaryHtml = eventSummaryHtml(event.summary, siteUrl);
+  const summary = eventSummaryText(event.summary);
   const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
-  const sortedProducts = normalizedAnnouncedProducts(event).map((p) => p.name).sort((a, b) => a.localeCompare(b));
-  const productsList = sortedProducts.length
+  // A product on the site is shown under its own name ("AirPods 5", even
+  // if typed "Airpods 5"), and the whole row links to its page.
+  const announced = normalizedAnnouncedProducts(event).map((p) => {
+    const match = Object.values(productsBySlug || {}).find((x) => x.name.toLowerCase() === String(p.name).trim().toLowerCase());
+    return { name: match ? match.name : appleName(String(p.name).trim()), slug: match ? match.slug : null };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+  const sortedProducts = announced.map((p) => p.name);
+  const productsList = announced.length
     ? `<ul class="event-products-list">
-    ${sortedProducts.map((name) => {
-      const match = Object.values(productsBySlug || {}).find((p) => p.name.toLowerCase() === name.toLowerCase());
-      return `<li>${match ? `<a href="/products/${match.slug}/">${escapeHtml(name)}</a>` : escapeHtml(name)}</li>`;
-    }).join('\n')}
+    ${announced.map((p) => (p.slug
+      ? `<li><a class="event-product-link" href="/products/${p.slug}/">${escapeHtml(p.name)}<span class="event-product-go" aria-hidden="true">&rarr;</span></a></li>`
+      : `<li><span class="event-product-plain">${escapeHtml(p.name)}</span></li>`)).join('\n')}
   </ul>`
     : '';
   const body = `
@@ -1516,14 +1547,14 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
   ${dateText ? `<p class="page-intro">${escapeHtml(dateText)}</p>` : ''}
   ${FactsKit.eventCountdownHtml(event)}
   ${event.image_url ? `<img class="event-detail-image" src="${escapeHtml(event.image_url)}" alt="">` : ''}
-  ${summary ? `<p class="event-summary">${escapeHtml(summary).replace(/\n+/g, '<br>')}</p>` : ''}
+  ${summaryHtml ? `<div class="page-copy event-summary">${summaryHtml}</div>` : ''}
   ${productsList ? `<h2>What was announced</h2>${productsList}` : ''}
   ${event.event_url ? `<p><a class="intro-cta" href="${escapeHtml(event.event_url)}" target="_blank" rel="noopener">Watch on Apple's site</a></p>` : ''}
   <p><a href="/events/" class="gallery-nav-link">&larr; All Apple Events</a></p>
 </article>`;
   return shell({
     title: `${event.heading} — Apple Sunset`,
-    description: `${event.heading}${dateText ? `, ${dateText}` : ''}. ${summary ? summary.replace(/\s+/g, ' ') : sortedProducts.length ? 'Announced: ' + sortedProducts.join(', ') + '.' : 'The date, time and what Apple announced, tracked by Apple Sunset.'}`,
+    description: `${event.heading}${dateText ? `, ${dateText}` : ''}. ${summary ? summary : sortedProducts.length ? 'Announced: ' + sortedProducts.join(', ') + '.' : 'The date, time and what Apple announced, tracked by Apple Sunset.'}`,
     siteUrl,
     path: `/events/${eventSlug(event)}/`,
     bodyHtml: body,
@@ -2890,8 +2921,20 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <p class="admin-hint">Only needed if two events overlap: a featured one goes first. Either way an event leaves the homepage 48 hours after it starts.</p>
         <label>Event time, with its time zone, e.g. "10am PT" (the countdown and the UK time are worked out from it; with no time, 10am PT is assumed)<input type="text" id="event_time" placeholder="10am PT" autocomplete="off"></label>
         <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/" autocomplete="off"></label>
-        <label>Summary (optional): a line or two on what happened, shown on the event page and in Google results<textarea id="event_summary" rows="3" placeholder="e.g. Apple unveiled iPhone 18 Pro with a new camera system, alongside Apple Watch Series 12."></textarea></label>
-        <p class="admin-hint" id="event-summary-count"></p>
+        <div class="admin-subfield">
+          <span class="admin-subfield-label">Summary <span class="admin-optional">Optional, a line or two on what happened, shown on the event page and in Google results</span></span>
+          <div class="richtext-toolbar">
+            <button type="button" data-editor="event_summary_editor" data-cmd="bold" aria-label="Bold"><b>B</b></button>
+            <button type="button" data-editor="event_summary_editor" data-cmd="italic" aria-label="Italic"><i>I</i></button>
+            <button type="button" data-editor="event_summary_editor" data-cmd="underline" aria-label="Underline"><u>U</u></button>
+            <button type="button" data-editor="event_summary_editor" data-cmd="insertParagraph" aria-label="New paragraph">&para;</button>
+            <button type="button" data-link-for="event_summary_editor" aria-label="Add a link">&#128279;</button>
+            <button type="button" data-editor="event_summary_editor" data-cmd="removeFormat" class="richtext-clear" aria-label="Remove formatting from the selection">&times;</button>
+            <button type="button" id="event-summary-clear-all-btn" class="richtext-clear-all">Clear all formatting</button>
+          </div>
+          <div id="event_summary_editor" class="richtext-editor richtext-editor--short" contenteditable="true" data-placeholder="e.g. Apple unveiled iPhone 18 Pro with a new camera system, alongside Apple Watch Series 12."></div>
+          <p class="admin-hint" id="event-summary-count"></p>
+        </div>
         <div class="admin-subfield">
           <span class="admin-subfield-label">Announced products (optional, add once you know what was revealed)</span>
           <ul id="event-products-list" class="refresh-history-list"></ul>
@@ -3336,8 +3379,16 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
         <label>Time, with its time zone<input type="text" id="up-ev-time" placeholder="e.g. 10am PT" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
         <p class="up-hint" id="up-ev-time-echo" aria-live="polite"></p>
         <label>Apple&rsquo;s event page (optional)<input type="url" id="up-ev-url" placeholder="https://www.apple.com/apple-events/" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
-        <label>Summary (optional)<textarea id="up-ev-summary" class="up-fact-edit up-fact-edit--short" placeholder="A line or two on what Apple announced"></textarea></label>
-        <p class="up-hint" id="up-ev-summary-count">Shown on the event page and in Google results.</p>
+        <span class="up-label">Summary (optional)</span>
+        <div class="up-rt-toolbar" role="toolbar" aria-label="Summary formatting">
+          <button type="button" data-cmd="bold" aria-label="Bold"><b>B</b></button>
+          <button type="button" data-cmd="italic" aria-label="Italic"><i>I</i></button>
+          <button type="button" data-cmd="underline" aria-label="Underline"><u>U</u></button>
+          <button type="button" data-cmd="link" aria-label="Add a link">Link</button>
+          <button type="button" data-cmd="clear" class="up-rt-clear" aria-label="Clear all formatting">Clear</button>
+        </div>
+        <div id="up-ev-summary" class="up-rt-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Summary" data-placeholder="A line or two on what Apple announced"></div>
+        <p class="up-hint" id="up-ev-summary-count">Shown on the event page and in Google results. Select words, then tap B to make them bold.</p>
       </div>
 
       <div class="up-card">

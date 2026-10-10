@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-<link rel="stylesheet" href="/upload.css?v=9561cbc239">
+<link rel="stylesheet" href="/upload.css?v=6d54f70617">
 </head>
 <body>
 <main class="up">
@@ -197,8 +197,16 @@
         <label>Time, with its time zone<input type="text" id="up-ev-time" placeholder="e.g. 10am PT" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
         <p class="up-hint" id="up-ev-time-echo" aria-live="polite"></p>
         <label>Apple&rsquo;s event page (optional)<input type="url" id="up-ev-url" placeholder="https://www.apple.com/apple-events/" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
-        <label>Summary (optional)<textarea id="up-ev-summary" class="up-fact-edit up-fact-edit--short" placeholder="A line or two on what Apple announced"></textarea></label>
-        <p class="up-hint" id="up-ev-summary-count">Shown on the event page and in Google results.</p>
+        <span class="up-label">Summary (optional)</span>
+        <div class="up-rt-toolbar" role="toolbar" aria-label="Summary formatting">
+          <button type="button" data-cmd="bold" aria-label="Bold"><b>B</b></button>
+          <button type="button" data-cmd="italic" aria-label="Italic"><i>I</i></button>
+          <button type="button" data-cmd="underline" aria-label="Underline"><u>U</u></button>
+          <button type="button" data-cmd="link" aria-label="Add a link">Link</button>
+          <button type="button" data-cmd="clear" class="up-rt-clear" aria-label="Clear all formatting">Clear</button>
+        </div>
+        <div id="up-ev-summary" class="up-rt-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Summary" data-placeholder="A line or two on what Apple announced"></div>
+        <p class="up-hint" id="up-ev-summary-count">Shown on the event page and in Google results. Select words, then tap B to make them bold.</p>
       </div>
 
       <div class="up-card">
@@ -351,15 +359,15 @@
     <span id="up-user"></span>
     <button type="button" id="up-logout" class="up-link">Sign out</button>
   </footer>
-  <p class="up-version">Version a836dd</p>
+  <p class="up-version">Version fd612e</p>
 </main>
 <script>
   window.SUPABASE_URL = "";
   window.SUPABASE_ANON_KEY = "";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
-<script src="/facts-kit.js?v=0ac28cbfe5" defer></script>
-<script src="/upload.js?v=a836dd875d" defer></script>
+<script src="/facts-kit.js?v=5ad86bd15b" defer></script>
+<script src="/upload.js?v=fd612ede81" defer></script>
 <script>
   // Keeps the page's files on the phone so it opens instantly from the
   // Home Screen; updates are fetched in the background.

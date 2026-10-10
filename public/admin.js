@@ -3539,7 +3539,7 @@
     document.getElementById('event_date').value = event.event_date || '';
     document.getElementById('event_time').value = event.event_time || '';
     document.getElementById('event_url').value = event.event_url || '';
-    document.getElementById('event_summary').value = event.summary || '';
+    document.getElementById('event_summary_editor').innerHTML = window.FactsKit.summaryToEditorHtml(event.summary);
     updateEventSummaryCount();
     document.getElementById('event_featured').checked = !!event.featured;
     currentEventProducts = (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p));
@@ -3555,6 +3555,7 @@
     currentEventProducts = [];
     renderEventImageThumb();
     renderEventProducts();
+    document.getElementById('event_summary_editor').innerHTML = '';
     updateEventSummaryCount();
     document.getElementById('event-form-title').textContent = 'Add event';
     showEventForm();
@@ -3562,10 +3563,17 @@
 
   // A running count, since a summary reads best at a line or two.
   function updateEventSummaryCount() {
-    const n = document.getElementById('event_summary').value.trim().length;
-    document.getElementById('event-summary-count').textContent = n ? n + ' characters' + (n > 300 ? ', longer than the 300 or so that reads best' : '') : '';
+    document.getElementById('event-summary-count').textContent = window.FactsKit.summaryLengthNote(document.getElementById('event_summary_editor'));
   }
-  document.getElementById('event_summary').addEventListener('input', updateEventSummaryCount);
+  document.getElementById('event_summary_editor').addEventListener('input', updateEventSummaryCount);
+  document.getElementById('event-summary-clear-all-btn').addEventListener('click', () => {
+    const editor = document.getElementById('event_summary_editor');
+    if (!editor.textContent.trim()) return;
+    if (!window.confirm('Remove all formatting from this summary? This keeps the text but clears bold, italic, and links.')) return;
+    const escapeText = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    editor.innerHTML = extractParagraphs(editor).map((para) => '<p>' + escapeText(para) + '</p>').join('');
+    updateEventSummaryCount();
+  });
 
   document.getElementById('new-event-btn').addEventListener('click', startNewEvent);
 
@@ -3603,7 +3611,7 @@
     };
     // Sent when there is one, or once the column exists, so saving still
     // works before supabase-schema-update-31.sql has been run.
-    const summaryText = document.getElementById('event_summary').value.trim();
+    const summaryText = window.FactsKit.summaryFromEditor(document.getElementById('event_summary_editor'));
     const editingEvent = editingEventId ? cachedEvents.find((ev) => ev.id === editingEventId) : null;
     if (summaryText || (editingEvent && 'summary' in editingEvent)) payload.summary = summaryText || null;
     if (!payload.heading || !payload.image_url || !payload.event_date) {
