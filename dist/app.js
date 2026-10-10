@@ -1638,13 +1638,13 @@
 
   // --- Reveal "Edit this product" to the logged-in admin only.
 
-  // iPhone Safari has no scroll anchoring: when a live redraw changes the
-  // height of something above where the reader is, the page jumps. Chrome
-  // holds the reader's place itself; elsewhere this does, by keeping the
-  // first thing on screen that survives the change where it was.
-  var NATIVE_SCROLL_ANCHORING = !!(window.CSS && CSS.supports && CSS.supports('overflow-anchor', 'auto'));
+  // When a live redraw changes the height of something above where the
+  // reader is, the page would jump. Browsers differ in whether (and how
+  // well) they hold the reader's place themselves, so styles.css turns
+  // that off everywhere and this does it the same way on every phone:
+  // the first thing on screen that survives the change stays where it was.
   function keepPlaceJS(change) {
-    if (NATIVE_SCROLL_ANCHORING || !(window.scrollY > 0) || !document.elementFromPoint) { change(); return; }
+    if (!(window.scrollY > 0) || !document.elementFromPoint) { change(); return; }
     var x = Math.round(window.innerWidth / 2);
     var probes = [8, Math.round(window.innerHeight / 2), window.innerHeight - 8].map(function (y) {
       var el = document.elementFromPoint(x, y);
@@ -2038,6 +2038,19 @@
     return ordered.concat(rest).slice(0, 3);
   }
 
+  // Whether two bits of markup show the same thing: the same words and
+  // links, ignoring spacing, hidden rotation tiles and a ticking clock.
+  function sameContentJS(htmlA, htmlB) {
+    function digest(html) {
+      var box = document.createElement('div');
+      box.innerHTML = html;
+      Array.prototype.forEach.call(box.querySelectorAll('[hidden], script, [data-countdown-at], [data-countdown-clock]'), function (el) { el.remove(); });
+      var links = Array.prototype.map.call(box.querySelectorAll('a[href], img[src]'), function (el) { return el.getAttribute('href') || el.getAttribute('src'); }).join('|');
+      return box.textContent.replace(/\s+/g, ' ').trim() + '#' + links;
+    }
+    return digest(htmlA) === digest(htmlB);
+  }
+
   var heroCardsSection = document.getElementById('hero-cards');
   if (heroCardsSection && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     var featuredOrderReq = fetch(window.SUPABASE_URL + '/rest/v1/site_content?select=body&id=eq.featured', {
@@ -2071,7 +2084,10 @@
       var activeEvent = window.FactsKit ? window.FactsKit.pickHeroEvent(heroData.events, Date.now()) : null;
       var featuredOrder = heroData.featuredOrder;
       var statsEl = document.getElementById('site-stats');
-      if (statsEl && Array.isArray(products) && products.length) keepPlaceJS(function () { statsEl.outerHTML = siteStatsHtmlJS(siteStatsJS(products)); });
+      if (statsEl && Array.isArray(products) && products.length) {
+        var statsHtml = siteStatsHtmlJS(siteStatsJS(products));
+        if (!sameContentJS(statsEl.outerHTML, statsHtml)) keepPlaceJS(function () { statsEl.outerHTML = statsHtml; });
+      }
       var active = products.filter(function (p) { return !p.discontinued; });
       var withStatus = active
         .map(function (p) { return { product: p, status: computeStatusJS(p) }; })
@@ -2117,11 +2133,11 @@
           })
         : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');
       // Must match homePage(): the featured tile, then the Live counts panel.
-      keepPlaceJS(function () {
-        heroCardsSection.innerHTML =
-          featuredSlotHtml +
-          siteStatsHtmlJS(siteStatsJS(products));
-      });
+      var heroHtml = featuredSlotHtml + siteStatsHtmlJS(siteStatsJS(products));
+      // Usually the live tiles say exactly what the built ones do; then
+      // nothing is touched, so nothing on the page can move.
+      if (sameContentJS(heroCardsSection.innerHTML, heroHtml)) return;
+      keepPlaceJS(function () { heroCardsSection.innerHTML = heroHtml; });
     }
   }
 
