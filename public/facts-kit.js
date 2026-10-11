@@ -1179,11 +1179,29 @@
   function xLengthNote(post, hashtagsOn) {
     const len = xPostLength(post);
     if (len <= 280) return '';
-    const tags = hashtagsOn ? String(post || '').match(/\n*(?:#[A-Za-z0-9_]+[ \t]*)+(?=\n|$)/) : null;
-    const saves = tags ? tags[0].length - 1 : 0;
-    return saves && len - saves <= 280
-      ? ' \u2014 too long for X. Untick \u201cAdd hashtags\u201d and it fits'
+    const without = hashtagsOn ? xWithoutHashtags(post) : post;
+    return without !== post && xPostLength(without) <= 280
+      ? ' \u2014 too long for X. Without the hashtags it fits'
       : ' \u2014 too long for X, shorten it a little';
+  }
+
+  // The post with its line of hashtags taken out.
+  function xWithoutHashtags(post) {
+    return String(post || '').replace(/\n*(?:#[A-Za-z0-9_]+[ \t]*)+(?=\n|$)/, '');
+  }
+
+  // Why Post to X is off when a post is too long, for the line under the
+  // buttons, and whether taking the hashtags out would fix it.
+  function xOverNote(post) {
+    const len = xPostLength(post);
+    if (!post || len <= 280) return null;
+    const over = len - 280;
+    const without = xWithoutHashtags(post);
+    const tagsFix = without !== post && xPostLength(without) <= 280;
+    return {
+      text: 'Post to X is off: the post is ' + over + ' character' + (over === 1 ? '' : 's') + ' over X\u2019s 280.' + (tagsFix ? ' Without the hashtags it fits.' : ' Shorten the text to post it.'),
+      tagsFix,
+    };
   }
 
   function daysBetweenDates(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
@@ -1725,6 +1743,8 @@
     xCardKey,
     cardGuess,
     xLengthNote,
+    xWithoutHashtags,
+    xOverNote,
     summaryToEditorHtml,
     cdnImgHtml,
     summaryFromEditor,

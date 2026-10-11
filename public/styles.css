@@ -2890,3 +2890,7 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 /* An event's summary, under its artwork, set like the site's other copy */
 .event-summary { margin: 1.25rem 0 0; }
 .event-summary a { color: var(--accent-dark); }
+
+/* X composer: why Post to X is off, with a quick fix */
+.x-over { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px 0 0; font-size: 14px; font-weight: 600; color: var(--overdue-text); }
+.x-over[hidden] { display: none; }

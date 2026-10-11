@@ -567,12 +567,32 @@
 
     // The count and buttons follow whatever is in the X box, as that is
     // what gets posted.
+    // Takes the hashtags out: from the X box itself when it's been edited
+    // by hand (the tick box no longer changes it), otherwise by unticking.
+    $x('x-over-tags').addEventListener('click', () => {
+      if (previewOwn) {
+        $x('x-preview').value = window.FactsKit.xWithoutHashtags($x('x-preview').value);
+        $x('x-preview').dispatchEvent(new Event('input', { bubbles: true }));
+      } else {
+        $x('x-tags').checked = false;
+        $x('x-tags').dispatchEvent(new Event('change', { bubbles: true }));
+        $x('x-tags').dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      updateCount();
+    });
+
     function updateCount() {
       const post = postText();
       const len = window.FactsKit.xPostLength(post);
       $x('x-count').textContent = post ? len + ' / 280 characters' + window.FactsKit.xLengthNote(post, $x('x-tags').checked) : '';
       $x('x-count').classList.toggle('is-over', len > 280);
       $x('x-post-btn').disabled = !post || len > 280 || !cardReady();
+      const overNote = window.FactsKit.xOverNote(post);
+      $x('x-over').hidden = !overNote;
+      if (overNote) {
+        $x('x-over-text').textContent = overNote.text;
+        $x('x-over-tags').hidden = !overNote.tagsFix;
+      }
       if (post && !cardReady()) $x('x-post-btn').textContent = 'Preparing card\u2026';
       else if ($x('x-post-btn').textContent === 'Preparing card\u2026') $x('x-post-btn').textContent = 'Post to X';
       $x('x-copy-btn').disabled = !post;

@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-<link rel="stylesheet" href="/upload.css?v=6d54f70617">
+<link rel="stylesheet" href="/upload.css?v=de72c7d46c">
 </head>
 <body>
 <main class="up">
@@ -125,6 +125,7 @@
         <button type="button" id="up-x-post" class="gallery-action">Post text only</button>
         <button type="button" id="up-x-copy" class="gallery-action">Copy text</button>
       </div>
+      <p id="up-x-over" class="up-x-over" hidden><span id="up-x-over-text"></span> <button type="button" id="up-x-over-tags" class="gallery-action">Remove the hashtags</button></p>
       <p class="up-hint" id="up-x-note">Share to X with card opens the share sheet: pick X and the card and text go in together. If the text doesn’t appear in X, it’s been copied, so just paste it.</p>
       <button type="button" id="up-x-done" class="gallery-action gallery-action--block">Done: clear and go back</button>
     </div>
@@ -359,15 +360,15 @@
     <span id="up-user"></span>
     <button type="button" id="up-logout" class="up-link">Sign out</button>
   </footer>
-  <p class="up-version">Version 21f8a4</p>
+  <p class="up-version">Version 92f5f1</p>
 </main>
 <script>
   window.SUPABASE_URL = "";
   window.SUPABASE_ANON_KEY = "";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
-<script src="/facts-kit.js?v=1f57b7bf3f" defer></script>
-<script src="/upload.js?v=21f8a43896" defer></script>
+<script src="/facts-kit.js?v=165a2f9716" defer></script>
+<script src="/upload.js?v=92f5f1527a" defer></script>
 <script>
   // Keeps the page's files on the phone so it opens instantly from the
   // Home Screen; updates are fetched in the background.

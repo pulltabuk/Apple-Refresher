@@ -324,3 +324,7 @@ body {
 .up-rt-editor p { margin: 0 0 0.6em; }
 .up-rt-editor p:last-child { margin-bottom: 0; }
 .up-rt-editor a { color: var(--accent-dark); }
+
+/* X posts: why sharing is off, with a quick fix */
+.up-x-over { display: flex; flex-direction: column; gap: 8px; margin: 0; font-size: 14px; font-weight: 600; color: var(--error); }
+.up-x-over[hidden] { display: none; }

@@ -3054,6 +3054,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <button type="button" id="x-card-btn" class="admin-btn" hidden>Download card</button>
       <button type="button" id="x-clear-btn" class="admin-btn">Clear</button>
     </div>
+    <p id="x-over" class="x-over" hidden><span id="x-over-text"></span> <button type="button" id="x-over-tags" class="admin-btn admin-btn--small">Remove the hashtags</button></p>
     <div id="x-after" class="x-after" hidden>
       <p><strong>Your post is open in X.</strong> Once it&rsquo;s posted, what next?</p>
       <div class="x-actions">
@@ -3327,6 +3328,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
         <button type="button" id="up-x-post" class="gallery-action">Post text only</button>
         <button type="button" id="up-x-copy" class="gallery-action">Copy text</button>
       </div>
+      <p id="up-x-over" class="up-x-over" hidden><span id="up-x-over-text"></span> <button type="button" id="up-x-over-tags" class="gallery-action">Remove the hashtags</button></p>
       <p class="up-hint" id="up-x-note">Share to X with card opens the share sheet: pick X and the card and text go in together. If the text doesn’t appear in X, it’s been copied, so just paste it.</p>
       <button type="button" id="up-x-done" class="gallery-action gallery-action--block">Done: clear and go back</button>
     </div>

@@ -941,12 +941,32 @@
 
   // The count and buttons follow whatever is in the X box, as that is
   // what gets posted.
+  // Takes the hashtags out: from the X box itself when it's been edited
+  // by hand (the tick box no longer changes it), otherwise by unticking.
+  $('up-x-over-tags').addEventListener('click', () => {
+    if (xPreviewOwn) {
+      $('up-x-preview').value = window.FactsKit.xWithoutHashtags($('up-x-preview').value);
+      $('up-x-preview').dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      $('up-x-tags').checked = false;
+      $('up-x-tags').dispatchEvent(new Event('change', { bubbles: true }));
+      $('up-x-tags').dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    xUpdateCount();
+  });
+
   function xUpdateCount() {
     const post = xPostBox();
     const len = window.FactsKit.xPostLength(post);
     $('up-x-count').textContent = post ? len + ' / 280 characters' + window.FactsKit.xLengthNote(post, $('up-x-tags').checked) : '';
     $('up-x-count').classList.toggle('up-fact-count--over', len > 280);
     ['up-x-share', 'up-x-post', 'up-x-copy'].forEach((id) => { $(id).disabled = !post || len > 280; });
+    const overNote = window.FactsKit.xOverNote(post);
+    $('up-x-over').hidden = !overNote;
+    if (overNote) {
+      $('up-x-over-text').textContent = overNote.text.replace('Post to X is off', 'Sharing is off');
+      $('up-x-over-tags').hidden = !overNote.tagsFix;
+    }
     if (post && !xCardReady()) { $('up-x-post').disabled = true; $('up-x-post').textContent = 'Preparing card\u2026'; }
     else if ($('up-x-post').textContent === 'Preparing card\u2026') $('up-x-post').textContent = 'Post to X';
     $('up-x-preview-reset').hidden = !xPreviewOwn;
