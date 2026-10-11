@@ -2,16 +2,19 @@
 // X reads this page's preview tags and shows the card saved for <key>
 // (x-cards/<key>.png in storage, uploaded by admin or the phone app);
 // people who tap the link are sent straight on to <path> on this site.
+//
+// It claims /c/* itself (config.path below) rather than through a
+// redirect rule in netlify.toml, which on the live site answered 404.
 
 const escapeHtml = (str) => String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const env = (name) => (typeof Netlify !== 'undefined' && Netlify.env && Netlify.env.get(name)) || process.env[name] || '';
 
-exports.handler = async (event) => {
-  const site = (process.env.URL || 'https://applesunset.com').replace(/\/+$/, '');
-  const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
-  // Works whether Netlify hands over the original path or the function's.
-  const raw = String(event.path || '').replace(/^\/\.netlify\/functions\/card/, '').replace(/^\/c(?=\/)/, '');
+export default async (req) => {
+  const site = (env('URL') || 'https://applesunset.com').replace(/\/+$/, '');
+  const supabaseUrl = env('SUPABASE_URL').replace(/\/+$/, '');
+  const raw = new URL(req.url).pathname.replace(/^\/c(?=\/|$)/, '');
   const match = raw.match(/^\/([0-9a-z]{1,16})(\/.*)?$/i);
-  if (!match) return { statusCode: 302, headers: { Location: site + '/' }, body: '' };
+  if (!match) return new Response('', { status: 302, headers: { Location: site + '/' } });
   const key = match[1].toLowerCase();
   // Only ever forwards to a page on this site.
   let path = match[2] || '/';
@@ -42,9 +45,12 @@ exports.handler = async (event) => {
 <p><a href="${escapeHtml(target)}">Continue to Apple Sunset</a></p>
 <script>location.replace(${JSON.stringify(target)});</script>
 </body></html>`;
-  return {
-    statusCode: 200,
+  return new Response(html, {
+    status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' },
-    body: html,
-  };
+  });
+};
+
+export const config = {
+  path: '/c/*',
 };

@@ -892,8 +892,15 @@
     }, 900);
   }
 
+  let xCardProductsAsked = false;
   function xRefresh() {
     const text = $('up-x-text').value.trim();
+    // The card's guess names the product, which needs the product list:
+    // guess again once it has arrived.
+    if (text && !xCardProductsAsked) {
+      xCardProductsAsked = true;
+      window.FactsKit.ensureCardProducts().then(() => { if (!xCardFieldsOwn) xRefresh(); });
+    }
     // The product list gives the #ProductName hashtag.
     if (text && !allProducts.length && !xProductsLoading) {
       xProductsLoading = true;
@@ -937,7 +944,7 @@
   function xUpdateCount() {
     const post = xPostBox();
     const len = window.FactsKit.xPostLength(post);
-    $('up-x-count').textContent = post ? len + ' / 280 characters' + (len > 280 ? ' — too long for X' : '') : '';
+    $('up-x-count').textContent = post ? len + ' / 280 characters' + window.FactsKit.xLengthNote(post, $('up-x-tags').checked) : '';
     $('up-x-count').classList.toggle('up-fact-count--over', len > 280);
     ['up-x-share', 'up-x-post', 'up-x-copy'].forEach((id) => { $(id).disabled = !post || len > 280; });
     if (post && !xCardReady()) { $('up-x-post').disabled = true; $('up-x-post').textContent = 'Preparing card\u2026'; }
