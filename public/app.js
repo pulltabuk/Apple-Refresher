@@ -462,15 +462,10 @@
       if (!iconEl || iconEl.tagName === 'IMG') return;
       var customKey = Object.keys(CUSTOM_CATEGORY_ICONS).find(function (k) { return k.toLowerCase() === String(category || '').toLowerCase(); });
       if (!customKey) return;
-      var size = iconEl.getAttribute('width') || 40;
-      var newIcon = document.createElement('img');
-      newIcon.className = 'placeholder-icon';
-      newIcon.src = CUSTOM_CATEGORY_ICONS[customKey];
-      newIcon.alt = '';
-      newIcon.width = size;
-      newIcon.height = size;
-      newIcon.style.objectFit = 'contain';
-      iconEl.replaceWith(newIcon);
+      var size = Number(iconEl.getAttribute('width')) || 40;
+      var holder = document.createElement('span');
+      holder.innerHTML = cdnImgHtmlJS(CUSTOM_CATEGORY_ICONS[customKey], iconPixelsJS(size), ' class="placeholder-icon" alt="" width="' + size + '" height="' + size + '" style="object-fit:contain;"');
+      iconEl.replaceWith(holder.firstChild);
     });
   }
 
@@ -732,7 +727,7 @@
     var s = size || 40;
     var customKey = Object.keys(CUSTOM_CATEGORY_ICONS).find(function (k) { return k.toLowerCase() === String(category || '').toLowerCase(); });
     if (customKey) {
-      return '<img class="placeholder-icon" src="' + escapeHtmlJS(CUSTOM_CATEGORY_ICONS[customKey]) + '" alt="" width="' + s + '" height="' + s + '" style="object-fit:contain;">';
+      return cdnImgHtmlJS(CUSTOM_CATEGORY_ICONS[customKey], iconPixelsJS(s), ' class="placeholder-icon" alt="" width="' + s + '" height="' + s + '" style="object-fit:contain;"');
     }
     var key = Object.keys(CATEGORY_ICON_SHAPES).find(function (k) { return k.toLowerCase() === String(category || '').toLowerCase(); });
     var shape = (key && CATEGORY_ICON_SHAPES[key]) || CATEGORY_ICON_SHAPES.Other;
@@ -744,7 +739,7 @@
   function productIconJS(product, size) {
     if (product && product.icon_url) {
       var s = size || 40;
-      return '<img class="placeholder-icon placeholder-icon--product" src="' + escapeHtmlJS(String(product.icon_url).replace(/"/g, '%22')) + '" alt="" width="' + s + '" height="' + s + '" style="object-fit:contain;">';
+      return cdnImgHtmlJS(String(product.icon_url).replace(/"/g, '%22'), iconPixelsJS(s), ' class="placeholder-icon placeholder-icon--product" alt="" width="' + s + '" height="' + s + '" style="object-fit:contain;"');
     }
     return categoryIconJS(product && product.category, size);
   }
@@ -2451,11 +2446,23 @@
     return '/.netlify/images?url=' + encodeURIComponent(url) + '&w=' + width + '&q=80';
   }
 
+  // Must stay in step with cdnImgHtml() in src/templates.js: the image at
+  // the size shown, from Netlify's CDN, or the original if that fails.
+  function cdnImgHtmlJS(url, width, attrs, square) {
+    var cdn = cdnImageJS(url, width);
+    if (cdn === url) return '<img src="' + escapeHtmlJS(url) + '"' + (attrs || '') + '>';
+    var src = square ? cdn + '&h=' + width + '&fit=cover' : cdn;
+    return '<img src="' + escapeHtmlJS(src) + '" data-full="' + escapeHtmlJS(url) + '" onerror="this.onerror=null;this.src=this.dataset.full"' + (attrs || '') + '>';
+  }
+  function iconPixelsJS(size) {
+    return size <= 40 ? 120 : 240;
+  }
+
   function galleryCarouselImgHtmlJS(url, alt, index) {
     var cdn = cdnImageJS(url, 1280);
     var srcset = cdn === url ? '' : ' srcset="' + [640, 960, 1280, 1920].map(function (w) { return escapeHtmlJS(cdnImageJS(url, w)) + ' ' + w + 'w'; }).join(', ') + '" sizes="(max-width: 700px) 100vw, 640px"';
     var fallback = cdn === url ? '' : ' onerror="this.onerror=null;this.removeAttribute(\'srcset\');this.src=this.dataset.full"';
-    return '<img src="' + escapeHtmlJS(cdn) + '"' + srcset + ' data-full="' + escapeHtmlJS(url) + '" alt="' + escapeHtmlJS(alt) + '"' + (index === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async"' + fallback + '>';
+    return '<img src="' + escapeHtmlJS(cdn) + '"' + srcset + ' data-full="' + escapeHtmlJS(url) + '"' + (cdn === url ? '' : ' data-zoom="' + escapeHtmlJS(cdnImageJS(url, 2048)) + '"') + ' alt="' + escapeHtmlJS(alt) + '"' + (index === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async"' + fallback + '>';
   }
 
   // Must stay in step with galleryImageAlt() in src/templates.js.
@@ -2474,10 +2481,10 @@
     var images = galleryPhotoImagesJS(photo);
     // Must stay in step with galleryStripItemHtml() in src/templates.js.
     var media = images.length > 1
-      ? '<span class="gallery-strip-mosaic' + (images.length === 2 ? ' gallery-strip-mosaic--two' : '') + '"><span class="gallery-strip-main"><img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '"></span><span class="gallery-strip-side' + (images.length === 2 ? ' gallery-strip-side--one' : '') + '">' +
-        images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb"><img src="' + escapeHtmlJS(u) + '" alt=""></span>'; }).join('') +
+      ? '<span class="gallery-strip-mosaic' + (images.length === 2 ? ' gallery-strip-mosaic--two' : '') + '"><span class="gallery-strip-main">' + cdnImgHtmlJS(images[0], 600, ' alt="' + escapeHtmlJS(displayName) + '" loading="lazy"') + '</span><span class="gallery-strip-side' + (images.length === 2 ? ' gallery-strip-side--one' : '') + '">' +
+        images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb">' + cdnImgHtmlJS(u, 300, ' alt="" loading="lazy"', true) + '</span>'; }).join('') +
         (images.length > 3 ? '<span class="gallery-strip-more">+' + (images.length - 3) + '</span>' : '') + '</span></span>'
-      : '<span class="gallery-strip-single">' + (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '') + '</span>';
+      : '<span class="gallery-strip-single">' + (images[0] ? cdnImgHtmlJS(images[0], 600, ' alt="' + escapeHtmlJS(displayName) + '" loading="lazy"', true) : '') + '</span>';
     var tags = (photo.tags || []).slice().sort(function (a, b) { return a.localeCompare(b); }).slice(0, 3).map(function (t) {
       return '<span class="pill pill--tag">' + escapeHtmlJS(t) + '</span>';
     }).join('');
@@ -2518,13 +2525,13 @@
     // Must stay in step with galleryPhotoCardHtml() in src/templates.js.
     var media = images.length > 1
       ? '<span class="gallery-strip-mosaic' + (images.length === 2 ? ' gallery-strip-mosaic--two' : '') + '">' +
-          '<span class="gallery-strip-main"><img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '"></span>' +
+          '<span class="gallery-strip-main">' + cdnImgHtmlJS(images[0], 600, ' alt="' + escapeHtmlJS(displayName) + '" loading="lazy"') + '</span>' +
           '<span class="gallery-strip-side' + (images.length === 2 ? ' gallery-strip-side--one' : '') + '">' +
-            images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb"><img src="' + escapeHtmlJS(u) + '" alt=""></span>'; }).join('') +
+            images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb">' + cdnImgHtmlJS(u, 300, ' alt="" loading="lazy"', true) + '</span>'; }).join('') +
             (images.length > 3 ? '<span class="gallery-strip-more">+' + (images.length - 3) + '</span>' : '') +
           '</span></span>' +
           '<span class="gallery-strip-count">' + images.length + ' photos</span>'
-      : (images[0] ? '<img src="' + escapeHtmlJS(images[0]) + '" alt="' + escapeHtmlJS(displayName) + '">' : '');
+      : (images[0] ? cdnImgHtmlJS(images[0], 800, ' alt="' + escapeHtmlJS(displayName) + '" loading="lazy"') : '');
     return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-created="' + dateToTimestampJS(photo.created_at) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
       '<a class="card-link" href="/gallery/' + galleryPhotoSlugJS(photo) + '/">' +
         '<div class="card-image">' + media + '</div>' +
@@ -2543,7 +2550,7 @@
     var shown = featured.concat(rest).slice(0, 10);
     var remaining = products.length - shown.length;
     var tags = shown.map(function (p) { return '<span class="pill">' + escapeHtmlJS(p.name) + '</span>'; }).join('') + (remaining > 0 ? '<span class="pill pill--muted">+' + remaining + ' more</span>' : '');
-    var inner = '<div class="card-image">' + (event.image_url ? '<img src="' + escapeHtmlJS(event.image_url) + '" alt="">' : '') + '</div>' +
+    var inner = '<div class="card-image">' + (event.image_url ? cdnImgHtmlJS(event.image_url, 800, ' alt="" loading="lazy"') : '') + '</div>' +
       '<p class="card-name">' + escapeHtmlJS(event.heading) + '</p>' +
       (dateText ? '<p class="card-meta">' + escapeHtmlJS(dateText) + '</p>' : '');
     return '<article class="card"><a class="card-link" href="/events/' + eventSlugJS(event) + '/">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
