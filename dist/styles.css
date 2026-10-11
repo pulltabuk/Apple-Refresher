@@ -633,6 +633,13 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .fact-card-subject a:hover { text-decoration: underline; }
 .fact-today { align-self: flex-start; margin: 0 0 12px; padding: 4px 10px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
 .fact-card--today { box-shadow: inset 0 0 0 2px var(--accent); }
+/* Facts page: a year in burnt orange, then each month's facts */
+.facts-controls { margin: 1rem 0 0.5rem; }
+.facts-year-title { margin: 2rem 0 0; font-size: 34px; font-weight: 800; line-height: 1.1; color: var(--accent); }
+.facts-month-title { margin: 1.25rem 0 0.75rem; font-size: 19px; font-weight: 700; color: var(--text); }
+.facts-more-title { margin: 2.5rem 0 0.25rem; font-size: 24px; }
+.facts-more-intro { margin: 0 0 1rem; color: var(--text-secondary); }
+.facts-list .fact-card[hidden], .facts-list .facts-month[hidden], .facts-list .facts-year[hidden], .facts-list .facts-more[hidden] { display: none; }
 .homepage-section h2 { font-size: 18px; margin: 0 0 1rem; }
 
 /* Equal-height rows so every tile matches and the pills line up along

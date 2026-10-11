@@ -172,6 +172,34 @@ async function saveDailyFactLock(lock) {
   }
 }
 
+// Every day's homepage fact, oldest first: [{ date, key }], kept in the
+// site_content row 'daily_fact_history'. The Facts page dates each fact
+// by the day it was on the homepage.
+async function loadDailyFactHistory() {
+  if (!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)) return [];
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data } = await supabase.from('site_content').select('body').eq('id', 'daily_fact_history').maybeSingle();
+    const list = JSON.parse((data && data.body) || '[]');
+    return Array.isArray(list) ? list.filter((h) => h && /^\d{4}-\d{2}-\d{2}$/.test(h.date) && h.key) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+async function saveDailyFactHistory(history) {
+  if (!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)) return;
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { error } = await supabase.from('site_content').upsert({ id: 'daily_fact_history', body: JSON.stringify(history) });
+    if (error) console.log('Could not save the homepage fact diary: ' + error.message);
+  } catch (err) {
+    console.log('Could not save the homepage fact diary.');
+  }
+}
+
 // Apple's quarterly results. Optional: without the table (see
 // supabase-schema-update-29.sql) the site builds without an earnings page.
 async function loadEarnings() {
@@ -454,6 +482,15 @@ async function main() {
   if (dailyFact && !process.env.FACT_DATE && !(lockedFact && lockedFact.date === factDate && lockedFact.key === dailyFact.key)) {
     await saveDailyFactLock({ date: factDate, key: dailyFact.key });
   }
+  // The diary: one entry per day, the first fact recorded for it. The
+  // last saved day's fact starts it off on the first run.
+  const factHistory = process.env.FACT_DATE ? [] : await loadDailyFactHistory();
+  const diaryBefore = JSON.stringify(factHistory);
+  const noteDay = (date, key) => { if (date && key && !factHistory.some((h) => h.date === date)) factHistory.push({ date, key }); };
+  if (lockedFact && lockedFact.date < factDate) noteDay(lockedFact.date, lockedFact.key);
+  if (dailyFact) noteDay(factDate, dailyFact.key);
+  factHistory.sort((a, b) => a.date.localeCompare(b.date));
+  if (!process.env.FACT_DATE && JSON.stringify(factHistory) !== diaryBefore) await saveDailyFactHistory(factHistory);
 
   write('index.html', homePage({
     heroFeatured,
@@ -480,7 +517,7 @@ async function main() {
   write('photo-licence/index.html', photoLicencePage(opts));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }), galleryPhotos.map(galleryLastmod).filter(Boolean).sort().pop() || null);
   write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
-  write('facts/index.html', factsPage({ facts, products, todayKey: dailyFact ? dailyFact.key : '', pageContent: pageContent.facts || null, ...opts }));
+  write('facts/index.html', factsPage({ facts, products, todayKey: dailyFact ? dailyFact.key : '', history: factHistory, pageContent: pageContent.facts || null, ...opts }));
   write('earnings/index.html', earningsPage({ earnings, pageContent: pageContent.earnings || null, ...opts }));
 
   // One page per fact, whose link preview is the fact's card (made and
