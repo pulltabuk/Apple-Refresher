@@ -2583,8 +2583,9 @@
       .then(function (results) {
         var facts = results[0];
         if (!Array.isArray(facts)) return;
-        // Must match factsPage(): statistics with their current numbers.
-        var html = window.FactsKit.factsPageHtml(facts, Array.isArray(results[1]) ? results[1] : []);
+        // Must match factsPage(): the same pool, with today's homepage fact
+        // (named by the build) first.
+        var html = window.FactsKit.factsPageHtml(facts, Array.isArray(results[1]) ? results[1] : [], { todayKey: factsListSection.getAttribute('data-today-key') || '' });
         factsListSection.innerHTML = html;
         var noFacts = document.getElementById('no-facts');
         if (noFacts) noFacts.style.display = html ? 'none' : '';
