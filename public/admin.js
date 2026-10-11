@@ -570,7 +570,7 @@
     function updateCount() {
       const post = postText();
       const len = window.FactsKit.xPostLength(post);
-      $x('x-count').textContent = post ? len + ' / 280 characters' + (len > 280 ? ' — too long for X, shorten it a little' : '') : '';
+      $x('x-count').textContent = post ? len + ' / 280 characters' + window.FactsKit.xLengthNote(post, $x('x-tags').checked) : '';
       $x('x-count').classList.toggle('is-over', len > 280);
       $x('x-post-btn').disabled = !post || len > 280 || !cardReady();
       if (post && !cardReady()) $x('x-post-btn').textContent = 'Preparing card\u2026';

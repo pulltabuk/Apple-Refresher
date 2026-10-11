@@ -294,22 +294,39 @@
     const first = p.original_launch_date || releases[0] || null;
     const future = (p.refresh_history || []).filter((d) => d > today).sort()[0];
     if (p.discontinued && p.discontinued_date) {
-      return { big: p.discontinued_date.slice(0, 4), caption: 'the year it was discontinued' + (first ? ', after ' + cardSpanText(first, p.discontinued_date) + ' on sale' : ''), sub: first ? 'First released ' + cardDate(first) : '' };
+      return { kind: 'gone', big: p.discontinued_date.slice(0, 4), caption: 'the year it was discontinued' + (first ? ', after ' + cardSpanText(first, p.discontinued_date) + ' on sale' : ''), sub: first ? 'First released ' + cardDate(first) : '' };
     }
     if (future) {
       const days = Math.max(0, Math.round((new Date(future) - new Date(today)) / 86400000));
-      return { big: days.toLocaleString('en-GB'), caption: (days === 1 ? 'day' : 'days') + ' until it arrives', sub: 'Coming ' + cardDate(future) };
+      return { kind: 'coming', big: days.toLocaleString('en-GB'), caption: (days === 1 ? 'day' : 'days') + ' until it arrives', sub: 'Coming ' + cardDate(future) };
     }
     if (releases.length) {
       const last = releases[releases.length - 1];
       const days = Math.round((new Date(today) - new Date(last)) / 86400000);
       return {
+        kind: 'since',
         big: days.toLocaleString('en-GB'),
         caption: (days === 1 ? 'day' : 'days') + ' since its last release',
         sub: releases.length === 1 ? 'Only release: ' + cardDate(last) : releases.length + ' releases since ' + releases[0].slice(0, 4),
       };
     }
-    return { big: '', caption: '', sub: '' };
+    return { kind: '', big: '', caption: '', sub: '' };
+  }
+
+  // Whether a post is about what the product's live figure says, so the
+  // card can show it ("discontinued 2023" only on a post about it ending).
+  const FIGURE_TOPICS = {
+    gone: /discontinu|retired|axed|dropped|replaced|end of (the )?line|no longer (sold|on sale)|killed off|lifespan|on sale for/i,
+    coming: /coming|arriv|launch|pre-?order|on sale (from|on)|countdown|days? (until|to go)|release date/i,
+    since: /\bdays?\b|refresh|since (its|the|it was) (last|launch|release)|waiting|overdue|last (release|update)|still on sale|unchanged|has(n.?t| not) (been )?(updated|refreshed|changed)/i,
+  };
+  // The post's opening sentence, short enough for the card's line, for a
+  // post with no figure of its own.
+  function leadSentence(text, max) {
+    const limit = max || 120;
+    const first = String(text || '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?]["\u201d\u2019']?)\s/)[0] || '';
+    if (first.length <= limit) return first;
+    return first.slice(0, limit).replace(/[\s,;:]+\S*$/, '') + '\u2026';
   }
 
   // A statistic's key number ("604 days", "55%") and the few words after it.
@@ -386,16 +403,18 @@
     const product = productNamed(text, cardProducts);
     if (product) {
       // The text's own figure when it has one, so the card says what the
-      // post says; otherwise the product's live figure.
+      // post says; the product's live figure only when the post is about
+      // that; otherwise the post's opening sentence and no big number.
       const own = textFigure(text);
-      const fig = own || productFigure(product);
+      const live = productFigure(product);
+      const fig = own || (live.kind && FIGURE_TOPICS[live.kind].test(String(text || '')) ? live : { big: '', caption: leadSentence(text), sub: '' });
       return { title: appleName(product.name), shape: iconShapeFor(product.category) || CATEGORY_ICONS.Other, iconUrl: product.icon_url || customCategoryIcon(product.category) || null, big: fig.big, caption: fig.caption, sub: fig.sub || '' };
     }
     const category = categoryNamed(text);
     const fig = textFigure(text);
     // Not about one family: a topic icon in the tile (the Apple Sunset
     // logo always sits small in the corner), and no title unless typed.
-    return { title: category || '', shape: category ? iconShapeFor(category) : CARD_ICONS[suggestCardIcon(text)], iconUrl: category ? customCategoryIcon(category) : null, big: fig ? fig.big : '', caption: fig ? fig.caption : '', sub: '' };
+    return { title: category || '', shape: category ? iconShapeFor(category) : CARD_ICONS[suggestCardIcon(text)], iconUrl: category ? customCategoryIcon(category) : null, big: fig ? fig.big : '', caption: fig ? fig.caption : leadSentence(text), sub: '' };
   }
 
   function loadImage(src, cors) {
@@ -1155,6 +1174,18 @@
     return String(full || '').replace(/https?:\/\/\S+/g, 'x'.repeat(23)).length;
   }
 
+  // What the counter says after "N / 280 characters": nothing when it
+  // fits; when it doesn't, whether dropping the hashtags line would do.
+  function xLengthNote(post, hashtagsOn) {
+    const len = xPostLength(post);
+    if (len <= 280) return '';
+    const tags = hashtagsOn ? String(post || '').match(/\n*(?:#[A-Za-z0-9_]+[ \t]*)+(?=\n|$)/) : null;
+    const saves = tags ? tags[0].length - 1 : 0;
+    return saves && len - saves <= 280
+      ? ' \u2014 too long for X. Untick \u201cAdd hashtags\u201d and it fits'
+      : ' \u2014 too long for X, shorten it a little';
+  }
+
   function daysBetweenDates(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
 
   // Post ideas from the products: on this day, coming soon, the longest
@@ -1693,6 +1724,7 @@
     productNamed,
     xCardKey,
     cardGuess,
+    xLengthNote,
     summaryToEditorHtml,
     cdnImgHtml,
     summaryFromEditor,
