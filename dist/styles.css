@@ -2785,6 +2785,7 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .event-hero-countdown .countdown-value { font-size: 30px; }
 }
 .event-hero-note { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text-secondary); }
+.event-hero-summary { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .event-hero-products { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .event-hero-products li { font-size: 14px; font-weight: 600; line-height: 1.3; padding: 8px 10px; background: var(--accent-bg); border-radius: 8px; color: var(--accent-dark); }
 .event-hero-products a { position: relative; z-index: 1; color: var(--accent-dark); }

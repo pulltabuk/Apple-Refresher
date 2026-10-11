@@ -1649,6 +1649,23 @@
 
   // The hero tile. opts: href (the event's page on this site), products
   // (every product as { name, slug }, to link what was announced) and now.
+  const APPLE_EVENTS_URL = 'https://www.apple.com/apple-events/';
+
+  // An event summary's opening sentence as plain text (the summary can be
+  // formatted), short enough for the homepage tile.
+  function eventSummaryLead(summary, max) {
+    const limit = max || 160;
+    const text = String(summary || '')
+      .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+      .replace(/<\/?(p|div)\b[^>]*>|<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    const first = text.split(/(?<=[.!?]["\u201d\u2019']?)\s/)[0];
+    if (first.length <= limit) return first;
+    return first.slice(0, limit).replace(/[\s,;:]+\S*$/, '') + '\u2026';
+  }
+
   function eventHeroHtml(event, opts) {
     const o = opts || {};
     const now = o.now == null ? Date.now() : o.now;
@@ -1684,7 +1701,9 @@
         : '<a class="event-hero-cta event-hero-cta--quiet" href="' + href + '">Event details <span aria-hidden="true">&rarr;</span></a>';
     } else if (phase === 'live') {
       middle = '<p class="event-hero-note">It&rsquo;s on now. Everything Apple announces will be added here afterwards.</p>';
-      cta = '<a class="event-hero-cta" href="' + (watchUrl || href) + '"' + (watchUrl ? ' target="_blank" rel="noopener"' : '') + '>Watch live' + (watchUrl ? ' <span aria-hidden="true">&#8599;</span>' : '') + '</a>';
+      // With no link of its own, Apple's events page, where Apple streams
+      // its events live.
+      cta = '<a class="event-hero-cta" href="' + (watchUrl || APPLE_EVENTS_URL) + '" target="_blank" rel="noopener">' + (watchUrl && !onApple ? 'Watch live' : 'Watch live on apple.com') + ' <span aria-hidden="true">&#8599;</span></a>';
     } else {
       const named = (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p)).filter((p) => p && p.name);
       const ordered = named.filter((p) => p.featured).sort((a, b) => a.name.localeCompare(b.name))
@@ -1693,13 +1712,15 @@
       (o.products || []).forEach((p) => { if (p && p.name && p.slug) bySlugName[p.name.toLowerCase()] = p.slug; });
       const shown = ordered.slice(0, 12);
       const more = ordered.length - shown.length;
-      middle = ordered.length
+      // The summary's opening sentence, a line or two on what was announced.
+      const lead = eventSummaryLead(event.summary);
+      middle = (lead ? '<p class="event-hero-summary">' + escapeHtml(lead) + '</p>' : '') + (ordered.length
         ? '<ul class="event-hero-products' + (shown.length > 4 ? ' event-hero-products--many' : '') + '">' + shown.map((p) => {
             const slug = bySlugName[p.name.toLowerCase()];
             return '<li>' + (slug ? '<a href="/products/' + escapeHtml(slug) + '/">' + escapeHtml(p.name) + '</a>' : escapeHtml(p.name)) + '</li>';
           }).join('') + (more > 0 ? '<li class="event-hero-more">+' + more + ' more</li>' : '') + '</ul>'
-        : '<p class="event-hero-note">What Apple announced is being added now.</p>';
-      cta = '<a class="event-hero-cta" href="' + href + '">' + (ordered.length ? 'See everything announced' : 'Go to the event page') + ' <span aria-hidden="true">&rarr;</span></a>';
+        : lead ? '' : '<p class="event-hero-note">What Apple announced is being added now.</p>');
+      cta = '<a class="event-hero-cta" href="' + href + '">' + (ordered.length || lead ? 'See everything announced' : 'Go to the event page') + ' <span aria-hidden="true">&rarr;</span></a>';
     }
     const many = phase === 'recap' && (event.announced_products || []).length > 4;
     return '<article class="card card--featured card--event event-hero event-hero--' + phase + (many ? ' event-hero--many' : '') + '" data-event-hero data-phase-until="' + until + '">' +
