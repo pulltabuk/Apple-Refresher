@@ -1605,8 +1605,8 @@ ${events.length ? '' : '<p id="no-events" class="page-intro">No events yet.</p>'
 // Statistics worked out from every product, then each product's own
 // "Did you know?". Built by the same code (public/facts-kit.js) that
 // the page's live refresh uses.
-function factsPage({ facts, products, todayKey, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const inner = FactsKit.factsPageHtml(facts, products, { todayKey });
+function factsPage({ facts, products, todayKey, history, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const inner = FactsKit.factsPageHtml(facts, products, { todayKey, history });
   const body = `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Facts')}</h1>
@@ -1615,7 +1615,11 @@ function factsPage({ facts, products, todayKey, pageContent, siteUrl, supabaseUr
 ${pageStandardLine(pageContent, `<p class="page-intro">Every &ldquo;Did you know?&rdquo; from the Apple Sunset homepage, newest first.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 ${inner ? '' : '<p id="no-facts" class="page-intro">Nothing here yet.</p>'}
-<div id="facts-list" class="facts-list" data-mode="facts" data-today-key="${escapeHtml(todayKey || '')}">${inner}</div>`;
+<div class="controls-row facts-controls">
+  <input type="search" id="facts-search" class="search-input" placeholder="Search facts…" aria-label="Search facts">
+</div>
+<p id="facts-no-results" class="page-intro" hidden>No facts match your search.</p>
+<div id="facts-list" class="facts-list" data-mode="facts" data-today-key="${escapeHtml(todayKey || '')}" data-history="${escapeHtml(JSON.stringify(history || []))}">${inner}</div>`;
   return shell({
     title: 'Facts — Apple Sunset',
     description: 'Every "Did you know?" fact from the Apple Sunset homepage, newest first.',

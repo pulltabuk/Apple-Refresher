@@ -2573,6 +2573,29 @@
   // Facts page: every fact published to the homepage, newest first, from
   // the same code the build uses (facts-kit.js).
   var factsListSection = document.getElementById('facts-list');
+  var factsSearch = document.getElementById('facts-search');
+
+  // One search for every month: hides facts that don't match, then any
+  // month, year or "More facts" left empty.
+  function applyFactsSearchJS() {
+    if (!factsListSection) return;
+    var query = factsSearch ? factsSearch.value.trim() : '';
+    var shown = 0;
+    factsListSection.querySelectorAll('.fact-card').forEach(function (cardEl) {
+      var hit = !query || matchesSearchJS(cardEl.getAttribute('data-search') || cardEl.textContent, query);
+      cardEl.hidden = !hit;
+      if (hit) shown++;
+    });
+    factsListSection.querySelectorAll('.facts-month, .facts-more').forEach(function (group) {
+      group.hidden = !group.querySelector('.fact-card:not([hidden])');
+    });
+    factsListSection.querySelectorAll('.facts-year').forEach(function (group) {
+      group.hidden = !group.querySelector('.facts-month:not([hidden])');
+    });
+    var none = document.getElementById('facts-no-results');
+    if (none) none.hidden = !query || shown > 0;
+  }
+  if (factsSearch) factsSearch.addEventListener('input', applyFactsSearchJS);
   if (factsListSection && window.FactsKit && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
     Promise.all([
       fetch(window.SUPABASE_URL + '/rest/v1/facts?select=*&order=created_at.desc', {
@@ -2583,12 +2606,15 @@
       .then(function (results) {
         var facts = results[0];
         if (!Array.isArray(facts)) return;
-        // Must match factsPage(): the same pool, with today's homepage fact
-        // (named by the build) first.
-        var html = window.FactsKit.factsPageHtml(facts, Array.isArray(results[1]) ? results[1] : [], { todayKey: factsListSection.getAttribute('data-today-key') || '' });
+        // Must match factsPage(): the same pool, dated from the build's
+        // diary of homepage facts, with today's first.
+        var history = [];
+        try { history = JSON.parse(factsListSection.getAttribute('data-history') || '[]'); } catch (err) { history = []; }
+        var html = window.FactsKit.factsPageHtml(facts, Array.isArray(results[1]) ? results[1] : [], { todayKey: factsListSection.getAttribute('data-today-key') || '', history: history });
         factsListSection.innerHTML = html;
         var noFacts = document.getElementById('no-facts');
         if (noFacts) noFacts.style.display = html ? 'none' : '';
+        applyFactsSearchJS();
       })
       .catch(function () {});
   }
