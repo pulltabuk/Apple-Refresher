@@ -1605,8 +1605,8 @@ ${events.length ? '' : '<p id="no-events" class="page-intro">No events yet.</p>'
 // Statistics worked out from every product, then each product's own
 // "Did you know?". Built by the same code (public/facts-kit.js) that
 // the page's live refresh uses.
-function factsPage({ facts, products, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const inner = FactsKit.factsPageHtml(facts, products);
+function factsPage({ facts, products, todayKey, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const inner = FactsKit.factsPageHtml(facts, products, { todayKey });
   const body = `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Facts')}</h1>
@@ -1615,7 +1615,7 @@ function factsPage({ facts, products, pageContent, siteUrl, supabaseUrl, supabas
 ${pageStandardLine(pageContent, `<p class="page-intro">Every &ldquo;Did you know?&rdquo; from the Apple Sunset homepage, newest first.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 ${inner ? '' : '<p id="no-facts" class="page-intro">Nothing here yet.</p>'}
-<div id="facts-list" class="facts-list" data-mode="facts">${inner}</div>`;
+<div id="facts-list" class="facts-list" data-mode="facts" data-today-key="${escapeHtml(todayKey || '')}">${inner}</div>`;
   return shell({
     title: 'Facts — Apple Sunset',
     description: 'Every "Did you know?" fact from the Apple Sunset homepage, newest first.',

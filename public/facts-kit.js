@@ -961,16 +961,46 @@
     }, []);
   }
 
-  function factsPageHtml(facts, products) {
-    const list = liveFacts(facts, products);
-    if (!list.length) return '';
-    return '<div class="facts-grid">' + list.map((f) => {
-      const href = '/facts/' + encodeURIComponent(String(f.id)) + '/';
-      const day = String(f.created_at || '').slice(0, 10);
-      return '<article class="fact-card fact-card--product">' +
-        '<p class="fact-text">' + escapeHtml(f.text) + '</p>' +
-        (f.live ? '<p class="fact-date">Kept up to date</p>' : /^\d{4}-\d{2}-\d{2}$/.test(day) ? '<p class="fact-date">' + Number(day.slice(8)) + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(day.slice(5, 7)) - 1] + ' ' + day.slice(0, 4) + '</p>' : '') +
-        '<a class="fact-more-link" href="' + href + '">Read more &rarr;</a>' +
+  // The Facts page: everything the homepage "Did you know?" takes turns
+  // through (the same pool: product facts, statistics kept up to date and
+  // facts published from admin or the phone app), with today's homepage
+  // fact first, then the newest: published facts by the day they were
+  // published, product facts by their "As of" date, then the statistics.
+  // A fact saved for a later day stays out until its day.
+  // opts.todayKey: the key of the fact on the homepage today (the build
+  // passes it; the page's live refresh reads it back from the list).
+  function factsPageHtml(facts, products, opts) {
+    const options = opts || {};
+    const today = new Date().toISOString().slice(0, 10);
+    const factById = {};
+    (facts || []).forEach((f) => { if (f && f.id != null) factById[String(f.id)] = f; });
+    const productBySlug = {};
+    (products || []).forEach((p) => { if (p && p.slug) productBySlug[p.slug] = p; });
+    const isDay = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+    const entries = dailyFactPool(products, facts).filter((item) => !(item.pin && item.pin > today)).map((item) => {
+      const kind = item.key.charAt(0);
+      let date = '';
+      if (kind === 'f') date = String((factById[item.key.slice(2)] || {}).created_at || '').slice(0, 10);
+      if (kind === 'p') date = String((productBySlug[item.slug] || {}).did_you_know_date || '').slice(0, 10);
+      return { item, kind, date: isDay(date) ? date : '', today: !!options.todayKey && item.key === options.todayKey };
+    });
+    if (!entries.length) return '';
+    const rank = (e) => (e.today ? 0 : e.date ? 1 : e.kind === 'p' ? 2 : e.kind === 'f' ? 3 : 4);
+    entries.sort((a, b) => rank(a) - rank(b) || (b.date < a.date ? -1 : b.date > a.date ? 1 : 0) || (a.item.key < b.item.key ? -1 : a.item.key > b.item.key ? 1 : 0));
+    const dayText = (d) => Number(d.slice(8)) + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(d.slice(5, 7)) - 1] + ' ' + d.slice(0, 4);
+    return '<div class="facts-grid">' + entries.map((e) => {
+      const item = e.item;
+      const productHref = item.slug ? '/products/' + encodeURIComponent(item.slug) + '/' : '';
+      const subject = e.kind === 'p' && item.name ? '<p class="fact-card-subject"><a href="' + productHref + '">' + escapeHtml(item.name) + '</a></p>' : '';
+      const when = e.kind === 's' ? '<p class="fact-date">Kept up to date</p>'
+        : e.date ? '<p class="fact-date">' + (e.kind === 'p' ? 'As of ' + monthYear(e.date) : dayText(e.date)) + '</p>' : '';
+      const more = e.kind === 'f' ? '<a class="fact-more-link" href="/facts/' + encodeURIComponent(item.key.slice(2)) + '/">Read more &rarr;</a>'
+        : e.kind === 'p' && productHref ? '<a class="fact-more-link" href="' + productHref + '">More on the ' + escapeHtml(item.name) + ' &rarr;</a>' : '';
+      return '<article class="fact-card fact-card--product fact-card--' + (e.kind === 'p' ? 'about-product' : e.kind === 's' ? 'statistic' : 'published') + (e.today ? ' fact-card--today' : '') + '" data-fact-key="' + escapeHtml(item.key) + '">' +
+        (e.today ? '<p class="fact-today">On the homepage today</p>' : '') +
+        subject +
+        '<p class="fact-text">' + escapeHtml(item.plain) + '</p>' +
+        when + more +
         '</article>';
     }).join('') + '</div>';
   }

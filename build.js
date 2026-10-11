@@ -480,7 +480,7 @@ async function main() {
   write('photo-licence/index.html', photoLicencePage(opts));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }), galleryPhotos.map(galleryLastmod).filter(Boolean).sort().pop() || null);
   write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
-  write('facts/index.html', factsPage({ facts, products, pageContent: pageContent.facts || null, ...opts }));
+  write('facts/index.html', factsPage({ facts, products, todayKey: dailyFact ? dailyFact.key : '', pageContent: pageContent.facts || null, ...opts }));
   write('earnings/index.html', earningsPage({ earnings, pageContent: pageContent.earnings || null, ...opts }));
 
   // One page per fact, whose link preview is the fact's card (made and
