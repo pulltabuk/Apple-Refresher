@@ -323,6 +323,13 @@ function normaliseGroupKey(value) {
   return (value || '').trim().toLowerCase();
 }
 
+// "Apple Watch release history": named after the family (or line) the
+// timeline shows. A catch-all "Other" family keeps the plain heading.
+function releaseHistoryHeading(name) {
+  const n = String(name || '').trim();
+  return !n || n.toLowerCase() === 'other' ? 'Release history' : `${escapeHtml(n)} release history`;
+}
+
 function categoryTimelinePoints(product, allProducts) {
   const groupKey = normaliseGroupKey(product.timeline_name || product.category);
   const sameCategory = (allProducts || []).filter((p) => normaliseGroupKey(p.timeline_name || p.category) === groupKey);
@@ -2162,7 +2169,7 @@ function categoryPage({ category, items, pageContent, siteUrl, supabaseUrl, supa
   const seedProduct = allProductsInCategory[0];
   const timelinePoints = seedProduct ? categoryTimelinePoints(seedProduct, allProductsInCategory) : [];
   const releaseHistorySection = timelinePoints.length
-    ? `<h2>Release history</h2>
+    ? `<h2>${releaseHistoryHeading(category)}</h2>
   ${verticalTimelineHtml(seedProduct, allProductsInCategory)}`
     : '';
   const body = `
@@ -2411,8 +2418,10 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> ${(product.waiting_count || 0) === 1 ? 'person' : 'people'}`),
   ].filter(Boolean).join('\n');
 
+  // Named after what the timeline shows: the family, or the product's own
+  // line when it is set to show that alone.
   const releaseHistorySection = timelinePoints.length
-    ? `<h2>Release history</h2>
+    ? `<h2>${releaseHistoryHeading(product.timeline_name || product.category)}</h2>
   ${timelineHtml}`
     : '';
 

@@ -195,6 +195,12 @@
       '<tbody>' + rows + '</tbody></table></div>';
   }
 
+  // Must match releaseHistoryHeading() in templates.js.
+  function releaseHistoryHeadingJS(name) {
+    var n = String(name || '').trim();
+    return !n || n.toLowerCase() === 'other' ? 'Release history' : escapeHtmlJS(n) + ' release history';
+  }
+
   function categoryTimelinePointsJS(product, allProducts) {
     var groupKey = normaliseGroupKeyJS(product.timeline_name || product.category);
     var sameCategory = (allProducts || []).filter(function (p) { return normaliseGroupKeyJS(p.timeline_name || p.category) === groupKey; });
@@ -1053,7 +1059,7 @@
 
     var allProducts = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
     var timelinePoints = categoryTimelinePointsJS(product, allProducts);
-    var releaseHistorySection = timelinePoints.length ? '<h2>Release history</h2>' + verticalTimelineHtmlJS(product, allProducts) : '';
+    var releaseHistorySection = timelinePoints.length ? '<h2>' + releaseHistoryHeadingJS(product.timeline_name || product.category) + '</h2>' + verticalTimelineHtmlJS(product, allProducts) : '';
 
     return (
       '<nav class="breadcrumbs" aria-label="Breadcrumb"><ol>' +
@@ -2374,7 +2380,7 @@
           var points = seedProduct ? categoryTimelinePointsJS(seedProduct, categoryProducts) : [];
           if (points.length) {
             timelineSection.style.display = '';
-            timelineSection.innerHTML = '<h2>Release history</h2>' + verticalTimelineHtmlJS(seedProduct, categoryProducts);
+            timelineSection.innerHTML = '<h2>' + releaseHistoryHeadingJS(seedProduct.category) + '</h2>' + verticalTimelineHtmlJS(seedProduct, categoryProducts);
           } else {
             timelineSection.style.display = 'none';
             timelineSection.innerHTML = '';
@@ -2586,7 +2592,7 @@
       cardEl.hidden = !hit;
       if (hit) shown++;
     });
-    factsListSection.querySelectorAll('.facts-month, .facts-more').forEach(function (group) {
+    factsListSection.querySelectorAll('.facts-month').forEach(function (group) {
       group.hidden = !group.querySelector('.fact-card:not([hidden])');
     });
     factsListSection.querySelectorAll('.facts-year').forEach(function (group) {
