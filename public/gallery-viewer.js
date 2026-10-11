@@ -270,6 +270,7 @@
       var zoomBox = document.createElement('div');
       zoomBox.className = 'gp-zoom';
       var img = document.createElement('img');
+      if (p.original && p.original !== p.full) img.onerror = function () { img.onerror = null; img.src = p.original; };
       img.src = p.full;
       img.alt = p.alt;
       img.decoding = 'async';
@@ -525,7 +526,10 @@
     container.dataset.viewer = 'on';
 
     var photos = imgs.map(function (img) {
-      return { full: img.getAttribute('data-full') || img.currentSrc || img.src, alt: img.alt };
+      // The large copy from the image CDN when there is one; the original
+      // stays as the fallback.
+      var original = img.getAttribute('data-full') || img.currentSrc || img.src;
+      return { full: img.getAttribute('data-zoom') || original, original: original, alt: img.alt };
     });
 
     var viewport = document.createElement('div');

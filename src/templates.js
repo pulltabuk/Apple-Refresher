@@ -38,7 +38,7 @@ function categoryIcon(category, size) {
   const s = size || 40;
   const customKey = Object.keys(CUSTOM_CATEGORY_ICONS).find((k) => k.toLowerCase() === String(category || '').toLowerCase());
   if (customKey) {
-    return `<img class="placeholder-icon" src="${escapeHtml(CUSTOM_CATEGORY_ICONS[customKey])}" alt="" width="${s}" height="${s}" style="object-fit:contain;">`;
+    return cdnImgHtml(CUSTOM_CATEGORY_ICONS[customKey], iconPixels(s), ` class="placeholder-icon" alt="" width="${s}" height="${s}" style="object-fit:contain;"`);
   }
   const key = Object.keys(CATEGORY_ICONS).find((k) => k.toLowerCase() === String(category || '').toLowerCase());
   const shape = (key && CATEGORY_ICONS[key]) || CATEGORY_ICONS.Other;
@@ -50,8 +50,7 @@ function categoryIcon(category, size) {
 function productIcon(product, size) {
   if (product && product.icon_url) {
     const s = size || 40;
-    const src = escapeHtml(String(product.icon_url).replace(/"/g, '%22'));
-    return `<img class="placeholder-icon placeholder-icon--product" src="${src}" alt="" width="${s}" height="${s}" style="object-fit:contain;">`;
+    return cdnImgHtml(String(product.icon_url).replace(/"/g, '%22'), iconPixels(s), ` class="placeholder-icon placeholder-icon--product" alt="" width="${s}" height="${s}" style="object-fit:contain;"`);
   }
   return categoryIcon(product && product.category, size);
 }
@@ -1172,13 +1171,13 @@ function galleryPhotoCardHtml(photo) {
     <div class="card-image">
       ${images.length > 1
         ? `<span class="gallery-strip-mosaic${images.length === 2 ? ' gallery-strip-mosaic--two' : ''}">
-            <span class="gallery-strip-main"><img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}"></span>
+            <span class="gallery-strip-main">${cdnImgHtml(images[0], 600, ` alt="${escapeHtml(displayName)}" loading="lazy"`)}</span>
             <span class="gallery-strip-side${images.length === 2 ? ' gallery-strip-side--one' : ''}">
-              ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb"><img src="${escapeHtml(url)}" alt=""></span>`).join('')}
+              ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb">${cdnImgHtml(url, 300, ' alt="" loading="lazy"', true)}</span>`).join('')}
               ${images.length > 3 ? `<span class="gallery-strip-more">+${images.length - 3}</span>` : ''}
             </span>
           </span>`
-        : images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}
+        : images[0] ? cdnImgHtml(images[0], 800, ` alt="${escapeHtml(displayName)}" loading="lazy"`) : ''}
       ${images.length > 1 ? `<span class="gallery-strip-count">${images.length} photos</span>` : ''}
     </div>
     <p class="card-name">${escapeHtml(displayName)}</p>
@@ -1196,6 +1195,23 @@ function cdnImage(url, width) {
   return `/.netlify/images?url=${encodeURIComponent(url)}&w=${width}&q=80`;
 }
 
+// An <img> served by Netlify's Image CDN at the size it is shown, so
+// Supabase sends each photo once instead of on every visit. If the CDN
+// can't serve it, the original loads instead. square crops it to fit a
+// square tile. Keep in step with cdnImgHtmlJS() in app.js.
+function cdnImgHtml(url, width, attrs, square) {
+  const cdn = cdnImage(url, width);
+  if (cdn === url) return `<img src="${escapeHtml(url)}"${attrs || ''}>`;
+  const src = square ? `${cdn}&h=${width}&fit=cover` : cdn;
+  return `<img src="${escapeHtml(src)}" data-full="${escapeHtml(url)}" onerror="this.onerror=null;this.src=this.dataset.full"${attrs || ''}>`;
+}
+
+// Icons are drawn at 22 to 40px; one size of file covers them all on
+// any screen, and keeps the number of copies the CDN fetches down.
+function iconPixels(size) {
+  return size <= 40 ? 120 : 240;
+}
+
 // A carousel photo: right-sized for the page via srcset, with the
 // original in data-full for the full-screen viewer. Falls back to the
 // original if the CDN can't serve it.
@@ -1203,7 +1219,7 @@ function galleryCarouselImgHtml(url, alt, index) {
   const cdn = cdnImage(url, 1280);
   const srcset = cdn === url ? '' : ` srcset="${[640, 960, 1280, 1920].map((w) => `${escapeHtml(cdnImage(url, w))} ${w}w`).join(', ')}" sizes="(max-width: 700px) 100vw, 640px"`;
   const fallback = cdn === url ? '' : ` onerror="this.onerror=null;this.removeAttribute('srcset');this.src=this.dataset.full"`;
-  return `<img src="${escapeHtml(cdn)}"${srcset} data-full="${escapeHtml(url)}" alt="${escapeHtml(alt)}"${index === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async"${fallback}>`;
+  return `<img src="${escapeHtml(cdn)}"${srcset} data-full="${escapeHtml(url)}"${cdn === url ? '' : ` data-zoom="${escapeHtml(cdnImage(url, 2048))}"`} alt="${escapeHtml(alt)}"${index === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async"${fallback}>`;
 }
 
 // Where a photo was taken, e.g. "London, UK" (either part may be missing).
@@ -1433,13 +1449,13 @@ function galleryStripItemHtml(photo) {
   // it reads as a set at a glance rather than a single picture.
   const media = images.length > 1
     ? `<span class="gallery-strip-mosaic${images.length === 2 ? ' gallery-strip-mosaic--two' : ''}">
-        <span class="gallery-strip-main"><img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}"></span>
+        <span class="gallery-strip-main">${cdnImgHtml(images[0], 600, ` alt="${escapeHtml(displayName)}" loading="lazy"`)}</span>
         <span class="gallery-strip-side${images.length === 2 ? ' gallery-strip-side--one' : ''}">
-          ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb"><img src="${escapeHtml(url)}" alt=""></span>`).join('')}
+          ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb">${cdnImgHtml(url, 300, ' alt="" loading="lazy"', true)}</span>`).join('')}
           ${images.length > 3 ? `<span class="gallery-strip-more">+${images.length - 3}</span>` : ''}
         </span>
       </span>`
-    : `<span class="gallery-strip-single">${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(displayName)}">` : ''}</span>`;
+    : `<span class="gallery-strip-single">${images[0] ? cdnImgHtml(images[0], 600, ` alt="${escapeHtml(displayName)}" loading="lazy"`, true) : ''}</span>`;
   // Subject tags (e.g. iPod), in orange like the gallery tiles.
   const tags = (photo.tags || []).slice().sort((a, b) => a.localeCompare(b)).slice(0, 3)
     .map((t) => `<span class="pill pill--tag">${escapeHtml(t)}</span>`).join('');
@@ -1482,7 +1498,7 @@ function eventArchiveCardHtml(event, productsBySlug) {
       ? `<a class="pill pill--link" href="/products/${match.slug}/">${escapeHtml(p.name)}</a>`
       : `<span class="pill">${escapeHtml(p.name)}</span>`;
   }).join('') + (remaining > 0 ? `<span class="pill pill--muted">+${remaining} more</span>` : '');
-  const inner = `<div class="card-image">${event.image_url ? `<img src="${escapeHtml(event.image_url)}" alt="">` : ''}</div>
+  const inner = `<div class="card-image">${event.image_url ? cdnImgHtml(event.image_url, 800, ' alt="" loading="lazy"') : ''}</div>
     <p class="card-name">${escapeHtml(event.heading)}</p>
     ${dateText ? `<p class="card-meta">${escapeHtml(dateText)}</p>` : ''}`;
   // data-search lets the page filter match the announced products as
@@ -1546,7 +1562,7 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
   </div>
   ${dateText ? `<p class="page-intro">${escapeHtml(dateText)}</p>` : ''}
   ${FactsKit.eventCountdownHtml(event)}
-  ${event.image_url ? `<img class="event-detail-image" src="${escapeHtml(event.image_url)}" alt="">` : ''}
+  ${event.image_url ? cdnImgHtml(event.image_url, 1280, ' class="event-detail-image" alt=""') : ''}
   ${summaryHtml ? `<div class="page-copy event-summary">${summaryHtml}</div>` : ''}
   ${productsList ? `<h2>What was announced</h2>${productsList}` : ''}
   ${event.event_url ? `<p><a class="intro-cta" href="${escapeHtml(event.event_url)}" target="_blank" rel="noopener">Watch on Apple's site</a></p>` : ''}
@@ -1622,7 +1638,7 @@ function factPage({ fact: savedFact, products, cardUrl, related, siteUrl, supaba
 <article class="fact-page">
   <p class="fact-label">Did you know?</p>
   <h1 class="fact-page-text">${escapeHtml(fact.text)}</h1>
-  ${cardUrl ? `<img class="fact-page-card" src="${escapeHtml(cardUrl)}" alt="" width="1200" height="675">` : ''}
+  ${cardUrl ? cdnImgHtml(cardUrl, 1200, ' class="fact-page-card" alt="" width="1200" height="675"') : ''}
   ${factRelatedLinkHtml(related)}
   <a href="/facts/" class="fact-more-link">More facts &rarr;</a>
 </article>`;
@@ -2516,7 +2532,7 @@ function aboutPage({ content, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const body = `
 <article class="about-page">
   <h1>${escapeHtml(content.heading || 'About Apple Sunset')}</h1>
-  ${content.image_url ? `<div class="about-image"><img src="${content.image_url}" alt=""></div>` : ''}
+  ${content.image_url ? `<div class="about-image">${cdnImgHtml(content.image_url, 1200, ' alt=""')}</div>` : ''}
   <div class="about-body">${paragraphs}</div>
 </article>`;
 

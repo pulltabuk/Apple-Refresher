@@ -1274,6 +1274,14 @@
     return n ? n + ' characters' + (n > 300 ? ', longer than the 300 or so that reads best' : '') : '';
   }
 
+  // An <img> through Netlify's Image CDN at the size shown, falling back
+  // to the original. Same markup as cdnImgHtml() in src/templates.js.
+  function cdnImgHtml(url, width, attrs, square) {
+    if (!/^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//.test(String(url || ''))) return '<img src="' + escapeHtml(url) + '"' + (attrs || '') + '>';
+    const cdn = '/.netlify/images?url=' + encodeURIComponent(url) + '&w=' + width + '&q=80' + (square ? '&h=' + width + '&fit=cover' : '');
+    return '<img src="' + escapeHtml(cdn) + '" data-full="' + escapeHtml(url) + '" onerror="this.onerror=null;this.src=this.dataset.full"' + (attrs || '') + '>';
+  }
+
   // --- Apple Events in the homepage hero ---
   // Shared by the build (homePage in src/templates.js) and the page's live
   // refresh (app.js), so both always pick the same event and show it in
@@ -1543,7 +1551,7 @@
     // the emblem (as on the X card). No blurred backdrop: iPhone Safari
     // can't reliably blur a large image and flickers.
     const art = event.image_url
-      ? '<span class="event-hero-art"><img class="event-hero-art-img" src="' + escapeHtml(event.image_url) + '" alt=""></span>'
+      ? '<span class="event-hero-art">' + cdnImgHtml(event.image_url, 900, ' class="event-hero-art-img" alt=""') + '</span>'
       : '';
     const whenLine = phase === 'recap'
       ? 'Held ' + escapeHtml(day)
@@ -1616,6 +1624,7 @@
     xCardKey,
     cardGuess,
     summaryToEditorHtml,
+    cdnImgHtml,
     summaryFromEditor,
     summaryLengthNote,
     CARD_ICON_NAMES,
