@@ -920,8 +920,9 @@
     xUpdateCount();
     $('up-x-link').hidden = !$('up-x-link-on').checked;
     const wantCard = $('up-x-card-on').checked && !!text;
-    $('up-x-card-label').hidden = !$('up-x-card-on').checked;
-    $('up-x-card-fields').hidden = !$('up-x-card-on').checked;
+    // The card shows straight under the post; its settings fold away
+    // under "Edit the card".
+    $('up-x-card-edit').hidden = !$('up-x-card-on').checked;
     $('up-x-card').hidden = !wantCard;
     if (!wantCard) $('up-x-card-note').hidden = true;
     $('up-x-share').textContent = $('up-x-card-on').checked ? 'Share to X with card' : 'Share to X';
@@ -1108,6 +1109,7 @@
     $('up-x-card-icon').value = 'auto';
     xMarkIcon();
     $('up-x-card-label').value = 'Did you know?';
+    $('up-x-card-edit').open = false;
     $('up-x-idea-list').innerHTML = '';
     xCardFieldsOwn = false;
     xPreviewOwn = false;

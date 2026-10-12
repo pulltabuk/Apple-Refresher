@@ -3307,21 +3307,26 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
       <label class="up-check"><input type="checkbox" id="up-x-link-on"> Add a link</label>
       <input type="url" id="up-x-link" class="up-search" placeholder="https://applesunset.com/" autocomplete="off" aria-label="Link">
       <label class="up-check"><input type="checkbox" id="up-x-card-on" checked> Add a card image</label>
-      <input type="text" id="up-x-card-label" class="up-search" value="Did you know?" autocomplete="off" aria-label="Card heading">
-      <div class="up-x-card-fields" id="up-x-card-fields">
-        <span class="up-label">Card title <span class="up-hint">optional, above the headline, e.g. iPhone 16</span></span>
-        <input type="text" id="up-x-card-title" class="up-search" autocomplete="off" maxlength="40" aria-label="Card title">
-        <span class="up-label">Card icon <span class="up-hint">what is this post about? Tap one. The Apple Sunset logo always sits small in the corner.</span></span>
-        <select id="up-x-card-icon" hidden><option value="auto">Automatic</option></select>
-        <div class="icon-picker" id="up-x-card-icon-picker"></div>
-        <p class="up-hint icon-picker-auto" id="up-x-card-icon-auto"></p>
-        <input type="text" id="up-x-card-emoji" class="up-search" autocomplete="off" maxlength="16" placeholder="Or type or paste any other emoji" aria-label="Any other emoji for the card">
-        <span class="up-label">Card headline <span class="up-hint">the large text, e.g. 1,433 days. Leave empty for none.</span></span>
-        <input type="text" id="up-x-card-headline" class="up-search" autocomplete="off" maxlength="24" aria-label="Card headline">
-        <span class="up-label">Card line <span class="up-hint">the smaller text below it</span></span>
-        <textarea id="up-x-card-line" class="up-fact-edit up-fact-edit--short" aria-label="Card line"></textarea>
-        <p class="up-hint up-hint--error" id="up-x-card-note" hidden></p>
-      </div>
+      <img id="up-x-card" class="up-fact-preview up-x-card-img" alt="The card image" hidden>
+      <p class="up-hint up-hint--error" id="up-x-card-note" hidden></p>
+      <details class="up-x-card-edit" id="up-x-card-edit">
+        <summary class="gallery-action gallery-action--block">Edit the card</summary>
+        <div class="up-x-card-fields" id="up-x-card-fields">
+          <span class="up-label">Card heading <span class="up-hint">the small line at the top, e.g. Did you know?</span></span>
+          <input type="text" id="up-x-card-label" class="up-search" value="Did you know?" autocomplete="off" aria-label="Card heading">
+          <span class="up-label">Card title <span class="up-hint">optional, above the headline, e.g. iPhone 16</span></span>
+          <input type="text" id="up-x-card-title" class="up-search" autocomplete="off" maxlength="40" aria-label="Card title">
+          <span class="up-label">Card icon <span class="up-hint">what is this post about? Tap one. The Apple Sunset logo always sits small in the corner.</span></span>
+          <select id="up-x-card-icon" hidden><option value="auto">Automatic</option></select>
+          <div class="icon-picker" id="up-x-card-icon-picker"></div>
+          <p class="up-hint icon-picker-auto" id="up-x-card-icon-auto"></p>
+          <input type="text" id="up-x-card-emoji" class="up-search" autocomplete="off" maxlength="16" placeholder="Or type or paste any other emoji" aria-label="Any other emoji for the card">
+          <span class="up-label">Card headline <span class="up-hint">the large text, e.g. 1,433 days. Leave empty for none.</span></span>
+          <input type="text" id="up-x-card-headline" class="up-search" autocomplete="off" maxlength="24" aria-label="Card headline">
+          <span class="up-label">Card line <span class="up-hint">the smaller text below it</span></span>
+          <textarea id="up-x-card-line" class="up-fact-edit up-fact-edit--short" aria-label="Card line"></textarea>
+        </div>
+      </details>
       <div class="up-x-preview-head">
         <p class="up-hint">How it will look on X (you can edit it here):</p>
         <button type="button" id="up-x-preview-reset" class="gallery-action" hidden>Reset</button>
@@ -3331,7 +3336,6 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
       <p class="up-hint" id="up-x-preview-note" hidden>Edited by hand, so the boxes above no longer change it. Reset rebuilds it from them.</p>
       <p class="up-fact-count" id="up-x-count"></p>
       <p class="up-hint" id="up-x-link-note" hidden></p>
-      <img id="up-x-card" class="up-fact-preview" alt="" hidden>
       <div class="up-fact-actions">
         <button type="button" id="up-x-share" class="gallery-action gallery-action--primary gallery-action--wide">Share to X with card</button>
         <button type="button" id="up-x-post" class="gallery-action">Post text only</button>

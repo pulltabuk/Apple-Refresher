@@ -250,7 +250,13 @@ body {
 .up-x-kind { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-dark); margin-bottom: 3px; }
 .up-x-preview { white-space: pre-wrap; font: inherit; font-size: 15px; line-height: 1.5; margin: 0; padding: 12px 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow-wrap: anywhere; min-height: 150px; }
 .up-x-card-fields { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px; background: var(--accent-bg); }
-.up-x-card-fields[hidden], .up-x-preview-head [hidden], #up-x-card-note[hidden], #up-x-preview-note[hidden] { display: none; }
+.up-x-card-fields[hidden], .up-x-card-edit[hidden], .up-x-preview-head [hidden], #up-x-card-note[hidden], #up-x-preview-note[hidden] { display: none; }
+.up-x-card-img { border: 1px solid var(--border); }
+.up-x-card-edit > summary { list-style: none; }
+.up-x-card-edit > summary::-webkit-details-marker { display: none; }
+.up-x-card-edit > summary::after { content: '\25BE'; font-size: 13px; transition: transform 0.15s; }
+.up-x-card-edit[open] > summary::after { transform: rotate(180deg); }
+.up-x-card-edit[open] > summary { margin-bottom: 10px; }
 .up-x-card-fields .up-label .up-hint { font-weight: 400; }
 .up-x-card-fields .up-search, .up-x-card-fields .up-fact-edit, .up-x-card-fields .up-select { margin: 0; }
 .up-x-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
