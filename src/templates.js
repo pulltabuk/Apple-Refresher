@@ -2950,6 +2950,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <p class="admin-hint">Only needed if two events overlap: a featured one goes first. Either way an event leaves the homepage 48 hours after it starts.</p>
         <label>Event time, with its time zone, e.g. "10am PT" (the countdown and the UK time are worked out from it; with no time, 10am PT is assumed)<input type="text" id="event_time" placeholder="10am PT" autocomplete="off"></label>
         <label>Link to Apple's event page (optional)<input type="url" id="event_url" placeholder="https://www.apple.com/apple-events/" autocomplete="off"></label>
+        <p class="admin-hint">Add it when there's a live stream: the homepage then shows <strong>Watch live</strong> while it's on. Leave it empty when there's nothing to watch (news by press release).</p>
         <div class="admin-subfield">
           <span class="admin-subfield-label">Summary <span class="admin-optional">Optional, a line or two on what happened, shown on the event page and in Google results</span></span>
           <div class="richtext-toolbar">
@@ -3414,6 +3415,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
         <label>Time, with its time zone<input type="text" id="up-ev-time" placeholder="e.g. 10am PT" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
         <p class="up-hint" id="up-ev-time-echo" aria-live="polite"></p>
         <label>Apple&rsquo;s event page (optional)<input type="url" id="up-ev-url" placeholder="https://www.apple.com/apple-events/" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
+        <p class="up-hint">Only when there&rsquo;s a live stream: the homepage then shows Watch live. Leave empty if there&rsquo;s nothing to watch.</p>
         <span class="up-label">Summary (optional)</span>
         <div class="up-rt-toolbar" role="toolbar" aria-label="Summary formatting">
           <button type="button" data-cmd="bold" aria-label="Bold"><b>B</b></button>
