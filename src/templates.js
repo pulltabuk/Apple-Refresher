@@ -1511,7 +1511,7 @@ function eventArchiveCardHtml(event, productsBySlug) {
   // data-search lets the page filter match the announced products as
   // well as the event's own title and date.
   const searchText = [event.heading, dateText, ...products.map((p) => p.name)].filter(Boolean).join(' ');
-  return `<article class="card" data-search="${escapeHtml(searchText.toLowerCase())}">
+  return `<article class="card card--event-archive" data-search="${escapeHtml(searchText.toLowerCase())}">
   <a class="card-link" href="/events/${eventSlug(event)}/">${inner}</a>
   ${tags ? `<div class="gallery-tags"><div class="gallery-tags-row">${tags}</div></div>` : ''}
 </article>`;

@@ -1051,24 +1051,29 @@
   }
   $('up-x-back').addEventListener('click', () => (xReturnTo || openFacts)());
 
+  let xEventIdeaCount = 0;
   $('up-x-ideas').addEventListener('click', async () => {
+    $('up-x-ideas').disabled = true;
     if (!xIdeas.length) {
-      $('up-x-ideas').disabled = true;
       if (!allProducts.length) {
         const { data } = await client.from('products').select('*');
         allProducts = data || [];
       }
-      $('up-x-ideas').disabled = false;
       xIdeas = window.FactsKit.xPostIdeas(allProducts, window.location.origin);
       for (let i = xIdeas.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [xIdeas[i], xIdeas[j]] = [xIdeas[j], xIdeas[i]];
       }
-      // A coming, live or just-held Apple Event goes first.
-      const { data: events } = await client.from('apple_events').select('*');
-      xIdeas = window.FactsKit.eventPostIdeas(events || [], window.location.origin).concat(xIdeas);
       xShown = 0;
+      xEventIdeaCount = 0;
     }
+    // A coming, live or just-held Apple Event goes first, read afresh
+    // each time so it has the latest announced products.
+    const { data: events } = await client.from('apple_events').select('*');
+    const eventIdeas = window.FactsKit.eventPostIdeas(events || [], window.location.origin);
+    xIdeas = eventIdeas.concat(xIdeas.slice(xEventIdeaCount));
+    xEventIdeaCount = eventIdeas.length;
+    $('up-x-ideas').disabled = false;
     xShowIdeas();
   });
 
@@ -2189,8 +2194,22 @@
 
   // A ready-made post with the event's own card, back to the event after.
   $('up-ev-x').addEventListener('click', () => {
-    const ev = evList.find((x) => x.id === evEditingId);
-    if (!ev) return;
+    const saved = evList.find((x) => x.id === evEditingId);
+    if (!saved) return;
+    // What's on screen, saved or not: products just added go in the post.
+    const pending = $('up-ev-new-product').value.trim();
+    const products = pending && !evProducts.some((p) => p.name.toLowerCase() === pending.toLowerCase())
+      ? evProducts.concat([{ name: pending, featured: false }])
+      : evProducts;
+    const ev = Object.assign({}, saved, {
+      heading: $('up-ev-heading').value.trim() || saved.heading,
+      image_url: evImageUrl || saved.image_url,
+      event_date: $('up-ev-date').value || saved.event_date,
+      event_time: $('up-ev-time').value.trim() || null,
+      event_url: $('up-ev-url').value.trim() || null,
+      announced_products: products,
+      summary: window.FactsKit.summaryFromEditor($('up-ev-summary')) || null,
+    });
     show('x');
     xReturnTo = () => show('event');
     $('up-x-back').textContent = '‹ Back to the event';

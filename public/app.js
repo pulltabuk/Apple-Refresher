@@ -2548,28 +2548,41 @@
     '</article>';
   }
 
-  function eventArchiveCardHtmlJS(event) {
+  // Must match eventArchiveCardHtml() in templates.js.
+  function eventArchiveCardHtmlJS(event, productByName) {
     var dateText = [formatDateJS(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
     var products = (event.announced_products || []).map(function (p) { return typeof p === 'string' ? { name: p, featured: false } : p; });
     var featured = products.filter(function (p) { return p.featured; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
     var rest = products.filter(function (p) { return !p.featured; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
     var shown = featured.concat(rest).slice(0, 10);
     var remaining = products.length - shown.length;
-    var tags = shown.map(function (p) { return '<span class="pill">' + escapeHtmlJS(p.name) + '</span>'; }).join('') + (remaining > 0 ? '<span class="pill pill--muted">+' + remaining + ' more</span>' : '');
+    var tags = shown.map(function (p) {
+      var match = productByName[p.name.toLowerCase()];
+      return match
+        ? '<a class="pill pill--link" href="/products/' + match.slug + '/">' + escapeHtmlJS(p.name) + '</a>'
+        : '<span class="pill">' + escapeHtmlJS(p.name) + '</span>';
+    }).join('') + (remaining > 0 ? '<span class="pill pill--muted">+' + remaining + ' more</span>' : '');
     var inner = '<div class="card-image">' + (event.image_url ? cdnImgHtmlJS(event.image_url, 800, ' alt="" loading="lazy"') : '') + '</div>' +
       '<p class="card-name">' + escapeHtmlJS(event.heading) + '</p>' +
       (dateText ? '<p class="card-meta">' + escapeHtmlJS(dateText) + '</p>' : '');
-    return '<article class="card"><a class="card-link" href="/events/' + eventSlugJS(event) + '/">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
+    var searchText = [event.heading, dateText].concat(products.map(function (p) { return p.name; })).filter(Boolean).join(' ');
+    return '<article class="card card--event-archive" data-search="' + escapeHtmlJS(searchText.toLowerCase()) + '"><a class="card-link" href="/events/' + eventSlugJS(event) + '/">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
   }
 
   if (gridSection && gridSection.getAttribute('data-mode') === 'events' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-    fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=*&order=event_date.desc', {
-      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (events) {
+    Promise.all([
+      fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=*&order=event_date.desc', {
+        headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
+      }).then(function (res) { return res.json(); }),
+      fetchAllProductsJS().catch(function () { return []; }),
+    ])
+      .then(function (results) {
+        var events = results[0];
         if (!Array.isArray(events)) return;
-        gridSection.innerHTML = events.map(eventArchiveCardHtmlJS).join('');
+        // Announced products we track link straight to their pages.
+        var productByName = {};
+        (Array.isArray(results[1]) ? results[1] : []).forEach(function (p) { if (p && p.name && p.slug) productByName[p.name.toLowerCase()] = p; });
+        gridSection.innerHTML = events.map(function (event) { return eventArchiveCardHtmlJS(event, productByName); }).join('');
         var noEvents = document.getElementById('no-events');
         if (noEvents) noEvents.style.display = events.length ? 'none' : '';
       })
