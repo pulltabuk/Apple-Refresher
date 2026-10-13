@@ -1739,6 +1739,11 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card .pill:not(.pill--location):not(.pill--count) { font-size: 10px; padding: 3px 9px; border-color: #e6e1d8; color: var(--text-secondary); }
 .card .pill:not(.pill--location):not(.pill--count):hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-dark); }
 .card .pill--location, .card .pill--count { font-size: 10px; padding: 3px 9px; }
+/* Events page: a burnt orange outline and faded burnt orange product pills. */
+.card--event-archive { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.card--event-archive:hover { border-color: var(--accent-dark); box-shadow: 0 0 0 1px var(--accent-dark); }
+.card.card--event-archive .gallery-tags-row .pill:not(.pill--muted) { background: var(--accent-bg); border-color: #f0c9a8; color: var(--accent-dark); font-weight: 600; }
+.card.card--event-archive .gallery-tags-row .pill--link:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 /* Album tiles: subject tags in orange so they stand out; places clear
    until hovered. */
 .card .gallery-card-footer .pill:not(.pill--location):not(.pill--count) { background: var(--accent); border-color: var(--accent); color: #fff; }

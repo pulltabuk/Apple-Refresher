@@ -689,6 +689,7 @@
       $x('x-ideas-btn').textContent = ideas.length > 6 ? 'More ideas' : 'Ideas from my data';
     }
 
+    let eventIdeaCount = 0;
     $x('x-ideas-btn').addEventListener('click', async () => {
       if (!ideas.length) {
         ideas = window.FactsKit.xPostIdeas(cachedProducts, origin);
@@ -697,11 +698,15 @@
           const j = Math.floor(Math.random() * (i + 1));
           [ideas[i], ideas[j]] = [ideas[j], ideas[i]];
         }
-        // A coming, live or just-held Apple Event goes first.
-        const { data: events } = await client.from('apple_events').select('*');
-        ideas = window.FactsKit.eventPostIdeas(events || [], origin).concat(ideas);
         shown = 0;
+        eventIdeaCount = 0;
       }
+      // A coming, live or just-held Apple Event goes first, read afresh
+      // each time so it has the latest announced products.
+      const { data: events } = await client.from('apple_events').select('*');
+      const eventIdeas = window.FactsKit.eventPostIdeas(events || [], origin);
+      ideas = eventIdeas.concat(ideas.slice(eventIdeaCount));
+      eventIdeaCount = eventIdeas.length;
       showIdeas();
     });
 
@@ -3461,7 +3466,12 @@
       const xBtn = document.createElement('button');
       xBtn.type = 'button';
       xBtn.textContent = 'Post to X';
-      xBtn.addEventListener('click', () => window.AdminX.use(window.FactsKit.eventPostIdea(event, { origin: window.location.origin })));
+      // Read afresh, so products added since this list loaded (say, from
+      // the phone app) are in the post.
+      xBtn.addEventListener('click', async () => {
+        const { data: latest } = await client.from('apple_events').select('*').eq('id', event.id).maybeSingle();
+        window.AdminX.use(window.FactsKit.eventPostIdea(latest || event, { origin: window.location.origin }));
+      });
       actionsTd.appendChild(xBtn);
       actionsTd.appendChild(editBtn);
       actionsTd.appendChild(deleteBtn);
