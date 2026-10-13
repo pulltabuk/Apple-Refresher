@@ -1431,12 +1431,18 @@
     const t = eventTimeParts(event.event_time) || { hour: 10, min: 0, zone: null };
     return zonedToUtc(bits[0], bits[1], bits[2], t.hour, t.min, t.zone || 'America/Los_Angeles');
   }
+  function eventHasNews(event) {
+    return !!(eventSummaryLead(event && event.summary) || ((event && event.announced_products) || []).length);
+  }
   function eventPhase(event, now) {
     const start = eventStartMs(event);
     if (isNaN(start)) return null;
     const t = now == null ? Date.now() : now;
     if (t < start) return 'upcoming';
-    if (t < start + EVENT_LIVE_MS) return 'live';
+    // Once what was announced is added (a summary or products), it shows
+    // as announced straight away: some events are press releases with
+    // nothing to watch.
+    if (t < start + EVENT_LIVE_MS) return eventHasNews(event) ? 'recap' : 'live';
     if (t < start + EVENT_RECAP_MS) return 'recap';
     return 'past';
   }
@@ -1524,8 +1530,11 @@
       text = 'It\u2019s official: Apple\u2019s next event, ' + quoted + ', is on ' + longDay + time + '. Follow the countdown, then see everything announced, on Apple Sunset.';
       card = { label: 'Apple Event', title: name, headline: days > 1 ? days + ' days' : days === 1 ? 'Tomorrow' : 'Today', line: whenLine, icon };
     } else if (phase === 'live') {
-      text = 'Apple\u2019s ' + quoted + ' event is live now. Everything announced will be on Apple Sunset.';
-      card = { label: 'Apple Event', title: name, headline: 'Live now', line: whenLine, icon };
+      // With no watch link there's no stream to point to.
+      text = event.event_url
+        ? 'Apple\u2019s ' + quoted + ' event is live now. Everything announced will be on Apple Sunset.'
+        : 'Apple\u2019s ' + quoted + ' announcements are happening now. Everything announced will be on Apple Sunset.';
+      card = { label: 'Apple Event', title: name, headline: event.event_url ? 'Live now' : 'Today', line: whenLine, icon };
     } else {
       let shown = names.slice();
       text = '';
@@ -1624,7 +1633,7 @@
 
   // The hero tile. opts: href (the event's page on this site), products
   // (every product as { name, slug }, to link what was announced) and now.
-  const APPLE_EVENTS_URL = 'https://www.apple.com/apple-events/';
+  const APPLE_NEWSROOM_URL = 'https://www.apple.com/newsroom/';
 
   // An event summary's opening sentence as plain text (the summary can be
   // formatted), short enough for the homepage tile.
@@ -1654,7 +1663,7 @@
     const onApple = /(^|\.)apple\.com$/i.test((String(event.event_url || '').match(/^https?:\/\/([^/]+)/i) || [])[1] || '');
     const until = phase === 'upcoming' ? start : phase === 'live' ? start + EVENT_LIVE_MS : start + EVENT_RECAP_MS;
     const kicker = phase === 'live'
-      ? '<span class="event-hero-kicker event-hero-kicker--live"><span class="event-hero-dot" aria-hidden="true"></span>Live now</span>'
+      ? '<span class="event-hero-kicker event-hero-kicker--live"><span class="event-hero-dot" aria-hidden="true"></span>' + (watchUrl ? 'Live now' : 'Happening now') + '</span>'
       : phase === 'recap'
       ? '<span class="event-hero-kicker">Just announced</span>'
       : '<span class="event-hero-kicker">Apple Event</span>';
@@ -1675,10 +1684,15 @@
         ? '<a class="event-hero-cta" href="' + watchUrl + '" target="_blank" rel="noopener">' + (onApple ? 'Watch on apple.com' : 'Where to watch') + ' <span aria-hidden="true">&#8599;</span></a>'
         : '<a class="event-hero-cta event-hero-cta--quiet" href="' + href + '">Event details <span aria-hidden="true">&rarr;</span></a>';
     } else if (phase === 'live') {
-      middle = '<p class="event-hero-note">It&rsquo;s on now. Everything Apple announces will be added here afterwards.</p>';
-      // With no link of its own, Apple's events page, where Apple streams
-      // its events live.
-      cta = '<a class="event-hero-cta" href="' + (watchUrl || APPLE_EVENTS_URL) + '" target="_blank" rel="noopener">' + (watchUrl && !onApple ? 'Watch live' : 'Watch live on apple.com') + ' <span aria-hidden="true">&#8599;</span></a>';
+      // A watch link means a stream to watch. Without one (an event done by
+      // press release), Apple Newsroom, where the announcements appear.
+      if (watchUrl) {
+        middle = '<p class="event-hero-note">It&rsquo;s on now. Everything Apple announces will be added here afterwards.</p>';
+        cta = '<a class="event-hero-cta" href="' + watchUrl + '" target="_blank" rel="noopener">' + (onApple ? 'Watch live on apple.com' : 'Watch live') + ' <span aria-hidden="true">&#8599;</span></a>';
+      } else {
+        middle = '<p class="event-hero-note">Apple is announcing it today. Everything announced will be added here.</p>';
+        cta = '<a class="event-hero-cta" href="' + APPLE_NEWSROOM_URL + '" target="_blank" rel="noopener">Apple Newsroom <span aria-hidden="true">&#8599;</span></a>';
+      }
     } else {
       const named = (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p)).filter((p) => p && p.name);
       const ordered = named.filter((p) => p.featured).sort((a, b) => a.name.localeCompare(b.name))
