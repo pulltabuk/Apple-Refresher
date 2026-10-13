@@ -2535,23 +2535,79 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   });
 }
 
-function aboutPage({ content, siteUrl, supabaseUrl, supabaseAnonKey }) {
+// The About page's own numbers, worked out at each build (the site
+// rebuilds daily). Deliberately not the homepage's "at a glance" counts,
+// so the page says something the homepage doesn't.
+function aboutCounts({ products, events, photos }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const list = products || [];
+  const past = list.flatMap((p) => releaseDates(p).filter((d) => d <= today));
+  return {
+    families: new Set(list.map((p) => p.category).filter(Boolean)).size,
+    releases: past.length,
+    since: past.length ? past.slice().sort()[0].slice(0, 4) : '',
+    discontinued: list.filter((p) => p.discontinued).length,
+    events: (events || []).length,
+    photos: (photos || []).length,
+    asOf: formatDate(today),
+  };
+}
+
+function aboutGuideHtml(c) {
+  const stat = (href, num, label, sub) => `<a class="about-stat" href="${href}"><span class="about-stat-num">${num}</span><span class="about-stat-label">${label}</span>${sub ? `<span class="about-stat-sub">${sub}</span>` : ''}</a>`;
+  const stats = [
+    c.families ? stat('/categories/', c.families, c.families === 1 ? 'product family' : 'product families') : '',
+    c.releases ? stat('/products/', c.releases, c.releases === 1 ? 'release recorded' : 'releases recorded', c.since ? `going back to ${c.since}` : '') : '',
+    c.discontinued ? stat('/discontinued/', c.discontinued, c.discontinued === 1 ? 'discontinued product archived' : 'discontinued products archived') : '',
+    c.events ? stat('/events/', c.events, c.events === 1 ? 'Apple Event' : 'Apple Events', 'and what each announced') : '',
+    c.photos ? stat('/gallery/', c.photos, c.photos === 1 ? 'gallery photo' : 'gallery photos') : '',
+  ].filter(Boolean).join('\n    ');
+  return `<section class="about-section">
+  <h2>What&rsquo;s on Apple Sunset</h2>
+  ${stats ? `<div class="about-stats">
+    ${stats}
+  </div>
+  <p class="about-asof">Counts as of ${escapeHtml(c.asOf)}, updated every day.</p>` : ''}
+</section>
+<section class="about-section">
+  <h2>How to read the numbers</h2>
+  <dl class="about-guide">
+    <dt>Days since refresh</dt>
+    <dd>How long it has been since Apple last released a new version of a product, counted from its most recent release date.</dd>
+    <dt>The usual wait</dt>
+    <dd>The average gap between a product&rsquo;s past releases, shown once it has at least two. &ldquo;1.2&times; the usual wait&rdquo; means this wait is already 20% longer than its average.</dd>
+    <dt>The colours</dt>
+    <dd>Each product is measured against its own usual wait, not a fixed number of days: <span class="badge badge--fresh">green</span> for under half of it, <span class="badge badge--aging">amber</span> from half to the full wait, and <span class="badge badge--overdue">red</span> once it has gone past it. A product with only one release so far is measured against a typical gap for its family.</dd>
+    <dt>Release history</dt>
+    <dd>Every recorded release of a product and its family, on a timeline on each product and family page.</dd>
+    <dt>Discontinued</dt>
+    <dd>Products Apple no longer sells stay on the site in a searchable archive, with their full release history.</dd>
+  </dl>
+  <p class="about-contact">Spotted something wrong or missing? <a href="/contact/">Get in touch</a>.</p>
+</section>`;
+}
+
+function aboutPage({ content, counts, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const paragraphs = (content.body || '')
     .split('\n\n')
     .filter(Boolean)
     .map((p) => `<p>${escapeHtml(p)}</p>`)
     .join('\n');
+  const c = counts || {};
 
   const body = `
 <article class="about-page">
   <h1>${escapeHtml(content.heading || 'About Apple Sunset')}</h1>
   ${content.image_url ? `<div class="about-image">${cdnImgHtml(content.image_url, 1200, ' alt=""')}</div>` : ''}
   <div class="about-body">${paragraphs}</div>
+  ${aboutGuideHtml(c)}
 </article>`;
 
   return shell({
     title: 'About — Apple Sunset',
-    description: 'What Apple Sunset is: an independent tracker of how long it has been since every Apple product was last refreshed or discontinued.',
+    description: c.families && c.releases
+      ? `About Apple Sunset: ${c.families} Apple product families and ${c.releases} releases${c.since ? ` since ${c.since}` : ''}, and how to read its numbers: days since refresh, the usual wait and the colours.`
+      : 'About Apple Sunset, and how to read its numbers: days since refresh, the usual wait and the colours.',
     siteUrl,
     path: '/about/',
     bodyHtml: body,
@@ -3611,6 +3667,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
 }
 
 module.exports = {
+  aboutCounts,
   earningsPage,
   nextEarnings,
   earningsQuarter,
