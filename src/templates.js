@@ -2183,7 +2183,7 @@ ${pageStandardLine(pageContent, `<p class="page-intro">${currentCount} current p
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 ${!pageContent || pageContent.show_stats !== false ? categoryStatsSentence(category, items) : ''}
 <div class="controls-row">
-  <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)}…" aria-label="Search">
+  <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)} or any product…" aria-label="Search">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
 ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
@@ -2192,6 +2192,10 @@ ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
   ${releaseHistorySection}
 </div>
 ${leagueTableHtml(items, category)}
+<section id="other-families" data-category-name="${escapeHtml(category)}" style="display:none;">
+  <h2 class="sort-heading">In other families</h2>
+  <div id="other-families-grid" class="card-grid product-list"></div>
+</section>
 ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   return shell({
     title: `${category} release history and update tracker | Apple Sunset`,
@@ -2673,8 +2677,13 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <p id="publish-status" class="admin-hint admin-publish-status"></p>
 
   <div id="tab-products" class="admin-tab-panel">
-    <div id="product-list-view">
+    <div class="admin-search-bar">
       <input type="search" id="product-search-input" class="admin-search-input" placeholder="Search every product by name…" aria-label="Search products" autocomplete="off">
+    </div>
+    <div id="search-screen" style="display:none;">
+      <div id="search-results" class="line-card-grid"></div>
+    </div>
+    <div id="product-list-view">
       <div id="family-screen">
         <h2 class="admin-screen-title"><span class="admin-step-num">1</span> Pick a family</h2>
         <div id="family-tiles" class="family-tiles" aria-label="Families"></div>
@@ -2683,9 +2692,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <button type="button" id="back-to-families-btn" class="admin-back-link">&larr; All families</button>
         <h2 class="admin-screen-title"><span class="admin-step-num">2</span> Pick a product <span id="products-screen-family" class="admin-screen-family"></span></h2>
         <div id="product-list" class="line-card-grid"></div>
-      </div>
-      <div id="search-screen" style="display:none;">
-        <div id="search-results" class="line-card-grid"></div>
       </div>
       <button type="button" id="new-product-btn" hidden></button>
     </div>

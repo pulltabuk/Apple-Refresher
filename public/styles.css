@@ -248,6 +248,10 @@ a { color: inherit; text-decoration: none; }
 .admin-fact-row p { margin: 0; font-size: 14px; flex: 1; }
 .admin-fact-textarea { flex: 1; font-size: 14px; font-family: inherit; padding: 8px; border: 1px solid var(--border); border-radius: 6px; resize: vertical; }
 .admin-fact-row button { flex-shrink: 0; }
+/* Stays at the top of the Products tab, on the product lists and while
+   editing, so another product is always one search away. */
+.admin-search-bar { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 1rem 0; margin-bottom: 0.5rem; }
+.admin-search-bar .admin-search-input { margin: 0; }
 .admin-search-input {
   display: block;
   width: 100%;
@@ -2582,6 +2586,7 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .sort-select-wrap { gap: 12px; }
 /* Products: names the order the tiles are in */
 .sort-heading { font-size: 18px; margin: 0 0 0.85rem; }
+#other-families { margin-top: 2rem; }
 
 /* Homepage under the waiting list: Browse all products, centred */
 .overdue-more { margin: 1.25rem 0 0; text-align: center; }
