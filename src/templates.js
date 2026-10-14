@@ -2677,8 +2677,13 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <p id="publish-status" class="admin-hint admin-publish-status"></p>
 
   <div id="tab-products" class="admin-tab-panel">
-    <div id="product-list-view">
+    <div class="admin-search-bar">
       <input type="search" id="product-search-input" class="admin-search-input" placeholder="Search every product by name…" aria-label="Search products" autocomplete="off">
+    </div>
+    <div id="search-screen" style="display:none;">
+      <div id="search-results" class="line-card-grid"></div>
+    </div>
+    <div id="product-list-view">
       <div id="family-screen">
         <h2 class="admin-screen-title"><span class="admin-step-num">1</span> Pick a family</h2>
         <div id="family-tiles" class="family-tiles" aria-label="Families"></div>
@@ -2687,9 +2692,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <button type="button" id="back-to-families-btn" class="admin-back-link">&larr; All families</button>
         <h2 class="admin-screen-title"><span class="admin-step-num">2</span> Pick a product <span id="products-screen-family" class="admin-screen-family"></span></h2>
         <div id="product-list" class="line-card-grid"></div>
-      </div>
-      <div id="search-screen" style="display:none;">
-        <div id="search-results" class="line-card-grid"></div>
       </div>
       <button type="button" id="new-product-btn" hidden></button>
     </div>

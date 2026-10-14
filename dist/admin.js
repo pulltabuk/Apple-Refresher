@@ -882,11 +882,20 @@
     productFormView.style.display = 'none';
   }
 
+  let productFormDirty = false;
+
   function showProductForm() {
     productListView.style.display = 'none';
     productFormView.style.display = 'block';
+    productFormDirty = false;
     window.scrollTo(0, 0);
   }
+
+  // Any change to the product form, so opening another product from the
+  // search can ask before throwing unsaved changes away.
+  productForm.addEventListener('input', () => { productFormDirty = true; });
+  productForm.addEventListener('change', () => { productFormDirty = true; });
+  productForm.addEventListener('click', (e) => { if (e.target.closest('button')) productFormDirty = true; });
 
   async function showDashboard() {
     loginSection.style.display = 'none';
@@ -1751,7 +1760,7 @@
         '<span class="line-card-meta">' + dates + ' date' + (dates === 1 ? '' : 's') + '</span>' +
         '<span class="line-card-status' + (p.discontinued ? ' line-card-status--discontinued' : (!last ? ' line-card-status--empty' : '')) + '">' + escapeAttr(meta) + '</span>' +
       '</span>';
-    main.addEventListener('click', () => editProduct(p.id));
+    main.addEventListener('click', () => openProduct(p.id));
 
     const actions = document.createElement('div');
     actions.className = 'line-card-actions';
@@ -1759,12 +1768,12 @@
     addDateBtn.type = 'button';
     addDateBtn.className = 'admin-btn admin-btn--small admin-btn--primary';
     addDateBtn.textContent = '+ Date';
-    addDateBtn.addEventListener('click', () => editProduct(p.id, { focusGeneration: true }));
+    addDateBtn.addEventListener('click', () => openProduct(p.id, { focusGeneration: true }));
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
     editBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
     editBtn.textContent = 'Edit';
-    editBtn.addEventListener('click', () => editProduct(p.id));
+    editBtn.addEventListener('click', () => openProduct(p.id));
     actions.appendChild(addDateBtn);
     actions.appendChild(editBtn);
     if (!p.featured && !p.discontinued) {
@@ -1781,11 +1790,22 @@
     return card;
   }
 
+  // From a product list, or from the search while another product is
+  // open: the search clears so its results don't sit above the form.
+  function openProduct(id, options) {
+    if (productFormView.style.display !== 'none' && productFormDirty &&
+        !window.confirm('Leave this product without saving your changes?')) return;
+    if (productSearchInputEl) productSearchInputEl.value = '';
+    document.getElementById('search-screen').style.display = 'none';
+    editProduct(id, options);
+  }
+
   function renderProductList() {
     renderFamilyTiles();
     const query = productSearchInputEl ? productSearchInputEl.value.trim().toLowerCase() : '';
 
-    // Searching jumps straight to matching products, from either screen.
+    // Searching jumps straight to matching products, from either list
+    // screen. While a product is open the results show above its form.
     if (query) {
       document.getElementById('family-screen').style.display = 'none';
       document.getElementById('products-screen').style.display = 'none';
