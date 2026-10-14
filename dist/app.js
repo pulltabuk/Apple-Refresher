@@ -1288,6 +1288,7 @@
       if (show) visibleCount++;
     });
     if (noResults) noResults.style.display = visibleCount === 0 ? '' : 'none';
+    applyOtherFamiliesJS(query, visibleCount);
     if (paginated) {
       currentPage = 1;
       applyPagination();
@@ -1526,6 +1527,40 @@
       applyFilters();
     });
   }
+  // On a family page a search also finds products in other families,
+  // listed under the family's own matches, so you never have to go back
+  // out to look for something else.
+  var otherFamilies = document.getElementById('other-families');
+  var otherFamiliesProducts = null;
+  function applyOtherFamiliesJS(query, familyMatches) {
+    if (!otherFamilies) return;
+    var otherGrid = document.getElementById('other-families-grid');
+    if (!query) {
+      otherFamilies.style.display = 'none';
+      otherGrid.innerHTML = '';
+      return;
+    }
+    if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return;
+    if (!otherFamiliesProducts) {
+      otherFamiliesProducts = fetchAllProductsJS().catch(function () { otherFamiliesProducts = null; return []; });
+    }
+    otherFamiliesProducts.then(function (products) {
+      // A newer search has run while the products were loading.
+      if ((searchInput ? searchInput.value : '').trim().toLowerCase() !== query) return;
+      var family = String(otherFamilies.getAttribute('data-category-name') || '').trim().toLowerCase();
+      var matches = (Array.isArray(products) ? products : []).filter(function (p) {
+        return String(p.category || '').trim().toLowerCase() !== family && matchesSearchJS(p.name + ' ' + (p.category || ''), query);
+      }).sort(function (a, b) {
+        if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
+        return String(a.name).localeCompare(String(b.name));
+      });
+      otherGrid.innerHTML = matches.map(function (p) { return cardHtmlJS(p, p.discontinued ? null : computeStatusJS(p)); }).join('');
+      refreshCustomIconsInDomJS();
+      otherFamilies.style.display = matches.length ? '' : 'none';
+      if (noResults) noResults.style.display = familyMatches || matches.length ? 'none' : '';
+    });
+  }
+
   if (searchInput) searchInput.addEventListener('input', applyFilters);
   if (searchFromUrl || isPaginatedGrid()) applyFilters();
 

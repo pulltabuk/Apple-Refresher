@@ -2582,6 +2582,7 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .sort-select-wrap { gap: 12px; }
 /* Products: names the order the tiles are in */
 .sort-heading { font-size: 18px; margin: 0 0 0.85rem; }
+#other-families { margin-top: 2rem; }
 
 /* Homepage under the waiting list: Browse all products, centred */
 .overdue-more { margin: 1.25rem 0 0; text-align: center; }

@@ -2183,7 +2183,7 @@ ${pageStandardLine(pageContent, `<p class="page-intro">${currentCount} current p
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 ${!pageContent || pageContent.show_stats !== false ? categoryStatsSentence(category, items) : ''}
 <div class="controls-row">
-  <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)}…" aria-label="Search">
+  <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)} or any product…" aria-label="Search">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
 ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
@@ -2192,6 +2192,10 @@ ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
   ${releaseHistorySection}
 </div>
 ${leagueTableHtml(items, category)}
+<section id="other-families" data-category-name="${escapeHtml(category)}" style="display:none;">
+  <h2 class="sort-heading">In other families</h2>
+  <div id="other-families-grid" class="card-grid product-list"></div>
+</section>
 ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   return shell({
     title: `${category} release history and update tracker | Apple Sunset`,
