@@ -2270,7 +2270,7 @@ function heroStatHtml(product, statusInfo, cycleDays) {
   const info = badgeDaysInfo(product, statusInfo);
   if (info.days < 0) {
     const due = (product.refresh_history || []).slice().sort().pop();
-    return `<p class="days-hero days-hero--upcoming"><span class="days-hero-label">Coming</span> <span class="days-hero-soon">${due ? formatDate(due) : 'soon'}</span></p>`;
+    return `<p class="days-hero days-hero--upcoming"><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">${due ? formatDate(due) : 'soon'}</span></p>`;
   }
   // A bar showing how far through the family's usual gap this product is
   // gives the big number something to be measured against, and uses the
