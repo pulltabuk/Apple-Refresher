@@ -305,7 +305,8 @@ body {
 .up-ev-products { display: flex; flex-direction: column; gap: 6px; }
 .up-ev-products:empty { display: none; }
 .up-ev-prod { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 6px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
-.up-ev-prod-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.up-ev-prod-name { flex: 1; min-width: 0; font: inherit; font-size: 16px; font-weight: 600; color: var(--text); padding: 8px 6px; border: 1px solid transparent; border-radius: 8px; background: none; }
+.up-ev-prod-name:focus { border-color: var(--border); background: #fff; outline: none; }
 .up-ev-star, .up-ev-remove { width: 40px; height: 40px; flex-shrink: 0; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 20px; line-height: 1; cursor: pointer; color: var(--text-secondary); -webkit-tap-highlight-color: transparent; }
 .up-ev-star[aria-pressed="true"] { color: var(--accent); }
 .up-ev-remove { font-size: 24px; }
