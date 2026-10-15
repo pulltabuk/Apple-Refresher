@@ -1948,9 +1948,17 @@
       star.setAttribute('aria-pressed', p.featured ? 'true' : 'false');
       star.setAttribute('aria-label', 'Show ' + p.name + ' on the event card');
       star.addEventListener('click', () => { evProducts[i].featured = !evProducts[i].featured; evRenderProducts(); });
-      const name = document.createElement('span');
+      // Typed straight into, so a misspelt name can be put right
+      // without removing it and adding it again.
+      const name = document.createElement('input');
+      name.type = 'text';
       name.className = 'up-ev-prod-name';
-      name.textContent = p.name;
+      name.value = p.name;
+      name.autocomplete = 'off';
+      name.setAttribute('aria-label', 'Product name');
+      name.addEventListener('input', () => { evProducts[i].name = name.value; });
+      // Enter finishes the name rather than saving the whole event.
+      name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); name.blur(); } });
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'up-ev-remove';
@@ -2085,7 +2093,7 @@
     const input = $('up-ev-new-product');
     const value = input.value.trim();
     if (!value) return;
-    if (!evProducts.some((p) => p.name.toLowerCase() === value.toLowerCase())) evProducts.push({ name: value, featured: false });
+    if (!evProducts.some((p) => p.name.trim().toLowerCase() === value.toLowerCase())) evProducts.push({ name: value, featured: false });
     input.value = '';
     evRenderProducts();
   }
@@ -2133,7 +2141,8 @@
       event_time: $('up-ev-time').value.trim() || null,
       event_url: $('up-ev-url').value.trim() || null,
       featured: $('up-ev-featured').checked,
-      announced_products: evProducts,
+      // A name cleared out while editing counts as removed.
+      announced_products: evProducts.map((p) => ({ ...p, name: p.name.trim() })).filter((p) => p.name),
     };
     // Sent when there is one, or once the column exists, so saving still
     // works before supabase-schema-update-31.sql has been run.
@@ -2198,9 +2207,10 @@
     if (!saved) return;
     // What's on screen, saved or not: products just added go in the post.
     const pending = $('up-ev-new-product').value.trim();
-    const products = pending && !evProducts.some((p) => p.name.toLowerCase() === pending.toLowerCase())
-      ? evProducts.concat([{ name: pending, featured: false }])
-      : evProducts;
+    const named = evProducts.map((p) => ({ ...p, name: p.name.trim() })).filter((p) => p.name);
+    const products = pending && !named.some((p) => p.name.toLowerCase() === pending.toLowerCase())
+      ? named.concat([{ name: pending, featured: false }])
+      : named;
     const ev = Object.assign({}, saved, {
       heading: $('up-ev-heading').value.trim() || saved.heading,
       image_url: evImageUrl || saved.image_url,

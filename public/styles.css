@@ -330,6 +330,7 @@ a { color: inherit; text-decoration: none; }
 }
 #event-products-list li { justify-content: flex-start; gap: 8px; }
 #event-products-list li button { margin-left: auto; }
+.admin-form #event-products-list .event-product-name { flex: 1; min-width: 0; padding: 6px 8px; }
 .refresh-history-add { display: flex; gap: 8px; align-items: center; }
 .unified-date-buttons { display: flex; gap: 8px; margin-top: 8px; }
 .date-chip {

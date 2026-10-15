@@ -3518,8 +3518,21 @@
       checkbox.addEventListener('change', () => {
         currentEventProducts[i].featured = checkbox.checked;
       });
-      const span = document.createElement('span');
-      span.textContent = product.name;
+      // Typed straight into, so a misspelt name can be put right
+      // without removing it and adding it again.
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'event-product-name';
+      nameInput.value = product.name;
+      nameInput.setAttribute('aria-label', 'Product name');
+      nameInput.autocomplete = 'off';
+      nameInput.addEventListener('input', () => {
+        currentEventProducts[i].name = nameInput.value;
+      });
+      // Enter finishes the name rather than saving the whole event.
+      nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); }
+      });
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.textContent = 'Remove';
@@ -3528,7 +3541,7 @@
         renderEventProducts();
       });
       li.appendChild(checkbox);
-      li.appendChild(span);
+      li.appendChild(nameInput);
       li.appendChild(removeBtn);
       eventProductsListEl.appendChild(li);
     });
@@ -3538,7 +3551,7 @@
     const input = document.getElementById('new-event-product');
     const value = input.value.trim();
     if (!value) return;
-    if (!currentEventProducts.some((p) => p.name.toLowerCase() === value.toLowerCase())) {
+    if (!currentEventProducts.some((p) => p.name.trim().toLowerCase() === value.toLowerCase())) {
       currentEventProducts.push({ name: value, featured: false });
     }
     input.value = '';
@@ -3657,7 +3670,10 @@
       event_time: document.getElementById('event_time').value.trim() || null,
       event_url: document.getElementById('event_url').value.trim() || null,
       featured: document.getElementById('event_featured').checked,
-      announced_products: currentEventProducts,
+      // A name cleared out while editing counts as removed.
+      announced_products: currentEventProducts
+        .map((p) => ({ ...p, name: p.name.trim() }))
+        .filter((p) => p.name),
     };
     // Sent when there is one, or once the column exists, so saving still
     // works before supabase-schema-update-31.sql has been run.
