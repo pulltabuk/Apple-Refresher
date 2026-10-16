@@ -644,7 +644,8 @@
 
     function useIdea(idea) {
       if ($x('x-text').value.trim() && !window.confirm('Replace the post you are writing with this idea?')) return;
-      $x('x-text').value = idea.text;
+      // Shortened if need be, so it never arrives over X's 280.
+      $x('x-text').value = window.FactsKit.xFitText(idea.text, { products: cachedProducts, link: idea.link });
       $x('x-link').value = idea.link || '';
       $x('x-link-on').checked = !!idea.link;
       $x('x-card-label').value = idea.kind || 'Did you know?';

@@ -901,7 +901,7 @@
       xCardProductsAsked = true;
       window.FactsKit.ensureCardProducts().then(() => { if (!xCardFieldsOwn) xRefresh(); });
     }
-    // The product list gives the #ProductName hashtag.
+    // The product list gives the product's family hashtag (#iPhone).
     if (text && !allProducts.length && !xProductsLoading) {
       xProductsLoading = true;
       client.from('products').select('*').then(({ data }) => { if (data && data.length) { allProducts = data; xRefresh(); } });
@@ -980,7 +980,8 @@
 
   function xUseIdea(idea) {
     if ($('up-x-text').value.trim() && !window.confirm('Replace the post you are writing with this idea?')) return;
-    $('up-x-text').value = idea.text;
+    // Shortened if need be, so it never arrives over X's 280.
+    $('up-x-text').value = window.FactsKit.xFitText(idea.text, { products: allProducts, link: idea.link });
     $('up-x-link').value = idea.link || '';
     $('up-x-link-on').checked = !!idea.link;
     $('up-x-card-label').value = idea.kind || 'Did you know?';

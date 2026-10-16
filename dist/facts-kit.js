@@ -19,7 +19,7 @@
     addTag('airpods', '#AirPods', '\ud83c\udfa7');
     addTag('mac', '#Mac', '\ud83d\udcbb');
     addTag('ipad', '#iPad', '\ud83d\udcf2');
-    // #Apple and the product's name (see hashtagsFor).
+    // #Apple and the product's family (see hashtagsFor).
     const uniqueHashtags = hashtagsFor(factText, products);
 
     const hook = emoji + ' Apple Fact:';
@@ -32,13 +32,35 @@
     // X counts any link as 23 characters, however long it is.
     const linkAllowance = link ? link.length - 23 : 0;
     if (full.length - linkAllowance > 280) {
-      const overBy = full.length - linkAllowance - 280;
-      const keep = Math.max(20, factText.length - overBy - 1);
-      const trimmed = factText.slice(0, keep).trim() + '\u2026';
+      const trimmed = shortenToFit(factText, (t) => (hook + ' ' + t + '\n\n' + footer).length - linkAllowance <= 280);
       body = hook + ' ' + trimmed;
       full = body + '\n\n' + footer;
     }
     return full;
+  }
+
+  // The longest start of the text that passes fits(): whole sentences off
+  // the end first, as long as a proper sentence or two is left; otherwise
+  // cut at a word, with an ellipsis. Never mid-word.
+  function shortenToFit(text, fits) {
+    const t = String(text || '').trim();
+    if (fits(t)) return t;
+    const ends = [];
+    const re = /[.!?]["'\u201d\u2019)]?(?=\s)/g;
+    let m;
+    while ((m = re.exec(t))) ends.push(m.index + m[0].length);
+    for (let i = ends.length - 1; i >= 0; i--) {
+      const kept = t.slice(0, ends[i]).trim();
+      if (kept.length < 60) break;
+      if (fits(kept)) return kept;
+    }
+    const words = t.split(/\s+/);
+    while (words.length > 1) {
+      words.pop();
+      const cut = words.join(' ').replace(/[\s,;:.\u2013\u2014-]+$/, '') + '\u2026';
+      if (fits(cut)) return cut;
+    }
+    return t;
   }
 
   // The line icons for each product family (40x40, drawn as strokes),
@@ -1063,26 +1085,36 @@
     return best;
   }
 
-  // #Apple plus the product's own name, e.g. "#Apple #iPodHiFi". Without a
-  // product list, or when no product is named, the product line instead.
+  // #Apple plus the product's family, e.g. "#Apple #iPhone" for the
+  // iPhone 14 Pro: the broad tags people follow and search, never one
+  // made from a model's full name.
+  const FAMILY_HASHTAGS = [['vision pro', '#VisionPro'], ['apple tv', '#AppleTV'], ['airtag', '#AirTag'], ['apple pencil', '#ApplePencil'],
+    ['airpods', '#AirPods'], ['homepod', '#HomePod'], ['ipod', '#iPod'], ['iphone', '#iPhone'], ['ipad', '#iPad'], ['watch', '#AppleWatch'], ['mac', '#Mac']];
+  function familyHashtag(words) {
+    const lower = String(words || '').toLowerCase();
+    const hit = FAMILY_HASHTAGS.find(([word]) => lower.indexOf(word) !== -1);
+    return hit ? hit[1] : null;
+  }
   function hashtagsFor(text, products) {
     const tags = ['#Apple'];
     if (/\bapple event\b|\bkeynote\b|\bevent\b/i.test(String(text || ''))) {
       tags.push('#AppleEvent');
       return tags;
     }
+    // The product's family first ("Other" says nothing, so its name),
+    // then whatever product line the text mentions.
     const product = productNamed(text, products);
-    if (product) {
-      const tag = '#' + String(product.name).replace(/[^A-Za-z0-9]+/g, '');
-      if (tag.length > 1 && tag.toLowerCase() !== '#apple') tags.push(tag);
-      return tags;
-    }
-    const lower = String(text || '').toLowerCase();
-    const line = [['vision pro', '#VisionPro'], ['apple tv', '#AppleTV'], ['airtag', '#AirTag'], ['airpods', '#AirPods'], ['homepod', '#HomePod'],
-      ['ipod', '#iPod'], ['iphone', '#iPhone'], ['ipad', '#iPad'], ['watch', '#AppleWatch'], ['mac', '#Mac']]
-      .find(([word]) => lower.indexOf(word) !== -1);
-    if (line) tags.push(line[1]);
+    const tag = (product && (familyHashtag(product.category) || familyHashtag(product.name))) || familyHashtag(text);
+    if (tag) tags.push(tag);
     return tags;
+  }
+
+  // A written post shortened, if need be, so that with the hashtags and
+  // link it fits X's 280. Hashtags are allowed for even when they're off,
+  // so ticking them later doesn't push it over.
+  function xFitText(text, opts) {
+    const o = Object.assign({}, opts || {}, { hashtags: true });
+    return shortenToFit(text, (t) => xPostLength(xPostText(t, o)) <= 280);
   }
 
   // The text that goes to X: the post, then hashtags and a link if wanted.
@@ -1237,7 +1269,7 @@
       'Please:',
       '1. Search the web and write 5 different posts about this topic: surprising facts, anniversaries, comparisons, or a question to get replies.',
       '2. Check every fact against at least two independent, reliable sources (for example Apple Newsroom, Apple Support pages, major news outlets). Double-check every date, number and name. Leave out anything that isn\'t confirmed, or that relies on rumour unless clearly labelled as one.',
-      '3. Each post must be under 230 characters, in British English, in a friendly but neutral brand voice (no "I" or "my"), with no hashtags or links (those get added afterwards).',
+      '3. Each post must be 200 characters or fewer, spaces included. Count every one and rewrite any that are longer: hashtags and a link are added afterwards and take up the rest of X\'s 280. British English, a friendly but neutral brand voice (no "I" or "my"), and no hashtags or links in the post itself.',
       '',
       'Reply with, for each post: the post on its own line, then its sources as links, then how confident you are.',
     ].join('\n');
@@ -1746,6 +1778,7 @@
     dailyFactBoxHtml,
     xPostIdeas,
     xPostText,
+    xFitText,
     xPostLength,
     xPostPrompt,
     hashtagsFor,
