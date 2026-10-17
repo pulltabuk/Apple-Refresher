@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta name="generated" content="2026-10-16T09:32:05.341Z">
+<meta name="generated" content="2026-10-17T06:00:48.164Z">
 </head>
 <body class="is-admin">
 <header class="site-header-bg">
@@ -330,6 +330,8 @@
           <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> Apple has taken this page down</label>
           <label>Apple specs page<input type="url" id="specs_url" placeholder="https://support.apple.com/en-us/111854" autocomplete="off"></label>
           <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="specs">Find tech specs</button></div>
+          <label class="checkbox-label"><input type="checkbox" id="specs_url_unavailable"> Apple no longer has a specs page for this</label>
+          <p class="admin-hint">To remove a link, empty its box. On a discontinued product, a link that a current product also uses (Apple reused the address for the newer model) is swapped automatically for a link to that newer model.</p>
           <label>Wikipedia page<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/AirPods" autocomplete="off"></label>
           <div>
             <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="wikipedia">Find on Wikipedia</button>
@@ -716,6 +718,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/facts-kit.js?v=0c43660680" defer></script>
-<script src="/admin.js?v=93ac336328" defer></script>
+<script src="/admin.js?v=3af91b80d6" defer></script>
 </body>
 </html>

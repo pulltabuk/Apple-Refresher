@@ -879,6 +879,28 @@
     return valueHtml ? '<div class="spec-row"><dt>' + label + '</dt><dd>' + valueHtml + '</dd></div>' : '';
   }
 
+  // Must stay in step with appleLinkRow() in src/templates.js.
+  function normaliseAppleLinkJS(url) {
+    if (!url) return '';
+    var parts = String(url).trim().toLowerCase()
+      .replace(/^https?:\/\//, '').replace(/^www\./, '')
+      .split(/[?#]/)[0].replace(/\/+$/, '').split('/');
+    if (parts.length > 1 && /^[a-z]{2}(-[a-z]{2})?$/.test(parts[1]) && parts[1] !== 'kb' && parts[1] !== 'tv') parts.splice(1, 1);
+    return parts.join('/');
+  }
+
+  function appleLinkRowJS(label, product, field, linkText, goneText, productsBySlug) {
+    if (product[field + '_unavailable']) return specRowJS(label, goneText);
+    var own = normaliseAppleLinkJS(product[field]);
+    var newer = own && product.discontinued && productsBySlug
+      ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }).filter(function (p) {
+          return p.slug !== product.slug && !p.discontinued && normaliseAppleLinkJS(p[field]) === own;
+        })[0]
+      : null;
+    if (newer) return specRowJS(label, 'Apple\u2019s page now shows the <a href="/products/' + newer.slug + '/">' + escapeHtmlJS(newer.name) + '</a>');
+    return product[field] ? specRowJS(label, '<a href="' + product[field] + '" target="_blank" rel="noopener">' + linkText + ' &#8599;</a>') : '';
+  }
+
   function sanitizeRichTextJS(html) {
     if (!html) return '';
     var allowed = { p: 1, b: 1, strong: 1, i: 1, em: 1, u: 1, br: 1, a: 1 };
@@ -1046,12 +1068,8 @@
       specRowJS('Previous model', previousModelHtml),
       specRowJS('Replaced by', replacedByHtml),
       product.discontinued ? specRowJS('Why it went', escapeHtmlJS(product.discontinued_reason)) : '',
-      product.apple_url_unavailable
-        ? specRowJS('Official Apple page', 'No longer available on Apple\u2019s website')
-        : product.apple_url
-        ? specRowJS('Official Apple page', '<a href="' + product.apple_url + '" target="_blank" rel="noopener">apple.com &#8599;</a>')
-        : '',
-      product.specs_url ? specRowJS('Tech specs', '<a href="' + product.specs_url + '" target="_blank" rel="noopener">Apple specs &#8599;</a>') : '',
+      appleLinkRowJS('Official Apple page', product, 'apple_url', 'apple.com', 'No longer available on Apple\u2019s website', productsBySlug),
+      appleLinkRowJS('Tech specs', product, 'specs_url', 'Apple specs', 'No longer available from Apple', productsBySlug),
       product.press_release_url ? specRowJS('Press release', '<a href="' + product.press_release_url + '" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>') : '',
       product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
       product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> ' + ((product.waiting_count || 0) === 1 ? 'person' : 'people')),

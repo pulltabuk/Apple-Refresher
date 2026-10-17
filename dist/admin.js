@@ -2547,6 +2547,7 @@
     document.getElementById('specs_url').value = p.specs_url || '';
     document.getElementById('press_release_url').value = p.press_release_url || '';
     document.getElementById('apple_url_unavailable').checked = !!p.apple_url_unavailable;
+    document.getElementById('specs_url_unavailable').checked = !!p.specs_url_unavailable;
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     updateFeaturedSlotOptions(p.id);
     document.getElementById('in_countdown').checked = !!p.in_countdown;
@@ -3012,6 +3013,10 @@
         discontinued_reason: isDiscontinued ? (document.getElementById('discontinued_reason').value.trim() || null) : null,
         video_url: currentVideoUrl,
       };
+      // Sent when ticked, or once the column exists, so saving still works
+      // before supabase-schema-update-32.sql has been run.
+      const specsGone = document.getElementById('specs_url_unavailable').checked;
+      if (specsGone || cachedProducts.some((p) => 'specs_url_unavailable' in p)) payload.specs_url_unavailable = specsGone;
       if (factDateColumnExists()) {
         const factDate = document.getElementById('did_you_know_date').value || null;
         payload.did_you_know_date = payload.did_you_know ? (factDate || todayIso()) : null;
