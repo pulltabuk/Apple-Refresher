@@ -2249,6 +2249,34 @@ function specRow(label, valueHtml) {
   return valueHtml ? `<div class="spec-row"><dt>${label}</dt><dd>${valueHtml}</dd></div>` : '';
 }
 
+// apple.com/uk/x/ and apple.com/x/ are the same page, as are
+// support.apple.com/en-gb/123 and /en-us/123.
+function normaliseAppleLink(url) {
+  if (!url) return '';
+  const parts = String(url).trim().toLowerCase()
+    .replace(/^https?:\/\//, '').replace(/^www\./, '')
+    .split(/[?#]/)[0].replace(/\/+$/, '').split('/');
+  if (parts.length > 1 && /^[a-z]{2}(-[a-z]{2})?$/.test(parts[1]) && parts[1] !== 'kb' && parts[1] !== 'tv') parts.splice(1, 1);
+  return parts.join('/');
+}
+
+// When Apple replaces a product it usually reuses the address
+// (apple.com/homepod-mini/ moved on to the second generation), so the
+// old product's link would open the new one. Returns the current
+// product now using this link, if there is one.
+function linkTakenOverBy(product, field, productsBySlug) {
+  const own = normaliseAppleLink(product[field]);
+  if (!own || !product.discontinued || !productsBySlug) return null;
+  return Object.values(productsBySlug).find((p) => p.slug !== product.slug && !p.discontinued && normaliseAppleLink(p[field]) === own) || null;
+}
+
+function appleLinkRow(label, product, field, linkText, goneText, productsBySlug) {
+  if (product[field + '_unavailable']) return specRow(label, goneText);
+  const newer = linkTakenOverBy(product, field, productsBySlug);
+  if (newer) return specRow(label, `Apple\u2019s page now shows the <a href="/products/${newer.slug}/">${escapeHtml(newer.name)}</a>`);
+  return product[field] ? specRow(label, `<a href="${product[field]}" target="_blank" rel="noopener">${linkText} &#8599;</a>`) : '';
+}
+
 function heroCycle(product, status, sortedDates, allProducts) {
   // The product's own gaps when it has enough history, otherwise the
   // family's real gaps, labelled so it is clear which is being shown.
@@ -2411,12 +2439,8 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     specRow('Previous model', previousModelHtml),
     specRow('Replaced by', replacedByHtml),
     product.discontinued ? specRow('Why it went', escapeHtml(product.discontinued_reason)) : '',
-    product.apple_url_unavailable
-      ? specRow('Official Apple page', 'No longer available on Apple\u2019s website')
-      : product.apple_url
-      ? specRow('Official Apple page', `<a href="${product.apple_url}" target="_blank" rel="noopener">apple.com &#8599;</a>`)
-      : '',
-    product.specs_url ? specRow('Tech specs', `<a href="${product.specs_url}" target="_blank" rel="noopener">Apple specs &#8599;</a>`) : '',
+    appleLinkRow('Official Apple page', product, 'apple_url', 'apple.com', 'No longer available on Apple\u2019s website', productsBySlug),
+    appleLinkRow('Tech specs', product, 'specs_url', 'Apple specs', 'No longer available from Apple', productsBySlug),
     product.press_release_url ? specRow('Press release', `<a href="${product.press_release_url}" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>`) : '',
     product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(externalLinkLabel(product))} &#8599;</a>`) : '',
     product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> ${(product.waiting_count || 0) === 1 ? 'person' : 'people'}`),
@@ -2906,6 +2930,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <label class="checkbox-label"><input type="checkbox" id="apple_url_unavailable"> Apple has taken this page down</label>
           <label>Apple specs page<input type="url" id="specs_url" placeholder="https://support.apple.com/en-us/111854" autocomplete="off"></label>
           <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="specs">Find tech specs</button></div>
+          <label class="checkbox-label"><input type="checkbox" id="specs_url_unavailable"> Apple no longer has a specs page for this</label>
+          <p class="admin-hint">To remove a link, empty its box. On a discontinued product, a link that a current product also uses (Apple reused the address for the newer model) is swapped automatically for a link to that newer model.</p>
           <label>Wikipedia page<input type="url" id="external_link" placeholder="https://en.wikipedia.org/wiki/AirPods" autocomplete="off"></label>
           <div>
             <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="wikipedia">Find on Wikipedia</button>
