@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta name="generated" content="2026-10-17T06:00:48.164Z">
+<meta name="generated" content="2026-10-17T09:04:36.842Z">
 </head>
 <body class="is-admin">
 <header class="site-header-bg">
@@ -83,7 +83,9 @@
 
   <div id="tab-products" class="admin-tab-panel">
     <div class="admin-search-bar">
+      <button type="button" id="admin-home-btn" class="admin-btn admin-btn--ghost admin-search-bar-btn" title="Back to the start: every family" aria-label="Admin home">&#8962;<span class="admin-search-bar-btn-text"> Home</span></button>
       <input type="search" id="product-search-input" class="admin-search-input" placeholder="Search every product by name…" aria-label="Search products" autocomplete="off">
+      <button type="button" id="admin-new-btn" class="admin-btn admin-btn--primary admin-search-bar-btn" title="Add a new product (in the family you are in)" aria-label="New product">+<span class="admin-search-bar-btn-text"> New product</span></button>
     </div>
     <div id="search-screen" style="display:none;">
       <div id="search-results" class="line-card-grid"></div>
@@ -718,6 +720,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/facts-kit.js?v=0c43660680" defer></script>
-<script src="/admin.js?v=3af91b80d6" defer></script>
+<script src="/admin.js?v=946a0548a3" defer></script>
 </body>
 </html>

@@ -250,8 +250,17 @@ a { color: inherit; text-decoration: none; }
 .admin-fact-row button { flex-shrink: 0; }
 /* Stays at the top of the Products tab, on the product lists and while
    editing, so another product is always one search away. */
-.admin-search-bar { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 1rem 0; margin-bottom: 0.5rem; }
-.admin-search-bar .admin-search-input { margin: 0; }
+.admin-search-bar { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 1rem 0; margin-bottom: 0.5rem; display: flex; align-items: stretch; gap: 8px; }
+.admin-search-bar .admin-search-input { margin: 0; flex: 1 1 auto; min-width: 0; }
+.admin-search-bar-btn { align-self: stretch; flex: none; white-space: nowrap; font-size: 14px; padding: 0 14px; }
+@media (max-width: 600px) {
+  /* Phones: just the house and the plus, so the search keeps its room */
+  .admin-search-bar-btn { font-size: 18px; padding: 0 12px; min-width: 44px; }
+  .admin-search-bar-btn-text { display: none; }
+}
+/* A product on the homepage: its Feature button stays lit */
+.admin-btn--featured { background: #fdf3c8; color: #7a5800; border-color: #e9cf73; font-weight: 600; }
+.admin-btn--featured:hover { background: #fff; border-color: #b98a00; }
 .admin-search-input {
   display: block;
   width: 100%;
@@ -1833,17 +1842,21 @@ body.is-admin .site-search { display: none; }
 .entry-pill--announced { background: #e8eef7; color: #2d4f7c; }
 .entry-pill--preorder { background: #f5ecda; color: #7a5a1e; }
 
-/* Countdown on the featured tile for an upcoming product */
-.card-featured-count-due { display: block; font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
-
-/* Live countdown on the featured tile for an unreleased product */
-.product-countdown-clock { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: baseline; }
-.product-countdown-clock .countdown-value { font-size: 30px; }
-.product-countdown-clock .countdown-unit { flex-direction: column; align-items: flex-start; gap: 2px; }
-.product-countdown-clock .countdown-unit-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
-@media (max-width: 600px) {
-  .product-countdown-clock { gap: 8px 10px; }
-  .product-countdown-clock .countdown-value { font-size: 24px; }
+/* Live countdown on the featured tile for an unreleased product: a
+   green panel, the date on top, then four boxed units like the hero
+   countdown (two by two in the slim tile beside the at-a-glance box). */
+.card-featured-count--upcoming { align-items: stretch; gap: 10px; padding: 12px; border-radius: 14px; border: 1px solid #d3e4bf; }
+.card-featured-count-due { display: block; margin: 0; font-size: 14px; font-weight: 700; color: var(--fresh-text); }
+.product-countdown-clock { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.product-countdown-clock .countdown-unit { flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 2px; background: #fff; border-radius: 10px; border: 1px solid #d3e4bf; min-width: 0; }
+.product-countdown-clock .countdown-unit--wide { grid-column: 1 / -1; flex-direction: row; align-items: baseline; gap: 6px; }
+.product-countdown-clock .countdown-value { font-size: 26px; }
+.product-countdown-clock .countdown-unit-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.75; }
+@media (min-width: 701px) {
+  .intro-hero-cards .card--featured .card-featured-count--upcoming { padding: 14px; }
+  .intro-hero-cards .card--featured .product-countdown-clock { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .intro-hero-cards .card--featured .product-countdown-clock .countdown-unit { padding: 12px 4px; }
+  .intro-hero-cards .card--featured .product-countdown-clock .countdown-value { font-size: 34px; }
 }
 
 /* The seconds digit pulses each tick so the countdown reads as live */
@@ -1857,7 +1870,6 @@ body.is-admin .site-search { display: none; }
   min-width: 1.6em;
   text-align: center;
 }
-.product-countdown-clock .countdown-unit--secs .countdown-value { text-align: left; }
 @media (prefers-reduced-motion: reduce) {
   .countdown-unit--secs .countdown-value { animation: none; }
 }

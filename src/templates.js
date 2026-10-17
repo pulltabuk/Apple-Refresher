@@ -1392,9 +1392,9 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
             // server-rendered day count is the fallback if scripts are off.
             const away = due ? daysUntil(due) : null;
             const fallback = away !== null && away > 0
-              ? `<span class="countdown-unit"><span class="countdown-value">${away}</span> <span class="countdown-unit-label">${away === 1 ? 'day' : 'days'}</span></span>`
-              : '<span class="countdown-unit"><span class="countdown-value">Today</span></span>';
-            return `<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="${due}"><span class="product-countdown-clock" data-product-countdown-clock>${fallback}</span><span class="card-featured-count-due">Coming ${formatDate(due)}</span></div>`;
+              ? `<span class="countdown-unit countdown-unit--wide"><span class="countdown-value">${away}</span> <span class="countdown-unit-label">${away === 1 ? 'day' : 'days'}</span></span>`
+              : '<span class="countdown-unit countdown-unit--wide"><span class="countdown-value">Today</span></span>';
+            return `<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="${due}"><span class="card-featured-count-due">Coming ${formatDate(due)}</span><span class="product-countdown-clock" data-product-countdown-clock>${fallback}</span></div>`;
           })()
         : `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span> <span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`)
     : productBadge(product, statusInfo);
@@ -1408,6 +1408,9 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
   const expectedPassed = expectedDate ? expectedDate.getTime() < Date.now() : false;
   const nextExpected = expectedDate ? expectedDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }) : null;
   const extras = upcomingExtras(product);
+  // Still to come: the countdown says when, so the line's first launch
+  // and a "next refresh" worked out from a future date only confuse.
+  const isUpcoming = !!(daysInfo && daysInfo.days < 0);
   // How far through its usual refresh cycle the product is, as a bar.
   // Keep in step with featuredCycleHtmlJS() in public/app.js.
   // One release: no cycle to show, so say that instead of drawing a bar.
@@ -1429,10 +1432,10 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
     product.price ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price from</span> ${escapeHtml(formatPrice(product.price))}</div>` : '',
     extras.announced ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Announced</span> ${formatDate(extras.announced)}</div>` : '',
     extras.preorder ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Pre-orders open</span> ${formatDate(extras.preorder)}</div>` : '',
-    launch ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ${formatDate(launch)}</div>` : '',
+    launch && !isUpcoming ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ${formatDate(launch)}</div>` : '',
     product.discontinued && product.discontinued_date
       ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ${formatDate(product.discontinued_date)}</div>`
-      : nextExpected
+      : nextExpected && !isUpcoming
       ? `<div class="card-featured-detail"><span class="card-featured-detail-label">${expectedPassed ? 'Refresh was expected' : 'Next refresh expected'}</span> ${nextExpected}</div>`
       : '',
     predecessor ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ${escapeHtml(predecessor.name)}</div>` : '',
@@ -2702,7 +2705,9 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
   <div id="tab-products" class="admin-tab-panel">
     <div class="admin-search-bar">
+      <button type="button" id="admin-home-btn" class="admin-btn admin-btn--ghost admin-search-bar-btn" title="Back to the start: every family" aria-label="Admin home">&#8962;<span class="admin-search-bar-btn-text"> Home</span></button>
       <input type="search" id="product-search-input" class="admin-search-input" placeholder="Search every product by name…" aria-label="Search products" autocomplete="off">
+      <button type="button" id="admin-new-btn" class="admin-btn admin-btn--primary admin-search-bar-btn" title="Add a new product (in the family you are in)" aria-label="New product">+<span class="admin-search-bar-btn-text"> New product</span></button>
     </div>
     <div id="search-screen" style="display:none;">
       <div id="search-results" class="line-card-grid"></div>
