@@ -1728,7 +1728,10 @@ function countdownHtml(countdown) {
     const days = Math.max(0, Math.floor((target - Date.now()) / 86400000));
     return `<a class="countdown" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''}>
     <span class="countdown-label">${escapeHtml(item.kicker || 'Counting down to')}</span>
-    <span class="countdown-name">${escapeHtml(item.label)}</span>
+    ${item.product
+      // A product counts down with its icon, as on the featured tile.
+      ? `<span class="countdown-name-row"><span class="countdown-icon">${productIcon(item.product, 32)}</span><span class="countdown-name">${escapeHtml(item.label)}</span></span>`
+      : `<span class="countdown-name">${escapeHtml(item.label)}</span>`}
     <span class="countdown-clock" data-countdown-clock>
       <span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>
     </span>
