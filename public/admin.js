@@ -1777,13 +1777,23 @@
     editBtn.addEventListener('click', () => openProduct(p.id));
     actions.appendChild(addDateBtn);
     actions.appendChild(editBtn);
-    if (!p.featured && !p.discontinued) {
+    // Lit up while the product is on the homepage; tapping it again
+    // takes it off.
+    if (!p.discontinued) {
       const featureBtn = document.createElement('button');
       featureBtn.type = 'button';
-      featureBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
-      featureBtn.textContent = '\u2606 Feature';
-      featureBtn.title = 'Put this in a free homepage featured slot (up to 3)';
-      featureBtn.addEventListener('click', () => makeFeatured(p));
+      featureBtn.setAttribute('aria-pressed', p.featured ? 'true' : 'false');
+      if (p.featured) {
+        featureBtn.className = 'admin-btn admin-btn--small admin-btn--featured';
+        featureBtn.textContent = '\u2605 Featured';
+        featureBtn.title = 'On the homepage. Tap to take it off';
+        featureBtn.addEventListener('click', () => unfeature(p));
+      } else {
+        featureBtn.className = 'admin-btn admin-btn--small admin-btn--ghost';
+        featureBtn.textContent = '\u2606 Feature';
+        featureBtn.title = 'Put this in a free homepage featured slot (up to 3)';
+        featureBtn.addEventListener('click', () => makeFeatured(p));
+      }
       actions.appendChild(featureBtn);
     }
     card.appendChild(main);
@@ -1862,6 +1872,30 @@
 
   const productSearchInputEl = document.getElementById('product-search-input');
   if (productSearchInputEl) productSearchInputEl.addEventListener('input', renderProductList);
+
+  // Home and New product sit either side of the pinned search, so they
+  // are on screen from anywhere in the Products tab, mid-form included.
+  function okToLeaveForm() {
+    return productFormView.style.display === 'none' || !productFormDirty ||
+      window.confirm('Leave this product without saving your changes?');
+  }
+  document.getElementById('admin-home-btn').addEventListener('click', () => {
+    if (!okToLeaveForm()) return;
+    selectedFamily = null;
+    editingId = null;
+    editingSlug = null;
+    if (productSearchInputEl) productSearchInputEl.value = '';
+    if (window.history && window.history.pushState) window.history.pushState({}, '', '/admin/');
+    showProductList();
+    renderProductList();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  document.getElementById('admin-new-btn').addEventListener('click', () => {
+    if (!okToLeaveForm()) return;
+    if (productSearchInputEl) productSearchInputEl.value = '';
+    document.getElementById('search-screen').style.display = 'none';
+    startNewProduct();
+  });
 
   // --- Step 3: generations.
 
@@ -2745,6 +2779,18 @@
       return;
     }
     await setFeaturedSlot(product.id, slot);
+    loadProducts();
+  }
+
+  // The lit "Featured" button in the list: off the homepage, slot freed.
+  async function unfeature(product) {
+    if (!window.confirm('Take ' + product.name + ' off the homepage?')) return;
+    const result = await client.from('products').update({ featured: false }).eq('id', product.id);
+    if (result.error) {
+      window.alert('Failed to un-feature "' + product.name + '": ' + result.error.message);
+      return;
+    }
+    await setFeaturedSlot(product.id, 0);
     loadProducts();
   }
 

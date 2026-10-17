@@ -2006,8 +2006,8 @@
           ? (function () {
               var due = (product.refresh_history || []).slice().sort().pop();
               return '<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="' + due + '">' +
-                '<span class="product-countdown-clock" data-product-countdown-clock></span>' +
-                '<span class="card-featured-count-due">Coming ' + formatDateJS(due) + '</span></div>';
+                '<span class="card-featured-count-due">Coming ' + formatDateJS(due) + '</span>' +
+                '<span class="product-countdown-clock" data-product-countdown-clock></span></div>';
             })()
           : '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span> <span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>')
       : badgeHtmlJS(product, statusInfo);
@@ -2018,12 +2018,18 @@
       : null;
     var expectedPassed = expectedDate ? expectedDate.getTime() < Date.now() : false;
     var nextExpected = expectedDate ? expectedDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }) : null;
+    // Must match featuredCardHtml() in src/templates.js.
+    var isUpcoming = !!(daysInfo && daysInfo.days < 0);
+    var newest = sortedHistoryJS(product).slice(-1)[0];
+    var extras = newest ? (generationDetailsJS(product)[newest] || {}) : {};
     var detailRows = [];
     if (product.price) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price from</span> ' + escapeHtmlJS(formatPriceJS(product.price)) + '</div>');
-    if (launch) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ' + formatDateJS(launch) + '</div>');
+    if (extras.announced) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Announced</span> ' + formatDateJS(extras.announced) + '</div>');
+    if (extras.preorder) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Pre-orders open</span> ' + formatDateJS(extras.preorder) + '</div>');
+    if (launch && !isUpcoming) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ' + formatDateJS(launch) + '</div>');
     if (product.discontinued && product.discontinued_date) {
       detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ' + formatDateJS(product.discontinued_date) + '</div>');
-    } else if (nextExpected) {
+    } else if (nextExpected && !isUpcoming) {
       detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">' + (expectedPassed ? 'Refresh was expected' : 'Next refresh expected') + '</span> ' + nextExpected + '</div>');
     }
     if (predecessor) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ' + escapeHtmlJS(predecessor.name) + '</div>');
@@ -2099,7 +2105,7 @@
     function digest(html) {
       var box = document.createElement('div');
       box.innerHTML = html;
-      Array.prototype.forEach.call(box.querySelectorAll('[hidden], script, [data-countdown-at], [data-countdown-clock]'), function (el) { el.remove(); });
+      Array.prototype.forEach.call(box.querySelectorAll('[hidden], script, [data-countdown-at], [data-countdown-clock], [data-product-countdown-clock]'), function (el) { el.remove(); });
       var links = Array.prototype.map.call(box.querySelectorAll('a[href], img[src]'), function (el) { return el.getAttribute('href') || el.getAttribute('src'); }).join('|');
       return box.textContent.replace(/\s+/g, '') + '#' + links;
     }
@@ -3071,8 +3077,8 @@
   // Live countdown on a featured product that has not been released yet.
   // Re-scanned after any client-side re-render, and ticks every second.
   (function productCountdown() {
-    function unit(value, label) {
-      return '<span class="countdown-unit"><span class="countdown-value">' + value +
+    function unit(value, label, extraClass) {
+      return '<span class="countdown-unit' + (extraClass ? ' ' + extraClass : '') + '"><span class="countdown-value">' + value +
         '</span> <span class="countdown-unit-label">' + label + '</span></span>';
     }
     function render(el) {
@@ -3086,7 +3092,7 @@
       var left = target - Date.now();
       if (isNaN(target)) return;
       if (left <= 0) {
-        clock.innerHTML = '<span class="countdown-unit"><span class="countdown-value">Out now</span></span>';
+        clock.innerHTML = '<span class="countdown-unit countdown-unit--wide"><span class="countdown-value">Out now</span></span>';
         return;
       }
       var secs = Math.floor(left / 1000);
@@ -3094,7 +3100,7 @@
       var hours = Math.floor((secs % 86400) / 3600);
       var mins = Math.floor((secs % 3600) / 60);
       clock.innerHTML = unit(days, days === 1 ? 'day' : 'days') +
-        unit(hours, 'hr') + unit(mins, 'min') + unit(secs % 60, 'sec');
+        unit(hours, hours === 1 ? 'hour' : 'hours') + unit(mins, 'mins') + unit(secs % 60, 'secs', 'countdown-unit--secs');
     }
     function tickAll() {
       var els = document.querySelectorAll('[data-product-countdown]');
