@@ -1732,7 +1732,7 @@ function countdownHtml(countdown) {
     <span class="countdown-clock" data-countdown-clock>
       <span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>
     </span>
-    <span class="countdown-date">${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}</span>
+    <span class="countdown-date">${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}</span>
   </a>`;
   }).join('\n');
 }
@@ -2713,6 +2713,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <div id="search-results" class="line-card-grid"></div>
     </div>
     <div id="product-list-view">
+      <div id="homepage-strip" class="homepage-strip" hidden></div>
       <div id="family-screen">
         <h2 class="admin-screen-title"><span class="admin-step-num">1</span> Pick a family</h2>
         <div id="family-tiles" class="family-tiles" aria-label="Families"></div>

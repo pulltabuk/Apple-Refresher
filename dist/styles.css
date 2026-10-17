@@ -258,6 +258,21 @@ a { color: inherit; text-decoration: none; }
   .admin-search-bar-btn { font-size: 18px; padding: 0 12px; min-width: 44px; }
   .admin-search-bar-btn-text { display: none; }
 }
+/* Admin, top of the product lists: what the homepage shows right now */
+.homepage-strip { display: flex; flex-direction: column; gap: 8px; margin: 0 0 1.25rem; padding: 12px 14px; border: 1px solid #e9cf73; border-radius: 12px; background: #fffaf0; }
+.homepage-strip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.homepage-strip-label { flex: 0 0 104px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #7a5800; }
+.homepage-chip { display: inline-flex; align-items: stretch; border: 1px solid #e9cf73; border-radius: 999px; background: #fdf3c8; overflow: hidden; font-size: 13px; }
+.homepage-chip button { border: 0; background: transparent; font: inherit; color: var(--text); cursor: pointer; }
+.homepage-chip-name { padding: 5px 4px 5px 12px; font-weight: 600; }
+.homepage-chip-name:hover { text-decoration: underline; }
+.homepage-chip-x { padding: 0 10px 0 6px; font-size: 16px; line-height: 1; color: #7a5800; }
+.homepage-chip-x:hover { background: #fff; color: var(--overdue-text); }
+.homepage-chip--empty { padding: 5px 12px; background: transparent; border-style: dashed; color: var(--text-secondary); }
+@media (max-width: 600px) {
+  .homepage-strip-label { flex-basis: 100%; }
+  .homepage-chip-x { padding: 0 12px 0 8px; font-size: 18px; }
+}
 /* A product on the homepage: its Feature button stays lit */
 .admin-btn--featured { background: #fdf3c8; color: #7a5800; border-color: #e9cf73; font-weight: 600; }
 .admin-btn--featured:hover { background: #fff; border-color: #b98a00; }
@@ -1853,7 +1868,8 @@ body.is-admin .site-search { display: none; }
 .product-countdown-clock .countdown-value { font-size: 26px; }
 .product-countdown-clock .countdown-unit-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.75; }
 @media (min-width: 701px) {
-  .intro-hero-cards .card--featured .card-featured-count--upcoming { padding: 14px; }
+  .intro-hero-cards .card--featured .card-featured-count--upcoming { padding: 14px 12px; }
+  .intro-hero-cards .card--featured .card-featured-count-due { font-size: 13px; }
   .intro-hero-cards .card--featured .product-countdown-clock { grid-template-columns: 1fr 1fr; gap: 8px; }
   .intro-hero-cards .card--featured .product-countdown-clock .countdown-unit { padding: 12px 4px; }
   .intro-hero-cards .card--featured .product-countdown-clock .countdown-value { font-size: 34px; }
