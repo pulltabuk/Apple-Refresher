@@ -1811,7 +1811,89 @@
     editProduct(id, options);
   }
 
+  // Top of the product lists: what the homepage shows right now, each
+  // with an x to take it off, so nothing has to be hunted for.
+  function renderHomepageStrip() {
+    const strip = document.getElementById('homepage-strip');
+    if (!strip) return;
+    const searching = productSearchInputEl && productSearchInputEl.value.trim();
+    const today = new Date().toISOString().slice(0, 10);
+    const byId = (id) => cachedProducts.find((p) => String(p.id) === String(id));
+    const counting = cachedProducts
+      .map((p) => ({ p, due: (p.refresh_history || []).filter((d) => d > today).sort()[0] }))
+      .filter((x) => x.p.in_countdown && x.due)
+      .sort((a, b) => (a.due < b.due ? -1 : 1));
+    strip.innerHTML = '';
+    strip.hidden = !!searching;
+
+    function chip(text, product, removeTitle, onRemove) {
+      const wrap = document.createElement('span');
+      wrap.className = 'homepage-chip';
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'homepage-chip-name';
+      open.textContent = text;
+      open.title = 'Edit ' + product.name;
+      open.addEventListener('click', () => openProduct(product.id));
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'homepage-chip-x';
+      x.textContent = '\u00d7';
+      x.title = removeTitle;
+      x.setAttribute('aria-label', removeTitle);
+      x.addEventListener('click', onRemove);
+      wrap.appendChild(open);
+      wrap.appendChild(x);
+      return wrap;
+    }
+    function row(label, chips) {
+      const r = document.createElement('div');
+      r.className = 'homepage-strip-row';
+      const l = document.createElement('span');
+      l.className = 'homepage-strip-label';
+      l.textContent = label;
+      r.appendChild(l);
+      chips.forEach((c) => r.appendChild(c));
+      strip.appendChild(r);
+    }
+
+    row('\u2605 Featured', featuredSlots().map((id, i) => {
+      const p = id && byId(id);
+      if (!p) {
+        const empty = document.createElement('span');
+        empty.className = 'homepage-chip homepage-chip--empty';
+        empty.textContent = 'Slot ' + (i + 1) + ' free';
+        return empty;
+      }
+      return chip((i + 1) + '. ' + p.name, p, 'Take ' + p.name + ' off the homepage', () => unfeature(p));
+    }));
+    if (counting.length) {
+      row('\u23f1 Countdown', counting.map((x) => chip(x.p.name + ' \u00b7 ' + formatAdminDate(x.due), x.p,
+        'Take ' + x.p.name + ' out of the countdown', () => removeFromCountdown(x.p))));
+    }
+  }
+
+  async function removeFromCountdown(product) {
+    if (!window.confirm('Take ' + product.name + ' out of the homepage countdown?\n\nThe site rebuilds straight away, live in about a minute.')) return;
+    const result = await client.from('products').update({ in_countdown: false }).eq('id', product.id);
+    if (result.error) {
+      window.alert('Failed to update "' + product.name + '": ' + result.error.message);
+      return;
+    }
+    // The countdown is built into the page, so it needs a rebuild to go.
+    const published = await rebuildSite();
+    const statusEl = document.getElementById('publish-status');
+    if (statusEl) {
+      statusEl.textContent = published.ok
+        ? product.name + ' is out of the countdown. Live in about a minute.'
+        : product.name + ' is out of the countdown, but the rebuild didn\u2019t start (' + published.error + '). Press Publish changes.';
+      statusEl.className = 'admin-hint admin-publish-status' + (published.ok ? ' is-ok' : ' is-error');
+    }
+    loadProducts();
+  }
+
   function renderProductList() {
+    renderHomepageStrip();
     renderFamilyTiles();
     const query = productSearchInputEl ? productSearchInputEl.value.trim().toLowerCase() : '';
 

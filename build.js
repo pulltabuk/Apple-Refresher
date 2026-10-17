@@ -349,7 +349,7 @@ async function main() {
   futureReleases
     .filter((r) => r.product.in_countdown)
     .forEach((r) => {
-      countdowns.push({ label: r.product.name, date: r.date, time: null, href: `/products/${r.product.slug}/` });
+      countdowns.push({ label: r.product.name, date: r.date, time: null, href: `/products/${r.product.slug}/`, datePrefix: 'Coming' });
     });
   countdowns.sort((a, b) => (a.date < b.date ? -1 : 1));
   // The next quarterly results: a line under the countdown, or the
