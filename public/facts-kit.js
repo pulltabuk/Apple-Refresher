@@ -456,26 +456,36 @@
   }
 
   // Draws text wrapped to maxWidth in at most maxLines, shrinking the
-  // font until it fits. Returns the y below the last line.
-  function fitText(ctx, text, x, y, maxWidth, weight, size, minSize, maxLines) {
+  // font until it fits: no line wider than maxWidth (a long figure such
+  // as "1,000,000" is one word, so it has to shrink rather than wrap) and
+  // nothing below maxBottom when given. Returns the y below the last line.
+  function fitText(ctx, text, x, y, maxWidth, weight, size, minSize, maxLines, maxBottom) {
     let lines;
     let s = size;
+    const bottomAt = (n, sz) => y + sz + (n - 1) * Math.round(sz * 1.18) + Math.round(sz * 0.3);
     for (;;) {
       ctx.font = weight + ' ' + s + 'px ' + FONT;
       lines = wrapLines(ctx, text, maxWidth);
-      if (lines.length <= maxLines || s <= minSize) break;
+      const widest = lines.reduce((w, l) => Math.max(w, ctx.measureText(l).width), 0);
+      const fits = lines.length <= maxLines && widest <= maxWidth && (!maxBottom || bottomAt(lines.length, s) <= maxBottom);
+      if (fits || s <= minSize) break;
       s -= 2;
     }
-    if (lines.length > maxLines) {
+    // Still too tall at the smallest size: fewer lines, with the cut shown.
+    let allowed = maxLines;
+    if (maxBottom) while (allowed > 1 && bottomAt(allowed, s) > maxBottom) allowed -= 1;
+    if (lines.length > allowed) {
       fitText.cut = true;
-      lines = lines.slice(0, maxLines);
+      lines = lines.slice(0, allowed);
       // Show the cut, rather than ending mid-sentence as if complete.
-      let last = lines[maxLines - 1];
+      let last = lines[allowed - 1];
       while (last && ctx.measureText(last + '\u2026').width > maxWidth) last = last.replace(/\s*\S+$/, '');
-      lines[maxLines - 1] = (last || '') + '\u2026';
+      lines[allowed - 1] = (last || '') + '\u2026';
     }
     const lh = Math.round(s * 1.18);
-    lines.forEach((line, i) => ctx.fillText(line, x, y + s + i * lh));
+    // maxWidth here squeezes a word that is still too wide at the
+    // smallest size, rather than letting it run off the card.
+    lines.forEach((line, i) => ctx.fillText(line, x, y + s + i * lh, maxWidth));
     return y + s + (lines.length - 1) * lh + Math.round(s * 0.3);
   }
 
@@ -593,44 +603,48 @@
     ctx.shadowOffsetY = 2;
     const cx = tx + TILE + 64;
     const cw = W - PAD - cx;
+    // The right-hand column has the card to itself down to here (the
+    // logo sits bottom-left, under the tile), so no text can meet it.
+    const BOTTOM = H - 48;
     ctx.fillStyle = '#ffffff';
-    let y = subject.title ? fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2) : ty - 8;
+    let y = subject.title ? fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2, BOTTOM) : ty - 8;
     if (subject.big) {
       ctx.fillStyle = sunsetGradient(ctx, cx, 0, cx + cw, 0, SUNSET_WARM);
       ctx.fillStyle = '#ffd59a';
-      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', 150, 72, 1);
+      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', 150, 72, 1, BOTTOM);
     } else if (!own) {
       // No figure: the label says it all, in big type.
       ctx.fillStyle = '#ffd59a';
-      y = fitText(ctx, 'Did you know?', cx, y + 4, cw, '800', 96, 60, 1);
+      y = fitText(ctx, 'Did you know?', cx, y + 4, cw, '800', 96, 60, 1, BOTTOM);
     }
     ctx.fillStyle = '#ffffff';
     if (subject.caption) {
       fitText.cut = false;
       // With no headline, the line takes its space, in larger type.
       y = own && !subject.big
-        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', 58, 38, 4)
-        : fitText(ctx, subject.caption, cx, y, cw, '700', 46, 34, 3);
+        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', 58, 38, 5, BOTTOM)
+        : fitText(ctx, subject.caption, cx, y, cw, '700', 46, 34, 4, BOTTOM);
       lineCut = fitText.cut;
     }
-    if (subject.sub) {
+    if (subject.sub && y + 2 + 28 <= BOTTOM) {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
-      fitText(ctx, subject.sub, cx, y + 2, cw, '500', 28, 22, 1);
+      fitText(ctx, subject.sub, cx, y + 2, cw, '500', 28, 22, 1, BOTTOM);
     }
 
-    // Web address, bottom-left.
+    // Logo, small, bottom-left under the icon tile, with the web address
+    // beside it. It used to sit bottom-right, where a three-line fact ran
+    // into it.
+    const size2 = 76;
+    const lx = PAD;
+    const ly = H - 50 - size2;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.font = '500 26px ' + FONT;
-    ctx.fillText('applesunset.com', PAD, H - 60);
+    ctx.fillText('applesunset.com', logo ? lx + size2 + 20 : PAD, logo ? ly + size2 / 2 + 9 : H - 60);
 
-    // Logo, small, bottom-right (unless it's already the big tile).
     if (logo) {
       ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
       ctx.shadowBlur = 16;
       ctx.shadowOffsetY = 4;
-      const size2 = 76;
-      const lx = W - PAD - size2 + 10;
-      const ly = H - 50 - size2;
       roundedRect(ctx, lx, ly, size2, size2, 16);
       ctx.fillStyle = '#000';
       ctx.fill();
