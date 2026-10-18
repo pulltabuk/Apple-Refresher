@@ -875,6 +875,23 @@
     return value ? '<div class="key-fact"><p class="key-fact-label">' + label + '</p><p class="key-fact-value">' + value + '</p></div>' : '';
   }
 
+  // Must stay in step with FactsKit.videoInfo() in public/facts-kit.js.
+  function videoInfoJS(url) {
+    var u = String(url || '').trim();
+    if (!/^https?:\/\//i.test(u)) return null;
+    var m = u.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i);
+    if (m) {
+      var start = u.match(/[?&#](?:t|start)=(\d+)s?(?:[&#]|$)/);
+      return { kind: 'embed', host: 'YouTube', vertical: /\/shorts\//i.test(u), src: 'https://www.youtube-nocookie.com/embed/' + m[1] + (start ? '?start=' + start[1] : '') };
+    }
+    m = u.match(/vimeo\.com\/(?:video\/)?(\d{6,})/i);
+    if (m) return { kind: 'embed', host: 'Vimeo', vertical: false, src: 'https://player.vimeo.com/video/' + m[1] };
+    if (/\.(mp4|m4v|mov|webm|ogv)(?:[?#]|$)/i.test(u) || /\/storage\/v1\/object\/public\//.test(u)) return { kind: 'file', src: u };
+    var host = '';
+    try { host = new URL(u).hostname.replace(/^www\./i, ''); } catch (e) { return null; }
+    return { kind: 'link', host: host, src: u };
+  }
+
   function specRowJS(label, valueHtml) {
     return valueHtml ? '<div class="spec-row"><dt>' + label + '</dt><dd>' + valueHtml + '</dd></div>' : '';
   }
@@ -1019,7 +1036,13 @@
       return (photo.tags || []).some(function (tag) { return tag.trim().toLowerCase() === productNameLower; });
     });
 
-    var videoBlock = product.video_url ? '<video class="product-video" src="' + product.video_url + '" controls></video>' : '';
+    // Must match productPage() in src/templates.js.
+    var video = videoInfoJS(product.video_url);
+    var videoBlock = !video || video.kind === 'link'
+      ? ''
+      : video.kind === 'file'
+      ? '<video class="product-video" src="' + escapeHtmlJS(video.src) + '" controls></video>'
+      : '<div class="product-video product-video--embed' + (video.vertical ? ' product-video--vertical' : '') + '"><iframe src="' + escapeHtmlJS(video.src) + '" title="' + escapeHtmlJS(product.name) + ' video on ' + video.host + '" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>';
 
     var successor = product.replaced_by && productsBySlug ? productsBySlug[product.replaced_by] : null;
     var replacedByHtml = successor
@@ -1070,6 +1093,7 @@
       product.discontinued ? specRowJS('Why it went', escapeHtmlJS(product.discontinued_reason)) : '',
       appleLinkRowJS('Official Apple page', product, 'apple_url', 'apple.com', 'No longer available on Apple\u2019s website', productsBySlug),
       appleLinkRowJS('Tech specs', product, 'specs_url', 'Apple specs', 'No longer available from Apple', productsBySlug),
+      video && video.kind === 'link' ? specRowJS('Video', '<a href="' + escapeHtmlJS(video.src) + '" target="_blank" rel="noopener">Watch on ' + escapeHtmlJS(video.host) + ' &#8599;</a>') : '',
       product.press_release_url ? specRowJS('Press release', '<a href="' + product.press_release_url + '" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>') : '',
       product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
       product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> ' + ((product.waiting_count || 0) === 1 ? 'person' : 'people')),
@@ -1085,8 +1109,8 @@
         '<li><a href="/categories/' + slugifyJS(product.category || 'other') + '/">' + escapeHtmlJS(product.category || 'Products') + '</a></li>' +
         '<li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li aria-current="page">' + escapeHtmlJS(product.name) + '</li>' +
       '</ol></nav>' +
-      '<div class="product-top' + (product.video_url ? '' : ' product-top--no-media') + '">' +
-        (product.video_url ? '<div class="product-media">' + videoBlock + '</div>' : '') +
+      '<div class="product-top' + (videoBlock ? '' : ' product-top--no-media') + '">' +
+        (videoBlock ? '<div class="product-media">' + videoBlock + '</div>' : '') +
         '<div class="product-info">' +
           '<div class="product-header">' +
             '<div>' +

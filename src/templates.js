@@ -2373,9 +2373,14 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   // repeats what is already above it and in the timeline.
   const timelineCoversOnlyThisProduct = productGenerations(product).length < 2;
 
-  const videoBlock = product.video_url
-    ? `<video class="product-video" src="${product.video_url}" controls></video>`
-    : '';
+  // An uploaded file or a YouTube/Vimeo link plays beside the details;
+  // any other video link is a row in the details (see FactsKit.videoInfo).
+  const video = FactsKit.videoInfo(product.video_url);
+  const videoBlock = !video || video.kind === 'link'
+    ? ''
+    : video.kind === 'file'
+    ? `<video class="product-video" src="${escapeHtml(video.src)}" controls></video>`
+    : `<div class="product-video product-video--embed${video.vertical ? ' product-video--vertical' : ''}"><iframe src="${escapeHtml(video.src)}" title="${escapeHtml(product.name)} video on ${video.host}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
 
   const successor = product.replaced_by && productsBySlug ? productsBySlug[product.replaced_by] : null;
   const replacedByHtml = successor
@@ -2447,6 +2452,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     product.discontinued ? specRow('Why it went', escapeHtml(product.discontinued_reason)) : '',
     appleLinkRow('Official Apple page', product, 'apple_url', 'apple.com', 'No longer available on Apple\u2019s website', productsBySlug),
     appleLinkRow('Tech specs', product, 'specs_url', 'Apple specs', 'No longer available from Apple', productsBySlug),
+    video && video.kind === 'link' ? specRow('Video', `<a href="${escapeHtml(video.src)}" target="_blank" rel="noopener">Watch on ${escapeHtml(video.host)} &#8599;</a>`) : '',
     product.press_release_url ? specRow('Press release', `<a href="${product.press_release_url}" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>`) : '',
     product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(externalLinkLabel(product))} &#8599;</a>`) : '',
     product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> ${(product.waiting_count || 0) === 1 ? 'person' : 'people'}`),
@@ -2466,8 +2472,8 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     { label: product.category || 'Products', href: `/categories/${slugify(product.category || 'other')}/` },
     { label: product.name },
   ])}
-  <div class="product-top${product.video_url ? '' : ' product-top--no-media'}">
-    ${product.video_url ? `<div class="product-media">
+  <div class="product-top${videoBlock ? '' : ' product-top--no-media'}">
+    ${videoBlock ? `<div class="product-media">
       ${videoBlock}
     </div>` : ''}
     <div class="product-info">
@@ -2954,11 +2960,13 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         <section class="admin-step" id="step-extras">
           <h3 class="admin-step-title"><span class="admin-step-num">6</span> Video <span class="admin-optional">Optional</span></h3>
-          <div id="video-status" class="admin-video-status">No video uploaded.</div>
+          <div id="video-status" class="admin-video-status">No video yet.</div>
           <div>
-            <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label>
+            <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload a video</label>
             <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
           </div>
+          <label>Or link to a video<input type="url" id="video_link" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off"></label>
+          <p class="admin-hint">YouTube and Vimeo play right on the product page. A link anywhere else shows as &ldquo;Watch on &hellip;&rdquo; in the details.</p>
           <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
         </section>
 
@@ -3119,6 +3127,12 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <button type="button" id="x-claude-btn" class="admin-btn">Write with Claude</button>
     </div>
     <p class="admin-hint" id="x-claude-note">Claude writes 5 posts, each checked against two sources (free in the Claude app). Copy the one you like into the box below.</p>
+    <div class="fact-research x-article-row">
+      <input type="url" id="x-article" placeholder="Or paste an article link to share, e.g. from MacRumors" autocomplete="off" aria-label="Article link to share">
+      <button type="button" id="x-article-btn" class="admin-btn">Share article</button>
+    </div>
+    <p class="admin-hint" id="x-article-note">Writes the post for you: the headline, credit to the site&rsquo;s X account, and a link straight to the article.</p>
+    <p class="admin-hint x-bookmarklet-row">Quicker on a computer: drag <a id="x-bookmarklet" class="x-bookmarklet" href="#">&#8599; Tweet this</a> to your bookmarks bar. Click it on any article and this page opens with the post written.</p>
 
     <h3 class="admin-form-section">2. Your post</h3>
     <textarea id="x-text" class="x-text" rows="4" placeholder="Write or paste your post here"></textarea>

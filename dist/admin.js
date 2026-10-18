@@ -640,7 +640,74 @@
         useIdea(idea);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
+      // From the "Tweet this" bookmark: { url, title, site, via } read off
+      // the article itself.
+      shareArticle(info) {
+        const tabBtn = document.querySelector('.admin-tab-btn[data-tab="x"]');
+        if (tabBtn) tabBtn.click();
+        window.scrollTo({ top: 0 });
+        if (info.title) useArticle(info);
+        else { $x('x-article').value = info.url; $x('x-article-btn').click(); }
+      },
     };
+
+    // Someone else's story: its headline and the article's own link, with
+    // no card, so X shows the article's own preview picture. (A card link
+    // only ever leads to a page on this site.)
+    function useArticle(info) {
+      useIdea({ text: window.FactsKit.articlePostText(info), link: info.url, kind: 'News' });
+      $x('x-card-on').checked = false;
+      $x('x-article').value = '';
+      $x('x-article-note').textContent = 'Ready: check the wording below, then Post to X.';
+      refresh();
+    }
+
+    $x('x-article-btn').addEventListener('click', async () => {
+      const raw = $x('x-article').value.trim();
+      const url = /^https?:\/\//i.test(raw) ? raw : raw ? 'https://' + raw : '';
+      if (!url) { $x('x-article').focus(); return; }
+      const btn = $x('x-article-btn');
+      btn.disabled = true;
+      btn.textContent = 'Reading\u2026';
+      $x('x-article-note').textContent = 'Reading the article\u2019s headline\u2026';
+      try {
+        const { data } = await client.auth.getSession();
+        const token = data && data.session ? data.session.access_token : null;
+        const res = await fetch('/.netlify/functions/article-info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ url }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body.title) throw new Error(body.error || 'no headline found');
+        useArticle({ url: body.url || url, title: body.title, site: body.site, via: body.via });
+      } catch (err) {
+        // Still useful without the headline: the link is in, type the rest.
+        useIdea({ text: '', link: url, kind: 'News' });
+        $x('x-card-on').checked = false;
+        refresh();
+        $x('x-article-note').textContent = 'Couldn\u2019t read the headline (' + err.message + '). The link is in: type what you want to say above it.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Share article';
+      }
+    });
+    $x('x-article').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); $x('x-article-btn').click(); }
+    });
+
+    // The "Tweet this" bookmark: run on an article, it reads the headline,
+    // site name and X account from the page's own tags and opens this page
+    // with them (handled in showDashboard).
+    const bookmarklet = "javascript:(function(){var m=function(s){var e=document.querySelector(s);return e&&e.content?e.content:''};" +
+      "var t=m('meta[property=\"og:title\"]')||m('meta[name=\"twitter:title\"]')||document.title;" +
+      "var u=m('meta[property=\"og:url\"]')||location.href;if(!/^https:/.test(u))u=location.href;" +
+      "window.open('" + origin + "/admin/?share='+encodeURIComponent(u)+'&title='+encodeURIComponent(t)+'&site='+encodeURIComponent(m('meta[property=\"og:site_name\"]')||location.hostname.replace(/^www\\./,''))+'&via='+encodeURIComponent(m('meta[name=\"twitter:site\"]')||m('meta[property=\"twitter:site\"]')),'_blank');})();";
+    $x('x-bookmarklet').setAttribute('href', bookmarklet);
+    $x('x-bookmarklet').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.alert('Drag this button up to your bookmarks bar (in Safari, show it with View > Show Favorites Bar). Then click it while reading any article.');
+    });
 
     function useIdea(idea) {
       if ($x('x-text').value.trim() && !window.confirm('Replace the post you are writing with this idea?')) return;
@@ -908,7 +975,13 @@
     const params = new URLSearchParams(window.location.search);
     const editId = params.get('edit');
     const editPhotoId = params.get('editPhoto');
-    if (editId) {
+    const shareUrl = params.get('share');
+    if (shareUrl && /^https?:\/\//i.test(shareUrl)) {
+      // From the "Tweet this" bookmark on an article.
+      showProductList();
+      if (window.history && window.history.replaceState) window.history.replaceState({}, '', '/admin/#x');
+      window.AdminX.shareArticle({ url: shareUrl, title: params.get('title') || '', site: params.get('site') || '', via: params.get('via') || '' });
+    } else if (editId) {
       editProduct(editId);
     } else if (params.get('new')) {
       startNewProduct();
@@ -2606,19 +2679,34 @@
     updateTimelineExamples();
   });
 
+  // One video per product: an upload, or a link typed in the box (the
+  // box is left empty for an upload).
+  const videoLinkEl = document.getElementById('video_link');
+  const isUploadedVideo = (url) => /\/storage\/v1\/object\/public\//.test(url || '');
   function renderVideoStatus() {
     videoStatusEl.innerHTML = '';
+    if (videoLinkEl && document.activeElement !== videoLinkEl) videoLinkEl.value = currentVideoUrl && !isUploadedVideo(currentVideoUrl) ? currentVideoUrl : '';
     if (!currentVideoUrl) {
-      videoStatusEl.textContent = 'No video uploaded.';
+      videoStatusEl.textContent = 'No video yet.';
       return;
     }
+    const info = window.FactsKit.videoInfo(currentVideoUrl);
     const span = document.createElement('span');
-    span.textContent = 'Video attached. ';
+    span.textContent = !info
+      ? 'That doesn\u2019t look like a link yet: it should start with https:// '
+      : isUploadedVideo(currentVideoUrl)
+      ? 'Uploaded video attached. '
+      : info.kind === 'embed'
+      ? info.host + ' video: plays on the product page. '
+      : info.kind === 'file'
+      ? 'Video file: plays on the product page. '
+      : 'Link to a video on ' + info.host + ': shows as \u201cWatch on ' + info.host + '\u201d. ';
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.textContent = 'Remove';
     removeBtn.addEventListener('click', () => {
       currentVideoUrl = null;
+      if (videoLinkEl) videoLinkEl.value = '';
       renderVideoStatus();
     });
     videoStatusEl.appendChild(span);
@@ -3139,7 +3227,8 @@
         // on a product still on sale was silently thrown away.
         replaced_by: document.getElementById('replaced_by').value || null,
         discontinued_reason: isDiscontinued ? (document.getElementById('discontinued_reason').value.trim() || null) : null,
-        video_url: currentVideoUrl,
+        // A half-typed link that isn't one yet isn't saved.
+        video_url: window.FactsKit.videoInfo(currentVideoUrl) ? currentVideoUrl : null,
       };
       // Sent when ticked, or once the column exists, so saving still works
       // before supabase-schema-update-32.sql has been run.
@@ -3515,6 +3604,11 @@
     const { data } = client.storage.from('product-images').getPublicUrl(path);
     return data.publicUrl;
   }
+
+  if (videoLinkEl) videoLinkEl.addEventListener('input', () => {
+    currentVideoUrl = videoLinkEl.value.trim() || null;
+    renderVideoStatus();
+  });
 
   document.getElementById('video-upload').addEventListener('change', async (e) => {
     const file = e.target.files[0];

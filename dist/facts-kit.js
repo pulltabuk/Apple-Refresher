@@ -489,6 +489,42 @@
     return y + s + (lines.length - 1) * lh + Math.round(s * 0.3);
   }
 
+  // --- A product's video, from its one video_url: an uploaded file plays
+  // in a <video>; a YouTube or Vimeo link plays in that site's player; any
+  // other link becomes a "Watch on ..." link. public/app.js keeps a copy
+  // (videoInfoJS) for the live page refresh. ---
+  function videoInfo(url) {
+    const u = String(url || '').trim();
+    if (!/^https?:\/\//i.test(u)) return null;
+    let m = u.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i);
+    if (m) {
+      const start = u.match(/[?&#](?:t|start)=(\d+)s?(?:[&#]|$)/);
+      return { kind: 'embed', host: 'YouTube', vertical: /\/shorts\//i.test(u), src: 'https://www.youtube-nocookie.com/embed/' + m[1] + (start ? '?start=' + start[1] : '') };
+    }
+    m = u.match(/vimeo\.com\/(?:video\/)?(\d{6,})/i);
+    if (m) return { kind: 'embed', host: 'Vimeo', vertical: false, src: 'https://player.vimeo.com/video/' + m[1] };
+    if (/\.(mp4|m4v|mov|webm|ogv)(?:[?#]|$)/i.test(u) || /\/storage\/v1\/object\/public\//.test(u)) return { kind: 'file', src: u };
+    let host = '';
+    try { host = new URL(u).hostname.replace(/^www\./i, ''); } catch (e) { return null; }
+    return { kind: 'link', host, src: u };
+  }
+
+  // --- Sharing someone else's article on X: its headline, credit to the
+  // site (its X account when the page names one), and the article's own
+  // link, so X shows the article's preview. ---
+  function articlePostText(info) {
+    const site = String((info && info.site) || '').trim();
+    let title = String((info && info.title) || '').replace(/\s+/g, ' ').trim();
+    // A page title often ends " - MacRumors" or " | 9to5Mac".
+    if (site) {
+      const safe = site.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      title = title.replace(new RegExp('\\s*[|\\-\u2013\u2014:\u00b7]\\s*' + safe + '\\s*$', 'i'), '');
+    }
+    const handle = String((info && info.via) || '').replace(/^@/, '').trim();
+    const credit = /^[A-Za-z0-9_]{1,15}$/.test(handle) ? 'via @' + handle : site ? 'via ' + site : '';
+    return [title, credit].filter(Boolean).join(' ');
+  }
+
   // fields: { headline, line } typed by the writer, used as they are in
   // place of the guess from the text. The canvas's lineCut says whether
   // the line had to be shortened to fit.
@@ -1834,6 +1870,8 @@
     generateFactImage,
     factImageFile,
     generateFactCandidates,
+    videoInfo,
+    articlePostText,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = FactsKit;
   if (typeof window !== 'undefined') window.FactsKit = FactsKit;
