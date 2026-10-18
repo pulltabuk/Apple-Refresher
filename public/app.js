@@ -1109,7 +1109,7 @@
         '<li><a href="/categories/' + slugifyJS(product.category || 'other') + '/">' + escapeHtmlJS(product.category || 'Products') + '</a></li>' +
         '<li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li aria-current="page">' + escapeHtmlJS(product.name) + '</li>' +
       '</ol></nav>' +
-      '<div class="product-top' + (videoBlock ? '' : ' product-top--no-media') + '">' +
+      '<div class="product-top' + (videoBlock ? ' product-top--video' : ' product-top--no-media') + '">' +
         (videoBlock ? '<div class="product-media">' + videoBlock + '</div>' : '') +
         '<div class="product-info">' +
           '<div class="product-header">' +
