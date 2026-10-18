@@ -2472,7 +2472,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     { label: product.category || 'Products', href: `/categories/${slugify(product.category || 'other')}/` },
     { label: product.name },
   ])}
-  <div class="product-top${videoBlock ? '' : ' product-top--no-media'}">
+  <div class="product-top${videoBlock ? ' product-top--video' : ' product-top--no-media'}">
     ${videoBlock ? `<div class="product-media">
       ${videoBlock}
     </div>` : ''}

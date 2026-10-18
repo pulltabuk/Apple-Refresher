@@ -973,6 +973,9 @@ label.admin-btn { cursor: pointer; color: #fff; }
 
 @media (max-width: 760px) {
   .product-top { flex-direction: column; gap: 1.25rem; }
+  /* The signed-in admin buttons drop under the name rather than
+     squeezing it onto three lines. */
+  .product-header { flex-wrap: wrap; }
 }
 
 /* Spec list on the product page: label / value rows, PullTab style */
@@ -984,8 +987,35 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .spec-row dd .pill { font-weight: 500; text-decoration: none; }
 
 @media (min-width: 760px) {
-  .product-top--no-media .spec-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 2.5rem; row-gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-  .product-top--no-media .spec-row { border-bottom: none; padding-bottom: 0; }
+  .product-top--no-media .spec-list, .product-top--video .spec-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 2.5rem; row-gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .product-top--no-media .spec-row, .product-top--video .spec-row { border-bottom: none; padding-bottom: 0; }
+}
+
+/* A product with a video: the title across the top, then the video and
+   the day count side by side at the same height, the fact tiles in one
+   row under both, and the details in two columns below. Phones: title,
+   video, then the rest. A grid laid over the usual markup (.product-info
+   and .product-facts step aside with display: contents), so the live
+   refresh in app.js builds it unchanged. */
+.product-top--video { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; gap: 0; }
+.product-top--video > .product-info,
+.product-top--video .product-facts { display: contents; }
+.product-top--video .product-info > *,
+.product-top--video .key-facts-row { grid-column: 1 / -1; }
+.product-top--video .product-header { order: -2; margin-bottom: 16px; align-items: center; }
+.product-top--video > .product-media { order: -1; grid-column: 1; }
+.product-top--video .product-facts .days-hero { order: -1; margin: 12px 0 0; }
+.product-top--video .key-facts-row { margin: 12px 0 1.5rem; }
+.product-top--video .product-video { margin: 0; border-radius: 16px; box-shadow: 0 10px 30px rgba(20, 33, 61, 0.16); }
+@media (min-width: 761px) {
+  .product-top--video { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); column-gap: 20px; }
+  .product-top--video .product-facts .days-hero { grid-column: 2; margin: 0; padding: 28px; }
+  .product-top--video .days-hero-number { font-size: 64px; }
+  .product-top--video .key-facts-row { margin-top: 20px; }
+  .product-top--video .key-facts-row[data-facts="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .product-top--video .product-header h1 { font-size: 34px; line-height: 1.15; }
+  /* A tall YouTube Short gets a narrow column to itself */
+  .product-top--video:has(.product-video--vertical) { grid-template-columns: minmax(0, 340px) minmax(0, 1fr); }
 }
 @media (max-width: 480px) {
   .spec-row { grid-template-columns: 1fr; gap: 2px; }
