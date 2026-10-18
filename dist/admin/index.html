@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta name="generated" content="2026-10-18T19:03:17.555Z">
+<meta name="generated" content="2026-10-18T20:16:09.866Z">
 </head>
 <body class="is-admin">
 <header class="site-header-bg">
@@ -348,11 +348,13 @@
 
         <section class="admin-step" id="step-extras">
           <h3 class="admin-step-title"><span class="admin-step-num">6</span> Video <span class="admin-optional">Optional</span></h3>
-          <div id="video-status" class="admin-video-status">No video uploaded.</div>
+          <div id="video-status" class="admin-video-status">No video yet.</div>
           <div>
-            <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Add video</label>
+            <label for="video-upload" class="admin-btn admin-btn--small admin-btn--primary">Upload a video</label>
             <input type="file" id="video-upload" accept="video/*" class="admin-file-input">
           </div>
+          <label>Or link to a video<input type="url" id="video_link" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off"></label>
+          <p class="admin-hint">YouTube and Vimeo play right on the product page. A link anywhere else shows as &ldquo;Watch on &hellip;&rdquo; in the details.</p>
           <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
         </section>
 
@@ -532,6 +534,12 @@
       <button type="button" id="x-claude-btn" class="admin-btn">Write with Claude</button>
     </div>
     <p class="admin-hint" id="x-claude-note">Claude writes 5 posts, each checked against two sources (free in the Claude app). Copy the one you like into the box below.</p>
+    <div class="fact-research x-article-row">
+      <input type="url" id="x-article" placeholder="Or paste an article link to share, e.g. from MacRumors" autocomplete="off" aria-label="Article link to share">
+      <button type="button" id="x-article-btn" class="admin-btn">Share article</button>
+    </div>
+    <p class="admin-hint" id="x-article-note">Writes the post for you: the headline, credit to the site&rsquo;s X account, and a link straight to the article.</p>
+    <p class="admin-hint x-bookmarklet-row">Quicker on a computer: drag <a id="x-bookmarklet" class="x-bookmarklet" href="#">&#8599; Tweet this</a> to your bookmarks bar. Click it on any article and this page opens with the post written.</p>
 
     <h3 class="admin-form-section">2. Your post</h3>
     <textarea id="x-text" class="x-text" rows="4" placeholder="Write or paste your post here"></textarea>
@@ -720,7 +728,7 @@
   window.SUPABASE_ANON_KEY = "";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="/facts-kit.js?v=9720ab29b3" defer></script>
-<script src="/admin.js?v=0ae252cf61" defer></script>
+<script src="/facts-kit.js?v=eb23b269a5" defer></script>
+<script src="/admin.js?v=7e79f9e390" defer></script>
 </body>
 </html>

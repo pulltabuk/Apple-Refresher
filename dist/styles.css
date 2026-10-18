@@ -273,6 +273,9 @@ a { color: inherit; text-decoration: none; }
   .homepage-strip-label { flex-basis: 100%; }
   .homepage-chip-x { padding: 0 12px 0 8px; font-size: 18px; }
 }
+/* Admin X tab: the "Tweet this" bookmark, a button to drag */
+.x-bookmarklet { display: inline-block; padding: 3px 10px; border-radius: 999px; background: #000; color: #fff !important; font-weight: 700; text-decoration: none; cursor: grab; }
+.x-bookmarklet:hover { background: #333; }
 /* A product on the homepage: its Feature button stays lit */
 .admin-btn--featured { background: #fdf3c8; color: #7a5800; border-color: #e9cf73; font-weight: 600; }
 .admin-btn--featured:hover { background: #fff; border-color: #b98a00; }
@@ -963,6 +966,10 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .product-header h1 { margin: 0; font-size: 26px; }
 .spec-list + .badge { margin-top: 1rem; display: inline-block; }
 .product-video { width: 100%; border-radius: 12px; margin-top: 12px; background: #000; }
+/* A YouTube or Vimeo video, at its own shape: wide, or tall for a Short */
+.product-video--embed { aspect-ratio: 16 / 9; overflow: hidden; }
+.product-video--embed iframe { display: block; width: 100%; height: 100%; border: 0; }
+.product-video--vertical { aspect-ratio: 9 / 16; max-width: 360px; }
 
 @media (max-width: 760px) {
   .product-top { flex-direction: column; gap: 1.25rem; }
