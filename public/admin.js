@@ -422,6 +422,7 @@
         if (delError) { window.alert('Could not delete: ' + delError.message); return; }
         await rebuildSite();
         loadEarningsAdmin();
+        loadNextEarnings();
       });
       actions.appendChild(edit);
       actions.appendChild(del);
@@ -482,6 +483,7 @@
       const published = await rebuildSite();
       earnEl('earnings-status').textContent = published.ok ? 'Saved. Live on the site in about a minute.' : 'Saved, but publishing failed (' + published.error + '). Press Publish changes.';
       await loadEarningsAdmin();
+      loadNextEarnings();
       setTimeout(() => showEarningsForm(false), 1200);
     });
   }
@@ -1755,6 +1757,7 @@
     cachedProducts = data;
     if (window.FactsKit && window.FactsKit.setCardProducts) window.FactsKit.setCardProducts(data);
     await loadFeaturedOrder();
+    await loadNextEarnings();
     updateCategoryOptions();
     renderProductList();
   }
@@ -1899,15 +1902,15 @@
     strip.innerHTML = '';
     strip.hidden = !!searching;
 
-    function chip(text, product, removeTitle, onRemove) {
+    function chip(text, product, removeTitle, onRemove, onOpen, openTitle) {
       const wrap = document.createElement('span');
       wrap.className = 'homepage-chip';
       const open = document.createElement('button');
       open.type = 'button';
       open.className = 'homepage-chip-name';
       open.textContent = text;
-      open.title = 'Edit ' + product.name;
-      open.addEventListener('click', () => openProduct(product.id));
+      open.title = openTitle || 'Edit ' + product.name;
+      open.addEventListener('click', onOpen || (() => openProduct(product.id)));
       const x = document.createElement('button');
       x.type = 'button';
       x.className = 'homepage-chip-x';
@@ -1944,6 +1947,67 @@
       row('\u23f1 Countdown', counting.map((x) => chip(x.p.name + ' \u00b7 ' + formatAdminDate(x.due), x.p,
         'Take ' + x.p.name + ' out of the countdown', () => removeFromCountdown(x.p))));
     }
+    // The next results: the line under the homepage countdown (or the
+    // countdown itself when nothing else is coming). Hidden until the
+    // earnings table exists.
+    if (earningsTableReady) {
+      const e = nextEarningsRow;
+      if (e) {
+        const name = 'Q' + e.fiscal_quarter + ' FY' + e.fiscal_year;
+        row('$ Earnings', [chip(name + ' results \u00b7 ' + formatAdminDate(e.report_date) + (e.report_time ? ', ' + e.report_time : ''), null,
+          'Delete ' + name, () => deleteNextEarnings(e), () => openEarningsTab(e), 'Edit ' + name)]);
+      } else {
+        const add = document.createElement('button');
+        add.type = 'button';
+        add.className = 'homepage-chip homepage-chip--empty homepage-chip--add';
+        add.textContent = '+ Add the next quarter';
+        add.addEventListener('click', () => openEarningsTab(null));
+        row('$ Earnings', [add]);
+      }
+    }
+  }
+
+  let nextEarningsRow = null;
+  let earningsTableReady = false;
+  async function loadNextEarnings() {
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const { data, error } = await client.from('earnings').select('*').gte('report_date', today).order('report_date', { ascending: true }).limit(1);
+      earningsTableReady = !error;
+      nextEarningsRow = !error && data && data.length ? data[0] : null;
+    } catch (err) {
+      earningsTableReady = false;
+      nextEarningsRow = null;
+    }
+  }
+
+  // Straight to that quarter's form on the Earnings tab (a new one with
+  // no row).
+  function openEarningsTab(row) {
+    const tabBtn = document.querySelector('.admin-tab-btn[data-tab="earnings"]');
+    if (tabBtn) tabBtn.click();
+    openEarningsForm(row);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function deleteNextEarnings(row) {
+    const name = 'Q' + row.fiscal_quarter + ' FY' + row.fiscal_year;
+    if (!window.confirm('Delete ' + name + ' results (' + formatAdminDate(row.report_date) + ')?\n\nIt comes off the homepage and the Earnings page. The site rebuilds straight away.')) return;
+    const { error } = await client.from('earnings').delete().eq('id', row.id);
+    if (error) {
+      window.alert('Could not delete ' + name + ': ' + error.message);
+      return;
+    }
+    const published = await rebuildSite();
+    const statusEl = document.getElementById('publish-status');
+    if (statusEl) {
+      statusEl.textContent = published.ok
+        ? name + ' deleted. Live in about a minute.'
+        : name + ' deleted, but the rebuild didn\u2019t start (' + published.error + '). Press Publish changes.';
+      statusEl.className = 'admin-hint admin-publish-status' + (published.ok ? ' is-ok' : ' is-error');
+    }
+    await loadNextEarnings();
+    renderHomepageStrip();
   }
 
   async function removeFromCountdown(product) {
