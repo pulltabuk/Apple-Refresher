@@ -1726,7 +1726,7 @@ function countdownHtml(countdown) {
     // given (e.g. "1:30pm PT"), else 8am UK on the day.
     const target = item.time ? FactsKit.eventStartMs({ event_date: item.date, event_time: item.time }) : Date.parse(item.date + 'T07:00:00Z');
     const days = Math.max(0, Math.floor((target - Date.now()) / 86400000));
-    return `<a class="countdown" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''}>
+    return `<a class="countdown${/^\/events\//.test(item.href) ? ' countdown--event' : ''}" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''}>
     <span class="countdown-label">${escapeHtml(item.kicker || 'Counting down to')}</span>
     ${item.product
       // A product counts down with its icon, as on the featured tile.
