@@ -1211,7 +1211,8 @@
     const wrap = document.getElementById('replaced-by-choice');
     if (!wrap) return;
     const next = cachedProducts.find((p) => p.slug === picked);
-    const when = next ? successorReleaseDate(next) : null;
+    const announced = next ? successorRetireDate(next) : null;
+    const when = announced || (next ? successorReleaseDate(next) : null);
     const show = !!picked && !currentDiscontinuedDate && !!when;
     wrap.style.display = show ? '' : 'none';
     if (!show) {
@@ -1220,13 +1221,30 @@
       return;
     }
     const hint = document.getElementById('replaced-by-choice-hint');
-    if (hint) hint.textContent = 'Retiring it sets its discontinued date to ' + formatAdminDate(when) +
-      ', the day ' + next.name + ' arrived.';
+    if (hint) hint.textContent = announced
+      ? 'Retiring it sets its discontinued date to ' + formatAdminDate(announced) +
+        ', the day ' + next.name + ' was announced.'
+      : 'Retiring it sets its discontinued date to ' + formatAdminDate(when) +
+        ', the day ' + next.name + ' reached shops. No announced date is recorded for ' +
+        next.name + ', and Apple usually drops the old model on announcement day, so check this by hand.';
   }
 
   function successorReleaseDate(product) {
     const dates = (product.refresh_history || []).slice().sort();
     return product.original_launch_date || dates[0] || null;
+  }
+
+  // The day the old model actually left the price list. Apple normally
+  // pulls it when the successor is announced, not when the successor
+  // reaches shops, so the announced date wins wherever one has been
+  // recorded against that release. Returns null when none has been, so
+  // the caller can say so rather than quietly use the release date.
+  function successorRetireDate(product) {
+    const release = successorReleaseDate(product);
+    const details = product.generation_details;
+    if (!release || !details || typeof details !== 'object') return null;
+    const info = details[release];
+    return (info && info.announced) || null;
   }
 
   function updatePreviousModelChoice() {
@@ -1967,6 +1985,93 @@
     }
   }
 
+  // Products retired on the day their replacement reached shops, when
+  // that replacement's announced date is on record: Apple usually drops
+  // the old model the day the new one is announced, and the "Retire it"
+  // buttons used the release date until October 2026. Listed above the
+  // strip with a one-tap fix, or "Leave it" to stop asking.
+  const RETIRE_OK_KEY = 'admin-retire-date-ok';
+  function retireDateChecks() {
+    let ok = [];
+    try { ok = JSON.parse(localStorage.getItem(RETIRE_OK_KEY) || '[]'); } catch (e) { ok = []; }
+    return cachedProducts.map((p) => {
+      if (!p.discontinued || !p.discontinued_date) return null;
+      const next = (p.replaced_by && cachedProducts.find((q) => q.slug === p.replaced_by)) ||
+        cachedProducts.find((q) => q.previous_model === p.slug);
+      if (!next) return null;
+      const release = successorReleaseDate(next);
+      const announced = successorRetireDate(next);
+      if (!announced || announced === release || p.discontinued_date !== release) return null;
+      if (ok.indexOf(p.id + ':' + p.discontinued_date) !== -1) return null;
+      return { p, next, release, announced };
+    }).filter(Boolean);
+  }
+
+  function renderRetireCheck() {
+    const box = document.getElementById('retire-check');
+    if (!box) return;
+    const searching = productSearchInputEl && productSearchInputEl.value.trim();
+    const checks = searching ? [] : retireDateChecks();
+    box.innerHTML = '';
+    box.hidden = !checks.length;
+    if (!checks.length) return;
+    const head = document.createElement('p');
+    head.className = 'retire-check-head';
+    head.textContent = 'Discontinued dates to check: these were retired on the day their replacement reached shops, but Apple usually drops a model the day its replacement is announced.';
+    box.appendChild(head);
+    checks.forEach((c) => {
+      const row = document.createElement('div');
+      row.className = 'retire-check-row';
+      const text = document.createElement('span');
+      text.className = 'retire-check-text';
+      text.textContent = c.p.name + ': ' + formatAdminDate(c.release) + ' \u2192 ' + formatAdminDate(c.announced) + ' (' + c.next.name + ' announced)';
+      const fix = document.createElement('button');
+      fix.type = 'button';
+      fix.className = 'admin-btn admin-btn--small admin-btn--primary';
+      fix.textContent = 'Use ' + formatAdminDate(c.announced);
+      fix.addEventListener('click', () => fixRetireDates([c]));
+      const leave = document.createElement('button');
+      leave.type = 'button';
+      leave.className = 'admin-btn admin-btn--small admin-btn--ghost';
+      leave.textContent = 'Leave it';
+      leave.title = 'The release date is right for this one: stop asking';
+      leave.addEventListener('click', () => {
+        let ok = [];
+        try { ok = JSON.parse(localStorage.getItem(RETIRE_OK_KEY) || '[]'); } catch (e) { ok = []; }
+        ok.push(c.p.id + ':' + c.p.discontinued_date);
+        try { localStorage.setItem(RETIRE_OK_KEY, JSON.stringify(ok)); } catch (e) { /* private mode: asks again next time */ }
+        renderRetireCheck();
+      });
+      row.appendChild(text);
+      row.appendChild(fix);
+      row.appendChild(leave);
+      box.appendChild(row);
+    });
+    if (checks.length > 1) {
+      const all = document.createElement('button');
+      all.type = 'button';
+      all.className = 'admin-btn admin-btn--small admin-btn--primary retire-check-all';
+      all.textContent = 'Fix all ' + checks.length;
+      all.addEventListener('click', () => fixRetireDates(checks));
+      box.appendChild(all);
+    }
+  }
+
+  async function fixRetireDates(checks) {
+    const list = checks.map((c) => c.p.name + ' \u2192 ' + formatAdminDate(c.announced)).join('\n');
+    if (!window.confirm('Change the discontinued date of:\n\n' + list + '\n\nPress Publish changes afterwards to update the site.')) return;
+    for (const c of checks) {
+      const result = await client.from('products').update({ discontinued_date: c.announced }).eq('id', c.p.id);
+      if (result.error) window.alert('Could not update ' + c.p.name + ': ' + result.error.message);
+    }
+    const statusEl = document.getElementById('publish-status');
+    if (statusEl) {
+      statusEl.textContent = 'Discontinued dates updated. Press Publish changes to put them on the site.';
+      statusEl.className = 'admin-hint admin-publish-status is-ok';
+    }
+    await loadProducts();
+  }
+
   let nextEarningsRow = null;
   let earningsTableReady = false;
   async function loadNextEarnings() {
@@ -2030,6 +2135,7 @@
   }
 
   function renderProductList() {
+    renderRetireCheck();
     renderHomepageStrip();
     renderFamilyTiles();
     const query = productSearchInputEl ? productSearchInputEl.value.trim().toLowerCase() : '';
@@ -3119,13 +3225,23 @@
 
   async function autoDiscontinuePreviousModel(payload, shouldDiscontinue) {
     if (!payload.previous_model || !shouldDiscontinue) return;
-    const prev = cachedProducts.find((p) => p.slug === payload.previous_model);
-    if (!prev || prev.discontinued) return;
-    const newLaunchDate = payload.original_launch_date || (payload.refresh_history && payload.refresh_history[0]) || null;
+    const cached = cachedProducts.find((p) => p.slug === payload.previous_model);
+    if (!cached) return;
+    // This writes the other product's row directly, where the form cannot
+    // show what changed, so a date already on the record is left alone:
+    // it may well have been corrected by hand. Read afresh rather than
+    // from this tab's copy, which can predate a fix made elsewhere (on
+    // the phone, or in another tab).
+    const fresh = await client.from('products').select('id, discontinued, discontinued_date, replaced_by').eq('id', cached.id).maybeSingle();
+    if (fresh.error || !fresh.data) return;
+    const prev = fresh.data;
+    if (prev.discontinued && prev.discontinued_date) return;
+    const newLaunchDate = successorRetireDate(payload) ||
+      payload.original_launch_date || (payload.refresh_history && payload.refresh_history[0]) || null;
     const result = await client.from('products').update({
       discontinued: true,
-      replaced_by: payload.slug,
-      discontinued_date: newLaunchDate,
+      replaced_by: prev.replaced_by || payload.slug,
+      discontinued_date: prev.discontinued_date || newLaunchDate,
     }).eq('id', prev.id);
     if (result.error) {
       console.error('Failed to auto-discontinue the previous model:', result.error);
@@ -3167,7 +3283,7 @@
       const successorSlug = document.getElementById('replaced_by').value;
       if (!currentDiscontinuedDate && successorSlug && retireEl && retireEl.value === 'discontinue') {
         const next = cachedProducts.find((p) => p.slug === successorSlug);
-        const when = next ? successorReleaseDate(next) : null;
+        const when = next ? (successorRetireDate(next) || successorReleaseDate(next)) : null;
         if (when) currentDiscontinuedDate = when;
       }
       const isDiscontinued = !!currentDiscontinuedDate;
@@ -3215,7 +3331,9 @@
       const prevSlug = document.getElementById('previous_model').value;
       if (prevSlug && prevAction && prevAction.value === 'discontinue') {
         const prev = cachedProducts.find((p) => p.slug === prevSlug);
-        const prevWhen = currentOriginalLaunchDate || currentRefreshHistory.slice().sort()[0] || null;
+        const firstRelease = currentOriginalLaunchDate || currentRefreshHistory.slice().sort()[0] || null;
+        const firstInfo = firstRelease ? currentGenerationDetails[firstRelease] : null;
+        const prevWhen = (firstInfo && firstInfo.announced) || firstRelease;
         if (prev && !prev.discontinued && prevWhen && prevWhen >= todayStr) {
           const ok = window.confirm('This marks the ' + prev.name + ' discontinued on ' + (prevWhen === todayStr ? 'today' : formatAdminDate(prevWhen) + ', which is in the future') + '.\n\nIs that right? Press Cancel to change it.');
           if (!ok) return;

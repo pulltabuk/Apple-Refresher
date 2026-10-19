@@ -2722,6 +2722,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <div id="search-results" class="line-card-grid"></div>
     </div>
     <div id="product-list-view">
+      <div id="retire-check" class="retire-check" hidden></div>
       <div id="homepage-strip" class="homepage-strip" hidden></div>
       <div id="family-screen">
         <h2 class="admin-screen-title"><span class="admin-step-num">1</span> Pick a family</h2>
@@ -2920,7 +2921,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <label><input type="radio" name="previous_model_action" value="keep" checked><span>Still on sale, leave it</span></label>
               <label><input type="radio" name="previous_model_action" value="discontinue"><span>Mark it discontinued</span></label>
             </div>
-            <p class="admin-hint">&ldquo;Mark it discontinued&rdquo; sets its discontinued date to this product&rsquo;s first release date and points it here.</p>
+            <p class="admin-hint">&ldquo;Mark it discontinued&rdquo; sets its discontinued date to the day this product was announced (its release date if no announced date is recorded in step 3) and points it here. A discontinued date already on it is never changed.</p>
           </div>
           <label><span class="admin-label-row">Replaced by <span class="admin-optional">Optional</span></span><select id="replaced_by"></select></label>
           <p class="admin-hint">Setting this also tells the newer product that this one came before it, so there is no need to go and edit that one too. A product can be replaced while still on sale, so this is here whatever its status.</p>
