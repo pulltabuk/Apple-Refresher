@@ -3020,8 +3020,8 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .event-hero:hover { border-color: var(--event-dark); box-shadow: 0 12px 32px rgba(109, 40, 217, 0.26); }
 .event-hero-title .event-hero-link, .event-hero-title .event-hero-link:hover { color: var(--event-dark); }
 .event-hero-countdown .countdown-unit { border: 1px solid var(--event-border); }
-.event-hero-kicker { background: var(--event-bg); color: var(--event); border: 1px solid var(--event-border); }
-.event-hero-kicker .event-hero-dot { background: var(--event); }
+.event-hero-kicker { background: var(--event); color: #fff; border: 1px solid var(--event); box-shadow: 0 2px 8px rgba(109, 40, 217, 0.3); }
+.event-hero-kicker .event-hero-dot { background: #fff; }
 .event-hero-kicker--live { background: #c4271b; color: #fff; border-color: #c4271b; }
 .event-hero-kicker--live .event-hero-dot { background: #fff; }
 .event-hero-countdown .countdown-unit { background: #fff; color: var(--event); }
