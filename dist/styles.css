@@ -258,6 +258,13 @@ a { color: inherit; text-decoration: none; }
   .admin-search-bar-btn { font-size: 18px; padding: 0 12px; min-width: 44px; }
   .admin-search-bar-btn-text { display: none; }
 }
+/* Admin, top of the product lists: discontinued dates that look like the
+   replacement's release day rather than its announcement */
+.retire-check { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; padding: 12px 14px; border: 1px solid #e9c3c3; border-radius: 12px; background: var(--overdue-bg); }
+.retire-check-head { margin: 0; font-size: 13px; color: var(--overdue-text); font-weight: 600; }
+.retire-check-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.retire-check-text { flex: 1 1 260px; font-size: 14px; }
+.retire-check-all { align-self: flex-start; }
 /* Admin, top of the product lists: what the homepage shows right now */
 .homepage-strip { display: flex; flex-direction: column; gap: 8px; margin: 0 0 1.25rem; padding: 12px 14px; border: 1px solid #e9cf73; border-radius: 12px; background: #fffaf0; }
 .homepage-strip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
