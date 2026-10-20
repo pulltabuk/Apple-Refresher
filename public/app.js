@@ -498,6 +498,23 @@
     return words.every(function (word) { return text.indexOf(word) !== -1; });
   }
 
+  // How closely a name fits what was typed, best first: 0 the name
+  // itself, 1 each word typed is a whole word of it ("air" in "iPad
+  // Air"), 2 the name starts with it ("AirPods"), 3 a word in it starts
+  // with each word typed, 4 anywhere. Groups are capped, so without this
+  // "air" filled the families with AirPods and never reached iPad Air.
+  function searchRankJS(name, query) {
+    var n = String(name || '').toLowerCase().trim();
+    var q = String(query || '').toLowerCase().trim();
+    if (n === q) return 0;
+    var nameWords = n.split(/[^a-z0-9]+/).filter(Boolean);
+    var typed = q.split(/\s+/).filter(Boolean);
+    if (typed.every(function (w) { return nameWords.indexOf(w) !== -1; })) return 1;
+    if (n.indexOf(q) === 0) return 2;
+    if (typed.every(function (w) { return nameWords.some(function (nw) { return nw.indexOf(w) === 0; }); })) return 3;
+    return 4;
+  }
+
   // --- Site-wide header search dropdown ---
 
   var siteSearchForm = document.querySelector('.site-search');
@@ -598,7 +615,7 @@
     // The header search covers the whole site. Each group is capped so
     // one busy group can't push the others out of sight.
     var SEARCH_GROUP_LABELS_JS = { category: 'Categories', product: 'Products', event: 'Apple Events', album: 'Photo albums', page: 'Pages' };
-    var SEARCH_GROUP_CAPS_JS = { category: 3, product: 6, event: 4, album: 4, page: 3 };
+    var SEARCH_GROUP_CAPS_JS = { category: 6, product: 6, event: 4, album: 4, page: 3 };
     var SEARCH_PAGES_JS = [
       { label: 'All products', href: '/products/', words: 'every product list tracker refresh' },
       { label: 'Discontinued products', href: '/discontinued/', words: 'discontinued retired ended' },
@@ -631,9 +648,10 @@
           var name = (p.category || '').trim();
           if (name) families[name.toLowerCase()] = name;
         });
-        Object.keys(families).sort().forEach(function (key) {
+        Object.keys(families).filter(function (key) { return matchesSearchJS(families[key], query); })
+          .sort(function (a, b) { return searchRankJS(a, query) - searchRankJS(b, query) || a.localeCompare(b); })
+          .forEach(function (key) {
           var name = families[key];
-          if (!matchesSearchJS(name, query)) return;
           var count = products.filter(function (p) { return (p.category || '').toLowerCase() === key; }).length;
           matches.push({ kind: 'category', label: name, href: '/categories/' + slugifyJS(name) + '/',
             iconHtml: categoryIconJS(name, 22), note: count + (count === 1 ? ' product' : ' products') });
@@ -645,7 +663,10 @@
         products.filter(function (p) { return matchesSearchJS(p.name + ' ' + (p.category || ''), query); })
           .sort(function (a, b) {
             if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
-            return lastOut(b).localeCompare(lastOut(a)) || a.name.localeCompare(b.name);
+            // The exact name first, loose mid-word matches last; otherwise
+            // newest first, as families already show the close matches.
+            var fit = function (p) { var r = searchRankJS(p.name, query); return r === 0 ? 0 : r < 4 ? 1 : 2; };
+            return fit(a) - fit(b) || lastOut(b).localeCompare(lastOut(a)) || a.name.localeCompare(b.name);
           })
           .forEach(function (p) {
             matches.push({ kind: 'product', label: p.name, href: '/products/' + p.slug + '/',
