@@ -625,7 +625,10 @@
       if (!wantCard) $x('x-card-note').hidden = true;
       if (wantCard) {
         cardTimer = setTimeout(async () => {
+          const sig = cardSig();
           const card = await window.FactsKit.xCardPreview(text, $x('x-card-label').value.trim() || 'Did you know?', cardFields());
+          // The wording changed (or the post was cleared) while it drew.
+          if (sig !== cardSig() || !$x('x-card-on').checked) return;
           cardUrl = card.url;
           $x('x-card').src = cardUrl;
           $x('x-card-note').hidden = !card.lineCut;
@@ -808,28 +811,54 @@
     window.addEventListener('focus', unlockFields);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) unlockFields(); });
 
-    function clearPost() {
-      $x('x-text').value = '';
-      $x('x-link').value = '';
-      $x('x-link-on').checked = false;
-      $x('x-card-label').value = 'Did you know?';
+    // Everything that belongs to one post, beyond its text: hand edits
+    // to the X box and the card, the saved card, and the drawn image.
+    function forgetPostState() {
+      cardFieldsOwn = false;
+      previewOwn = false;
       $x('x-card-headline').value = '';
       $x('x-card-line').value = '';
       $x('x-card-title').value = '';
       $x('x-card-emoji').value = '';
       $x('x-card-icon').value = 'auto';
       markIcon();
-      cardFieldsOwn = false;
-      previewOwn = false;
+      clearTimeout(cardTimer);
+      clearTimeout(uploadTimer);
+      cardKey = null;
+      cardFor = '';
+      cardUrl = null;
+      $x('x-card').removeAttribute('src');
+      $x('x-preview').value = '';
+      $x('x-link-note').hidden = true;
+    }
+
+    function clearPost() {
+      // Hand edits are forgotten first, so nothing below can leave the
+      // last post's wording stuck in the X box or on the card.
+      forgetPostState();
+      $x('x-text').value = '';
+      $x('x-link').value = '';
+      $x('x-link-on').checked = false;
+      // Back to the defaults (sharing an article turns the card off).
+      $x('x-tags').checked = true;
+      $x('x-card-on').checked = true;
+      $x('x-card-label').value = 'Did you know?';
       $x('x-topic').value = '';
       $x('x-ideas').innerHTML = '';
       $x('x-after').hidden = true;
-      cardKey = null;
-      cardFor = '';
-      $x('x-link-note').hidden = true;
       unlockFields();
       refresh();
     }
+
+    // Pasting into an empty post box, or over the whole of it, is a new
+    // post: the X box and card follow the new words, whatever was edited
+    // by hand for the last one (and even if Clear never ran: a browser
+    // that has blocked its "Clear this post?" question cancels it).
+    $x('x-text').addEventListener('paste', () => {
+      const box = $x('x-text');
+      const whole = !box.value.trim() || (box.selectionStart === 0 && box.selectionEnd === box.value.length);
+      if (whole) forgetPostState();
+    });
 
     $x('x-post-btn').addEventListener('click', () => {
       window.open('https://x.com/intent/post?text=' + encodeURIComponent(postText()), '_blank', 'noopener');
