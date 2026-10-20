@@ -406,7 +406,12 @@
 
   // The card's headline and line as the composer pre-fills them: the
   // best guess from the text, for the writer to keep or change.
+  // Links say nothing the card should show: a date in a MacRumors
+  // address ("/2026/10/18/") was being read as the card's big figure.
+  const withoutLinks = (text) => String(text || '').replace(/https?:\/\/\S+/gi, ' ').replace(/[ \t]+/g, ' ').trim();
+
   function cardGuess(text) {
+    text = withoutLinks(text);
     const subject = cardSubject(text);
     const fig = textFigure(text);
     return { headline: cardHeadline(subject.big), line: (fig && fig.big === subject.big && fig.full) || subject.caption || '', title: subject.title || '', icon: 'auto' };
@@ -422,6 +427,7 @@
   }
 
   function cardSubject(text) {
+    text = withoutLinks(text);
     const product = productNamed(text, cardProducts);
     if (product) {
       // The text's own figure when it has one, so the card says what the
