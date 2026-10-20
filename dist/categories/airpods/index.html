@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="/styles.css">
 <link rel="alternate" type="application/rss+xml" title="Apple Sunset — Recent Refreshes &amp; Discontinuations" href="/feed.xml">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta name="generated" content="2026-10-20T16:18:39.970Z">
+<meta name="generated" content="2026-10-20T23:03:29.019Z">
 </head>
 <body>
 <header class="site-header-bg">
@@ -71,13 +71,57 @@
     <button type="button" id="sort-reset-btn" class="sort-reset-btn" aria-label="Reset sort order" title="Reset to default order" style="display:none;">&times;</button>
   </div>
 </div>
-<div class="filter-bar" data-filter-key="status">
+<div class="filter-row">
+  <div class="filter-bar" data-filter-key="status">
   <button class="filter-btn active" data-filter-value="all">All <span class="filter-btn-count">(3)</span></button>
   <button class="filter-btn" data-filter-value="current">Current <span class="filter-btn-count">(3)</span></button>
 <button class="filter-btn" data-filter-value="discontinued">Discontinued <span class="filter-btn-count">(0)</span></button>
 </div>
+  <a class="jump-pill" href="#category-timeline-section">Release history <span aria-hidden="true">&darr;</span></a>
+</div>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
-<div id="category-timeline-section" style="display:;">
+<table class="league-table" id="grid" data-mode="category" data-category-name="AirPods">
+  <thead>
+    <tr>
+      <th class="league-rank">#</th>
+      <th class="league-name">Product</th>
+      <th class="league-status">Status</th>
+      <th class="league-launch">Launched</th>
+      <th class="league-price">Price</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="league-row" data-href="/products/airpods-max/" data-category="AirPods" data-status="current" data-days="679" data-wait="0.466" data-launch="1607990400000" data-discontinued="" data-lifespan="" data-decade="">
+  <td class="league-rank">1</td>
+  <td class="league-name"><a href="/products/airpods-max/" class="league-name-link"><svg class="placeholder-icon" viewBox="0 0 40 40" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/></svg><span>AirPods Max</span></a></td>
+  <td class="league-status"><span class="badge badge--fresh" title="Recently updated: this one is usually updated every 1456 days">679 days since refresh</span></td>
+  <td class="league-launch">15 Dec 2020</td>
+  <td class="league-price">£549</td>
+</tr>
+<tr class="league-row" data-href="/products/airpods-pro/" data-category="AirPods" data-status="current" data-days="-3" data-wait="-0.004" data-launch="1572393600000" data-discontinued="" data-lifespan="" data-decade="">
+  <td class="league-rank">2</td>
+  <td class="league-name"><a href="/products/airpods-pro/" class="league-name-link"><svg class="placeholder-icon" viewBox="0 0 40 40" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/></svg><span>AirPods Pro</span></a></td>
+  <td class="league-status"><span class="badge badge--upcoming">Coming 23 Oct 2026</span></td>
+  <td class="league-launch">30 Oct 2019</td>
+  <td class="league-price">$249</td>
+</tr>
+<tr class="league-row" data-href="/products/airpods/" data-category="AirPods" data-status="current" data-days="760" data-wait="0.803" data-launch="1481587200000" data-discontinued="" data-lifespan="" data-decade="">
+  <td class="league-rank">3</td>
+  <td class="league-name"><a href="/products/airpods/" class="league-name-link"><svg class="placeholder-icon" viewBox="0 0 40 40" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/></svg><span>AirPods</span></a></td>
+  <td class="league-status"><span class="badge badge--aging" title="Getting on: this one is usually updated every 946 days">760 days since refresh</span></td>
+  <td class="league-launch">13 Dec 2016</td>
+  <td class="league-price">$129</td>
+</tr>
+  </tbody>
+</table>
+<section id="other-families" data-category-name="AirPods" style="display:none;">
+  <h2 class="sort-heading">In other families</h2>
+  <div id="other-families-grid" class="card-grid product-list"></div>
+</section>
+<!-- The products come straight under the filters that change them, so
+     tapping Current or Discontinued shows the result; the long timeline
+     follows, a tap away on "Release history". -->
+<div id="category-timeline-section" class="category-timeline-section" style="display:;">
   <h2>AirPods release history</h2>
   <ol class="tl">
     
@@ -193,44 +237,6 @@
     </li>
   </ol>
 </div>
-<table class="league-table" id="grid" data-mode="category" data-category-name="AirPods">
-  <thead>
-    <tr>
-      <th class="league-rank">#</th>
-      <th class="league-name">Product</th>
-      <th class="league-status">Status</th>
-      <th class="league-launch">Launched</th>
-      <th class="league-price">Price</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr class="league-row" data-href="/products/airpods-max/" data-category="AirPods" data-status="current" data-days="679" data-wait="0.466" data-launch="1607990400000" data-discontinued="" data-lifespan="" data-decade="">
-  <td class="league-rank">1</td>
-  <td class="league-name"><a href="/products/airpods-max/" class="league-name-link"><svg class="placeholder-icon" viewBox="0 0 40 40" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/></svg><span>AirPods Max</span></a></td>
-  <td class="league-status"><span class="badge badge--fresh" title="Recently updated: this one is usually updated every 1456 days">679 days since refresh</span></td>
-  <td class="league-launch">15 Dec 2020</td>
-  <td class="league-price">£549</td>
-</tr>
-<tr class="league-row" data-href="/products/airpods-pro/" data-category="AirPods" data-status="current" data-days="-3" data-wait="-0.004" data-launch="1572393600000" data-discontinued="" data-lifespan="" data-decade="">
-  <td class="league-rank">2</td>
-  <td class="league-name"><a href="/products/airpods-pro/" class="league-name-link"><svg class="placeholder-icon" viewBox="0 0 40 40" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/></svg><span>AirPods Pro</span></a></td>
-  <td class="league-status"><span class="badge badge--upcoming">Coming 23 Oct 2026</span></td>
-  <td class="league-launch">30 Oct 2019</td>
-  <td class="league-price">$249</td>
-</tr>
-<tr class="league-row" data-href="/products/airpods/" data-category="AirPods" data-status="current" data-days="760" data-wait="0.803" data-launch="1481587200000" data-discontinued="" data-lifespan="" data-decade="">
-  <td class="league-rank">3</td>
-  <td class="league-name"><a href="/products/airpods/" class="league-name-link"><svg class="placeholder-icon" viewBox="0 0 40 40" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10c-3 0-5 2-5 5v9c0 2 1.5 3 3 3s3-1 3-3V13"/><path d="M26 10c3 0 5 2 5 5v9c0 2-1.5 3-3 3s-3-1-3-3V13"/></svg><span>AirPods</span></a></td>
-  <td class="league-status"><span class="badge badge--aging" title="Getting on: this one is usually updated every 946 days">760 days since refresh</span></td>
-  <td class="league-launch">13 Dec 2016</td>
-  <td class="league-price">$129</td>
-</tr>
-  </tbody>
-</table>
-<section id="other-families" data-category-name="AirPods" style="display:none;">
-  <h2 class="sort-heading">In other families</h2>
-  <div id="other-families-grid" class="card-grid product-list"></div>
-</section>
 
 </main>
 <footer class="site-footer-bg">

@@ -2006,6 +2006,17 @@
     });
   }
 
+  // "Release history" on a family page: a smooth scroll down to it.
+  document.querySelectorAll('.jump-pill').forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      var target = document.querySelector(link.getAttribute('href'));
+      if (!target) return;
+      e.preventDefault();
+      var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      target.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
+    });
+  });
+
   revealAdminEditLinks(document.querySelectorAll('.admin-edit-link'));
   wireTweetButtons(document.querySelectorAll('.tweet-btn'));
   wireWaitButtons(document.querySelectorAll('.wait-btn'));
