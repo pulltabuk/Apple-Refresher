@@ -2192,16 +2192,22 @@ ${!pageContent || pageContent.show_stats !== false ? categoryStatsSentence(categ
   <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)} or any product…" aria-label="Search">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
-${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
-<p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
-<div id="category-timeline-section" style="display:${timelinePoints.length ? '' : 'none'};">
-  ${releaseHistorySection}
+<div class="filter-row">
+  ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
+  ${timelinePoints.length ? '<a class="jump-pill" href="#category-timeline-section">Release history <span aria-hidden="true">&darr;</span></a>' : ''}
 </div>
+<p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 ${leagueTableHtml(items, category)}
 <section id="other-families" data-category-name="${escapeHtml(category)}" style="display:none;">
   <h2 class="sort-heading">In other families</h2>
   <div id="other-families-grid" class="card-grid product-list"></div>
 </section>
+<!-- The products come straight under the filters that change them, so
+     tapping Current or Discontinued shows the result; the long timeline
+     follows, a tap away on "Release history". -->
+<div id="category-timeline-section" class="category-timeline-section" style="display:${timelinePoints.length ? '' : 'none'};">
+  ${releaseHistorySection}
+</div>
 ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   return shell({
     title: `${category} release history and update tracker | Apple Sunset`,
