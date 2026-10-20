@@ -3054,7 +3054,7 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .filter-row .filter-bar { margin: 0; }
 /* Neutral, so it reads as "go to", not as a fourth filter: a warm grey
    fill and an orange arrow. Purple stays for events, green for status. */
-.jump-pill { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 7px 14px; border-radius: 999px; border: 1px solid #e4dfd5; background: #f3f0ea; color: var(--text); font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background-color 0.15s ease, border-color 0.15s ease; }
+.jump-pill { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding: 5px 12px; border-radius: 999px; border: 1px solid #e4dfd5; background: #f3f0ea; color: var(--text); font-size: 12px; line-height: 14px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; white-space: nowrap; transition: background-color 0.15s ease, border-color 0.15s ease; }
 .jump-pill span { color: var(--accent); font-weight: 800; transition: transform 0.15s ease; }
 .jump-pill:hover { background: #ebe6dc; border-color: #d6cfc2; color: var(--text); }
 .jump-pill:hover span { transform: translateY(2px); }
