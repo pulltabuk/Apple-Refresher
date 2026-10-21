@@ -2315,8 +2315,15 @@ function heroStatHtml(product, statusInfo, cycleDays) {
   if (!statusInfo) return '';
   const info = badgeDaysInfo(product, statusInfo);
   if (info.days < 0) {
+    // Coming soon: the date, and a live countdown to it (filled in and
+    // kept ticking by app.js; the day count is the fallback without it).
+    // Keep in step with heroStatHtmlJS() in public/app.js.
     const due = (product.refresh_history || []).slice().sort().pop();
-    return `<p class="days-hero days-hero--upcoming"><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">${due ? formatDate(due) : 'soon'}</span></p>`;
+    const away = due ? daysUntil(due) : null;
+    const fallback = away !== null && away > 0
+      ? `<span class="countdown-unit countdown-unit--wide"><span class="countdown-value">${away}</span> <span class="countdown-unit-label">${away === 1 ? 'day' : 'days'}</span></span>`
+      : '';
+    return `<p class="days-hero days-hero--upcoming"${due ? ` data-product-countdown="${due}"` : ''}><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">${due ? formatDate(due) : 'soon'}</span>${due ? `<span class="product-countdown-clock days-hero-clock" data-product-countdown-clock>${fallback}</span>` : ''}</p>`;
   }
   // A bar showing how far through the family's usual gap this product is
   // gives the big number something to be measured against, and uses the

@@ -3067,3 +3067,25 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 @media (max-width: 600px) {
   .jump-pill { margin-left: 0; }
 }
+
+/* Product page, coming soon: the date, then a live countdown to it as
+   four boxes; two by two beside a video, so the tile fills the video's
+   height with something worth reading rather than empty green. */
+.days-hero--upcoming { gap: 6px; }
+.days-hero--upcoming .days-hero-clock { margin-top: 10px; }
+.days-hero--upcoming .days-hero-clock .countdown-unit { padding: 12px 4px; }
+.days-hero--upcoming .days-hero-clock .countdown-value { font-size: 30px; }
+@media (min-width: 761px) {
+  .product-top--video .days-hero--upcoming .days-hero-soon { font-size: 34px; line-height: 1.1; }
+  .product-top--video .product-facts .days-hero--upcoming { padding: 22px 24px; }
+  .product-top--video .days-hero--upcoming .days-hero-clock { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .product-top--video .days-hero--upcoming .days-hero-clock .countdown-unit { padding: 12px 6px; border-radius: 12px; }
+  .product-top--video .days-hero--upcoming .days-hero-clock .countdown-value { font-size: 38px; }
+  .product-top--video .days-hero--upcoming .days-hero-clock .countdown-unit-label { font-size: 11px; }
+}
+@media (min-width: 761px) and (max-width: 960px) {
+  .product-top--video .product-facts .days-hero--upcoming { padding: 18px 20px; }
+  .product-top--video .days-hero--upcoming .days-hero-soon { font-size: 28px; }
+  .product-top--video .days-hero--upcoming .days-hero-clock .countdown-unit { padding: 9px 4px; }
+  .product-top--video .days-hero--upcoming .days-hero-clock .countdown-value { font-size: 32px; }
+}
