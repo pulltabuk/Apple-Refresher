@@ -1319,9 +1319,12 @@
   var currentPage = 1;
   var PAGE_SIZE = 30;
 
+  // All products and Discontinued: pages of whole rows, with search,
+  // sort and filters still covering every product.
   function isPaginatedGrid() {
     var grid = document.getElementById('grid');
-    return !!(grid && grid.getAttribute('data-mode') === 'all' && document.getElementById('pagination'));
+    var mode = grid && grid.getAttribute('data-mode');
+    return !!((mode === 'all' || mode === 'discontinued') && document.getElementById('pagination'));
   }
 
   function applyFilters() {
