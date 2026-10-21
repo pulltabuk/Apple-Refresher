@@ -19,7 +19,23 @@ export default async (req) => {
   // Only ever forwards to a page on this site.
   let path = match[2] || '/';
   if (!/^\/[A-Za-z0-9\-._~/]*$/.test(path) || path.startsWith('//')) path = '/';
-  const target = site + path;
+  let target = site + path;
+  let away = false;
+  // A card made for another site's article forwards to it. The article is
+  // stored beside the image by admin (x-cards/<key>.json), so only cards
+  // made there can lead off the site.
+  if (path === '/' && supabaseUrl) {
+    try {
+      const res = await fetch(`${supabaseUrl}/storage/v1/object/public/product-images/x-cards/${key}.json`, { signal: AbortSignal.timeout(2500) });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && typeof data.link === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(data.link)) {
+          target = data.link;
+          away = true;
+        }
+      }
+    } catch (err) { /* no article saved, or storage slow: the homepage */ }
+  }
   const image = supabaseUrl ? `${supabaseUrl}/storage/v1/object/public/product-images/x-cards/${key}.png` : `${site}/logo.png`;
   const html = `<!doctype html>
 <html lang="en"><head>
@@ -42,7 +58,7 @@ export default async (req) => {
 <meta name="twitter:image" content="${escapeHtml(image)}">
 <meta http-equiv="refresh" content="0; url=${escapeHtml(target)}">
 </head><body>
-<p><a href="${escapeHtml(target)}">Continue to Apple Sunset</a></p>
+<p><a href="${escapeHtml(target)}">${away ? 'Continue to the article' : 'Continue to Apple Sunset'}</a></p>
 <script>location.replace(${JSON.stringify(target)});</script>
 </body></html>`;
   return new Response(html, {

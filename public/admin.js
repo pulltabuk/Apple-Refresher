@@ -512,7 +512,14 @@
       line: $x('x-card-line').value,
       title: $x('x-card-title').value,
       icon: $x('x-card-emoji').value.trim() || $x('x-card-icon').value,
+      source: $x('x-card-source').value,
     });
+    // The post's link when it goes to another site (an article being
+    // shared): the card then forwards there instead of to this site.
+    const outsideLink = () => {
+      const link = $x('x-link-on').checked ? $x('x-link').value.trim() : '';
+      try { return link && new URL(link).origin !== origin && /^https:/i.test(link) ? link : ''; } catch (e) { return ''; }
+    };
     function guessCardFields() {
       // "Automatic" says which icon it will use.
       const text = $x('x-text').value.trim();
@@ -527,7 +534,7 @@
     let previewOwn = false;
     const postText = () => $x('x-preview').value.trim();
 
-    const cardSig = () => ($x('x-card-label').value.trim() || 'Did you know?') + '\n' + $x('x-text').value.trim() + '\n' + JSON.stringify(cardFields());
+    const cardSig = () => ($x('x-card-label').value.trim() || 'Did you know?') + '\n' + $x('x-text').value.trim() + '\n' + JSON.stringify(cardFields()) + '\n' + outsideLink();
     const wantsCard = () => $x('x-card-on').checked && !!$x('x-text').value.trim();
     const cardReady = () => !wantsCard() || (cardKey && cardFor === cardSig());
     // Whether the saved card's link opened properly when checked; if not,
@@ -549,9 +556,10 @@
       const sig = cardSig();
       uploadTimer = setTimeout(async () => {
         const label = $x('x-card-label').value.trim() || 'Did you know?';
-        const key = await window.FactsKit.uploadXCard(client, $x('x-text').value.trim(), label, cardFields());
+        const away = outsideLink();
+        const key = await window.FactsKit.uploadXCard(client, $x('x-text').value.trim(), label, cardFields(), away || undefined);
         if (sig !== cardSig()) return;
-        const check = key ? await window.FactsKit.checkXCardLink(origin, key) : { ok: false, reason: 'the card didn\u2019t save' };
+        const check = key ? await window.FactsKit.checkXCardLink(origin, key, away || undefined) : { ok: false, reason: 'the card didn\u2019t save' };
         if (sig !== cardSig()) return;
         cardKey = key || 'none';
         cardFor = sig;
@@ -560,7 +568,7 @@
         note.hidden = false;
         note.classList.toggle('x-card-note', !check.ok);
         note.textContent = check.ok
-          ? 'Card link checked: it opens and shows the card on X.'
+          ? (away ? 'Card link checked: it shows the card on X and opens the article.' : 'Card link checked: it opens and shows the card on X.')
           : 'The card link isn\u2019t working (' + check.reason + '), so this post uses the plain link instead. You can still download the card and add it to the post in X.';
         $x('x-post-btn').textContent = 'Post to X';
         refresh();
@@ -632,7 +640,7 @@
           cardUrl = card.url;
           $x('x-card').src = cardUrl;
           $x('x-card-note').hidden = !card.lineCut;
-          $x('x-card-note').textContent = card.lineCut ? 'The card line is too long, so the card cuts it short (\u2026). Shorten it to show it all.' : '';
+          $x('x-card-note').textContent = card.lineCut ? 'The card\u2019s text is too long, so it is cut short (\u2026). Shorten the headline or the line to show it all.' : '';
         }, 300);
       }
     }
@@ -656,12 +664,19 @@
       },
     };
 
-    // Someone else's story: its headline and the article's own link, with
-    // no card, so X shows the article's own preview picture. (A card link
-    // only ever leads to a page on this site.)
+    // Someone else's story: its headline and the article's own link. With
+    // a card, the card opens the article (see outsideLink), and its source
+    // line names the site.
     function useArticle(info) {
-      useIdea({ text: window.FactsKit.articlePostText(info), link: info.url, kind: 'News' });
-      $x('x-card-on').checked = false;
+      const post = window.FactsKit.articlePostText(info);
+      useIdea({ text: post, link: info.url, kind: 'News' });
+      const site = String(info.site || '').trim();
+      $x('x-card-source').value = site ? 'Source: ' + site : '';
+      // The card starts as the article's headline in large type (no big
+      // figure), which suits news; every field can still be changed.
+      $x('x-card-headline').value = '';
+      $x('x-card-line').value = post.replace(/\s+via\s+@?\S+$/i, '');
+      cardFieldsOwn = true;
       $x('x-article').value = '';
       $x('x-article-note').textContent = 'Ready: check the wording below, then Post to X.';
       refresh();
@@ -689,7 +704,7 @@
       } catch (err) {
         // Still useful without the headline: the link is in, type the rest.
         useIdea({ text: '', link: url, kind: 'News' });
-        $x('x-card-on').checked = false;
+        try { $x('x-card-source').value = 'Source: ' + new URL(url).hostname.replace(/^www\./, ''); } catch (e) { /* not a link */ }
         refresh();
         $x('x-article-note').textContent = 'Couldn\u2019t read the headline (' + err.message + '). The link is in: type what you want to say above it.';
       } finally {
@@ -721,6 +736,7 @@
       $x('x-link').value = idea.link || '';
       $x('x-link-on').checked = !!idea.link;
       $x('x-card-label').value = idea.kind || 'Did you know?';
+      $x('x-card-source').value = '';
       cardFieldsOwn = false;
       previewOwn = false;
       $x('x-card-emoji').value = '';
@@ -795,6 +811,9 @@
 
     ['x-text', 'x-link', 'x-card-label'].forEach((id) => $x(id).addEventListener('input', refresh));
     ['x-card-headline', 'x-card-line', 'x-card-title', 'x-card-emoji'].forEach((id) => $x(id).addEventListener('input', () => { cardFieldsOwn = true; refresh(); }));
+    // The source isn't guessed from the post, so typing it leaves the
+    // other card fields following the text.
+    $x('x-card-source').addEventListener('input', refresh);
     window.FactsKit.mountIconPicker($x('x-card-icon-picker'), $x('x-card-icon'), $x('x-card-emoji'), refresh);
     const markIcon = () => { if ($x('x-card-icon-picker').markPicked) $x('x-card-icon-picker').markPicked(); };
     $x('x-preview').addEventListener('input', () => { previewOwn = true; updateCount(); });
@@ -803,7 +822,7 @@
 
     // The writing fields, always editable when the page is in view (a
     // phone coming back from X can leave them looking stuck).
-    const xFields = ['x-text', 'x-link', 'x-card-label', 'x-card-headline', 'x-card-line', 'x-card-title', 'x-card-icon', 'x-card-emoji', 'x-preview', 'x-topic', 'x-tags', 'x-link-on', 'x-card-on'];
+    const xFields = ['x-text', 'x-link', 'x-card-label', 'x-card-headline', 'x-card-line', 'x-card-title', 'x-card-source', 'x-card-icon', 'x-card-emoji', 'x-preview', 'x-topic', 'x-tags', 'x-link-on', 'x-card-on'];
     function unlockFields() {
       xFields.forEach((id) => { const el = $x(id); if (el) { el.disabled = false; el.readOnly = false; } });
     }
@@ -819,6 +838,7 @@
       $x('x-card-headline').value = '';
       $x('x-card-line').value = '';
       $x('x-card-title').value = '';
+      $x('x-card-source').value = '';
       $x('x-card-emoji').value = '';
       $x('x-card-icon').value = 'auto';
       markIcon();

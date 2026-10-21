@@ -934,7 +934,7 @@
         const card = await window.FactsKit.xCardPreview(text, label, xCardFields());
         $('up-x-card').src = card.url;
         $('up-x-card-note').hidden = !card.lineCut;
-        $('up-x-card-note').textContent = card.lineCut ? 'The card line is too long, so the card cuts it short (\u2026). Shorten it to show it all.' : '';
+        $('up-x-card-note').textContent = card.lineCut ? 'The card\u2019s text is too long, so it is cut short (\u2026). Shorten the headline or the line to show it all.' : '';
         xCardFile = await window.FactsKit.factImageFile(text, label, xCardFields());
       }, 300);
     }

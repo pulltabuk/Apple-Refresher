@@ -3167,10 +3167,12 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <div class="icon-picker" id="x-card-icon-picker"></div>
       <p class="admin-hint icon-picker-auto" id="x-card-icon-auto"></p>
       <input type="text" id="x-card-emoji" autocomplete="off" maxlength="16" placeholder="Or type or paste any other emoji" aria-label="Any other emoji for the card">
-      <label for="x-card-headline">Card headline <span class="admin-hint">the large text, e.g. 1,433 days or 2014. Leave empty for none.</span></label>
-      <input type="text" id="x-card-headline" autocomplete="off" maxlength="24">
+      <label for="x-card-headline">Card headline <span class="admin-hint">the large text: a figure like 1,433 days or 2014, or a short headline (it wraps onto two lines). Leave empty for none.</span></label>
+      <input type="text" id="x-card-headline" autocomplete="off" maxlength="60">
       <label for="x-card-line">Card line <span class="admin-hint">the smaller text below it</span></label>
       <textarea id="x-card-line" rows="2"></textarea>
+      <label for="x-card-source">Card source <span class="admin-hint">small text at the bottom, e.g. Source: 9to5Mac. Filled in for you when you share an article.</span></label>
+      <input type="text" id="x-card-source" autocomplete="off" maxlength="60">
       <p id="x-card-note" class="admin-hint x-card-note" hidden></p>
     </div>
     <div class="x-preview-head">
@@ -3448,7 +3450,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
           <p class="up-hint icon-picker-auto" id="up-x-card-icon-auto"></p>
           <input type="text" id="up-x-card-emoji" class="up-search" autocomplete="off" maxlength="16" placeholder="Or type or paste any other emoji" aria-label="Any other emoji for the card">
           <span class="up-label">Card headline <span class="up-hint">the large text, e.g. 1,433 days. Leave empty for none.</span></span>
-          <input type="text" id="up-x-card-headline" class="up-search" autocomplete="off" maxlength="24" aria-label="Card headline">
+          <input type="text" id="up-x-card-headline" class="up-search" autocomplete="off" maxlength="60" aria-label="Card headline">
           <span class="up-label">Card line <span class="up-hint">the smaller text below it</span></span>
           <textarea id="up-x-card-line" class="up-fact-edit up-fact-edit--short" aria-label="Card line"></textarea>
         </div>
