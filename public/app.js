@@ -1028,7 +1028,7 @@
 
   // Must stay in step with relatedProductsHtml() in src/templates.js.
   // Without this the live refresh wiped the family section off the page.
-  function relatedProductsHtmlJS(product, productsBySlug) {
+  function relatedProductsHtmlJS(product, productsBySlug, jumpToHistory) {
     if (!productsBySlug) return '';
     var siblings = Object.keys(productsBySlug)
       .map(function (k) { return productsBySlug[k]; })
@@ -1041,7 +1041,8 @@
     if (!siblings.length) return '';
     var rows = siblings.map(function (p) { return cardHtmlJS(p, p.discontinued ? null : computeStatusJS(p)); }).join('');
     var cat = product.category || 'this category';
-    return '<section class="related-section"><h2>More in ' + escapeHtmlJS(cat) + '</h2>' +
+    return '<section class="related-section"><div class="related-head"><h2>More in ' + escapeHtmlJS(cat) + '</h2>' +
+      (jumpToHistory ? '<a class="jump-pill" href="#release-history">Release history <span aria-hidden="true">&darr;</span></a>' : '') + '</div>' +
       '<div class="card-grid product-list related-list">' + rows + '</div>' +
       '<p class="see-all"><a class="intro-cta" href="/categories/' + slugifyJS(product.category || 'other') + '/">All ' +
       escapeHtmlJS(product.category || 'products') + ' &rarr;</a></p></section>';
@@ -1156,11 +1157,12 @@
         '</div>' +
       '</div>' +
       (product.rumor_note ? '<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">' + sanitizeRichTextJS(product.rumor_note) + '</div></div>' : '') +
-      releaseHistorySection +
-      // Must stay in step with src/templates.js: one generation means the
-      // table only repeats the tiles and the timeline.
+      // Must stay in step with productPage() in src/templates.js: more in
+      // the family first, then its release history.
+      relatedProductsHtmlJS(product, productsBySlug, !!releaseHistorySection) +
+      (releaseHistorySection ? '<div id="release-history" class="category-timeline-section">' + releaseHistorySection + '</div>' : '') +
+      // One generation means the table only repeats the tiles and the timeline.
       (productGenerationsJS(product).length < 2 ? '' : generationsSectionHtmlJS(product)) +
-      relatedProductsHtmlJS(product, productsBySlug) +
       (relatedPhotos.length ? '<h2>From the gallery</h2><div class="gallery-strip">' + relatedPhotos.map(galleryStripItemHtmlJS).join('') + '</div>' : '') +
       '<p class="report-line"><a class="report-link" href="/contact/?topic=Correction&page=' +
         encodeURIComponent(product.name) + '&url=' + encodeURIComponent('/products/' + product.slug + '/') +
@@ -2006,15 +2008,16 @@
     });
   }
 
-  // "Release history" on a family page: a smooth scroll down to it.
-  document.querySelectorAll('.jump-pill').forEach(function (link) {
-    link.addEventListener('click', function (e) {
-      var target = document.querySelector(link.getAttribute('href'));
-      if (!target) return;
-      e.preventDefault();
-      var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      target.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
-    });
+  // "Release history" pills: a smooth scroll down to the timeline. One
+  // listener for the page, so pills the live refresh redraws work too.
+  document.addEventListener('click', function (e) {
+    var link = e.target.closest ? e.target.closest('.jump-pill') : null;
+    if (!link) return;
+    var target = document.querySelector(link.getAttribute('href'));
+    if (!target) return;
+    e.preventDefault();
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
   });
 
   revealAdminEditLinks(document.querySelectorAll('.admin-edit-link'));
