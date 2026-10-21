@@ -2019,7 +2019,8 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid product-list" id="grid" data-mode="discontinued">
   ${items.map((p) => cardHtml(p, null)).join('\n')}
-</div>`
+</div>
+<div id="pagination" class="pagination"></div>`
     : `
 <h1>${pageHeading(pageContent, 'Discontinued products')}</h1>
 <p class="page-intro">No discontinued products yet.</p>`;
