@@ -408,7 +408,9 @@
   // best guess from the text, for the writer to keep or change.
   // Links say nothing the card should show: a date in a MacRumors
   // address ("/2026/10/18/") was being read as the card's big figure.
-  const withoutLinks = (text) => String(text || '').replace(/https?:\/\/\S+/gi, ' ').replace(/[ \t]+/g, ' ').trim();
+  // Nor do @names: "via @9to5mac" was becoming a headline of "9".
+  const withoutLinks = (text) => String(text || '').replace(/https?:\/\/\S+/gi, ' ')
+    .replace(/(^|\s)(?:via\s+)?@\w+/gi, ' ').replace(/[ \t]+/g, ' ').trim();
 
   function cardGuess(text) {
     text = withoutLinks(text);
@@ -542,7 +544,8 @@
     if (own) {
       subject.big = cardHeadline(fields.headline);
       subject.caption = String(fields.line || '').trim();
-      subject.sub = '';
+      // Small text under the line, e.g. "Source: 9to5Mac".
+      subject.sub = String(fields.source || '').trim();
       if (fields.title !== undefined) subject.title = String(fields.title || '').trim();
       // The icon: 'auto' (the product's or topic's), a topic icon by
       // name, or anything else typed, drawn as an emoji.
@@ -648,29 +651,37 @@
     // The right-hand column has the card to itself down to here (the
     // logo sits bottom-left, under the tile), so no text can meet it.
     const BOTTOM = H - 48;
+    // A source line ("Source: 9to5Mac") keeps its own room at the bottom.
+    const SUB_ROOM = subject.sub ? 44 : 0;
+    const TEXT_BOTTOM = BOTTOM - SUB_ROOM;
     ctx.fillStyle = '#ffffff';
-    let y = subject.title ? fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2, BOTTOM) : ty - 8;
+    let y = subject.title ? fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2, TEXT_BOTTOM) : ty - 8;
     if (subject.big) {
       ctx.fillStyle = sunsetGradient(ctx, cx, 0, cx + cw, 0, SUNSET_WARM);
       ctx.fillStyle = '#ffd59a';
-      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', 150, 72, 1, BOTTOM);
+      // A figure ("20", "1,000,000") stays one big line; a short headline
+      // ("Limited to 2 per customer") takes two, smaller, rather than
+      // being cut off.
+      fitText.cut = false;
+      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', 150, 48, 2, TEXT_BOTTOM);
+      lineCut = fitText.cut;
     } else if (!own) {
       // No figure: the label says it all, in big type.
       ctx.fillStyle = '#ffd59a';
-      y = fitText(ctx, 'Did you know?', cx, y + 4, cw, '800', 96, 60, 1, BOTTOM);
+      y = fitText(ctx, 'Did you know?', cx, y + 4, cw, '800', 96, 60, 1, TEXT_BOTTOM);
     }
     ctx.fillStyle = '#ffffff';
     if (subject.caption) {
       fitText.cut = false;
       // With no headline, the line takes its space, in larger type.
       y = own && !subject.big
-        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', 58, 38, 5, BOTTOM)
-        : fitText(ctx, subject.caption, cx, y, cw, '700', 46, 34, 4, BOTTOM);
-      lineCut = fitText.cut;
+        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', 58, 38, 5, TEXT_BOTTOM)
+        : fitText(ctx, subject.caption, cx, y, cw, '700', 46, 34, 4, TEXT_BOTTOM);
+      lineCut = lineCut || fitText.cut;
     }
-    if (subject.sub && y + 2 + 28 <= BOTTOM) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
-      fitText(ctx, subject.sub, cx, y + 2, cw, '500', 28, 22, 1, BOTTOM);
+    if (subject.sub) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
+      fitText(ctx, subject.sub, cx, y + 6, cw, '600', 28, 22, 1, BOTTOM);
     }
 
     // Logo, small, bottom-left under the icon tile, with the web address
@@ -1186,21 +1197,36 @@
   // link, and it shows that link's preview image. So the card is saved
   // to storage and the post links to /c/<key>/<page>: a tiny page whose
   // preview is the card, which sends people straight on to <page>.
-  function xCardKey(text, label, fields) {
+  function xCardKey(text, label, fields, outsideLink) {
     // "card2": the subject card. Changing it gives every post a new card
     // address, so X never shows a card drawn in the old design. The
     // writer's own headline and line are part of it too.
     const own = fields ? '\n' + cardHeadline(fields.headline) + '\n' + String(fields.line || '').trim() +
-      (fields.title !== undefined || fields.icon ? '\n' + String(fields.title || '').trim() + '\n' + String(fields.icon || 'auto').trim() : '') : '';
-    return factKey('card2\n' + String(label || '') + '\n' + String(text || '').trim() + own);
+      (fields.title !== undefined || fields.icon ? '\n' + String(fields.title || '').trim() + '\n' + String(fields.icon || 'auto').trim() : '') +
+      (String(fields.source || '').trim() ? '\nsource:' + String(fields.source).trim() : '') : '';
+    // A card for another site's article forwards there, so the article is
+    // part of its address too.
+    const away = outsideLink ? '\nlink:' + outsideLink : '';
+    return factKey('card2\n' + String(label || '') + '\n' + String(text || '').trim() + own + away);
   }
 
-  async function uploadXCard(client, text, label, fields) {
-    const key = xCardKey(text, label, fields);
+  // outsideLink: an article on another site the card should open. It is
+  // saved beside the image (x-cards/<key>.json), and the card page
+  // (netlify/functions/card.mjs) forwards there; only cards made here
+  // can, so the card address can't be used to send people anywhere else.
+  async function uploadXCard(client, text, label, fields, outsideLink) {
+    const key = xCardKey(text, label, fields, outsideLink);
     const file = await factImageFile(String(text || '').trim(), label, fields);
     if (!file) return null;
-    const { error } = await client.storage.from(CARD_BUCKET).upload('x-cards/' + key + '.png', file, { contentType: 'image/png' });
-    if (error && !(/exist|duplicate/i.test(error.message || '') || error.statusCode === '409')) return null;
+    const bucket = client.storage.from(CARD_BUCKET);
+    const { error } = await bucket.upload('x-cards/' + key + '.png', file, { contentType: 'image/png' });
+    const exists = (e) => /exist|duplicate/i.test(e.message || '') || e.statusCode === '409';
+    if (error && !exists(error)) return null;
+    if (outsideLink) {
+      const json = new Blob([JSON.stringify({ link: outsideLink })], { type: 'application/json' });
+      const saved = await bucket.upload('x-cards/' + key + '.json', json, { contentType: 'application/json' });
+      if (saved.error && !exists(saved.error)) return null;
+    }
     return key;
   }
 
@@ -1217,13 +1243,18 @@
 
   // Opens a card link the way X will, before it's posted: the card page
   // must load and name this card, and the card image must load.
-  async function checkXCardLink(origin, key) {
+  async function checkXCardLink(origin, key, outsideLink) {
     try {
       const res = await fetch(origin + '/c/' + key + '/', { cache: 'no-store' });
       if (!res.ok) return { ok: false, reason: 'the card page answered ' + res.status };
       const html = await res.text();
       const m = html.match(/<meta property="og:image" content="([^"]+)"/);
       if (!m || m[1].indexOf('x-cards/' + key) === -1) return { ok: false, reason: 'the card page doesn\u2019t show this card' };
+      // For another site's article, the card must open that article.
+      if (outsideLink) {
+        const c = html.match(/<link rel="canonical" href="([^"]+)"/);
+        if (!c || c[1].replace(/&amp;/g, '&') !== outsideLink) return { ok: false, reason: 'the card would open Apple Sunset, not the article' };
+      }
       const img = await loadImage(m[1].replace(/&amp;/g, '&') + '?check=' + Date.now(), true);
       if (!img) return { ok: false, reason: 'the card image didn\u2019t load' };
       return { ok: true, reason: '' };
