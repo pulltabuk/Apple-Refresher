@@ -2194,7 +2194,7 @@ ${!pageContent || pageContent.show_stats !== false ? categoryStatsSentence(categ
 </div>
 <div class="filter-row">
   ${filterBar('status', STATUS_VALUES, STATUS_LABELS, statusCounts, items.length)}
-  ${timelinePoints.length ? '<a class="jump-pill" href="#category-timeline-section">Release history <span aria-hidden="true">&darr;</span></a>' : ''}
+  ${timelinePoints.length ? jumpPillHtml('#category-timeline-section') : ''}
 </div>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 ${leagueTableHtml(items, category)}
@@ -2234,7 +2234,7 @@ function breadcrumbsHtml(trail) {
 
 // Other products in the same family, so a page is never a dead end for
 // a reader or for a crawler.
-function relatedProductsHtml(product, productsBySlug, statusBySlug) {
+function relatedProductsHtml(product, productsBySlug, statusBySlug, jumpToHistory) {
   if (!productsBySlug) return '';
   const siblings = Object.keys(productsBySlug)
     .map((slug) => productsBySlug[slug])
@@ -2247,10 +2247,16 @@ function relatedProductsHtml(product, productsBySlug, statusBySlug) {
   if (!siblings.length) return '';
   const rows = siblings.map((p) => cardHtml(p, statusBySlug ? statusBySlug[p.slug] : null)).join('\n');
   return `<section class="related-section">
-    <h2>More in ${escapeHtml(product.category || 'this category')}</h2>
+    <div class="related-head"><h2>More in ${escapeHtml(product.category || 'this category')}</h2>${jumpToHistory ? jumpPillHtml('#release-history') : ''}</div>
     <div class="card-grid product-list related-list">${rows}</div>
     <p class="see-all"><a class="intro-cta" href="/categories/${slugify(product.category || 'other')}/">All ${escapeHtml(product.category || 'products')} &rarr;</a></p>
   </section>`;
+}
+
+// "Release history" pill: a jump down the page to the timeline, used on
+// family pages (beside the filters) and product pages (beside "More in").
+function jumpPillHtml(href) {
+  return `<a class="jump-pill" href="${href}">Release history <span aria-hidden="true">&darr;</span></a>`;
 }
 
 function keyFact(label, value) {
@@ -2517,11 +2523,11 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
 
   ${product.rumor_note ? `<div class="callout"><p class="callout-label">Notes</p><div class="callout-body">${sanitizeRichText(product.rumor_note, siteUrl)}</div></div>` : ''}
 
-  ${releaseHistorySection}
+  ${relatedProductsHtml(product, productsBySlug, statusBySlug, !!releaseHistorySection)}
+
+  ${releaseHistorySection ? `<div id="release-history" class="category-timeline-section">${releaseHistorySection}</div>` : ''}
 
   ${timelineCoversOnlyThisProduct ? '' : generationsSectionHtml(product)}
-
-  ${relatedProductsHtml(product, productsBySlug, statusBySlug)}
 
   ${relatedPhotos.length ? `<h2>From the gallery</h2>
   <div class="gallery-strip">
@@ -2974,6 +2980,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
           <label>Or link to a video<input type="url" id="video_link" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off"></label>
           <p class="admin-hint">YouTube and Vimeo play right on the product page. A link anywhere else shows as &ldquo;Watch on &hellip;&rdquo; in the details.</p>
+          <p id="video-error" class="form-error"></p>
           <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
         </section>
 

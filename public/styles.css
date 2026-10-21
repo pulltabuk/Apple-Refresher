@@ -1668,6 +1668,10 @@ label.admin-btn { cursor: pointer; color: #fff; }
 /* ---------- More in this family ---------- */
 .related-section { margin: 2rem 0; }
 .related-section h2 { margin-bottom: 0.75rem; }
+/* "More in" with the Release history pill beside it */
+.related-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 0.75rem; }
+.related-head h2 { margin: 0; }
+.related-head .jump-pill { margin-left: 0; }
 .related-section .related-list { margin-top: 0; }
 
 /* Notes: a comfortable reading measure */

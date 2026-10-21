@@ -2913,7 +2913,7 @@
   }
 
   function clearFormErrors() {
-    ['family-error', 'name-error', 'discontinued-error', 'generation-add-error'].forEach((id) => {
+    ['family-error', 'name-error', 'discontinued-error', 'generation-add-error', 'video-error'].forEach((id) => {
       document.getElementById(id).textContent = '';
     });
   }
@@ -3337,6 +3337,11 @@
       if (pendingGenerationDate && pendingGenerationDate !== carriedDate && !alreadyRecorded(pendingGenerationDate)) {
         document.getElementById('generation-add-error').textContent = 'You picked a date but haven\u2019t added it yet. Tap "+ Add", or clear the date.';
         firstError = firstError || document.getElementById('step-generations');
+      }
+      // Never drop a video link without saying so.
+      if (currentVideoUrl && !window.FactsKit.videoInfo(currentVideoUrl)) {
+        document.getElementById('video-error').textContent = 'That video link doesn\u2019t look right. Paste the full address from YouTube, Vimeo or the video\u2019s page, or clear the box.';
+        firstError = firstError || document.getElementById('step-extras');
       }
       if (firstError) {
         firstError.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -3816,10 +3821,25 @@
     return data.publicUrl;
   }
 
-  if (videoLinkEl) videoLinkEl.addEventListener('input', () => {
-    currentVideoUrl = videoLinkEl.value.trim() || null;
-    renderVideoStatus();
-  });
+  // A link pasted without its https:// ("youtube.com/watch?v=…",
+  // "www.youtube.com/…") was saved as nothing at all; it gets one.
+  function fullLink(value) {
+    const t = String(value || '').trim();
+    if (!t || /^https?:\/\//i.test(t)) return t;
+    if (/^\/\//.test(t)) return 'https:' + t;
+    if (/^[a-z0-9-]+(\.[a-z0-9-]+)+(?:[/?#]|$)/i.test(t)) return 'https://' + t;
+    return t;
+  }
+  if (videoLinkEl) {
+    videoLinkEl.addEventListener('input', () => {
+      currentVideoUrl = fullLink(videoLinkEl.value) || null;
+      document.getElementById('video-error').textContent = '';
+      renderVideoStatus();
+    });
+    videoLinkEl.addEventListener('blur', () => {
+      if (currentVideoUrl && !isUploadedVideo(currentVideoUrl)) videoLinkEl.value = currentVideoUrl;
+    });
+  }
 
   document.getElementById('video-upload').addEventListener('change', async (e) => {
     const file = e.target.files[0];
