@@ -998,8 +998,11 @@
     if (!statusInfo) return '';
     var info = badgeDaysInfoJS(product, statusInfo);
     if (info.days < 0) {
+      // Must match heroStatHtml() in src/templates.js; productCountdown()
+      // below fills in and ticks the clock.
       var due = (product.refresh_history || []).slice().sort().pop();
-      return '<p class="days-hero days-hero--upcoming"><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">' + (due ? formatDateJS(due) : 'soon') + '</span></p>';
+      return '<p class="days-hero days-hero--upcoming"' + (due ? ' data-product-countdown="' + due + '"' : '') + '><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">' + (due ? formatDateJS(due) : 'soon') + '</span>' +
+        (due ? '<span class="product-countdown-clock days-hero-clock" data-product-countdown-clock></span>' : '') + '</p>';
     }
     var bar = '';
     if (cycleDays && cycleDays.days > 0) {
