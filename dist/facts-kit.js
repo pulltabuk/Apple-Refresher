@@ -651,16 +651,17 @@
     // The right-hand column has the card to itself down to here (the
     // logo sits bottom-left, under the tile), so no text can meet it.
     const BOTTOM = H - 48;
-    // The footer row: the logo and web address on the left, and on the
-    // right, level with them, a source line ("Source: 9to5Mac") when there
-    // is one, so it reads as a credit, well clear of the text above.
     const LOGO = 76;
     const LOGO_Y = H - 50 - LOGO;
-    const FOOT_BASELINE = LOGO_Y + LOGO / 2 + 9;
+    // A source line ("Source: 9to5Mac") sits under the text with a clear
+    // gap, as part of the same block, and keeps its room at the bottom.
     const SUB_SIZE = 28;
-    const TEXT_BOTTOM = subject.sub ? FOOT_BASELINE - SUB_SIZE - 26 : BOTTOM;
+    const SUB_GAP = 18;
+    const TEXT_BOTTOM = subject.sub ? BOTTOM - SUB_SIZE - SUB_GAP : BOTTOM;
+    // Space between the title ("iPhone Duo") and what follows it.
+    const TITLE_GAP = 16;
     ctx.fillStyle = '#ffffff';
-    let y = subject.title ? fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2, TEXT_BOTTOM) : ty - 8;
+    let y = subject.title ? fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2, TEXT_BOTTOM) + TITLE_GAP : ty - 8;
     if (subject.big) {
       ctx.fillStyle = sunsetGradient(ctx, cx, 0, cx + cw, 0, SUNSET_WARM);
       ctx.fillStyle = '#ffd59a';
@@ -686,7 +687,7 @@
     }
     if (subject.sub) {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
-      fitText(ctx, subject.sub, cx, FOOT_BASELINE - SUB_SIZE, cw, '600', SUB_SIZE, 22, 1, BOTTOM);
+      fitText(ctx, subject.sub, cx, y + SUB_GAP, cw, '600', SUB_SIZE, 22, 1, BOTTOM);
     }
 
     // Logo, small, bottom-left under the icon tile, with the web address
