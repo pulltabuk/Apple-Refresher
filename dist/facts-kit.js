@@ -651,9 +651,14 @@
     // The right-hand column has the card to itself down to here (the
     // logo sits bottom-left, under the tile), so no text can meet it.
     const BOTTOM = H - 48;
-    // A source line ("Source: 9to5Mac") keeps its own room at the bottom.
-    const SUB_ROOM = subject.sub ? 44 : 0;
-    const TEXT_BOTTOM = BOTTOM - SUB_ROOM;
+    // The footer row: the logo and web address on the left, and on the
+    // right, level with them, a source line ("Source: 9to5Mac") when there
+    // is one, so it reads as a credit, well clear of the text above.
+    const LOGO = 76;
+    const LOGO_Y = H - 50 - LOGO;
+    const FOOT_BASELINE = LOGO_Y + LOGO / 2 + 9;
+    const SUB_SIZE = 28;
+    const TEXT_BOTTOM = subject.sub ? FOOT_BASELINE - SUB_SIZE - 26 : BOTTOM;
     ctx.fillStyle = '#ffffff';
     let y = subject.title ? fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2, TEXT_BOTTOM) : ty - 8;
     if (subject.big) {
@@ -681,15 +686,15 @@
     }
     if (subject.sub) {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
-      fitText(ctx, subject.sub, cx, y + 6, cw, '600', 28, 22, 1, BOTTOM);
+      fitText(ctx, subject.sub, cx, FOOT_BASELINE - SUB_SIZE, cw, '600', SUB_SIZE, 22, 1, BOTTOM);
     }
 
     // Logo, small, bottom-left under the icon tile, with the web address
     // beside it. It used to sit bottom-right, where a three-line fact ran
     // into it.
-    const size2 = 76;
+    const size2 = LOGO;
     const lx = PAD;
-    const ly = H - 50 - size2;
+    const ly = LOGO_Y;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.font = '500 26px ' + FONT;
     ctx.fillText('applesunset.com', logo ? lx + size2 + 20 : PAD, logo ? ly + size2 / 2 + 9 : H - 60);
