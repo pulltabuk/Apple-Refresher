@@ -222,19 +222,28 @@
     ctx.closePath();
   }
 
+  // Wraps to maxWidth, keeping the writer's own line breaks: each line
+  // typed (a list item, say) starts a new line. lines.starts holds the
+  // index of each typed line's first wrapped line, for the gap between.
   function wrapLines(ctx, text, maxWidth) {
     const lines = [];
-    let line = '';
-    text.split(/\s+/).filter(Boolean).forEach((word) => {
-      const test = line ? line + ' ' + word : word;
-      if (ctx.measureText(test).width > maxWidth && line) {
-        lines.push(line);
-        line = word;
-      } else {
-        line = test;
-      }
+    lines.starts = [];
+    String(text || '').split(/\n/).forEach((para) => {
+      const words = para.split(/[ \t\r]+/).filter(Boolean);
+      if (!words.length) return;
+      lines.starts.push(lines.length);
+      let line = '';
+      words.forEach((word) => {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = test;
+        }
+      });
+      if (line) lines.push(line);
     });
-    if (line) lines.push(line);
     return lines;
   }
 
@@ -412,8 +421,19 @@
   const withoutLinks = (text) => String(text || '').replace(/https?:\/\/\S+/gi, ' ')
     .replace(/(^|\s)(?:via\s+)?@\w+/gi, ' ').replace(/[ \t]+/g, ' ').trim();
 
+  // A post that is a list ("Coming up 📅" then a line per date): its
+  // items, one per line, without the opening line or a closing question.
+  const ITEM_RE = /^(?:[-*\u2022\u25aa\u2013]\s|\d{1,2}[.)]\s|\p{Extended_Pictographic}|\d{1,2}\s+[A-Za-z]{3,})/u;
+  function listItems(text) {
+    const lines = String(text || '').split('\n').map((l) => l.trim()).filter(Boolean);
+    const items = lines.filter((l) => ITEM_RE.test(l) && !/^#/.test(l));
+    return items.length >= 2 ? items : null;
+  }
+
   function cardGuess(text) {
     text = withoutLinks(text);
+    const items = listItems(text);
+    if (items) return { headline: '', line: items.join('\n'), title: '', icon: 'auto' };
     const subject = cardSubject(text);
     const fig = textFigure(text);
     return { headline: cardHeadline(subject.big), line: (fig && fig.big === subject.big && fig.full) || subject.caption || '', title: subject.title || '', icon: 'auto' };
@@ -467,15 +487,24 @@
   // font until it fits: no line wider than maxWidth (a long figure such
   // as "1,000,000" is one word, so it has to shrink rather than wrap) and
   // nothing below maxBottom when given. Returns the y below the last line.
-  function fitText(ctx, text, x, y, maxWidth, weight, size, minSize, maxLines, maxBottom) {
+  // keepWhole: for a list, keep shrinking (down to that size) until every
+  // typed line fits on one line, before letting any wrap.
+  function fitText(ctx, text, x, y, maxWidth, weight, size, minSize, maxLines, maxBottom, keepWhole) {
     let lines;
     let s = size;
-    const bottomAt = (n, sz) => y + sz + (n - 1) * Math.round(sz * 1.18) + Math.round(sz * 0.3);
+    // A little extra space between typed lines (list items), so an item
+    // that wraps still reads as one.
+    let starts = [];
+    const gapsBefore = (n) => starts.filter((i) => i > 0 && i < n).length;
+    const gapOf = (sz) => Math.round(sz * 0.32);
+    const bottomAt = (n, sz) => y + sz + (n - 1) * Math.round(sz * 1.18) + gapsBefore(n) * gapOf(sz) + Math.round(sz * 0.3);
     for (;;) {
       ctx.font = weight + ' ' + s + 'px ' + FONT;
       lines = wrapLines(ctx, text, maxWidth);
+      starts = lines.starts || [];
       const widest = lines.reduce((w, l) => Math.max(w, ctx.measureText(l).width), 0);
-      const fits = lines.length <= maxLines && widest <= maxWidth && (!maxBottom || bottomAt(lines.length, s) <= maxBottom);
+      const whole = !keepWhole || s <= keepWhole || lines.length === starts.length;
+      const fits = whole && lines.length <= maxLines && widest <= maxWidth && (!maxBottom || bottomAt(lines.length, s) <= maxBottom);
       if (fits || s <= minSize) break;
       s -= 2;
     }
@@ -493,8 +522,8 @@
     const lh = Math.round(s * 1.18);
     // maxWidth here squeezes a word that is still too wide at the
     // smallest size, rather than letting it run off the card.
-    lines.forEach((line, i) => ctx.fillText(line, x, y + s + i * lh, maxWidth));
-    return y + s + (lines.length - 1) * lh + Math.round(s * 0.3);
+    lines.forEach((line, i) => ctx.fillText(line, x, y + s + i * lh + gapsBefore(i + 1) * gapOf(s), maxWidth));
+    return bottomAt(lines.length, s);
   }
 
   // --- A product's video, from its one video_url: an uploaded file plays
@@ -665,11 +694,12 @@
     if (subject.big) {
       ctx.fillStyle = sunsetGradient(ctx, cx, 0, cx + cw, 0, SUNSET_WARM);
       ctx.fillStyle = '#ffd59a';
-      // A figure ("20", "1,000,000") stays one big line; a short headline
-      // ("Limited to 2 per customer") takes two, smaller, rather than
-      // being cut off.
+      // A figure ("20", "1,000,000") stays one big line; a headline in
+      // words ("Limited to 2 per customer") is set smaller and takes up to
+      // two lines rather than being cut off or crowding out the line.
+      const wordy = /\s/.test(subject.big.trim()) && !/^[$\u00a3\u20ac]?\d/.test(subject.big.trim());
       fitText.cut = false;
-      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', 150, 48, 2, TEXT_BOTTOM);
+      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', wordy ? 84 : 150, 48, 2, TEXT_BOTTOM);
       lineCut = fitText.cut;
     } else if (!own) {
       // No figure: the label says it all, in big type.
@@ -680,9 +710,10 @@
     if (subject.caption) {
       fitText.cut = false;
       // With no headline, the line takes its space, in larger type.
+      const listy = /\n\s*\S/.test(subject.caption);
       y = own && !subject.big
-        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', 58, 38, 5, TEXT_BOTTOM)
-        : fitText(ctx, subject.caption, cx, y, cw, '700', 46, 34, 4, TEXT_BOTTOM);
+        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', listy ? 44 : 58, listy ? 26 : 38, listy ? 10 : 5, TEXT_BOTTOM, listy ? 32 : 0)
+        : fitText(ctx, subject.caption, cx, y + (listy ? 6 : 0), cw, '700', listy ? 40 : 46, listy ? 24 : 34, listy ? 9 : 4, TEXT_BOTTOM, listy ? 28 : 0);
       lineCut = lineCut || fitText.cut;
     }
     if (subject.sub) {

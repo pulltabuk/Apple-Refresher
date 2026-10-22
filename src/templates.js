@@ -3177,8 +3177,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <input type="text" id="x-card-emoji" autocomplete="off" maxlength="16" placeholder="Or type or paste any other emoji" aria-label="Any other emoji for the card">
       <label for="x-card-headline">Card headline <span class="admin-hint">the large text: a figure like 1,433 days or 2014, or a short headline (it wraps onto two lines). Leave empty for none.</span></label>
       <input type="text" id="x-card-headline" autocomplete="off" maxlength="60">
-      <label for="x-card-line">Card line <span class="admin-hint">the smaller text below it</span></label>
-      <textarea id="x-card-line" rows="2"></textarea>
+      <label for="x-card-line">Card line <span class="admin-hint">the smaller text below it. Press Return for a new line, e.g. to make a list; each line starts on its own.</span></label>
+      <textarea id="x-card-line" rows="4"></textarea>
       <label for="x-card-source">Card source <span class="admin-hint">small text at the bottom, e.g. Source: 9to5Mac. Filled in for you when you share an article.</span></label>
       <input type="text" id="x-card-source" autocomplete="off" maxlength="60">
       <p id="x-card-note" class="admin-hint x-card-note" hidden></p>
