@@ -1532,6 +1532,14 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .segmented-option--off span { text-decoration: line-through; }
 .admin-screen-title { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 20px; }
 .admin-screen-family { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; color: var(--text-secondary); font-weight: 600; }
+.admin-sort-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -4px 0 14px; }
+.admin-sort-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-right: 2px; }
+.admin-sort-btn { padding: 5px 12px; border: 1px solid #e5ded2; border-radius: 999px; background: #fff; font: inherit; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; }
+.admin-sort-btn:hover { border-color: var(--accent); }
+.admin-sort-btn.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.admin-line-ended { margin: -4px 0 14px; padding: 8px 12px; border-radius: 10px; background: #f3f0ea; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.admin-line-ended[hidden] { display: none; }
+.line-card-last { align-self: flex-start; margin-top: 4px; padding: 2px 8px; border-radius: 999px; background: #3a3530; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
 #products-screen .admin-back-link { margin-bottom: 10px; display: inline-block; }
 .choice-cards { display: grid; gap: 8px; }
 .choice-card { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; background: #fff; }
