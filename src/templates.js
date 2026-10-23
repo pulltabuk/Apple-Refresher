@@ -1726,7 +1726,15 @@ function countdownHtml(countdown) {
     // given (e.g. "1:30pm PT"), else 8am UK on the day.
     const target = item.time ? FactsKit.eventStartMs({ event_date: item.date, event_time: item.time }) : Date.parse(item.date + 'T07:00:00Z');
     const days = Math.max(0, Math.floor((target - Date.now()) / 86400000));
-    return `<a class="countdown${/^\/events\//.test(item.href) ? ' countdown--event' : ''}" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''}>
+    // What the tile says once its moment arrives (app.js switches to it,
+    // e.g. in a tab left open overnight; the next build drops the tile).
+    const isEvent = /^\/events\//.test(item.href);
+    const done = item.product
+      ? { kicker: 'Out today', text: '\ud83c\udf89 Available now', date: `Released ${formatDate(item.date)}` }
+      : isEvent
+      ? { kicker: 'Happening now', text: 'Live now', date: '' }
+      : { kicker: 'Results day', text: 'Results are out', date: '' };
+    return `<a class="countdown${isEvent ? ' countdown--event' : ''}" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
     <span class="countdown-label">${escapeHtml(item.kicker || 'Counting down to')}</span>
     ${item.product
       // A product counts down with its icon, as on the featured tile.
