@@ -3110,3 +3110,11 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-text--calm { justify-content: center; }
   .intro-hero-text--calm > .earnings-next { margin-top: 1.25rem; align-self: stretch; }
 }
+/* Side by side, the finished ("Out today") tile keeps its own height and
+   sits centred in the space between the description and the earnings
+   line, rather than stretching down onto the earnings line. */
+@media (min-width: 901px) {
+  .intro-hero-text:has(> .countdown--done) { justify-content: center; }
+  .intro-hero-text > .countdown.countdown--done { flex: 0 0 auto; margin: 0 0 24px; }
+  .intro-hero-text > .countdown.countdown--done + .earnings-next { margin-top: 0; }
+}
