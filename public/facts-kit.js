@@ -1782,8 +1782,8 @@
     const start = eventStartMs(event);
     const t = now == null ? Date.now() : now;
     if (isNaN(start) || t >= start) return '';
-    const uk = eventUkTime(event);
-    return '<div class="event-detail-countdown" data-countdown-box><p class="event-detail-countdown-label">Starts in' + (uk ? ' <span>(' + escapeHtml(uk) + ')</span>' : '') + '</p>' +
+    // The UK time is on the page's time pill, just above.
+    return '<div class="event-detail-countdown" data-countdown-box><p class="event-detail-countdown-label">Starts in</p>' +
       '<div class="event-hero-countdown" data-countdown-at="' + start + '" role="timer" aria-label="Time until the event">' + eventClockUnits(start - t) + '</div></div>';
   }
 
