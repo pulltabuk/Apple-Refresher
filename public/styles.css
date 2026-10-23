@@ -3202,3 +3202,20 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 
 /* A key fact quoted from the family ("across iPhone") rather than the product */
 .key-fact-note { display: block; margin-top: 3px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+
+/* At a glance, Apple's latest release: "New today" sized to fit the
+   tile, the product pill with a "+1" for others out the same day, and
+   the date underneath. */
+.site-stat-num.site-stat-num--word { white-space: normal; line-height: 1.05; }
+.intro-hero-cards .site-stat-num.site-stat-num--word { font-size: 26px; }
+@media (min-width: 701px) {
+  .intro-hero-cards .site-stat-num.site-stat-num--word { font-size: 36px; }
+}
+.site-stat .site-stat-sub { display: inline-flex; align-items: baseline; gap: 5px; overflow: visible; }
+.site-stat-sub-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.site-stat-more { flex: none; font-weight: 800; opacity: 0.75; }
+.site-stat-date { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+@media (max-width: 360px) {
+  .site-stat-date { font-size: 11px; white-space: nowrap; }
+  .intro-hero-cards .site-stat .site-stat-sub { font-size: 12px; padding: 3px 8px; }
+}
