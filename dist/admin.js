@@ -1962,6 +1962,115 @@
     editProduct(id, options);
   }
 
+  // The free featured slot being filled from the strip (1-3), if any.
+  let slotPickerFor = null;
+  let slotPickerQuery = '';
+  let focusSlotPicker = false;
+
+  // The picker under the strip: products on sale and not featured, newest
+  // release first, with a search box. Picking one puts it in the slot.
+  function slotPicker(slot, today) {
+    const box = document.createElement('div');
+    box.className = 'slot-picker';
+    const head = document.createElement('div');
+    head.className = 'slot-picker-head';
+    const title = document.createElement('strong');
+    title.textContent = 'Fill slot ' + slot + (slot === 1 ? ' (the big tile)' : '');
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'slot-picker-close';
+    close.textContent = '\u00d7';
+    close.title = 'Close';
+    close.setAttribute('aria-label', 'Close');
+    const shut = () => { slotPickerFor = null; renderHomepageStrip(); };
+    close.addEventListener('click', shut);
+    head.appendChild(title);
+    head.appendChild(close);
+    const input = document.createElement('input');
+    input.type = 'search';
+    input.className = 'admin-search-input slot-picker-search';
+    input.placeholder = 'Search products on sale\u2026';
+    input.setAttribute('aria-label', 'Search products to feature');
+    input.autocomplete = 'off';
+    input.value = slotPickerQuery;
+    const list = document.createElement('div');
+    list.className = 'slot-picker-list';
+    const newest = (p) => (p.refresh_history || []).slice().sort().pop() || '';
+    const candidates = cachedProducts
+      .filter((p) => !p.discontinued && !p.featured)
+      .sort((a, b) => newest(b).localeCompare(newest(a)) || a.name.localeCompare(b.name));
+    function fill() {
+      const words = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const matches = candidates
+        .filter((p) => words.every((w) => (p.name + ' ' + (p.category || '')).toLowerCase().includes(w)))
+        .slice(0, words.length ? 12 : 8);
+      list.innerHTML = '';
+      if (!matches.length) {
+        const none = document.createElement('p');
+        none.className = 'slot-picker-empty';
+        none.textContent = 'No products on sale match.';
+        list.appendChild(none);
+        return;
+      }
+      matches.forEach((p) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'slot-picker-item';
+        const icon = document.createElement('span');
+        icon.className = 'slot-picker-icon';
+        icon.innerHTML = iconHtml(p.category, p.icon_url, 26);
+        const text = document.createElement('span');
+        text.className = 'slot-picker-text';
+        const name = document.createElement('span');
+        name.className = 'slot-picker-name';
+        name.textContent = p.name;
+        const meta = document.createElement('span');
+        meta.className = 'slot-picker-meta';
+        const last = newest(p);
+        meta.textContent = [p.category, last ? (last > today ? 'Coming ' : 'Released ') + formatAdminDate(last) : ''].filter(Boolean).join(' \u00b7 ');
+        text.appendChild(name);
+        text.appendChild(meta);
+        item.appendChild(icon);
+        item.appendChild(text);
+        item.addEventListener('click', () => fillFeaturedSlot(p, slot, item));
+        list.appendChild(item);
+      });
+    }
+    input.addEventListener('input', () => { slotPickerQuery = input.value; fill(); });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); shut(); }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const first = list.querySelector('.slot-picker-item');
+        if (first) first.click();
+      }
+    });
+    fill();
+    box.appendChild(head);
+    box.appendChild(input);
+    box.appendChild(list);
+    // Only when just opened, so it never takes the cursor from elsewhere.
+    if (focusSlotPicker) {
+      focusSlotPicker = false;
+      setTimeout(() => input.focus(), 0);
+    }
+    return box;
+  }
+
+  async function fillFeaturedSlot(product, slot, button) {
+    if (button) button.disabled = true;
+    const result = await client.from('products').update({ featured: true }).eq('id', product.id);
+    if (result.error) {
+      window.alert('Failed to feature "' + product.name + '": ' + result.error.message);
+      if (button) button.disabled = false;
+      return;
+    }
+    await setFeaturedSlot(product.id, slot);
+    slotPickerFor = null;
+    slotPickerQuery = '';
+    loadProducts();
+  }
+
   // Top of the product lists: what the homepage shows right now, each
   // with an x to take it off, so nothing has to be hunted for.
   function renderHomepageStrip() {
@@ -2008,16 +2117,29 @@
       strip.appendChild(r);
     }
 
-    row('\u2605 Featured', featuredSlots().map((id, i) => {
+    const slots = featuredSlots();
+    row('\u2605 Featured', slots.map((id, i) => {
       const p = id && byId(id);
       if (!p) {
-        const empty = document.createElement('span');
-        empty.className = 'homepage-chip homepage-chip--empty';
-        empty.textContent = 'Slot ' + (i + 1) + ' free';
+        // A free slot opens a picker to fill it from here.
+        const empty = document.createElement('button');
+        empty.type = 'button';
+        empty.className = 'homepage-chip homepage-chip--empty homepage-chip--add' + (slotPickerFor === i + 1 ? ' is-open' : '');
+        empty.textContent = '+ Fill slot ' + (i + 1);
+        empty.title = 'Pick a product for slot ' + (i + 1) + (i === 0 ? ' (the big tile)' : '');
+        empty.setAttribute('aria-expanded', slotPickerFor === i + 1 ? 'true' : 'false');
+        empty.addEventListener('click', () => {
+          slotPickerFor = slotPickerFor === i + 1 ? null : i + 1;
+          slotPickerQuery = '';
+          focusSlotPicker = true;
+          renderHomepageStrip();
+        });
         return empty;
       }
       return chip((i + 1) + '. ' + p.name, p, 'Take ' + p.name + ' off the homepage', () => unfeature(p));
     }));
+    if (slotPickerFor && !slots[slotPickerFor - 1]) strip.appendChild(slotPicker(slotPickerFor, today));
+    else slotPickerFor = null;
     if (counting.length) {
       row('\u23f1 Countdown', counting.map((x) => chip(x.p.name + ' \u00b7 ' + formatAdminDate(x.due), x.p,
         'Take ' + x.p.name + ' out of the countdown', () => removeFromCountdown(x.p))));

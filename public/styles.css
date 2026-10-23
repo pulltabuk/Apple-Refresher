@@ -286,6 +286,23 @@ a { color: inherit; text-decoration: none; }
 .homepage-chip--empty { padding: 5px 12px; background: transparent; border-style: dashed; color: var(--text-secondary); }
 .homepage-chip--add { font: inherit; font-size: 13px; cursor: pointer; }
 .homepage-chip--add:hover { border-color: #b98a00; color: var(--text); background: #fff; }
+.homepage-chip--add.is-open { border-style: solid; border-color: #b98a00; color: var(--text); background: #fff; }
+.retire-check[hidden], .homepage-strip[hidden] { display: none; }
+/* Filling a free featured slot from the strip */
+.slot-picker { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; padding: 12px; border: 1px solid #e9cf73; border-radius: 12px; background: #fff; }
+.slot-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
+.slot-picker-close { border: 0; background: transparent; font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: 6px; color: var(--text-secondary); cursor: pointer; }
+.slot-picker-close:hover { background: #f3f0ea; color: var(--text); }
+.slot-picker-search { width: 100%; box-sizing: border-box; }
+.slot-picker-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.slot-picker-item { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 10px; border: 1px solid #ece6da; border-radius: 10px; background: #faf8f4; font: inherit; color: var(--text); text-align: left; cursor: pointer; }
+.slot-picker-item:hover, .slot-picker-item:focus-visible { border-color: var(--accent); background: #fff; }
+.slot-picker-item:disabled { opacity: 0.5; cursor: wait; }
+.slot-picker-icon { display: inline-grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 8px; background: #fff; border: 1px solid #ece6da; }
+.slot-picker-text { display: flex; flex-direction: column; min-width: 0; }
+.slot-picker-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-picker-meta { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-picker-empty { margin: 0; font-size: 13px; color: var(--text-secondary); }
 @media (max-width: 600px) {
   .homepage-strip-label { flex-basis: 100%; }
   .homepage-chip-x { padding: 0 12px 0 8px; font-size: 18px; }
@@ -3151,4 +3168,14 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .event-date-pills { grid-auto-flow: row; gap: 8px; }
   .event-date-pill { font-size: 16px; padding: 10px 14px; gap: 7px; }
   .event-date-pill svg { width: 18px; height: 18px; }
+}
+
+/* At a glance, "since the latest release": the product's name larger,
+   in an outlined pill. */
+.site-stat .site-stat-sub { flex: 0 0 auto; align-self: center; max-width: 100%; box-sizing: border-box; margin-top: 8px; padding: 4px 12px; border: 1.5px solid var(--accent); border-radius: 999px; background: #fff; color: var(--accent-dark); font-size: 15px; font-weight: 700; line-height: 1.25; }
+@media (max-width: 900px) {
+  .intro-hero-cards .site-stat .site-stat-sub { font-size: 14px; margin-top: 6px; padding: 3px 11px; }
+}
+@media (max-width: 420px) {
+  .intro-hero-cards .site-stat .site-stat-sub { font-size: 13px; padding: 3px 9px; }
 }
