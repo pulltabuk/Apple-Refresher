@@ -1327,7 +1327,10 @@
     return !!((mode === 'all' || mode === 'discontinued') && document.getElementById('pagination'));
   }
 
-  function applyFilters() {
+  // keepPage: true for a redraw (live refresh, or the page number from the
+  // address); anything else is the visitor changing what's shown, which
+  // starts again from page 1.
+  function applyFilters(keepPage) {
     var query = (searchInput ? searchInput.value : '').trim().toLowerCase();
     var visibleCount = 0;
     var paginated = isPaginatedGrid();
@@ -1361,12 +1364,53 @@
     if (noResults) noResults.style.display = visibleCount === 0 ? '' : 'none';
     applyOtherFamiliesJS(query, visibleCount);
     if (paginated) {
-      currentPage = 1;
+      if (keepPage !== true) {
+        currentPage = 1;
+        syncPageUrl(false);
+      }
       applyPagination();
     } else {
       renumberLeagueRanks();
     }
   }
+
+  // All products and Discontinued keep the page number (and on All
+  // products the Show filter) in the address, e.g. /products/?show=current
+  // &page=2, so Back steps through pages rather than leaving the list,
+  // and a link (the homepage's "on sale now" tile) can open a filter.
+  function pageFromUrl() {
+    var n = parseInt(new URLSearchParams(window.location.search).get('page'), 10);
+    return n > 1 ? n : 1;
+  }
+  function syncPageUrl(push) {
+    if (!isPaginatedGrid() || !window.history || !history.replaceState) return;
+    var params = new URLSearchParams(window.location.search);
+    if (currentPage > 1) params.set('page', String(currentPage)); else params.delete('page');
+    if (document.querySelector('.filter-bar[data-filter-key="status"]')) {
+      if (activeFilters.status && activeFilters.status !== 'all') params.set('show', activeFilters.status); else params.delete('show');
+    }
+    var qs = params.toString();
+    var url = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+    if (url === window.location.pathname + window.location.search + window.location.hash) return;
+    if (push) history.pushState({ page: currentPage }, '', url);
+    else history.replaceState(history.state, '', url);
+  }
+  // Sets the Show filter's buttons from ?show= (or back to All).
+  function statusFilterFromUrl() {
+    var bar = document.querySelector('.filter-bar[data-filter-key="status"]');
+    if (!bar) return;
+    var want = new URLSearchParams(window.location.search).get('show') || 'all';
+    var hit = Array.prototype.filter.call(bar.querySelectorAll('.filter-btn'), function (b) { return b.getAttribute('data-filter-value') === want; })[0];
+    if (!hit) return;
+    activeFilters.status = want;
+    bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.toggle('active', b === hit); });
+  }
+  window.addEventListener('popstate', function () {
+    if (!isPaginatedGrid()) return;
+    statusFilterFromUrl();
+    currentPage = pageFromUrl();
+    applyFilters(true);
+  });
 
   function updateStatusDivider() {
     var grid = document.getElementById('grid');
@@ -1471,9 +1515,12 @@
         if (val === 'prev') currentPage--;
         else if (val === 'next') currentPage++;
         else currentPage = parseInt(val, 10);
-        applyPagination();
+        // Up to the top of the list first, so that is where Back returns
+        // to on the page being left; then a history entry for this page.
         var gridEl = document.getElementById('grid');
-        if (gridEl) window.scrollTo({ top: Math.max(0, gridEl.getBoundingClientRect().top + window.scrollY - 100), behavior: 'smooth' });
+        if (gridEl) window.scrollTo(0, Math.max(0, gridEl.getBoundingClientRect().top + window.scrollY - 100));
+        syncPageUrl(true);
+        applyPagination();
       });
     });
   }
@@ -1556,6 +1603,7 @@
   }
 
   wireFilterBars();
+  if (isPaginatedGrid()) statusFilterFromUrl();
 
   // The mobile family picker drives the same buttons the desktop chips
   // use, so there is one source of truth for what is filtered.
@@ -1633,7 +1681,8 @@
   }
 
   if (searchInput) searchInput.addEventListener('input', applyFilters);
-  if (searchFromUrl || isPaginatedGrid()) applyFilters();
+  if (isPaginatedGrid()) currentPage = pageFromUrl();
+  if (searchFromUrl || isPaginatedGrid()) applyFilters(true);
 
   // --- Sort. Option values are "<attr>-<dir>": name sorts on the card's
   // name, anything else on a data-<attr> number. Cards missing that
@@ -1664,7 +1713,7 @@
     sortHeading.textContent = (value && SORT_HEADINGS[value]) || defaultSortHeading;
   }
 
-  function applySort() {
+  function applySort(keepPage) {
     updateSortHeading();
     var grid = document.getElementById('grid');
     if (!grid || !sortSelect || !sortSelect.value) return;
@@ -1695,7 +1744,10 @@
 
     items.forEach(function (item) { parent.appendChild(item); });
     if (isPaginatedGrid()) {
-      currentPage = 1;
+      if (keepPage !== true) {
+        currentPage = 1;
+        syncPageUrl(false);
+      }
       applyPagination();
     } else {
       renumberLeagueRanks();
@@ -1721,7 +1773,7 @@
       if (sortResetBtn) sortResetBtn.style.display = '';
     });
   }
-  applySort();
+  applySort(true);
 
   if (sortResetBtn) {
     sortResetBtn.addEventListener('click', function () {
@@ -1736,6 +1788,7 @@
       updateSortHeading();
       if (isPaginatedGrid()) {
         currentPage = 1;
+        syncPageUrl(false);
         applyPagination();
       } else {
         renumberLeagueRanks();
@@ -2145,7 +2198,7 @@
       '<div class="site-stats-head"><h2 class="site-stats-title">Apple Sunset at a glance</h2><span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span></div>' +
       '<div class="site-stats-row">' +
       stat('/products/', s.total, 'products tracked') +
-      stat('/products/', s.onSale, 'products on sale now') +
+      stat('/products/?show=current', s.onSale, 'products on sale now') +
       stat('/discontinued/', s.discontinued, 'products discontinued') +
       (s.latest ? stat('/products/' + escapeHtmlJS(s.latest.slug) + '/', s.latestDays === 0 ? 'Today' : s.latestDays + '<small> ' + (s.latestDays === 1 ? 'day' : 'days') + '</small>', 'since the latest release', '<span class="site-stat-sub">' + escapeHtmlJS(s.latest.name) + '</span>') : '') +
       '</div></div>';
@@ -2556,8 +2609,8 @@
         activeFilters[key] = value;
         bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.toggle('active', b === hit); });
       });
-      applySort();
-      applyFilters();
+      applySort(true);
+      applyFilters(true);
     }).catch(function () {});
   }
 
