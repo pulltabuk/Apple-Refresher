@@ -201,6 +201,13 @@
     return !n || n.toLowerCase() === 'other' ? 'Release history' : escapeHtmlJS(n) + ' release history';
   }
 
+  // Must match isEndOfLine() in src/templates.js.
+  function isEndOfLineJS(product, allProducts) {
+    if (!product || !product.last_in_line || !product.discontinued) return false;
+    var family = (product.category || '').trim().toLowerCase();
+    return !(allProducts || []).some(function (p) { return (p.category || '').trim().toLowerCase() === family && !p.discontinued; });
+  }
+
   function categoryTimelinePointsJS(product, allProducts) {
     var groupKey = normaliseGroupKeyJS(product.timeline_name || product.category);
     var sameCategory = (allProducts || []).filter(function (p) { return normaliseGroupKeyJS(p.timeline_name || p.category) === groupKey; });
@@ -247,7 +254,7 @@
 
     sameCategory.forEach(function (p) {
       if (p.discontinued && p.discontinued_date) {
-        points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name });
+        points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name, endOfLine: isEndOfLineJS(p, allProducts) });
       }
     });
     // Must stay in step with categoryTimelinePoints() in src/templates.js.
@@ -333,7 +340,8 @@
             // Must stay in step with src/templates.js.
             var tags = '<span class="tl-entry-type tl-entry-type--' + e.type + '">' +
               (e.type === 'refresh' ? 'Released' : e.label) + '</span>' +
-              (e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '');
+              (e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '') +
+              (e.endOfLine ? '<span class="tl-entry-type tl-entry-type--end">End of the line</span>' : '');
             return tags ? '<span class="tl-entry-tags">' + tags + '</span>' : '';
           })() + '</p>';
       }).join('');
@@ -873,7 +881,7 @@
     '</a>';
   }
 
-  function leagueRowHtmlJS(product, statusInfo, rank) {
+  function leagueRowHtmlJS(product, statusInfo, rank, endOfLine) {
     var status = statusKeyJS(product);
     var launch = launchDateJS(product);
     var days = statusInfo && status === 'current' ? statusInfo.daysSince : '';
@@ -885,7 +893,7 @@
       '<tr class="league-row' + (status === 'discontinued' ? ' league-row--discontinued' : '') + '" data-href="/products/' + product.slug + '/" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-wait="' + (days !== '' ? statusInfo.ratio.toFixed(3) : '') + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         '<td class="league-rank">' + rank + '</td>' +
         '<td class="league-name"><a href="/products/' + product.slug + '/" class="league-name-link">' + productIconJS(product, 24) + '<span>' + escapeHtmlJS(product.name) + '</span></a></td>' +
-        '<td class="league-status">' + badgeHtmlJS(product, statusInfo) + '</td>' +
+        '<td class="league-status">' + badgeHtmlJS(product, statusInfo) + (endOfLine ? ' <span class="badge badge--end">End of the line</span>' : '') + '</td>' +
         '<td class="league-launch">' + (launch ? formatDateJS(launch) : '\u2014') + '</td>' +
         '<td class="league-price">' + (product.price ? escapeHtmlJS(formatPriceJS(product.price)) : '\u2014') + '</td>' +
       '</tr>'
@@ -1104,7 +1112,12 @@
       keyFactJS('Discontinued', product.discontinued && product.discontinued_date ? formatDateJS(product.discontinued_date) : null),
       keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanTextJS(launch, product.discontinued_date) : null),
       keyFactJS('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null)
-    ].filter(Boolean).slice(0, 6).join('');
+    ].filter(Boolean);
+    // Must match productPage() in src/templates.js.
+    var familyAll = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
+    var endOfLine = isEndOfLineJS(product, familyAll);
+    keyFacts = keyFacts.slice(0, endOfLine ? 5 : 6).concat(endOfLine
+      ? ['<div class="key-fact key-fact--end"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ' + escapeHtmlJS(product.category || 'of its line') + '</p></div>'] : []).join('');
 
     var specs = [
       specRowJS('Category', pillJS(product.category)),
@@ -2548,7 +2561,8 @@
 
       if (mode === 'category') {
         var tbodyEl = gridSection.querySelector('tbody') || gridSection;
-        tbodyEl.innerHTML = items.map(function (i, idx) { return leagueRowHtmlJS(i.product, i.status, idx + 1); }).join('');
+        var familyProducts = items.map(function (i) { return i.product; });
+        tbodyEl.innerHTML = items.map(function (i, idx) { return leagueRowHtmlJS(i.product, i.status, idx + 1, isEndOfLineJS(i.product, familyProducts)); }).join('');
 
         var timelineSection = document.getElementById('category-timeline-section');
         if (timelineSection) {

@@ -3187,3 +3187,15 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 @media (max-width: 420px) {
   .intro-hero-cards .site-stat .site-stat-sub { font-size: 13px; padding: 3px 9px; }
 }
+
+/* The last product of a family whose line has ended: a black "End of
+   the line" pill on its timeline entry and in the family list, and a
+   black tile on its page. */
+.tl-entry-type--end, .badge--end { background: #1d1b19; color: #fff; }
+.league-status .badge--end { margin-left: 4px; }
+.key-fact.key-fact--end { background: #1d1b19; border-color: #1d1b19; }
+.key-fact--end .key-fact-label { color: rgba(255, 255, 255, 0.7); }
+.key-fact--end .key-fact-value { color: #fff; }
+@media (max-width: 900px) {
+  .league-status .badge--end { display: block; width: max-content; margin: 6px 0 0; white-space: nowrap; }
+}
