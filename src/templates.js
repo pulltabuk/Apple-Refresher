@@ -3177,7 +3177,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     </div>
     <div class="x-options">
       <label class="checkbox-label"><input type="checkbox" id="x-card-on" checked> Make a card image</label>
-      <input type="text" id="x-card-label" value="Did you know?" autocomplete="off" aria-label="Card heading">
+      <input type="text" id="x-card-label" value="Did you know?" autocomplete="off" aria-label="Card heading" title="The small line at the top of the card, picked from your post (On this day, Launch day, Did you know?) until you type your own">
     </div>
     <div class="x-card-fields" id="x-card-fields">
       <label for="x-card-title">Card title <span class="admin-hint">optional, above the headline, e.g. iPhone 16</span></label>
@@ -3460,7 +3460,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
       <details class="up-x-card-edit" id="up-x-card-edit">
         <summary class="gallery-action gallery-action--block">Edit the card</summary>
         <div class="up-x-card-fields" id="up-x-card-fields">
-          <span class="up-label">Card heading <span class="up-hint">the small line at the top, e.g. Did you know?</span></span>
+          <span class="up-label">Card heading <span class="up-hint">the small line at the top, picked from your post (e.g. On this day, Launch day, Did you know?) until you type your own</span></span>
           <input type="text" id="up-x-card-label" class="up-search" value="Did you know?" autocomplete="off" aria-label="Card heading">
           <span class="up-label">Card title <span class="up-hint">optional, above the headline, e.g. iPhone 16</span></span>
           <input type="text" id="up-x-card-title" class="up-search" autocomplete="off" maxlength="40" aria-label="Card title">

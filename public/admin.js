@@ -507,6 +507,9 @@
     // The card's headline and line: guessed from the post until the writer
     // types in either, then exactly what they typed.
     let cardFieldsOwn = false;
+    // The card's heading ("On this day", "Launch day"): picked from the
+    // post until the writer types one or an idea brings its own.
+    let cardLabelOwn = false;
     const cardFields = () => ({
       headline: $x('x-card-headline').value,
       line: $x('x-card-line').value,
@@ -524,8 +527,10 @@
       // "Automatic" says which icon it will use.
       const text = $x('x-text').value.trim();
       $x('x-card-icon-auto').textContent = text ? 'Auto uses: ' + window.FactsKit.cardAutoIconName(text) : '';
-      if (cardFieldsOwn) return;
+      if (cardFieldsOwn && cardLabelOwn) return;
       const guess = window.FactsKit.cardGuess(text);
+      if (!cardLabelOwn) $x('x-card-label').value = text ? guess.label : 'Did you know?';
+      if (cardFieldsOwn) return;
       $x('x-card-headline').value = guess.headline;
       $x('x-card-line').value = guess.line;
       $x('x-card-title').value = guess.title;
@@ -736,6 +741,7 @@
       $x('x-link').value = idea.link || '';
       $x('x-link-on').checked = !!idea.link;
       $x('x-card-label').value = idea.kind || 'Did you know?';
+      cardLabelOwn = !!idea.kind;
       $x('x-card-source').value = '';
       cardFieldsOwn = false;
       previewOwn = false;
@@ -809,7 +815,8 @@
       if (e.key === 'Enter') { e.preventDefault(); $x('x-claude-btn').click(); }
     });
 
-    ['x-text', 'x-link', 'x-card-label'].forEach((id) => $x(id).addEventListener('input', refresh));
+    ['x-text', 'x-link'].forEach((id) => $x(id).addEventListener('input', refresh));
+    $x('x-card-label').addEventListener('input', () => { cardLabelOwn = true; refresh(); });
     ['x-card-headline', 'x-card-line', 'x-card-title', 'x-card-emoji'].forEach((id) => $x(id).addEventListener('input', () => { cardFieldsOwn = true; refresh(); }));
     // The source isn't guessed from the post, so typing it leaves the
     // other card fields following the text.
@@ -834,6 +841,7 @@
     // to the X box and the card, the saved card, and the drawn image.
     function forgetPostState() {
       cardFieldsOwn = false;
+      cardLabelOwn = false;
       previewOwn = false;
       $x('x-card-headline').value = '';
       $x('x-card-line').value = '';

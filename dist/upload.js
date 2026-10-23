@@ -831,6 +831,9 @@
   // The card's headline and line: guessed from the post until either is
   // typed in, then exactly what was typed.
   let xCardFieldsOwn = false;
+  // The card's heading ("On this day", "Launch day"): picked from the
+  // post until it's typed or an idea brings its own.
+  let xCardLabelOwn = false;
   const xCardFields = () => ({
     headline: $('up-x-card-headline').value,
     line: $('up-x-card-line').value,
@@ -841,8 +844,10 @@
     // "Automatic" says which icon it will use.
     const text = $('up-x-text').value.trim();
     $('up-x-card-icon-auto').textContent = text ? 'Auto uses: ' + window.FactsKit.cardAutoIconName(text) : '';
-    if (xCardFieldsOwn) return;
+    if (xCardFieldsOwn && xCardLabelOwn) return;
     const guess = window.FactsKit.cardGuess(text);
+    if (!xCardLabelOwn) $('up-x-card-label').value = text ? guess.label : 'Did you know?';
+    if (xCardFieldsOwn) return;
     $('up-x-card-headline').value = guess.headline;
     $('up-x-card-line').value = guess.line;
     $('up-x-card-title').value = guess.title;
@@ -985,6 +990,7 @@
     $('up-x-link').value = idea.link || '';
     $('up-x-link-on').checked = !!idea.link;
     $('up-x-card-label').value = idea.kind || 'Did you know?';
+    xCardLabelOwn = !!idea.kind;
     xCardFieldsOwn = false;
     xPreviewOwn = false;
     $('up-x-card-emoji').value = '';
@@ -1083,7 +1089,8 @@
       'Claude is writing 5 posts, each checked against two sources (the request is also copied). Check its sources, then copy the one you like into the box below.');
   });
 
-  ['up-x-text', 'up-x-link', 'up-x-card-label'].forEach((id) => $(id).addEventListener('input', xRefresh));
+  ['up-x-text', 'up-x-link'].forEach((id) => $(id).addEventListener('input', xRefresh));
+  $('up-x-card-label').addEventListener('input', () => { xCardLabelOwn = true; xRefresh(); });
   ['up-x-card-headline', 'up-x-card-line', 'up-x-card-title', 'up-x-card-emoji'].forEach((id) => $(id).addEventListener('input', () => { xCardFieldsOwn = true; xRefresh(); }));
   window.FactsKit.mountIconPicker($('up-x-card-icon-picker'), $('up-x-card-icon'), $('up-x-card-emoji'), xRefresh);
   const xMarkIcon = () => { if ($('up-x-card-icon-picker').markPicked) $('up-x-card-icon-picker').markPicked(); };
@@ -1118,6 +1125,7 @@
     $('up-x-card-edit').open = false;
     $('up-x-idea-list').innerHTML = '';
     xCardFieldsOwn = false;
+    xCardLabelOwn = false;
     xPreviewOwn = false;
     xCaret = null;
     xRefresh();

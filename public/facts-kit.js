@@ -349,72 +349,18 @@
   const FIGURE_TOPICS = {
     gone: /discontinu|retired|axed|dropped|replaced|end of (the )?line|no longer (sold|on sale)|killed off|lifespan|on sale for/i,
     coming: /coming|arriv|launch|pre-?order|on sale (from|on)|countdown|days? (until|to go)|release date/i,
-    since: /\bdays?\b|refresh|since (its|the|it was) (last|launch|release)|waiting|overdue|last (release|update)|still on sale|unchanged|has(n.?t| not) (been )?(updated|refreshed|changed)/i,
+    since: /\bdays? since\b|refresh|since (its|the|it was) (last|launch|release)|waiting|overdue|last (release|update)|still on sale|unchanged|has(n.?t| not) (been )?(updated|refreshed|changed)/i,
   };
-  // The post's opening sentence, short enough for the card's line, for a
-  // post with no figure of its own.
-  function leadSentence(text, max) {
-    const limit = max || 120;
-    const first = String(text || '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?]["\u201d\u2019']?)\s/)[0] || '';
-    if (first.length <= limit) return first;
-    return first.slice(0, limit).replace(/[\s,;:]+\S*$/, '') + '\u2026';
-  }
 
-  // A statistic's key number ("604 days", "55%") and the few words after it.
   const MONTH_NAMES = '(?:january|february|march|april|may|june|july|august|september|october|november|december)';
   // "8 October 2014", "October 8" or "October 8, 2014".
   const DATE_RE = new RegExp('\\b(?:\\d{1,2}(?:st|nd|rd|th)?\\s+' + MONTH_NAMES + '|' + MONTH_NAMES + '\\s+\\d{1,2}(?:st|nd|rd|th)?\\b)(?:,?\\s+(?:19|20)\\d\\d)?\\b', 'i');
-  // Numbers that are part of a name, not a figure: "iPhone 11", "Series
-  // 9", "M4", "4th generation" and every product name on the site.
-  function maskModelNumbers(text) {
-    const blank = (str) => str.replace(/[^\s]/g, '\u2002');
-    let out = String(text || '');
-    (cardProducts || []).map((p) => String((p && p.name) || '')).filter((n) => /\d/.test(n) && n.length > 2)
-      .sort((a, b) => b.length - a.length)
-      .forEach((n) => {
-        const re = new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*'), 'gi');
-        out = out.replace(re, blank);
-      });
-    return out
-      .replace(/\b(?:iPhone|iPad|iPod|iMac|Mac|MacBook|AirPods|HomePod|Watch|Series|Gen)\s?\d{1,2}[a-z]{0,2}\b/gi, blank)
-      .replace(/\b[MAS]\d{1,2}\b/g, blank)
-      .replace(/\b\d{1,2}(?:st|nd|rd|th)[\s-]+gen(?:eration)?\b/gi, blank);
-  }
-
-  function textFigure(text) {
-    const masked = maskModelNumbers(text);
-    // A price keeps its currency and size: "$699", "£1.2bn".
-    let m = masked.match(/([$\u00a3\u20ac]\s?)?(\d[\d,]*(?:\.\d+)?)(\s?(?:bn|billion|million|m)\b)?(\s?(?:%|(?:per cent|percent|days?|weeks?|months?|years?)\b))?/i);
-    if (m) m = Object.assign([m[0], (m[1] || '').replace(/\s/g, '') + m[2] + (m[3] || ''), m[4] || ''], { index: m.index });
-    // A date ("8 October 2014") is one headline, not the number 8.
-    const d = masked.match(DATE_RE);
-    if (d && (!m || d.index <= m.index)) m = Object.assign([d[0], d[0].replace(/,/g, ''), ''], { index: d.index });
-    if (!m) return null;
-    const rest = String(text).slice(m.index + m[0].length).split(/[.,;:!?(]/)[0].trim().split(/\s+/).filter(Boolean);
-    const caption = rest.slice(0, 7).join(' ') + (rest.length > 7 ? '…' : '');
-    // The whole rest of the sentence, for the composer to pre-fill.
-    // The rest of the number's own sentence, for the composer to pre-fill;
-    // when the number ends its sentence, the words before it instead.
-    const after = String(text).slice(m.index + m[0].length);
-    let full = /^\s*["\u201d\u2019']?[.!?](\s|$)/.test(after) ? '' : after.replace(/^[\s,;:"'\u201d\u2019)\]]+/, '').split(/(?<=[.!?]["\u201d\u2019']?)\s/)[0].trim();
-    if (!/[a-z]/i.test(full)) {
-      const head = String(text).slice(0, m.index);
-      const starts = [...head.matchAll(/[.!?]["\u201d\u2019']?\s+/g)];
-      full = head.slice(starts.length ? starts[starts.length - 1].index + starts[starts.length - 1][0].length : 0)
-        .replace(/\s*\b(on|in|at|of|since|by|from|for)\s*$/i, '').replace(/[\s,;:]+$/, '').trim();
-      if ((full.match(/"/g) || []).length % 2) full += '"';
-      if (!/[a-z]/i.test(full)) full = '';
-    }
-    return { big: cardHeadline((m[1] + (m[2] || '')).replace(/\s?per ?cent/i, '%')), caption, sub: '', full };
-  }
 
   // A card headline never ends in a comma, full stop or other punctuation.
   function cardHeadline(text) {
     return String(text || '').trim().replace(/[\s,.;:!?\u2013\u2014-]+$/, '');
   }
 
-  // The card's headline and line as the composer pre-fills them: the
-  // best guess from the text, for the writer to keep or change.
   // Links say nothing the card should show: a date in a MacRumors
   // address ("/2026/10/18/") was being read as the card's big figure.
   // Nor do @names: "via @9to5mac" was becoming a headline of "9".
@@ -430,41 +376,561 @@
     return items.length >= 2 ? items : null;
   }
 
+  // --- Reading a post for its card. The post is read a sentence at a
+  // time and the card is about one of them, the focus: the news when
+  // there is some ("goes on sale today"), otherwise the sentence with
+  // the most to show, usually the first. The title, headline and line
+  // all come from that one sentence, so a card never names one product
+  // and shows a figure about another. The heading at the top says what
+  // kind of post it is: On this day, Launch day, Rumour and so on.
+
+  const EMOJI_RE = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}][\uFE0F\u200D\u20E3\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}]*/gu;
+  const escRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const capFirst = (s) => String(s || '').replace(/^(\W*)(\w)/, (m, p, c) => p + c.toUpperCase());
+  const blankOut = (str) => str.replace(/[^\s]/g, ' ');
+  const wordsIn = (s) => String(s || '').match(/[A-Za-z0-9\u00c0-\u024f'\u2019$\u00a3\u20ac%]+/g) || [];
+
+  // The post as the card reads it: no links, @names, emoji or hashtags,
+  // and its opening tag ("Did you know?", "Big news:") taken off and kept
+  // as the card's heading.
+  const OPENERS = [
+    [/^did you know\b\s*(?:[?:!,.]\s*|that\s+|(?=[a-z]))/i, 'Did you know?'],
+    [/^it['\u2019]s official\s*[:!.\u2013\u2014-]\s*/i, 'It\u2019s official'],
+    [/^(?:fun|quick|apple) fact\s*[:!.\u2013\u2014-]\s*/i, null],
+    [/^(?:big|huge|good|sad) news\s*[:!.\u2013\u2014-]\s*/i, null],
+    [/^breaking(?: news)?\s*[:!.\u2013\u2014-]\s*/i, 'Breaking'],
+    [/^just in\s*[:!.\u2013\u2014-]\s*/i, 'Just in'],
+    [/^(?:reminder|heads up|psa)\s*[:!.\u2013\u2014-]\s*/i, null],
+    [/^rumou?r(?: has it)?\s*[:!.\u2013\u2014-]\s*/i, 'Rumour'],
+    [/^(?:throwback|flashback)(?: \w+day)?\s*[:!.\u2013\u2014-]\s*/i, 'Throwback'],
+    [/^(?:poll|quick question|question)\s*[:!.\u2013\u2014-]\s*/i, 'Over to you'],
+    [/^(?:hot take|unpopular opinion)\s*[:!.\u2013\u2014-]\s*/i, null],
+  ];
+  function cardSource(text) {
+    let t = withoutLinks(text)
+      .replace(EMOJI_RE, ' ')
+      .replace(/(?:^|\s)(?:#\w+[ \t]*)+$/g, ' ')
+      .replace(/(^|\s)#([A-Za-z]\w*)/g, '$1$2')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/ *\n */g, '\n')
+      .trim();
+    let opener = '';
+    OPENERS.some(([re, label]) => {
+      const m = t.match(re);
+      if (!m) return false;
+      opener = label || capFirst(m[0].replace(/[\s:!.\u2013\u2014-]+$/, '').toLowerCase());
+      const asked = /^did you know\s*(?:that\s+|[a-z])/i.test(m[0]) || /^did you know\s+(?=[a-z])/i.test(t);
+      t = capFirst(t.slice(m[0].length));
+      if (asked) t = t.replace(/^([^?\n]*)\?/, '$1.');
+      return true;
+    });
+    return { text: t, opener };
+  }
+
+  // Sentences, keeping "4.5mm", "$102.5bn" and "U.S." whole.
+  function splitSentences(text) {
+    const out = [];
+    String(text || '').split(/\n+/).forEach((para) => {
+      let start = 0;
+      const re = /[.!?\u2026]+["\u201d\u2019')\]]*(?=\s+["\u201c\u2018(]?[A-Z0-9$\u00a3\u20ac])/g;
+      let m;
+      while ((m = re.exec(para))) {
+        const before = para.slice(start, m.index);
+        if (/(?:^|\s)(?:vs|mr|mrs|ms|dr|st|inc|ltd|approx|no|e\.g|i\.e|u\.s|u\.k)$/i.test(before)) continue;
+        out.push(para.slice(start, m.index + m[0].length).trim());
+        start = m.index + m[0].length;
+      }
+      if (para.slice(start).trim()) out.push(para.slice(start).trim());
+    });
+    return out.filter((s) => /[A-Za-z0-9]/.test(s));
+  }
+
+  // The products a sentence names, in order: a name matches whatever its
+  // spacing or punctuation ("iPod Hi-Fi" matches "iPod HiFi"), and of
+  // names starting at the same place the longest wins ("iPhone 17 Pro"
+  // over "iPhone 17").
+  const nameRes = new Map();
+  function productNameRe(name) {
+    const key = String(name || '');
+    if (!nameRes.has(key)) {
+      const tokens = key.toLowerCase().match(/[a-z0-9]+/g) || [];
+      nameRes.set(key, tokens.length ? new RegExp('(?<![a-z0-9])' + tokens.map(escRe).join('[^a-z0-9\\n]{0,2}') + '(?:s|\u2019s|\'s)?(?![a-z0-9])', 'gi') : null);
+    }
+    return nameRes.get(key);
+  }
+  function productsIn(s) {
+    const found = [];
+    (cardProducts || []).forEach((p) => {
+      const name = String((p && p.name) || '');
+      if (name.replace(/[^a-z0-9]/gi, '').length <= 2) return;
+      const re = productNameRe(name);
+      if (!re) return;
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(s))) found.push({ p, index: m.index, end: m.index + m[0].length, text: m[0] });
+    });
+    found.sort((a, b) => a.index - b.index || (b.end - b.index) - (a.end - a.index));
+    const kept = [];
+    found.forEach((f) => { if (!kept.some((k) => f.index < k.end && f.end > k.index)) kept.push(f); });
+    return kept;
+  }
+
+  // Product families named in general ("the original iPod", "iPhones",
+  // "the iPhone 7"), for a card's title and icon when no product on the
+  // site is named.
+  const FAMILY_WORDS = [
+    ['Apple Watch', 'apple\\s?watch(?:es)?'], ['Apple TV', 'apple\\s?tv'], ['Apple Pencil', 'apple\\s?pencils?'], ['Vision Pro', 'vision\\s?pro'],
+    ['AirPods', 'airpods'], ['AirTag', 'airtags?'], ['HomePod', 'homepods?'], ['iPhone', 'iphones?'], ['iPad', 'ipads?'], ['iPod', 'ipods?'],
+    ['Mac', 'macbooks?|imacs?|macintosh(?:es)?|macs?'],
+  ];
+  const FAMILY_RE = new RegExp('(?<![a-z0-9])(?:' + FAMILY_WORDS.map(([, re]) => '(' + re + ')').join('|') + ')(?![a-z0-9])', 'gi');
+  const MODEL_AFTER = /^\s(?:(?:\d{1,2}[a-z]?|X[SR]?|SE|Series\s\d{1,2})(?![\d,a-z])(?:\s(?:Pro|Plus|Max|mini|Ultra|Air|e))*|(?:Pro|Plus|Max|mini|Ultra|Air|nano|shuffle|touch|classic|Studio)(?![a-z])(?:\s(?:Max|mini|\d{1,2}))*)/i;
+  function familiesIn(s) {
+    const out = [];
+    FAMILY_RE.lastIndex = 0;
+    let m;
+    while ((m = FAMILY_RE.exec(s))) {
+      const i = m.slice(1).findIndex(Boolean);
+      const family = FAMILY_WORDS[i][0];
+      let word = /^airpods$/i.test(m[0]) ? 'AirPods' : m[0].replace(/(watch|macintosh)es$/i, '$1').replace(/s$/i, '');
+      word = /^macintosh$/i.test(word) ? 'Macintosh' : appleName(word.toLowerCase());
+      const after = s.slice(m.index + m[0].length);
+      const model = m[0] === word || /^airpods$/i.test(m[0]) ? after.match(MODEL_AFTER) : null;
+      const before = s.slice(0, m.index);
+      const original = /\b(?:the\s+)?(?:original|first|very first)\s+$/i.test(before) && !model;
+      const end = m.index + m[0].length + (model ? model[0].length : 0);
+      const title = original ? 'Original ' + word : model ? appleName(word + model[0]) : word;
+      out.push({ family, index: m.index, end, text: s.slice(m.index, end), title, original });
+    }
+    return out;
+  }
+
+  // Apple's software by version ("iOS 27"), which is a name, not a figure.
+  const SOFTWARE_RE = /(?<![a-z0-9])(?:iOS|iPadOS|macOS|watchOS|tvOS|visionOS)\s?\d{1,2}(?:\.\d{1,2})*(?![\d])/gi;
+
+  // Numbers that are part of a name, not a figure: products, "iPhone 7",
+  // "iOS 27", "M5", "Q4", "4th generation", a "20th-anniversary iPhone".
+  function maskNames(s, spans) {
+    let out = s;
+    spans.forEach((f) => { out = out.slice(0, f.index) + blankOut(out.slice(f.index, f.end)) + out.slice(f.end); });
+    return out
+      .replace(SOFTWARE_RE, blankOut)
+      .replace(/\b(?:iPhone|iPad|iPod|iMac|Mac|MacBook|AirPods|HomePod|Watch|Series|Gen|Wi-?Fi|USB|Bluetooth|CarPlay|Siri)\s?\d{1,2}(?:\.\d)?[a-z]{0,2}\b/gi, blankOut)
+      .replace(/\b[MASHUR]\d{1,2}(?:\s(?:Pro|Max|Ultra|Bionic))?\b/g, blankOut)
+      .replace(/\bQ[1-4]\b|\b[2-6]G\b|\bFY\s?\d{2,4}\b/g, blankOut)
+      .replace(/\b\d{1,2}(?:st|nd|rd|th)[\s-]+gen(?:eration)?\b/gi, blankOut)
+      .replace(/\b\d{1,3}(?:st|nd|rd|th)-\w+/gi, blankOut);
+  }
+
+  // A sentence's figures, with how much each would say as the card's big
+  // headline: a price or a percentage most, then a span of time, a
+  // measurement or a big count, then dates, times and bare years.
+  const NUM = '\\d[\\d,]*(?:\\.\\d+)?';
+  const SCALE = '(?:\\s?(?:bn|billion|million|trillion|tn|m|k)(?![a-z]))';
+  const FIGURE_RE = new RegExp([
+    '(?<ord>\\d{1,3}(?:st|nd|rd|th)\\s+(?:birthday|anniversary))',
+    '(?<money>[$\u00a3\u20ac]\\s?' + NUM + SCALE + '?)',
+    '(?<pct>' + NUM + '\\s?(?:%|per\\s?cent(?![a-z])|percent(?![a-z])))',
+    '(?<date>' + DATE_RE.source + '|\\b' + MONTH_NAMES + '\\s+(?:19|20)\\d\\d\\b)',
+    '(?<span>(?:' + NUM + '|\\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty)(?=\\s))\\s(?:days?|weeks?|months?|years?|decades?)(?![a-z])(?:\\s(?:ago|later)(?![a-z])|\\son(?=\\s*[,.;:!?]|$))?)',
+    '(?<inch>' + NUM + '-inch(?:es)?(?![a-z]))',
+    '(?<measure>' + NUM + '\\s?(?:GB|TB|MB|KB|mAh|mm|cm|kg|g|lbs?|inch(?:es)?|"|\u201d|hours?|hrs?|minutes?|mins?|seconds?|nits|Hz|fps|MP|megapixels?|W|watts?|mph|cores?|x|times)(?![a-z]))',
+    '(?<time>\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)(?![a-z])|\\b\\d{1,2}:\\d{2}(?!\\d))',
+    '(?<when>\\b(?:(?:this|next)\\s)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|tonight)(?:\\s(?:at|from)\\s\\d{1,2}(?::\\d{2})?\\s?(?:am|pm))?(?![a-z])|\\bnext\\s(?:week|month|year)\\b|\\blater\\sthis\\s(?:week|month|year)\\b|\\bthis\\s(?:week|weekend|month)\\b)',
+    '(?<year>(?<![\\d,.$\u00a3\u20ac])(?:19[7-9]\\d|20\\d\\d)(?![\\d,]))',
+    '(?<count>(?<![\\d.])' + NUM + SCALE + '?)',
+  ].join('|'), 'gi');
+  const QUALIFIER_RE = /(?:^|\s)((?:(?:up to|more than|over|nearly|almost|under|less than|at least|from|just|only|about|around|roughly|approximately|exactly|some|every|a whopping|a record)\s+){1,2})$/i;
+  const COUNT_NOUN_STOP = /^(?:as|has|was|is|its|this|his|plus|us|yes|less|across|unless|thus|does|goes|takes|makes|gets|hits|sits|runs|means|lets|this|these|those|years?|days?)$/i;
+  const NUMBER_WORDS = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twenty: 20, thirty: 30, forty: 40, fifty: 50 };
+
+  function figuresIn(s, masked) {
+    const out = [];
+    FIGURE_RE.lastIndex = 0;
+    let m;
+    while ((m = FIGURE_RE.exec(masked))) {
+      if (!m[0].trim()) { FIGURE_RE.lastIndex++; continue; }
+      const kind = Object.keys(m.groups).find((k) => m.groups[k] !== undefined);
+      let index = m.index;
+      let end = m.index + m[0].length;
+      let raw = s.slice(index, end);
+      let score = { money: 5, pct: 5, ord: 4, span: 4, measure: 4, inch: 3, date: 2, when: 2, time: 1, year: 1, count: 2 }[kind];
+      let big = raw.replace(/,(?=\s)/g, '').replace(/\s?per\s?cent|\s?percent/i, '%');
+      const qm = masked.slice(0, index).match(QUALIFIER_RE);
+      const quals = qm ? qm[1].trim().toLowerCase().split(/\s+(?=up to|more than|over|nearly|almost|under|less than|at least|from|just|only|about|around|roughly|approximately|exactly|some|every|a whopping|a record)/) : [];
+      let link = false;
+      if (kind === 'span') {
+        if (/\s(?:later|on)$/i.test(raw)) link = true;
+        if (!/\sago$/i.test(raw)) big = big.replace(/\s(?:later|on)$/i, '');
+      }
+      // "a 20th anniversary iPhone" names a model; "25th birthday" is the news.
+      if (kind === 'ord' && /^\s+(?:edition\s+)?(?:i[A-Z]|Mac|Apple|AirPods|HomePod|Vision)/.test(s.slice(end))) score = 0;
+      if (kind === 'count') {
+        const n = Number(raw.replace(/[^\d.]/g, ''));
+        if (/[a-z]/i.test(raw)) score = 4;
+        else if (n >= 1000) score = 3;
+        // "1,000 songs", "64 Apple products": the count with what it counts.
+        const noun = s.slice(end).match(/^\s((?:Apple\s)?[a-z][a-z-]{2,}s)(?![a-z])/);
+        if (noun && !COUNT_NOUN_STOP.test(noun[1])) { big += ' ' + noun[1]; end += noun[0].length; score += 1; }
+      }
+      if (kind === 'date') {
+        const at = masked.slice(end).match(/^\s(?:at|from)\s(\d{1,2}(?::\d{2})?\s?(?:am|pm))(?![a-z])/i);
+        if (at) { big = big + ', ' + at[1].replace(/\s/g, ''); end += at[0].length; }
+      }
+      if (kind === 'when') {
+        big = /day\b|tomorrow|tonight/i.test(raw) ? capFirst(raw.replace(/^(?:this|next)\s(?=[a-z]+day\b)/i, '').replace(/\s(?:at|from)\s/i, ', ')) : capFirst(raw);
+      }
+      if (kind === 'measure') big = big.replace(/\s?(GB|TB|MB|KB|mAh|mm|cm|kg|g|lbs?)$/i, (u) => u.trim());
+      if (kind === 'span') big = capFirst(big);
+      // Qualifiers that change the meaning stay ("Up to 40%", "3 billion+",
+      // "Every 365 days", "From £1,099"); the rest go.
+      let qualText = '';
+      quals.forEach((q) => {
+        if (/^(?:just|only|a whopping|a record)$/.test(q)) score += 1;
+        if (/^(?:more than|over|at least)$/.test(q) && kind !== 'date' && kind !== 'year') big = big.replace(/^([$\u00a3\u20ac]?[\d,.]+(?:\s?(?:bn|billion|million|trillion|tn|m|k))?)/i, '$1+');
+        else if (/^(?:up to|nearly|almost|under|less than|from|every)$/.test(q) && kind !== 'date' && kind !== 'year') qualText = qualText ? qualText : q;
+      });
+      if (quals.length) index -= qm[1].length;
+      if (qualText) big = capFirst(qualText) + ' ' + big;
+      out.push({ kind, index, end, start: m.index, raw: s.slice(m.index, end), big: cardHeadline(big), score, link });
+    }
+    // "On this day in 2001", "25 years ago today", "Today marks 10 years":
+    // the post's own date is its headline.
+    const opener = s.match(/^(?:on this day(?: back)?(?: in)?|today in apple history[,:]?(?: in)?)\s+((?:19|20)\d\d)\b/i) ||
+      s.match(/^(?:exactly\s+)?(\d+\s(?:years?|months?))\sago\s+today\b/i) ||
+      s.match(/^(?:today|this week|this month)\s+marks\s+(?:exactly\s+)?(\d+\s(?:years?|months?))\b/i);
+    if (opener) {
+      const at = s.indexOf(opener[1], opener.index);
+      const f = out.find((x) => x.start === at);
+      if (f) { f.score = 9; f.opener = true; if (/ago\s+today/i.test(opener[0])) f.big = cardHeadline(opener[1] + ' ago'); }
+    }
+    return out;
+  }
+
+  // Words that tell what kind of post it is, and the news it carries.
+  const STATUS = [
+    [/\b(?:(?:goes|go|went|is|are)\s+)?on\s+sale\s+(today|now)\b/i, 'sale', (m) => 'On sale ' + m[1].toLowerCase()],
+    [/\b(?:(?:is|are)\s+)?(?:out|here|available)\s+(today|now)\b/i, 'sale', (m) => 'Out ' + m[1].toLowerCase()],
+    [/\b(?:(?:is|are)\s+)?now\s+available\s+to\s+pre-?order\b/i, 'preorder', () => 'Open now'],
+    [/\b(?:(?:is|are)\s+)?now\s+(?:available|on\s+sale)(?:\s+to\s+order)?\b/i, 'sale', (m) => (/order/i.test(m[0]) ? 'Order now' : 'Out now')],
+    [/\b(?:is|are)\s+(?:finally\s+|officially\s+)?(?:here|out)(?=\s*[.!,]|\s*$)/i, 'sale', () => 'Out now'],
+    [/\b(?:arrives?|arrived|lands?|launch(?:es|ed)?|ships?|debuts?|hits\s+(?:stores|shelves)|(?:is|are)\s+released)\s+today\b/i, 'sale', () => 'Out today'],
+    [/(?<!\bago\s)\btoday,?\s+(?:[^.,;!?]{0,60}?\s)?(?:arrives|lands|launches|goes\s+on\s+sale|ships|debuts|hits\s+stores)\b/i, 'sale', () => 'Out today'],
+    [/\bpre-?orders?\s+(?:are\s+)?(?:now\s+)?(?:open(?:ed)?|live)(?:\s+(?:today|now))?(?=\s*[.!]|\s*$|\s+(?:for|in|at\s+apple))/i, 'preorder', () => 'Open now'],
+    [/\b(?:has|have)\s+(?:now\s+|just\s+|quietly\s+|officially\s+|finally\s+)?(?:discontinued|killed(?:\s+off)?|axed|retired)\b|\bdiscontinued\s+today\b|\b(?:is|are)\s+no\s+longer\s+(?:sold|on\s+sale|available)\b|\b(?:is|are)\s+(?:officially\s+)?dead\b/i, 'gone', () => 'Discontinued'],
+    [/\b(?:just|today)\s+(?:got\s+)?(?:updated|refreshed)\b|\b(?:updated|refreshed)\s+today\b|\b(?:finally\s+)?(?:gets?|got)\s+(?:an?\s+|its\s+first\s+)?(?:update|refresh)\s+today\b/i, 'updated', () => 'Out today'],
+    [/\b(?:just|today)\s+(?:announced|unveiled|revealed|launched|introduced)\b|\b(?:announced|unveiled|revealed|introduced)\s+today\b|\bapple\s+(?:announces|unveils|reveals|introduces)\b|\b(?:has|have)\s+(?:just\s+)?(?:announced|unveiled|revealed)\b/i, 'announce', () => ''],
+    [/\bpre-?orders?\b/i, 'preorder-soon', () => ''],
+    [/\b\d[\d,]*\s(?:days?|weeks?)\s(?:to\s+go|until|till)\b|\bcountdown\b|\bcoming\s+(?:soon|next|later|this)\b|\b(?:arrives?|launch(?:es)?|lands?|ships?|comes?\s+out)\s+(?:next|later|on|in|this|tomorrow|from)\b|(?<!\b(?:went|was|were|been)\s)\bon\s+sale\s+(?:from|on)\b|\bgoes\s+on\s+sale\s+(?:on|this|next|in|from|tomorrow)\b/i, 'coming', () => ''],
+  ];
+  const EVENT_RE = /\b(?:apple\s+)?(?:event|keynote|wwdc)\b/i;
+  const STATUS_LABELS = { sale: 'Launch day', preorder: 'Pre-orders', 'preorder-soon': 'Pre-orders', gone: 'End of the line', updated: 'Just updated', announce: 'Just announced', coming: 'Coming soon' };
+  function statusIn(s) {
+    for (const [re, kind, headline] of STATUS) {
+      const m = s.match(re);
+      if (m) return { kind, now: !/soon|coming|announce/.test(kind), headline: headline(m), index: m.index, end: m.index + m[0].length, text: m[0] };
+    }
+    return null;
+  }
+  const ON_THIS_DAY_RE = /^(?:on this day\b|today in apple history|(?:exactly\s+)?\d+\s+years?\s+ago\s+today|(?:today|this week)\s+marks\s+(?:exactly\s+)?\d+\s+years|happy\s+\d+(?:st|nd|rd|th)\s+(?:birthday|anniversary))|\b(?:happy|turns|celebrates|marks)\s+(?:its\s+)?\d+(?:st|nd|rd|th)\s+(?:birthday|anniversary)\b|\b\d+(?:st|nd|rd|th)\s+(?:birthday|anniversary)\s+today\b|\bturns\s+\d+\s+today\b|\byears?\s+ago\s+today\b/i;
+  const RUMOUR_RE = /\brumou?r|\breported(?:ly)?\b|\bleak(?:s|ed)?\b|\bsources?\s+say\b|\bexpected\s+to\b|\baccording\s+to\s+(?:a\s+)?(?:new\s+)?(?:report|analyst|sources?|leaker)\b|\bsaid\s+to\s+be\b|\bis\s+working\s+on\b|\bplanning\s+(?:a|an|to)\b/i;
+  const WAITING_RE = /\bsince\s+(?:apple\s+)?(?:last\s+)?(?:updated|refreshed)\b|\bstill\s+waiting\b|\bwithout\s+an?\s+(?:update|refresh)\b|\bha(?:s|ve)n['\u2019]?t\s+(?:been\s+)?(?:updated|refreshed)|\bha(?:s|ve)\s+not\s+(?:been\s+)?(?:updated|refreshed)|\bsince\s+(?:its|the)\s+last\s+(?:update|refresh|release)\b|\bwait(?:ing)?\s+for\s+an?\s+(?:update|refresh)\b/i;
+  const EARNINGS_RE = /\b(?:earnings|revenue|quarterly\s+results|profits?)\b/i;
+
+  // Words that say nothing on their own, for telling whether a sentence
+  // has anything left to say once its title and headline are taken out.
+  const FILLER_WORDS = /^(?:the|a|an|is|are|was|were|be|been|it|its|it's|it\u2019s|this|that|these|those|to|of|for|on|in|at|and|or|but|with|from|by|as|so|today|now|just|finally|happy|yes|wow|here|there|has|have|had|also|still|officially|quietly|exactly|again|apple|apple's|apple\u2019s)$/i;
+  function contentLeft(s, spans) {
+    let rest = s;
+    spans.filter(Boolean).sort((a, b) => b.index - a.index).forEach((sp) => { rest = rest.slice(0, sp.index) + ' ' + rest.slice(sp.end); });
+    return wordsIn(rest).filter((w) => !FILLER_WORDS.test(w));
+  }
+
+  function readSentence(s, i) {
+    const products = productsIn(s);
+    const families = familiesIn(s).filter((f) => !products.some((p) => f.index < p.end && f.end > p.index));
+    SOFTWARE_RE.lastIndex = 0;
+    const software = [...s.matchAll(SOFTWARE_RE)].map((m) => ({ index: m.index, end: m.index + m[0].length, title: m[0].replace(/\s+/, ' ') }));
+    // A screen size naming a model ("the 13-inch MacBook Pro") is part of its name.
+    products.concat(families).forEach((m) => {
+      const size = s.slice(0, m.index).match(/(\d{1,2}(?:\.\d)?-inch)\s+$/i);
+      if (size) { m.index -= size[0].length; m.size = size[1]; m.text = s.slice(m.index, m.end); }
+    });
+    const masked = maskNames(s, products.concat(families.filter((f) => f.text !== f.title.replace(/^Original /, '') || /\d/.test(f.text) || f.size)));
+    const figures = figuresIn(s, masked).filter((f) => !f.link);
+    const links = figuresIn(s, masked).filter((f) => f.link);
+    const status = statusIn(s);
+    const question = /\?["\u201d\u2019')]*\s*$/.test(s);
+    return { text: s, i, products, families, software, figures, links, status, question };
+  }
+
+  // The card's title: the product the sentence names (or the two it
+  // compares), else Apple software by version, else a product family.
+  function titleOf(r) {
+    const [a, b] = r.products;
+    if (a && b && a.p !== b.p && /^\W*(?:or|vs\.?|versus|than|compared\s+(?:to|with)|against|and)\s+(?:the\s+|an?\s+)?$/i.test(r.text.slice(a.end, b.index))) {
+      const both = appleName(a.p.name) + ' vs ' + appleName(b.p.name);
+      if (both.length <= 44) return { title: both, product: a.p, mention: a };
+    }
+    if (a) return { title: (a.size ? a.size + ' ' : '') + appleName(a.p.name), product: a.p, mention: a };
+    if (r.software[0]) return { title: r.software[0].title, mention: r.software[0] };
+    const f = r.families[0];
+    if (f) return { title: f.title, family: f.family, mention: f };
+    return { title: '' };
+  }
+
+  // "the original iPod" from "Apple announced the original iPod: ...",
+  // for a later sentence's "25 years later".
+  function anchorIn(r) {
+    const m = r.products[0] || r.families[0];
+    if (!m) return '';
+    const before = r.text.slice(0, m.index).match(/(?:\b(?:the|its|an?|his|their|original|first|very|debut|classic)\s+){1,3}$/i);
+    const phrase = (before ? before[0] : 'the ') + r.text.slice(m.index, m.end);
+    return /^(?:the|its|an?|his|their)\s/i.test(phrase) ? phrase.replace(/^The\s/, 'the ') : 'the ' + phrase;
+  }
+
+  const finishLine = (line) => {
+    let t = String(line || '').replace(/\s+([,.;:!?])/g, '$1').replace(/([,;:])(?:\s*[,;:])+/g, '$1').replace(/\s{2,}/g, ' ')
+      .replace(/^[\s,;:\u2013\u2014-]+/, '').replace(/[\s,;:\u2013\u2014-]+$/, '').trim();
+    t = t.replace(/[,;:]+\s*([.!?])/g, '$1');
+    if (!t) return '';
+    if (!/[.!?\u2026]["\u201d\u2019')\]]*$/.test(t) && !/["\u201d]$/.test(t)) t += '.';
+    if (/[.!?]["\u201d\u2019')]*\.$/.test(t)) t = t.slice(0, -1);
+    return t;
+  };
+
+  // The line under a figure: what the figure's sentence says about it. A
+  // figure starting the sentence leads into the rest ("604 days" then
+  // "since Apple last updated the Mac Pro"); one ending it follows the
+  // words before it; one in the middle shows the whole sentence.
+  const LEAD_IN = /^(?:(?:it['\u2019]s been|it has been|there are|there have been|there were|that['\u2019]s|that is|today marks|this marks|this week marks|on this day(?: back)?(?: in)?|today in apple history[,:]?(?: in)?|in|exactly|just|only|about|around|roughly|nearly|almost|over|more than|up to|some|a whopping|so far)[\s,]*)*$/i;
+  function lineAround(r, fig) {
+    const s = r.text;
+    const before = s.slice(0, fig.index);
+    const after = s.slice(fig.end);
+    if (LEAD_IN.test(before.trim())) {
+      let lead = after.match(/^\s*(?:ago\b)?\s*(?:today\b)?[\s,;:.!?\u2013\u2014-]*/i)[0];
+      let rest = after.slice(lead.length);
+      // "9,131 days, or exactly 25 years, since ...": the aside goes.
+      const aside = rest.match(/^(?:or|that['\u2019]s|which is|i\.e\.)\s[^,]{1,30},\s*/i);
+      if (aside) { rest = rest.slice(aside[0].length); lead = ' '; }
+      // A new clause after a comma starts with a capital; "since ..."
+      // or "until ..." carries straight on from the figure.
+      const carriesOn = /^(?:since|until|till|to|of|after|before|for|in|on|between|from|than|more|less|later|left|ago|and)\b/i.test(rest);
+      if (/[a-z]{3}/i.test(rest)) return finishLine(/[,;:\u2013\u2014]/.test(lead) && !carriesOn ? capFirst(rest) : rest);
+      // "On this day in 2001" and nothing more: the heading says it all.
+      if (fig.opener) return '';
+    }
+    if (!/[a-z]/i.test(after)) {
+      // The figure ends the sentence: the words before it, when they read
+      // as a whole ("The HomePod mini is Apple's cheapest speaker" before
+      // "at £99"). A tacked-on ", starting at" goes with the figure; a
+      // verb that needs it ("starts at", "held") keeps the whole sentence.
+      let head = before.replace(/[\s,;:\u2013\u2014-]+$/, '');
+      const clause = head.match(/,\s*(?:starting|priced|selling|retailing|costing)(?:\s+(?:at|from|for))?$/i);
+      if (clause) head = head.slice(0, clause.index);
+      else if (!/,\s*$/.test(before)) {
+        const prep = head.match(/\s+(?:on|in|at|of|for|from|by|with|after|before|since|until|lasting)$/i);
+        head = prep ? head.slice(0, prep.index) : '';
+        if (/\b(?:starts?|starting|priced|costs?|costing|retails?|sells?|sold|selling|weighs|measures|lasts|held|holds|has|had|is|was|are|were|be|been|and|or|but|just|only|of|to)$/i.test(head)) head = '';
+      }
+      head = head.replace(/[\s,;:]+$/, '');
+      const lastClause = head.split(/,\s*/).pop();
+      if (wordsIn(head).length >= 3 && wordsIn(lastClause).length >= 3) return finishLine(head);
+    }
+    return finishLine(s);
+  }
+
+  // A long line loses what it can spare: brackets, "based on ..." and,
+  // if it's still long, the clause after the main one.
+  function trimLine(line) {
+    let t = line;
+    if (t.length > 90) t = finishLine(t.replace(/\s*\([^)]*\)/g, ''));
+    if (t.length > 90) t = finishLine(t.replace(/,\s*(?:based on|according to|as tracked by|tracked by|per)\b[^.!?]*/i, ''));
+    if (t.length > 115) {
+      const cut = t.lastIndexOf(', ');
+      const head = cut > 40 ? t.slice(0, cut) : '';
+      if (head && wordsIn(head).length >= 6) t = finishLine(head);
+    }
+    return t;
+  }
+
+  // The line under a news headline ("On sale today"): the sentence with
+  // the news and the product's name taken out, "25 years later" spelt
+  // out from the sentence before ("25 years after the original iPod"),
+  // and a description of the product put first ("Apple's first foldable").
+  function newsLine(r, title, anchor) {
+    let t = r.text;
+    if (r.status && r.status.headline) {
+      const st = r.status;
+      const inner = st.text.match(/^today,?\s+(.*?)\s*\b(arrives|lands|launches|goes\s+on\s+sale|ships|debuts|hits\s+stores)\b$/i);
+      t = inner ? t.slice(0, st.index) + inner[1] + t.slice(st.end) : t.slice(0, st.index) + ' ' + t.slice(st.end);
+    }
+    if (anchor) t = t.replace(/\b((?:(?:exactly|nearly|almost|just|some|about)\s+)?\d[\d,]*\s(?:years?|months?|weeks?|days?|decades?))\s(?:later|on)\b/i, '$1 after ' + anchor);
+    if (title.mention && title.product) {
+      const re = new RegExp('(^|,\\s*)(?:the\\s+)?' + escRe(title.mention.text) + '\\s*(?=[,.!?;:]|$)', 'i');
+      t = t.replace(re, '$1');
+    }
+    t = finishLine(t.replace(/^\s*(?:today|now|and|so|finally)\b[\s,]*/i, ''));
+    const lead = t.match(/^((?:(?:exactly|nearly|almost|just|some|about)\s+)?\d[\d,]*\s(?:years?|months?|weeks?|days?|decades?)\s(?:after|since|on\s+from)\s[^,]+),\s+([^,]+?)[.!]?$/i);
+    if (lead && wordsIn(lead[2]).length <= 6) t = capFirst(lead[2]) + ', ' + lead[1].replace(/^\w/, (c) => c.toLowerCase()) + '.';
+    return contentLeft(t, []).length >= 2 ? capFirst(t) : '';
+  }
+
+  // Everything the card shows, worked out from the post.
+  function cardPlan(text) {
+    const src = cardSource(text);
+    // A list keeps its emoji, which mark its items and show on the card.
+    const items = listItems(withoutLinks(text));
+    if (items) {
+      const first = withoutLinks(text).split('\n')[0].trim();
+      const heading = !ITEM_RE.test(first) ? first.replace(EMOJI_RE, '').replace(/[:\s]+$/, '').trim() : '';
+      if (heading.length > 24 || /[.?]$/.test(heading)) return { kind: 'list', label: src.opener || '', title: '', headline: '', line: items.join('\n'), product: null, family: null, focus: src.text };
+      return { kind: 'list', label: src.opener || heading || '', title: '', headline: '', line: items.join('\n'), product: null, family: null, focus: src.text };
+    }
+    const sentences = splitSentences(src.text).map(readSentence);
+    if (!sentences.length) return { label: src.opener, title: '', headline: '', line: '', product: null, family: null, focus: '' };
+    const anyStatement = sentences.some((r) => !r.question);
+    const scoreOf = (r) => {
+      let n = r.i === 0 ? 1 : 0;
+      if (r.status && r.status.now) n += 4;
+      else if (r.status) n += 2;
+      if (r.products.length) n += 2;
+      else if (r.families.length || r.software.length) n += 1;
+      const best = r.figures.reduce((a, f) => Math.max(a, f.score), 0);
+      n += best >= 9 ? 3 : best >= 4 ? 2 : best >= 2 ? 1 : 0;
+      if (r.question && anyStatement) n -= 3;
+      return n;
+    };
+    const focus = sentences.reduce((best, r) => (scoreOf(r) > scoreOf(best) ? r : best), sentences[0]);
+    const title = titleOf(focus);
+    const others = sentences.filter((r) => r !== focus);
+    const after = others.filter((r) => r.i > focus.i).concat(others.filter((r) => r.i < focus.i).reverse());
+    const bestFig = (r) => r.figures.reduce((a, f) => (!a || f.score > a.score ? f : a), null);
+
+    // The heading: the post's own opening words, then what kind of post
+    // it is, else "Did you know?".
+    const whole = src.text;
+    let label = src.opener ||
+      (ON_THIS_DAY_RE.test(whole) ? 'On this day' : '') ||
+      (RUMOUR_RE.test(whole) ? 'Rumour' : '') ||
+      (focus.status ? STATUS_LABELS[focus.status.kind] : '') ||
+      (WAITING_RE.test(whole) ? 'Still waiting' : '') ||
+      (EARNINGS_RE.test(whole) ? 'Earnings' : '') ||
+      (EVENT_RE.test(focus.text) && focus.figures.some((f) => f.kind === 'date' || f.kind === 'when') ? 'Save the date' : '') ||
+      (!anyStatement ? 'Over to you' : '') ||
+      'Did you know?';
+
+    // The headline: the focus's best figure. A sentence that's only news
+    // ("The iPhone Duo is out today.") lends the card to the next one.
+    let detail = focus;
+    let fig = bestFig(focus);
+    const st = focus.status && focus.status.headline ? focus.status : null;
+    const spent = !fig && contentLeft(focus.text, [title.mention, st]).length <= 1;
+    const sameSubject = (r) => !r.products.some((m) => title.product && m.p !== title.product);
+    if (spent) {
+      const next = after.find(sameSubject);
+      if (next) { detail = next; fig = bestFig(next); }
+    }
+    let headline = fig ? fig.big : '';
+    let line = '';
+    let usedAnchor = null;
+    if (fig) {
+      // A figure that is all the sentence says ("Happy 25th birthday to
+      // the iPod!"): the next sentence explains it.
+      line = lineAround(detail, fig);
+      if (!contentLeft(detail.text, [title.mention, fig, detail === focus ? st : null]).length && after.length) {
+        const next = after.find((r) => r !== detail);
+        if (next) { line = finishLine(next.text); detail = next; }
+      }
+    } else if (st) {
+      // No figure, but news: the news is the headline ("On sale today").
+      headline = st.headline;
+      if (spent) line = detail !== focus ? finishLine(detail.text) : '';
+      else {
+        // News ending its clause ("..., goes on sale today."): the rest
+        // of the sentence says what's new about it.
+        const prev = sentences.slice(0, focus.i).reverse().find((r) => r.products.length || r.families.length);
+        const anchor = prev && focus.links.length ? anchorIn(prev) : '';
+        if (/^\s*(?:[.!?,;:]|$)/.test(focus.text.slice(st.end))) line = newsLine(focus, title, anchor);
+        if (!line) line = finishLine(focus.text);
+        if (anchor && line.indexOf(anchor) !== -1) usedAnchor = prev;
+      }
+    } else {
+      line = finishLine(detail.text);
+      // Nothing to count in it ("The iPhone Duo is Apple's first
+      // foldable."): a figure from the next sentence on the same subject.
+      const next = detail === focus ? after.find((r) => r.i === focus.i + 1 && sameSubject(r)) : null;
+      const borrowed = next && bestFig(next);
+      if (borrowed && borrowed.score >= 3) {
+        headline = borrowed.big;
+        fig = borrowed;
+        const both = line + ' ' + finishLine(next.text);
+        line = both.length <= 125 ? both : lineAround(next, borrowed);
+        detail = next;
+      }
+    }
+    if (!line && after.length && !spent) { detail = after[0]; line = finishLine(detail.text); }
+    line = trimLine(line);
+
+    // A short line takes the next sentence too, when it fits and stays on
+    // the same subject ("... the Mac Pro. Its usual gap is 640 days.").
+    if (line && line.length < 70) {
+      const more = after.find((r) => r !== detail && r !== usedAnchor && line.indexOf(r.text) === -1);
+      const extra = more ? finishLine(more.text) : '';
+      const otherProduct = more && more.products.some((m) => !title.product || m.p !== title.product);
+      if (extra && line.length + 1 + extra.length <= 105 && (!otherProduct || extra.length <= 45)) line = line + ' ' + extra;
+    }
+    return {
+      label, title: title.title, headline: cardHeadline(headline), line,
+      product: title.product || null, family: title.family || null, focus: focus.text, figure: fig,
+    };
+  }
+
+  // The card's subject: its title and icon, headline and line. With no
+  // figure of its own, a product's live figure when the post is about
+  // what it says ("discontinued 2023" only on a post about it ending).
+  function subjectOf(plan, text) {
+    const product = plan.product;
+    let big = plan.headline;
+    let caption = plan.line;
+    let sub = '';
+    if (product && !big && plan.kind !== 'list') {
+      const live = productFigure(product);
+      if (live.kind && live.big !== '0' && FIGURE_TOPICS[live.kind].test(plan.focus)) {
+        // "1,228 days" over "since its last release".
+        const unit = live.kind !== 'gone' && live.caption.match(/^(days?)\s+/);
+        big = unit ? live.big + ' ' + unit[1] : live.big;
+        caption = unit ? live.caption.slice(unit[0].length) : live.caption;
+        sub = live.sub || '';
+      }
+    }
+    if (product) {
+      return { title: plan.title, shape: iconShapeFor(product.category) || CATEGORY_ICONS.Other, iconUrl: product.icon_url || customCategoryIcon(product.category) || null, big, caption, sub };
+    }
+    // Not about one product: its family's icon, or a topic icon (the Apple
+    // Sunset logo always sits small in the corner).
+    const family = plan.family;
+    return { title: plan.title, shape: family ? iconShapeFor(family) : CARD_ICONS[suggestCardIcon(plan.focus || text)], iconUrl: family ? customCategoryIcon(family) : null, big, caption, sub };
+  }
+  function cardSubject(text) {
+    return subjectOf(cardPlan(text), text);
+  }
+
+  // The card's heading, title, headline and line as the composer
+  // pre-fills them: the best guess from the post, to keep or change.
   function cardGuess(text) {
-    text = withoutLinks(text);
-    const items = listItems(text);
-    if (items) return { headline: '', line: items.join('\n'), title: '', icon: 'auto' };
-    const subject = cardSubject(text);
-    const fig = textFigure(text);
-    return { headline: cardHeadline(subject.big), line: (fig && fig.big === subject.big && fig.full) || subject.caption || '', title: subject.title || '', icon: 'auto' };
+    const plan = cardPlan(text);
+    const subject = subjectOf(plan, text);
+    return { headline: cardHeadline(subject.big), line: subject.caption || '', title: subject.title || '', icon: 'auto', label: plan.label || 'Did you know?' };
   }
 
   // What "Automatic" will show, in words, for the composer.
   function cardAutoIconName(text) {
-    const product = productNamed(text, cardProducts);
-    if (product) return appleName(product.name) + ' icon';
-    const category = categoryNamed(text);
-    if (category) return category + ' icon';
-    return CARD_ICON_NAMES[suggestCardIcon(text)];
-  }
-
-  function cardSubject(text) {
-    text = withoutLinks(text);
-    const product = productNamed(text, cardProducts);
-    if (product) {
-      // The text's own figure when it has one, so the card says what the
-      // post says; the product's live figure only when the post is about
-      // that; otherwise the post's opening sentence and no big number.
-      const own = textFigure(text);
-      const live = productFigure(product);
-      const fig = own || (live.kind && FIGURE_TOPICS[live.kind].test(String(text || '')) ? live : { big: '', caption: leadSentence(text), sub: '' });
-      return { title: appleName(product.name), shape: iconShapeFor(product.category) || CATEGORY_ICONS.Other, iconUrl: product.icon_url || customCategoryIcon(product.category) || null, big: fig.big, caption: fig.caption, sub: fig.sub || '' };
-    }
-    const category = categoryNamed(text);
-    const fig = textFigure(text);
-    // Not about one family: a topic icon in the tile (the Apple Sunset
-    // logo always sits small in the corner), and no title unless typed.
-    return { title: category || '', shape: category ? iconShapeFor(category) : CARD_ICONS[suggestCardIcon(text)], iconUrl: category ? customCategoryIcon(category) : null, big: fig ? fig.big : '', caption: fig ? fig.caption : leadSentence(text), sub: '' };
+    const plan = cardPlan(text);
+    if (plan.product) return appleName(plan.product.name) + ' icon';
+    if (plan.family) return plan.family + ' icon';
+    return CARD_ICON_NAMES[suggestCardIcon(plan.focus || text)];
   }
 
   function loadImage(src, cors) {
