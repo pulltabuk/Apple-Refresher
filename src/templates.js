@@ -1545,6 +1545,19 @@ function eventSummaryText(summary) {
     .replace(/\s+/g, ' ').trim();
 }
 
+// The event's day and time as pills under the heading: the date on a
+// solid violet pill, the time (Apple's and the UK's) on a soft one.
+function eventDatePillsHtml(event) {
+  const day = new Date(String(event.event_date || '').slice(0, 10) + 'T12:00:00Z');
+  if (isNaN(day)) return '';
+  const longDate = day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).replace(',', '');
+  const uk = FactsKit.eventUkTime(event);
+  const time = [event.event_time, uk].filter(Boolean).join(' \u00b7 ');
+  const calendar = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+  const clock = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  return `<p class="event-date-pills"><span class="event-date-pill">${calendar}<time datetime="${escapeHtml(String(event.event_date).slice(0, 10))}">${escapeHtml(longDate)}</time></span>${time ? `<span class="event-date-pill event-date-pill--time">${clock}${escapeHtml(time)}</span>` : ''}</p>`;
+}
+
 function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabaseAnonKey }) {
   // Written in the admin or the phone app; also the page's description.
   const summaryHtml = eventSummaryHtml(event.summary, siteUrl);
@@ -1570,7 +1583,7 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
     <h1>${escapeHtml(event.heading)}</h1>
     <a class="admin-edit-link" data-admin-href="/admin/" data-admin-label="Admin" style="display:none;"></a>
   </div>
-  ${dateText ? `<p class="page-intro">${escapeHtml(dateText)}</p>` : ''}
+  ${eventDatePillsHtml(event)}
   ${FactsKit.eventCountdownHtml(event)}
   ${event.image_url ? cdnImgHtml(event.image_url, 1280, ' class="event-detail-image" alt=""') : ''}
   ${summaryHtml ? `<div class="page-copy event-summary">${summaryHtml}</div>` : ''}
