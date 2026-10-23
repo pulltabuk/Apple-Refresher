@@ -3087,7 +3087,16 @@
       if (!target || isNaN(target)) return;
       var left = target - Date.now();
       if (left <= 0) {
-        clock.innerHTML = '<span class="countdown-unit"><span class="countdown-value">Today</span></span>';
+        // Its moment has come: the tile becomes "Out today" (or "Live
+        // now", "Results are out"), set once, not every tick.
+        if (!el.classList.contains('countdown--done')) {
+          el.classList.add('countdown--done');
+          var kicker = el.querySelector('.countdown-label');
+          if (kicker && el.getAttribute('data-done-kicker')) kicker.textContent = el.getAttribute('data-done-kicker');
+          var dateEl = el.querySelector('.countdown-date');
+          if (dateEl && el.getAttribute('data-done-date')) dateEl.textContent = el.getAttribute('data-done-date');
+          clock.innerHTML = '<span class="countdown-done-badge">' + escapeHtmlJS(el.getAttribute('data-done-text') || 'Today') + '</span>';
+        }
         return;
       }
       var secs = Math.floor(left / 1000);

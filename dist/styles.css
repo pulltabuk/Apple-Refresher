@@ -3089,3 +3089,16 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .product-top--video .days-hero--upcoming .days-hero-clock .countdown-unit { padding: 9px 4px; }
   .product-top--video .days-hero--upcoming .days-hero-clock .countdown-value { font-size: 32px; }
 }
+
+/* The hero countdown once its moment has come (app.js adds
+   countdown--done): no clock boxes, one bold badge. */
+.countdown.countdown--done { border-color: var(--accent); box-shadow: 0 10px 26px rgba(194, 84, 12, 0.18); }
+.countdown.countdown--done .countdown-clock,
+.intro-hero-text > .countdown.countdown--done .countdown-clock { display: flex; width: auto; }
+.countdown-done-badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 22px; font-weight: 800; line-height: 1.1; box-shadow: 0 4px 14px rgba(194, 84, 12, 0.3); }
+.countdown--event.countdown--done { border-color: var(--event); box-shadow: 0 10px 26px rgba(109, 40, 217, 0.18); }
+.countdown--event .countdown-done-badge { background: #c4271b; box-shadow: 0 4px 14px rgba(196, 39, 27, 0.3); }
+.countdown.countdown--done .countdown-date { font-weight: 700; }
+@media (min-width: 901px) {
+  .intro-hero-text > .countdown.countdown--done .countdown-done-badge { font-size: 28px; padding: 14px 26px; }
+}
