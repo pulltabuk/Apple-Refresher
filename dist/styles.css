@@ -3102,3 +3102,11 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 @media (min-width: 901px) {
   .intro-hero-text > .countdown.countdown--done .countdown-done-badge { font-size: 28px; padding: 14px 26px; }
 }
+
+/* Homepage hero with nothing counting down: the heading, the
+   description and the compact earnings line sit centred down the
+   column, level with the tiles beside them, instead of a stand-in box. */
+@media (min-width: 901px) {
+  .intro-hero-text--calm { justify-content: center; }
+  .intro-hero-text--calm > .earnings-next { margin-top: 1.25rem; align-self: stretch; }
+}

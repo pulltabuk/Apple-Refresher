@@ -330,8 +330,10 @@ async function main() {
 
   // The hero countdown: the featured event if it is still to come,
   // otherwise the nearest future release date across every product.
+  // Release day counts: the tile turns into "Out today" when the moment
+  // comes, and the next day's build drops it.
   const futureReleases = products
-    .flatMap((p) => (p.refresh_history || []).filter((d) => d > today).map((d) => ({ date: d, product: p })))
+    .flatMap((p) => (p.refresh_history || []).filter((d) => d >= today).map((d) => ({ date: d, product: p })))
     .sort((a, b) => (a.date < b.date ? -1 : 1));
   // Countdowns: an upcoming pinned event, plus every product explicitly
   // opted in via "Show in the countdown" in admin. Products are only
@@ -352,16 +354,11 @@ async function main() {
       countdowns.push({ label: r.product.name, date: r.date, time: null, href: `/products/${r.product.slug}/`, datePrefix: 'Coming', product: r.product });
     });
   countdowns.sort((a, b) => (a.date < b.date ? -1 : 1));
-  // The next quarterly results: a line under the countdown, or the
-  // countdown itself when nothing else is coming up. With neither, the
-  // homepage shows the latest release in that space instead.
+  // The next quarterly results: always the compact line, never the big
+  // clock. With no countdown, the hero's text and that line sit centred.
   const earnings = await loadEarnings();
   const upcomingEarnings = nextEarnings(earnings || [], today);
-  let earningsNext = upcomingEarnings;
-  if (!countdowns.length && upcomingEarnings) {
-    countdowns.push({ label: `Apple ${earningsQuarter(upcomingEarnings)} results`, date: upcomingEarnings.report_date, time: upcomingEarnings.report_time || null, href: '/earnings/' });
-    earningsNext = null;
-  }
+  const earningsNext = upcomingEarnings;
   const countdown = countdowns.length ? countdowns : null;
   const galleryPhotos = await loadGalleryPhotos();
 
