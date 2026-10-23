@@ -2926,7 +2926,8 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 }
 
 /* An event's page: the countdown while it is still to come */
-.event-detail-countdown { max-width: 420px; margin: 0 0 1.25rem; }
+.event-detail-countdown { margin: 0 0 1.25rem; }
+.event-detail-countdown .event-hero-countdown { gap: 10px; }
 .event-detail-countdown[hidden] { display: none; }
 .event-detail-countdown-label { margin: 0 0 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-dark); }
 .event-detail-countdown-label span { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--text-secondary); }
@@ -3139,13 +3140,15 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-text > .countdown.countdown--done .countdown-date { font-size: 15px; }
 }
 
-/* An event's page: the day and time as pills under the heading */
-.event-date-pills { display: flex; flex-wrap: wrap; gap: 10px; margin: 0.25rem 0 1.5rem; }
-.event-date-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; background: var(--event); color: #fff; border: 1px solid var(--event); font-size: 18px; font-weight: 700; line-height: 1.2; box-shadow: 0 4px 14px rgba(109, 40, 217, 0.28); white-space: nowrap; }
+/* An event's page: the day and time as pills under the heading. They
+   span the image's width in equal halves; stacked, full width, on phones. */
+.event-date-pills { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; margin: 0.25rem 0 1.5rem; }
+.event-date-pill { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; padding: 11px 14px; border-radius: 999px; background: var(--event); color: #fff; border: 1px solid var(--event); font-size: 18px; font-weight: 700; line-height: 1.2; box-shadow: 0 4px 14px rgba(109, 40, 217, 0.28); white-space: nowrap; }
 .event-date-pill svg { flex: none; }
+.event-date-pill > :not(svg) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .event-date-pill--time { background: var(--event-bg); color: var(--event); border-color: var(--event-border); box-shadow: none; }
-@media (max-width: 560px) {
-  .event-date-pills { gap: 8px; }
-  .event-date-pill { font-size: 16px; padding: 9px 15px; gap: 7px; }
+@media (max-width: 700px) {
+  .event-date-pills { grid-auto-flow: row; gap: 8px; }
+  .event-date-pill { font-size: 16px; padding: 10px 14px; gap: 7px; }
   .event-date-pill svg { width: 18px; height: 18px; }
 }
