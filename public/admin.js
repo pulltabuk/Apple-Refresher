@@ -564,7 +564,8 @@
         const away = outsideLink();
         const key = await window.FactsKit.uploadXCard(client, $x('x-text').value.trim(), label, cardFields(), away || undefined);
         if (sig !== cardSig()) return;
-        const check = key ? await window.FactsKit.checkXCardLink(origin, key, away || undefined) : { ok: false, reason: 'the card didn\u2019t save' };
+        const check = key ? await window.FactsKit.checkXCardLink(origin, key, away || undefined)
+          : { ok: false, reason: window.FactsKit.uploadXCard.lastError || 'the card didn\u2019t save' };
         if (sig !== cardSig()) return;
         cardKey = key || 'none';
         cardFor = sig;

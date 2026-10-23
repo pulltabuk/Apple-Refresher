@@ -525,7 +525,9 @@
   // A sentence's figures, with how much each would say as the card's big
   // headline: a price or a percentage most, then a span of time, a
   // measurement or a big count, then dates, times and bare years.
-  const NUM = '\\d[\\d,]*(?:\\.\\d+)?';
+  // A number never takes the comma after it ("In 2012, the ..."), which
+  // used to make the line under it start without a capital.
+  const NUM = '\\d(?:[\\d,]*\\d)?(?:\\.\\d+)?';
   const SCALE = '(?:\\s?(?:bn|billion|million|trillion|tn|m|k)(?![a-z]))';
   const FIGURE_RE = new RegExp([
     '(?<ord>\\d{1,3}(?:st|nd|rd|th)\\s+(?:birthday|anniversary))',
@@ -537,7 +539,7 @@
     '(?<measure>' + NUM + '\\s?(?:GB|TB|MB|KB|mAh|mm|cm|kg|g|lbs?|inch(?:es)?|"|\u201d|hours?|hrs?|minutes?|mins?|seconds?|nits|Hz|fps|MP|megapixels?|W|watts?|mph|cores?|x|times)(?![a-z]))',
     '(?<time>\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)(?![a-z])|\\b\\d{1,2}:\\d{2}(?!\\d))',
     '(?<when>\\b(?:(?:this|next)\\s)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|tonight)(?:\\s(?:at|from)\\s\\d{1,2}(?::\\d{2})?\\s?(?:am|pm))?(?![a-z])|\\bnext\\s(?:week|month|year)\\b|\\blater\\sthis\\s(?:week|month|year)\\b|\\bthis\\s(?:week|weekend|month)\\b)',
-    '(?<year>(?<![\\d,.$\u00a3\u20ac])(?:19[7-9]\\d|20\\d\\d)(?![\\d,]))',
+    '(?<year>(?<![\\d,.$\u00a3\u20ac])(?:19[7-9]\\d|20\\d\\d)(?!\\d|,\\d))',
     '(?<count>(?<![\\d.])' + NUM + SCALE + '?)',
   ].join('|'), 'gi');
   const QUALIFIER_RE = /(?:^|\s)((?:(?:up to|more than|over|nearly|almost|under|less than|at least|from|just|only|about|around|roughly|approximately|exactly|some|every|a whopping|a record)\s+){1,2})$/i;
@@ -570,7 +572,8 @@
         if (/[a-z]/i.test(raw)) score = 4;
         else if (n >= 1000) score = 3;
         // "1,000 songs", "64 Apple products": the count with what it counts.
-        const noun = s.slice(end).match(/^\s((?:Apple\s)?[a-z][a-z-]{2,}s)(?![a-z])/);
+        // Apple's own plurals count too: "300,000 iPads", "1 million Macs".
+        const noun = s.slice(end).match(/^\s((?:Apple\s)?(?:[a-z][a-z-]{2,}s|i[A-Z][a-z]+s|Macs|AirTags|HomePods|AirPods))(?![a-z])/);
         if (noun && !COUNT_NOUN_STOP.test(noun[1])) { big += ' ' + noun[1]; end += noun[0].length; score += 1; }
       }
       if (kind === 'date') {
@@ -777,6 +780,66 @@
     return contentLeft(t, []).length >= 2 ? capFirst(t) : '';
   }
 
+  // --- "On this day" posts. The title is the day it happened ("Tuesday
+  // 23 October 2012": today's date in that year), the headline the figure
+  // that says most about it ("221 days", "1,000 songs", "$99") or else how
+  // long ago it was ("14 years ago"), and the line what happened, without
+  // the "On this day in 2012" it opened with. A post that leads with its
+  // own span ("25 years ago today", "Today marks 11 years", "Happy 25th
+  // birthday") keeps that as the headline.
+  const OTD_LEAD = /^(?:on this day(?: back)?(?: in (?:19|20)\d\d)?|today in apple history[,:]?(?: in (?:19|20)\d\d)?|(?:exactly\s+)?\d+\s+years?\s+ago\s+today|(?:today|this week|this month)\s+marks\s+(?:exactly\s+)?\d+\s+years?(?:\s+since)?|happy\s+\d+(?:st|nd|rd|th)\s+(?:birthday|anniversary)(?:\s+to)?)[\s,:\u2013\u2014-]*/i;
+  const WEEKDAY_TITLE_RE = /^(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s\d/;
+  function onThisDayPlan(sentences, focus, after, now) {
+    const today = now || new Date();
+    const thisYear = today.getFullYear();
+    const whole = sentences.map((r) => r.text).join(' ');
+    let year = null;
+    let lead = '';
+    let m;
+    if ((m = whole.match(/^(?:on this day(?: back)?(?: in)?|today in apple history[,:]?(?: in)?)\s+((?:19|20)\d\d)\b/i))) year = Number(m[1]);
+    else if ((m = whole.match(/\b(?:exactly\s+)?(\d+)\s+(years?)\s+ago\s+today\b/i))) { year = thisYear - Number(m[1]); lead = m[1] + ' ' + m[2] + ' ago'; }
+    else if ((m = whole.match(/^(?:today|this week|this month)\s+marks\s+(?:exactly\s+)?(\d+)\s+(years?)\b/i))) { year = thisYear - Number(m[1]); lead = m[1] + ' ' + m[2]; }
+    else if ((m = whole.match(/\b(\d+)(st|nd|rd|th)\s+(birthday|anniversary)\b/i))) { year = thisYear - Number(m[1]); lead = m[1] + m[2] + ' ' + m[3].toLowerCase(); }
+    else if ((m = whole.match(/\bturns\s+(\d+)\s+today\b/i))) { year = thisYear - Number(m[1]); lead = 'Turns ' + m[1]; }
+    else if ((m = focus.text.match(/\b((?:19|20)\d\d)\b/))) year = Number(m[1]);
+    if (!year || year >= thisYear || year < 1976) return null;
+    // Today's day and month, that year (no 29 February in other years).
+    const when = new Date(Date.UTC(year, today.getMonth(), today.getDate()));
+    if (when.getUTCMonth() !== today.getMonth()) return null;
+    const title = when.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '');
+
+    // The headline: the post's own span, else the figure that says most
+    // (a price, a percentage, a span, a measurement, a big count), else
+    // how long ago. Years and dates are already in the title.
+    let fig = null;
+    if (!lead) {
+      fig = focus.figures
+        .filter((f) => !f.opener && !/^(?:date|year|time|when)$/.test(f.kind) && !/^(?:19|20)\d\d$/.test(f.big) && f.score >= 3)
+        .reduce((a, f) => (!a || f.score > a.score ? f : a), null);
+    }
+    const ago = thisYear - year;
+    const headline = fig ? fig.big : lead ? capFirst(lead) : ago + (ago === 1 ? ' year' : ' years') + ' ago';
+
+    // The line: what happened, from the sentence it opened with, or the
+    // next one when that sentence was only the date.
+    const repeats = (r) => /\b\d+\s+years?\s+(?:ago|later|on)\b/i.test(r.text) && contentLeft(r.text, r.figures).length <= 2;
+    let detail = focus;
+    let line = focus.text.replace(OTD_LEAD, '');
+    if (contentLeft(line, []).length < 2) {
+      const next = after.find((r) => !repeats(r));
+      if (next) { detail = next; line = next.text; } else line = '';
+    }
+    line = line ? trimLine(finishLine(capFirst(line))) : '';
+    // A short line takes the next sentence too, unless it only says how
+    // long ago ("That was 14 years ago."), which the card already shows.
+    if (line && line.length < 70) {
+      const more = after.find((r) => r !== detail && !repeats(r) && line.indexOf(r.text) === -1);
+      const extra = more ? finishLine(more.text) : '';
+      if (extra && line.length + 1 + extra.length <= 105) line = line + ' ' + extra;
+    }
+    return { title, headline: cardHeadline(headline), line, figure: fig };
+  }
+
   // Everything the card shows, worked out from the post.
   function cardPlan(text) {
     const src = cardSource(text);
@@ -820,6 +883,16 @@
       (EVENT_RE.test(focus.text) && focus.figures.some((f) => f.kind === 'date' || f.kind === 'when') ? 'Save the date' : '') ||
       (!anyStatement ? 'Over to you' : '') ||
       'Did you know?';
+
+    if (label === 'On this day') {
+      const otd = onThisDayPlan(sentences, focus, after);
+      if (otd) {
+        return {
+          label, title: otd.title, headline: otd.headline, line: otd.line,
+          product: title.product || null, family: title.family || null, focus: focus.text, figure: otd.figure,
+        };
+      }
+    }
 
     // The headline: the focus's best figure. A sentence that's only news
     // ("The iPhone Duo is out today.") lends the card to the next one.
@@ -1156,7 +1229,10 @@
     // Space between the title ("iPhone Duo") and what follows it.
     const TITLE_GAP = 16;
     ctx.fillStyle = '#ffffff';
-    let y = subject.title ? fitText(ctx, subject.title, cx, ty - 8, cw, '800', 60, 40, 2, TEXT_BOTTOM) + TITLE_GAP : ty - 8;
+    // A date ("Tuesday 23 October 2012", on an On this day card) stays
+    // on one line, a little smaller, rather than breaking before the year.
+    const dateTitle = WEEKDAY_TITLE_RE.test(subject.title || '');
+    let y = subject.title ? fitText(ctx, subject.title, cx, ty - 8, cw, '800', dateTitle ? 52 : 60, dateTitle ? 34 : 40, dateTitle ? 1 : 2, TEXT_BOTTOM) + TITLE_GAP : ty - 8;
     if (subject.big) {
       ctx.fillStyle = sunsetGradient(ctx, cx, 0, cx + cw, 0, SUNSET_WARM);
       ctx.fillStyle = '#ffd59a';
@@ -1165,7 +1241,11 @@
       // two lines rather than being cut off or crowding out the line.
       const wordy = /\s/.test(subject.big.trim()) && !/^[$\u00a3\u20ac]?\d/.test(subject.big.trim());
       fitText.cut = false;
-      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', wordy ? 84 : 150, 48, 2, TEXT_BOTTOM);
+      // A figure ("221 days", "25 years ago") shrinks to stay on one line
+      // before it would break in two, and the headline always leaves room
+      // for two lines of the explanation under it.
+      const room = subject.caption ? TEXT_BOTTOM - 100 : TEXT_BOTTOM;
+      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', wordy ? 84 : 150, 48, 2, room, wordy ? 0 : 96);
       lineCut = fitText.cut;
     } else if (!own) {
       // No figure: the label says it all, in big type.
@@ -1718,17 +1798,24 @@
   // (netlify/functions/card.mjs) forwards there; only cards made here
   // can, so the card address can't be used to send people anywhere else.
   async function uploadXCard(client, text, label, fields, outsideLink) {
+    // Why it failed, in words, for the composer to show
+    // (uploadXCard.lastError), rather than just "it didn't save".
+    uploadXCard.lastError = '';
+    const fail = (why) => { uploadXCard.lastError = why; return null; };
     const key = xCardKey(text, label, fields, outsideLink);
-    const file = await factImageFile(String(text || '').trim(), label, fields);
-    if (!file) return null;
+    let file;
+    try { file = await factImageFile(String(text || '').trim(), label, fields); } catch (err) { return fail('the card image couldn\u2019t be made: ' + err.message); }
+    if (!file) return fail('the card image couldn\u2019t be made');
     const bucket = client.storage.from(CARD_BUCKET);
-    const { error } = await bucket.upload('x-cards/' + key + '.png', file, { contentType: 'image/png' });
-    const exists = (e) => /exist|duplicate/i.test(e.message || '') || e.statusCode === '409';
-    if (error && !exists(error)) return null;
+    const reason = (e) => 'the card didn\u2019t save: ' + (e.message || e.error || ('error ' + (e.statusCode || '')));
+    let res;
+    try { res = await bucket.upload('x-cards/' + key + '.png', file, { contentType: 'image/png' }); } catch (err) { return fail(reason(err)); }
+    const exists = (e) => /exist|duplicate/i.test(e.message || '') || String(e.statusCode) === '409';
+    if (res.error && !exists(res.error)) return fail(reason(res.error));
     if (outsideLink) {
       const json = new Blob([JSON.stringify({ link: outsideLink })], { type: 'application/json' });
       const saved = await bucket.upload('x-cards/' + key + '.json', json, { contentType: 'application/json' });
-      if (saved.error && !exists(saved.error)) return null;
+      if (saved.error && !exists(saved.error)) return fail(reason(saved.error));
     }
     return key;
   }
