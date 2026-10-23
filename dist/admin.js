@@ -488,6 +488,9 @@
     });
   }
 
+  // Loads the X tab's drafts to review; set up inside xPosts() below.
+  let xDraftsLoader = null;
+
   // --- X posts: for the X account only, nothing is saved or published
   // on the site.
   (function xPosts() {
@@ -948,6 +951,271 @@
       link.download = 'apple-sunset-post.png';
       link.click();
     });
+
+    // --- Buffer: posts go to Buffer, which publishes them to X, added to
+    // its queue (the next free slot) or for a set time, with the card
+    // attached as an image. The Buffer key stays on Netlify; the browser
+    // only ever talks to the site's own (owner-only) function.
+    async function ownerToken() {
+      const { data } = await client.auth.getSession();
+      return data && data.session ? data.session.access_token : null;
+    }
+    // The card saved to storage, as a public image address for Buffer.
+    async function cardImageUrl(text, label, fields) {
+      const key = await window.FactsKit.uploadXCard(client, text, label, fields);
+      if (!key) throw new Error(window.FactsKit.uploadXCard.lastError || 'the card didn\u2019t save');
+      const { data } = client.storage.from('product-images').getPublicUrl('x-cards/' + key + '.png');
+      return data.publicUrl;
+    }
+    async function sendToBuffer(post, mode, dueAt) {
+      const token = await ownerToken();
+      if (!token) throw new Error('You\u2019re signed out. Log in again.');
+      const res = await fetch('/.netlify/functions/buffer', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', text: post.text, imageUrl: post.imageUrl || '', mode, dueAt: dueAt || null }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || 'Buffer send failed (' + res.status + ')');
+      return body;
+    }
+    const whenText = (iso) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    // A time picker's local "2026-10-24T09:00" as a real moment.
+    const pickedTime = (value) => (value ? new Date(value).toISOString() : '');
+    function defaultPickTime() {
+      const t = new Date(Date.now() + 2 * 3600000);
+      t.setMinutes(0, 0, 0);
+      const pad = (n) => String(n).padStart(2, '0');
+      return t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate()) + 'T' + pad(t.getHours()) + ':00';
+    }
+
+    // The draft (from the list below) being finished in the composer, so
+    // sending it from there marks it done.
+    let composerDraft = null;
+    async function markDraft(id, fields) {
+      if (!id) return;
+      const { error } = await client.from('x_drafts').update(Object.assign({ decided_at: new Date().toISOString() }, fields)).eq('id', id);
+      if (error) console.error('Could not update the draft:', error);
+    }
+
+    // The composer's own Buffer buttons: the post as written above, with
+    // the card attached as an image (so the post carries the plain link,
+    // not the card link that X would otherwise preview).
+    async function sendComposer(mode, dueAt) {
+      const note = $x('x-buffer-note');
+      note.hidden = false;
+      note.classList.remove('x-card-note');
+      const body = $x('x-text').value.trim();
+      if (!body) { note.textContent = 'Write a post first.'; return; }
+      const link = $x('x-link-on').checked ? $x('x-link').value.trim() : '';
+      const text = previewOwn ? postText() : window.FactsKit.xPostText(body, { hashtags: $x('x-tags').checked, products: cachedProducts, link });
+      note.textContent = 'Sending to Buffer\u2026';
+      try {
+        const label = $x('x-card-label').value.trim() || 'Did you know?';
+        const imageUrl = wantsCard() ? await cardImageUrl(body, label, cardFields()) : '';
+        const sent = await sendToBuffer({ text, imageUrl }, mode, dueAt);
+        note.textContent = mode === 'schedule'
+          ? 'Scheduled in Buffer for ' + whenText(sent.dueAt || dueAt) + '.'
+          : 'Added to your Buffer queue' + (sent.dueAt ? ', going out ' + whenText(sent.dueAt) : '') + '.';
+        if (composerDraft) {
+          await markDraft(composerDraft, { status: mode === 'schedule' ? 'scheduled' : 'queued', buffer_post_id: sent.id || null, scheduled_for: sent.dueAt || dueAt || null, text: body });
+          composerDraft = null;
+          loadDrafts();
+        }
+      } catch (err) {
+        note.classList.add('x-card-note');
+        note.textContent = 'Not sent: ' + err.message;
+      }
+    }
+    $x('x-buffer-queue-btn').addEventListener('click', () => sendComposer('queue'));
+    $x('x-buffer-schedule-btn').addEventListener('click', () => {
+      const row = $x('x-buffer-when');
+      row.hidden = !row.hidden;
+      if (!row.hidden && !$x('x-buffer-at').value) $x('x-buffer-at').value = defaultPickTime();
+    });
+    $x('x-buffer-at-btn').addEventListener('click', () => {
+      const at = pickedTime($x('x-buffer-at').value);
+      if (!at) { $x('x-buffer-at').focus(); return; }
+      $x('x-buffer-when').hidden = true;
+      sendComposer('schedule', at);
+    });
+    $x('x-clear-btn').addEventListener('click', () => { if (!$x('x-text').value.trim()) { composerDraft = null; $x('x-buffer-note').hidden = true; } });
+
+    // --- Drafts to review: written each morning (x-drafts-background on
+    // Netlify) from the site's data and, with an Anthropic key, researched
+    // by Claude. Each can be queued or scheduled in Buffer, finished in the
+    // composer, or rejected. Nothing goes out without a click here.
+    let pollTimer = null;
+    async function loadRunNote() {
+      const { data } = await client.from('site_content').select('body').eq('id', 'x-drafts-run').maybeSingle();
+      let run = null;
+      try { run = data && data.body ? JSON.parse(data.body) : null; } catch (e) { run = null; }
+      if (!run) return '';
+      const made = run.site + run.researched;
+      return 'Last made ' + whenText(run.at) + ': ' + (made ? (run.site ? run.site + ' from your data' : '') + (run.site && run.researched ? ', ' : '') + (run.researched ? run.researched + ' researched by Claude' : '') : 'nothing new') + '.' +
+        (run.notes && run.notes.length ? ' ' + run.notes.join(' ') : '');
+    }
+    async function loadDrafts() {
+      const list = $x('x-drafts-list');
+      const status = $x('x-drafts-status');
+      const { data, error } = await client.from('x_drafts').select('*').eq('status', 'new').order('created_at', { ascending: false }).limit(30);
+      if (error) {
+        list.innerHTML = '';
+        status.textContent = /x_drafts|relation|schema cache/i.test(error.message)
+          ? 'Drafts aren\u2019t switched on yet: run supabase-schema-update-35.sql in the Supabase SQL editor.'
+          : 'Couldn\u2019t load drafts: ' + error.message;
+        return;
+      }
+      const note = await loadRunNote().catch(() => '');
+      status.textContent = (data.length ? data.length + ' draft' + (data.length === 1 ? '' : 's') + ' waiting. ' : 'No drafts waiting. ') + note;
+      list.innerHTML = '';
+      data.forEach((d) => list.appendChild(draftItem(d)));
+    }
+    xDraftsLoader = loadDrafts;
+
+    function draftItem(d) {
+      const card = d.card || {};
+      const label = card.label || d.kind || 'Did you know?';
+      const fields = { headline: card.headline || '', line: card.line || '', title: card.title || '', icon: card.icon || 'auto', source: card.source || '' };
+      const item = document.createElement('article');
+      item.className = 'x-draft';
+      const meta = document.createElement('div');
+      meta.className = 'x-draft-meta';
+      meta.innerHTML = '<span class="x-idea-kind"></span><span class="x-draft-origin"></span><span class="x-draft-date"></span>';
+      meta.children[0].textContent = d.kind || 'Post';
+      meta.children[1].textContent = d.origin === 'claude' ? 'Researched by Claude' : 'From your data';
+      meta.children[1].classList.toggle('is-claude', d.origin === 'claude');
+      meta.children[2].textContent = whenText(d.created_at);
+      const body = document.createElement('div');
+      body.className = 'x-draft-body';
+      const img = document.createElement('img');
+      img.className = 'x-draft-card';
+      img.alt = 'The card for this post';
+      const main = document.createElement('div');
+      main.className = 'x-draft-main';
+      const text = document.createElement('textarea');
+      text.className = 'x-draft-text';
+      text.rows = 4;
+      text.value = d.text;
+      text.setAttribute('aria-label', 'Post text');
+      main.appendChild(text);
+      if (Array.isArray(d.sources) && d.sources.length) {
+        const src = document.createElement('p');
+        src.className = 'x-draft-sources';
+        src.appendChild(document.createTextNode('Sources: '));
+        d.sources.forEach((s, i) => {
+          const a = document.createElement('a');
+          a.href = s.url;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = s.title || s.url;
+          if (i) src.appendChild(document.createTextNode(' \u00b7 '));
+          src.appendChild(a);
+        });
+        main.appendChild(src);
+      }
+      const actions = document.createElement('div');
+      actions.className = 'x-actions x-draft-actions';
+      const btn = (labelText, cls) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'admin-btn' + (cls ? ' ' + cls : ''); b.textContent = labelText; actions.appendChild(b); return b; };
+      const queueBtn = btn('Add to Buffer queue', 'admin-btn--primary');
+      const schedBtn = btn('Schedule\u2026');
+      const editBtn = btn('Edit in composer');
+      const rejectBtn = btn('Reject', 'admin-btn--ghost');
+      main.appendChild(actions);
+      const when = document.createElement('div');
+      when.className = 'x-buffer-when';
+      when.hidden = true;
+      when.innerHTML = '<input type="datetime-local" aria-label="When to post"> <button type="button" class="admin-btn admin-btn--primary">Schedule</button>';
+      main.appendChild(when);
+      const note = document.createElement('p');
+      note.className = 'admin-hint x-draft-note';
+      main.appendChild(note);
+      body.appendChild(img);
+      body.appendChild(main);
+      item.appendChild(meta);
+      item.appendChild(body);
+
+      // The card, drawn here as it will go out.
+      window.FactsKit.xCardPreview(d.text, label, fields).then((p) => { img.src = p.url; }).catch(() => { img.hidden = true; });
+
+      const busy = (on) => { [queueBtn, schedBtn, editBtn, rejectBtn].forEach((b) => { b.disabled = on; }); };
+      async function send(mode, dueAt) {
+        busy(true);
+        note.classList.remove('x-card-note');
+        note.textContent = 'Sending to Buffer\u2026';
+        try {
+          const words = text.value.trim();
+          const fitted = window.FactsKit.xFitText(words, { products: cachedProducts, link: d.link || '' });
+          const postBody = window.FactsKit.xPostText(fitted, { hashtags: true, products: cachedProducts, link: d.link || '' });
+          const imageUrl = await cardImageUrl(fitted, label, fields);
+          const sent = await sendToBuffer({ text: postBody, imageUrl }, mode, dueAt);
+          await markDraft(d.id, { status: mode === 'schedule' ? 'scheduled' : 'queued', buffer_post_id: sent.id || null, scheduled_for: sent.dueAt || dueAt || null, text: words });
+          item.classList.add('is-done');
+          note.textContent = mode === 'schedule' ? 'Scheduled in Buffer for ' + whenText(sent.dueAt || dueAt) + '.' : 'Added to your Buffer queue' + (sent.dueAt ? ', going out ' + whenText(sent.dueAt) : '') + '.';
+          setTimeout(loadDrafts, 2500);
+        } catch (err) {
+          note.classList.add('x-card-note');
+          note.textContent = 'Not sent: ' + err.message;
+          busy(false);
+        }
+      }
+      queueBtn.addEventListener('click', () => send('queue'));
+      schedBtn.addEventListener('click', () => {
+        when.hidden = !when.hidden;
+        const input = when.querySelector('input');
+        if (!when.hidden && !input.value) input.value = defaultPickTime();
+      });
+      when.querySelector('button').addEventListener('click', () => {
+        const at = pickedTime(when.querySelector('input').value);
+        if (!at) return;
+        when.hidden = true;
+        send('schedule', at);
+      });
+      editBtn.addEventListener('click', () => {
+        useIdea({ kind: label, text: text.value.trim(), link: d.link || '' });
+        // Its card comes with it, to change there.
+        $x('x-card-headline').value = fields.headline;
+        $x('x-card-line').value = fields.line;
+        $x('x-card-title').value = fields.title;
+        $x('x-card-source').value = fields.source;
+        cardFieldsOwn = true;
+        $x('x-card-on').checked = true;
+        composerDraft = d.id;
+        refresh();
+        $x('x-text').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      rejectBtn.addEventListener('click', async () => {
+        busy(true);
+        await markDraft(d.id, { status: 'rejected' });
+        item.remove();
+        loadDrafts();
+      });
+      return item;
+    }
+
+    $x('x-drafts-make').addEventListener('click', async () => {
+      const status = $x('x-drafts-status');
+      const token = await ownerToken();
+      if (!token) { status.textContent = 'You\u2019re signed out. Log in again.'; return; }
+      $x('x-drafts-make').disabled = true;
+      status.textContent = 'Making drafts\u2026 They\u2019ll appear here in a minute or two (researched ones take longest).';
+      try {
+        await fetch('/.netlify/functions/x-drafts-background', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+      } catch (err) {
+        status.textContent = 'Couldn\u2019t start the drafts: ' + err.message;
+        $x('x-drafts-make').disabled = false;
+        return;
+      }
+      // Check back every 20 seconds for five minutes.
+      let tries = 0;
+      clearInterval(pollTimer);
+      pollTimer = setInterval(() => {
+        tries += 1;
+        loadDrafts();
+        if (tries >= 15) { clearInterval(pollTimer); $x('x-drafts-make').disabled = false; }
+      }, 20000);
+    });
+
     refresh();
   })();
 
@@ -994,6 +1262,7 @@
         loadEvents();
       }
       if (tab === 'earnings') loadEarningsAdmin();
+      if (tab === 'x' && xDraftsLoader) xDraftsLoader();
       if (tab === 'facts') loadFactRotation();
       if (tab === 'facts' && !factsLoaded) {
         factsLoaded = true;

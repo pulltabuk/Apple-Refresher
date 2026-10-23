@@ -11,6 +11,11 @@
 [functions."daily-build"]
   schedule = "5 0 * * *"
 
+# The day's X post drafts, ready for review in the admin by the morning
+# (06:00 UTC: 7am in summer, 6am in winter, UK time).
+[functions."x-drafts-daily"]
+  schedule = "0 6 * * *"
+
 # Lets Netlify's Image CDN (/.netlify/images) resize photos stored in
 # Supabase, so the phone upload page can show small thumbnails instead of
 # downloading every full-size photo.
