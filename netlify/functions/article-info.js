@@ -67,6 +67,13 @@ async function readStart(res, limit) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+// The site owner's login(s). ADMIN_EMAILS in Netlify's environment
+// variables (comma separated) overrides the default.
+const OWNER_EMAILS = (process.env.ADMIN_EMAILS || 'jgprice@mac.com').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+function isOwner(user) {
+  return !!(user && user.email && OWNER_EMAILS.indexOf(String(user.email).toLowerCase()) !== -1);
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
 
@@ -78,6 +85,8 @@ exports.handler = async (event) => {
   try {
     const check = await fetch(supabaseUrl + '/auth/v1/user', { headers: { apikey: anonKey, Authorization: 'Bearer ' + token } });
     if (!check.ok) return json(401, { error: 'Session is not valid. Sign in again.' });
+    // The site owner only: anyone could create an account.
+    if (!isOwner(await check.json())) return json(403, { error: 'This account can\u2019t use this.' });
   } catch (err) {
     return json(502, { error: 'Could not verify the session: ' + err.message });
   }
