@@ -3681,21 +3681,38 @@
         payload.did_you_know_date = payload.did_you_know ? (factDate || todayIso()) : null;
       }
 
-      const result = editingId
-        ? await client.from('products').update(payload).eq('id', editingId)
-        : await client.from('products').insert(payload);
+      // The saved row is asked back, so a save the database quietly
+      // ignored (no error, nothing changed, e.g. a lapsed login) is caught
+      // here rather than looking like it worked.
+      const saveRow = (body) => (editingId
+        ? client.from('products').update(body).eq('id', editingId).select('id, refresh_history')
+        : client.from('products').insert(body).select('id, refresh_history'));
+      let result = await saveRow(payload);
+      // The "last of the line" column missing (supabase-schema-update-33.sql
+      // not run, or Supabase not caught up with it yet) must never cost the
+      // rest of the product: save without it, then say so.
+      let lineNotSaved = false;
+      if (result.error && /last_in_line/.test(result.error.message || '') && 'last_in_line' in payload) {
+        console.error('Save failed on last_in_line, saving without it:', result.error);
+        lineNotSaved = payload.last_in_line;
+        delete payload.last_in_line;
+        result = await saveRow(payload);
+      }
 
       if (result.error) {
         console.error('Save failed:', result.error);
-        if (/last_in_line/.test(result.error.message || '')) {
-          window.alert('Save failed: run supabase-schema-update-33.sql in the Supabase SQL editor first, so a product can be marked as the last of its line.');
-          return;
-        }
         const missingColumns = /generation_details|icon_url|specs_url|press_release_url|in_countdown|did_you_know/.test(result.error.message || '');
         window.alert(missingColumns
-          ? 'Save failed because the database hasn\u2019t been updated yet. Run the latest supabase-schema-update SQL file in the Supabase SQL editor, then save again.'
+          ? 'Save failed because the database hasn\u2019t been updated yet. Run the latest supabase-schema-update SQL file in the Supabase SQL editor, then save again.\n\n(' + result.error.message + ')'
           : 'Save failed: ' + result.error.message);
         return;
+      }
+      if (!result.data || !result.data.length) {
+        window.alert('Nothing was saved: the database didn\u2019t accept the change, and no error came back. This usually means the login has lapsed. Log out and in again, then save again (your changes are still in the form).');
+        return;
+      }
+      if (lineNotSaved) {
+        window.alert('Saved, dates and all, except the \u201clast of the line\u201d tick: the database doesn\u2019t have that column yet.\n\nIn the Supabase SQL editor, run:\n\nalter table products add column if not exists last_in_line boolean not null default false;\nnotify pgrst, \'reload schema\';\n\nThen tick it and save again.');
       }
       if (oldSlugToRedirect) {
         const redirectResult = await client.from('product_redirects').upsert({ from_slug: oldSlugToRedirect, to_path: '/products/' + slug + '/' });
@@ -3715,7 +3732,7 @@
         }
       }
       // One last product per family: marking this one unmarks any other.
-      if (lastInLine) {
+      if (lastInLine && !lineNotSaved) {
         const others = cachedProducts.filter((p) => p.last_in_line && p.slug !== slug &&
           (p.category || '').trim().toLowerCase() === category.trim().toLowerCase());
         for (const other of others) {

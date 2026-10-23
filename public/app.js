@@ -2221,6 +2221,12 @@
         if (d <= today && d !== p.discontinued_date && (!latest || d > latest.date)) latest = { date: d, name: p.name, slug: p.slug };
       });
     });
+    // Must match siteStats() in src/templates.js.
+    if (latest) {
+      var sameDay = onSale.filter(function (p) { return (p.refresh_history || []).indexOf(latest.date) !== -1; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name, 'en', { numeric: true }); });
+      if (sameDay.length) latest = { date: latest.date, name: sameDay[0].name, slug: sameDay[0].slug, others: sameDay.slice(1).map(function (p) { return p.name; }) };
+    }
     return {
       total: products.length,
       onSale: onSale.length,
@@ -2228,6 +2234,18 @@
       latest: latest,
       latestDays: latest ? Math.round((new Date(today) - new Date(latest.date)) / 86400000) : null,
     };
+  }
+  // Must match latestReleaseStatHtml() in src/templates.js.
+  function latestReleaseStatHtmlJS(latest, days) {
+    var others = latest.others || [];
+    var more = others.length ? '<span class="site-stat-more" title="' + escapeHtmlJS('Also: ' + others.join(', ')) + '">+' + others.length + '</span>' : '';
+    var num = days === 0
+      ? '<span class="site-stat-num site-stat-num--word">New today</span>'
+      : '<span class="site-stat-num">' + days + '<small> ' + (days === 1 ? 'day' : 'days') + '</small></span>';
+    var label = days === 0 ? 'Apple\u2019s latest release' : 'since Apple\u2019s last release';
+    return '<a class="site-stat site-stat--latest" href="/products/' + escapeHtmlJS(latest.slug) + '/">' + num + ' <span class="site-stat-label">' + label + '</span>' +
+      '<span class="site-stat-sub"><span class="site-stat-sub-name">' + escapeHtmlJS(latest.name) + '</span>' + more + '</span>' +
+      '<span class="site-stat-date">Out ' + formatDateJS(latest.date) + '</span></a>';
   }
   function siteStatsHtmlJS(s) {
     if (!s || !s.total) return '';
@@ -2238,7 +2256,7 @@
       stat('/products/', s.total, 'products tracked') +
       stat('/products/?show=current', s.onSale, 'products on sale now') +
       stat('/discontinued/', s.discontinued, 'products discontinued') +
-      (s.latest ? stat('/products/' + escapeHtmlJS(s.latest.slug) + '/', s.latestDays === 0 ? 'Today' : s.latestDays + '<small> ' + (s.latestDays === 1 ? 'day' : 'days') + '</small>', 'since the latest release', '<span class="site-stat-sub">' + escapeHtmlJS(s.latest.name) + '</span>') : '') +
+      (s.latest ? latestReleaseStatHtmlJS(s.latest, s.latestDays) : '') +
       '</div></div>';
   }
 

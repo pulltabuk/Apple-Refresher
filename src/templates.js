@@ -1915,6 +1915,13 @@ function siteStats(products) {
       if (d <= today && d !== p.discontinued_date && (!latest || d > latest.date)) latest = { date: d, name: p.name, slug: p.slug };
     });
   });
+  // Everything on sale that came out that same day: the tile names the
+  // first (A to Z) and counts the rest ("iPhone 18 Pro +1").
+  if (latest) {
+    const sameDay = onSale.filter((p) => (p.refresh_history || []).indexOf(latest.date) !== -1)
+      .sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }));
+    if (sameDay.length) latest = { date: latest.date, name: sameDay[0].name, slug: sameDay[0].slug, others: sameDay.slice(1).map((p) => p.name) };
+  }
   return {
     total: list.length,
     onSale: onSale.length,
@@ -1922,6 +1929,20 @@ function siteStats(products) {
     latest,
     latestDays: latest ? Math.round((new Date(today) - new Date(latest.date)) / 86400000) : null,
   };
+}
+
+// The at-a-glance tile for Apple's newest release: "New today" on the
+// day, otherwise "35 days since Apple's last release", with the product
+// (and how many others came out with it) and the date.
+// Must match latestReleaseStatHtmlJS() in public/app.js.
+function latestReleaseStatHtml(latest, days) {
+  const others = latest.others || [];
+  const more = others.length ? `<span class="site-stat-more" title="${escapeHtml('Also: ' + others.join(', '))}">+${others.length}</span>` : '';
+  const num = days === 0
+    ? '<span class="site-stat-num site-stat-num--word">New today</span>'
+    : `<span class="site-stat-num">${days}<small> ${days === 1 ? 'day' : 'days'}</small></span>`;
+  const label = days === 0 ? 'Apple\u2019s latest release' : 'since Apple\u2019s last release';
+  return `<a class="site-stat site-stat--latest" href="/products/${escapeHtml(latest.slug)}/">${num} <span class="site-stat-label">${label}</span><span class="site-stat-sub"><span class="site-stat-sub-name">${escapeHtml(latest.name)}</span>${more}</span><span class="site-stat-date">Out ${formatDate(latest.date)}</span></a>`;
 }
 
 function siteStatsHtml(s) {
@@ -1933,7 +1954,7 @@ function siteStatsHtml(s) {
       ${stat('/products/', s.total, 'products tracked')}
       ${stat('/products/?show=current', s.onSale, 'products on sale now')}
       ${stat('/discontinued/', s.discontinued, 'products discontinued')}
-      ${s.latest ? stat(`/products/${escapeHtml(s.latest.slug)}/`, s.latestDays === 0 ? 'Today' : `${s.latestDays}<small> ${s.latestDays === 1 ? 'day' : 'days'}</small>`, 'since the latest release', `<span class="site-stat-sub">${escapeHtml(s.latest.name)}</span>`) : ''}
+      ${s.latest ? latestReleaseStatHtml(s.latest, s.latestDays) : ''}
     </div>
   </div>`;
 }
