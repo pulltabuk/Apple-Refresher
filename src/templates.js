@@ -787,9 +787,8 @@ function categoryStatsSentence(category, items) {
   if (past.length < 2) return '';
   const sinceLast = toDays(past[past.length - 1], today);
   const parts = [`Across the ${past.length} release dates recorded here (several products often launch on the same day), Apple has updated ${cat} ${cadence(avg)}.`];
-  // Name the release this counts from: on a product page it can be a
-  // different product in the family, and an unnamed number reads as this
-  // product's own count. Keep in step with familyCadenceJS() in app.js.
+  // Name the release this counts from, so the number reads as the
+  // family's, not one product's.
   const lastDate = past[past.length - 1];
   const lastNames = items.filter((i) => (i.product.refresh_history || []).indexOf(lastDate) !== -1).map((i) => i.product.name).sort((a, b) => a.localeCompare(b));
   const who = lastNames.length > 2 ? `the ${lastNames[0]} and others` : lastNames.length ? `the ${lastNames.join(' and the ')}` : '';
@@ -2390,7 +2389,12 @@ function heroCycle(product, status, sortedDates, allProducts) {
   // quoted, in numbers, beside its latest release. Not as a bar: one
   // model ageing past the family's gap is not a missed update when the
   // family itself has moved on (the iPhone 16 after the iPhone 17).
-  if (sortedDates.length <= 1) return { days: fam.avg, family: product.category || null, single: true, lastDate: fam.lastDate, sinceLast: fam.sinceLast };
+  if (sortedDates.length <= 1) {
+    const latestNames = (allProducts || [])
+      .filter((p) => (p.category || '') === (product.category || '') && (p.refresh_history || []).indexOf(fam.lastDate) !== -1)
+      .map((p) => p.name).sort((a, b) => a.localeCompare(b));
+    return { days: fam.avg, family: product.category || null, single: true, lastDate: fam.lastDate, sinceLast: fam.sinceLast, latestNames };
+  }
   return { days: fam.avg, family: product.category || null };
 }
 
@@ -2423,9 +2427,14 @@ function heroStatHtml(product, statusInfo, cycleDays) {
   if (cycleDays && cycleDays.single && cycleDays.days > 0) {
     const fam = escapeHtml(cycleDays.family || 'this family');
     const latestIsThis = first && first === cycleDays.lastDate;
+    // The newest in the family, by name, so the reader can see the line
+    // has moved on (the only place this is said on a product page).
+    const names = cycleDays.latestNames || [];
+    const who = names.length > 2 ? `the ${names[0]} and others` : names.length ? `the ${names.join(' and the ')}` : '';
+    const ago = cycleDays.sinceLast === 0 ? 'today' : `${plural(cycleDays.sinceLast, 'day', 'days')} ago`;
     const text = `${when ? `Released ${when}` : 'Released'}${latestIsThis ? `, the latest ${fam} release` : ', its only release recorded here'}. ` +
-      `Across the family, Apple updates ${fam} about every ${plural(cycleDays.days, 'day', 'days')} (${roughCadence(cycleDays.days)})` +
-      (latestIsThis ? '.' : `, most recently ${cycleDays.sinceLast === 0 ? 'today' : `${plural(cycleDays.sinceLast, 'day', 'days')} ago`}.`);
+      `Across the family, Apple updates ${fam} about every ${plural(cycleDays.days, 'day', 'days')} (${roughCadence(cycleDays.days)}).` +
+      (latestIsThis ? '' : ` The latest${who ? `, ${escapeHtml(who)},` : ''} came out ${ago}.`);
     bar = `<span class="days-hero-caption">${text}</span>`;
   } else if (cycleDays && cycleDays.days > 0) {
     const gap = cycleDays.days;
@@ -2617,8 +2626,6 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
         <div class="key-facts-row" data-facts="${(keyFacts.match(/key-fact-label/g) || []).length}">${keyFacts}</div>
       </div>
 
-      ${product.discontinued ? '' : categoryStatsSentence(product.category || 'this category',
-          allProducts.filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })))}
 
       ${product.did_you_know ? `<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">${sanitizeRichText(product.did_you_know, siteUrl)}</div>${product.did_you_know_date ? `<p class="did-you-know-date">As of ${formatDate(String(product.did_you_know_date).slice(0, 7))}</p>` : ''}</aside>` : ''}
 

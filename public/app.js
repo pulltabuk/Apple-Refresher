@@ -1008,8 +1008,10 @@
       var today = new Date().toISOString().slice(0, 10);
       var lastDate = '';
       family.forEach(function (p) { (p.refresh_history || []).forEach(function (d) { if (d <= today && d > lastDate) lastDate = d; }); });
+      var latestNames = family.filter(function (p) { return (p.refresh_history || []).indexOf(lastDate) !== -1; })
+        .map(function (p) { return p.name; }).sort(function (a, b) { return a.localeCompare(b); });
       return { days: avg, family: product.category || null, single: true, lastDate: lastDate,
-        sinceLast: Math.round((new Date(today) - new Date(lastDate)) / 86400000) };
+        sinceLast: Math.round((new Date(today) - new Date(lastDate)) / 86400000), latestNames: latestNames };
     }
     return { days: avg, family: product.category || null };
   }
@@ -1035,9 +1037,12 @@
       // Must match heroStatHtml() in src/templates.js.
       var fam = escapeHtmlJS(cycleDays.family || 'this family');
       var latestIsThis = first && first === cycleDays.lastDate;
+      var names = cycleDays.latestNames || [];
+      var who = names.length > 2 ? 'the ' + names[0] + ' and others' : names.length ? 'the ' + names.join(' and the ') : '';
+      var ago = cycleDays.sinceLast === 0 ? 'today' : pluralJS(cycleDays.sinceLast, 'day', 'days') + ' ago';
       var text1 = (when ? 'Released ' + when : 'Released') + (latestIsThis ? ', the latest ' + fam + ' release' : ', its only release recorded here') + '. ' +
-        'Across the family, Apple updates ' + fam + ' about every ' + pluralJS(cycleDays.days, 'day', 'days') + ' (' + roughCadenceJS(cycleDays.days) + ')' +
-        (latestIsThis ? '.' : ', most recently ' + (cycleDays.sinceLast === 0 ? 'today' : pluralJS(cycleDays.sinceLast, 'day', 'days') + ' ago') + '.');
+        'Across the family, Apple updates ' + fam + ' about every ' + pluralJS(cycleDays.days, 'day', 'days') + ' (' + roughCadenceJS(cycleDays.days) + ').' +
+        (latestIsThis ? '' : ' The latest' + (who ? ', ' + escapeHtmlJS(who) + ',' : '') + ' came out ' + ago + '.');
       bar = '<span class="days-hero-caption">' + text1 + '</span>';
     } else if (cycleDays && cycleDays.days > 0) {
       var gap = cycleDays.days;
@@ -1193,8 +1198,6 @@
           '<div class="product-facts">' + heroStatHtmlJS(product, status, cycle) +
             '<div class="key-facts-row" data-facts="' + (keyFacts.match(/key-fact-label/g) || []).length + '">' + keyFacts + '</div>' +
           '</div>' +
-          (product.discontinued ? '' : familyCadenceJS(product.category || 'this category',
-            allProducts.filter(function (p) { return (p.category || '') === (product.category || ''); }))) +
           (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">' + sanitizeRichTextJS(product.did_you_know) + '</div>' + (product.did_you_know_date ? '<p class="did-you-know-date">As of ' + formatDateJS(String(product.did_you_know_date).slice(0, 7)) + '</p>' : '') + '</aside>' : '') +
           '<dl class="spec-list spec-list--secondary">' + specs + '</dl>' +
           (product.discontinued ? '' : '<button class="wait-btn wait-btn--large" data-product-id="' + product.id + '" data-slug="' + product.slug + '" data-count="' + (product.waiting_count || 0) + '">Are you looking forward to a new ' + escapeHtmlJS(product.category) + '?</button>') +
@@ -1225,39 +1228,6 @@
     var past = dates.filter(function (d) { return d <= today; });
     if (past.length < 2) return null;
     return Math.round((new Date(past[past.length - 1]) - new Date(past[0])) / 86400000 / (past.length - 1));
-  }
-
-  function familyCadenceJS(category, familyProducts) {
-    var seen = {}, dates = [];
-    familyProducts.forEach(function (p) {
-      (p.refresh_history || []).forEach(function (d) { if (!seen[d]) { seen[d] = 1; dates.push(d); } });
-    });
-    dates.sort();
-    var today = new Date().toISOString().slice(0, 10);
-    var past = dates.filter(function (d) { return d <= today; });
-    if (past.length < 2) return '';
-    var toDays = function (a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); };
-    var avg = Math.round(toDays(past[0], past[past.length - 1]) / (past.length - 1));
-    var sinceLast = toDays(past[past.length - 1], today);
-    var cadence = function (d) {
-      if (d < 330) { var m = Math.max(1, Math.round(d / 30.4)); return m === 1 ? 'about once a month' : 'roughly every ' + m + ' months'; }
-      var years = Math.round((d / 365.25) * 2) / 2;
-      if (years === 1) return 'about once a year';
-      var whole = Math.floor(years);
-      return 'roughly every ' + (years % 1 ? whole + '\u00bd' : whole) + ' years';
-    };
-    var plural = function (n) { return n + (n === 1 ? ' day' : ' days'); };
-    var text = 'Across the ' + past.length + ' release dates recorded here (several products often launch on the same day), Apple has updated ' + escapeHtmlJS(category) + ' ' + cadence(avg) + '. ';
-    // Must match categoryStatsSentence() in src/templates.js.
-    var lastDate = past[past.length - 1];
-    var lastNames = familyProducts.filter(function (p) { return (p.refresh_history || []).indexOf(lastDate) !== -1; })
-      .map(function (p) { return p.name; }).sort(function (a, b) { return a.localeCompare(b); });
-    var who = lastNames.length > 2 ? 'the ' + lastNames[0] + ' and others' : lastNames.length ? 'the ' + lastNames.join(' and the ') : '';
-    var latest = 'The latest ' + escapeHtmlJS(category) + ' release' + (who ? ', ' + escapeHtmlJS(who) + ',' : '') + ' was ' + plural(sinceLast) + ' ago';
-    if (sinceLast > avg * 1.25) text += latest + ', well past the usual gap.';
-    else if (sinceLast > avg) text += latest + ', a little beyond the usual gap.';
-    else text += latest + ', so the next is not due yet.';
-    return '<p class="page-stats">' + text + '</p>';
   }
 
   // Must match appleName() in src/templates.js.
@@ -1423,32 +1393,59 @@
     var n = parseInt(new URLSearchParams(window.location.search).get('page'), 10);
     return n > 1 ? n : 1;
   }
+  // Filter rows and the address words they use: ?show=current,
+  // ?family=HomePod, ?decade=2010s.
+  var URL_FILTER_PARAMS = { status: 'show', category: 'family', decade: 'decade' };
   function syncPageUrl(push) {
     if (!isPaginatedGrid() || !window.history || !history.replaceState) return;
     var params = new URLSearchParams(window.location.search);
     if (currentPage > 1) params.set('page', String(currentPage)); else params.delete('page');
-    if (document.querySelector('.filter-bar[data-filter-key="status"]')) {
-      if (activeFilters.status && activeFilters.status !== 'all') params.set('show', activeFilters.status); else params.delete('show');
-    }
+    Object.keys(URL_FILTER_PARAMS).forEach(function (key) {
+      if (!document.querySelector('.filter-bar[data-filter-key="' + key + '"]')) return;
+      var value = activeFilters[key];
+      if (value && value !== 'all') params.set(URL_FILTER_PARAMS[key], value); else params.delete(URL_FILTER_PARAMS[key]);
+    });
+    // The search and the order too, so coming back from a product (Back,
+    // or a swipe) finds the list exactly as it was left.
+    var typed = searchInput ? searchInput.value.trim() : '';
+    if (typed) params.set('search', typed); else params.delete('search');
+    var sortEl = document.getElementById('sort-select');
+    if (sortEl) { if (sortEl.value) params.set('sort', sortEl.value); else params.delete('sort'); }
     var qs = params.toString();
     var url = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
     if (url === window.location.pathname + window.location.search + window.location.hash) return;
     if (push) history.pushState({ page: currentPage }, '', url);
     else history.replaceState(history.state, '', url);
   }
-  // Sets the Show filter's buttons from ?show= (or back to All).
-  function statusFilterFromUrl() {
-    var bar = document.querySelector('.filter-bar[data-filter-key="status"]');
-    if (!bar) return;
-    var want = new URLSearchParams(window.location.search).get('show') || 'all';
-    var hit = Array.prototype.filter.call(bar.querySelectorAll('.filter-btn'), function (b) { return b.getAttribute('data-filter-value') === want; })[0];
-    if (!hit) return;
-    activeFilters.status = want;
-    bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.toggle('active', b === hit); });
+  // Sets the filter buttons from the address (?show=, ?family=,
+  // ?decade=), or back to none.
+  function filtersFromUrl() {
+    var params = new URLSearchParams(window.location.search);
+    Object.keys(URL_FILTER_PARAMS).forEach(function (key) {
+      var bar = document.querySelector('.filter-bar[data-filter-key="' + key + '"]');
+      if (!bar) return;
+      var want = params.get(URL_FILTER_PARAMS[key]) || 'all';
+      var hit = Array.prototype.filter.call(bar.querySelectorAll('.filter-btn'), function (b) { return b.getAttribute('data-filter-value') === want; })[0];
+      if (!hit && want !== 'all') return;
+      activeFilters[key] = want;
+      bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.toggle('active', b === hit); });
+    });
+    var familyPicker = document.querySelector('[data-family-select]');
+    if (familyPicker) familyPicker.value = activeFilters.category && activeFilters.category !== 'all' ? activeFilters.category : '';
   }
   window.addEventListener('popstate', function () {
     if (!isPaginatedGrid()) return;
-    statusFilterFromUrl();
+    filtersFromUrl();
+    var params = new URLSearchParams(window.location.search);
+    if (searchInput) searchInput.value = params.get('search') || '';
+    var sortEl = document.getElementById('sort-select');
+    var wantSort = params.get('sort');
+    if (sortEl && wantSort && sortEl.value !== wantSort) {
+      captureOriginalOrderIfNeeded();
+      sortEl.value = wantSort;
+      if (sortResetBtn) sortResetBtn.style.display = '';
+      applySort(true);
+    }
     currentPage = pageFromUrl();
     applyFilters(true);
   });
@@ -1644,7 +1641,7 @@
   }
 
   wireFilterBars();
-  if (isPaginatedGrid()) statusFilterFromUrl();
+  if (isPaginatedGrid()) filtersFromUrl();
 
   // The mobile family picker drives the same buttons the desktop chips
   // use, so there is one source of truth for what is filtered.
