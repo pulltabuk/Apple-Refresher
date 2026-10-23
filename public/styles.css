@@ -3118,3 +3118,23 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-text > .countdown.countdown--done { flex: 0 0 auto; margin: 0 0 24px; }
   .intro-hero-text > .countdown.countdown--done + .earnings-next { margin-top: 0; }
 }
+
+/* Stacked hero (phones and iPads held upright): the finished ("Out
+   today") tile is a centred column, so the badge isn't stranded on the
+   left of a wide box. */
+@media (max-width: 900px) {
+  .intro-hero-text > .countdown.countdown--done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 24px 20px; }
+  .intro-hero-text > .countdown.countdown--done > * { flex: none; }
+  .intro-hero-text > .countdown.countdown--done .countdown-name-row { justify-content: center; }
+  .intro-hero-text > .countdown.countdown--done .countdown-name { font-size: 22px; }
+  .intro-hero-text > .countdown.countdown--done .countdown-date { font-size: 14px; }
+}
+@media (min-width: 701px) and (max-width: 900px) {
+  .intro-hero-text > .countdown.countdown--done { gap: 16px; padding: 30px 24px; }
+  .intro-hero-text > .countdown.countdown--done .countdown-label { font-size: 12px; }
+  .intro-hero-text > .countdown.countdown--done .countdown-icon { width: 56px; height: 56px; border-radius: 14px; }
+  .intro-hero-text > .countdown.countdown--done .countdown-icon :is(svg, img) { width: 38px; height: 38px; }
+  .intro-hero-text > .countdown.countdown--done .countdown-name { font-size: 26px; }
+  .intro-hero-text > .countdown.countdown--done .countdown-done-badge { font-size: 28px; padding: 14px 30px; }
+  .intro-hero-text > .countdown.countdown--done .countdown-date { font-size: 15px; }
+}
