@@ -1893,7 +1893,7 @@
     document.getElementById('search-screen').style.display = 'none';
   }
 
-  function productCard(p, showFamilyName) {
+  function productCard(p, showFamilyName, showAdded) {
     const card = document.createElement('div');
     card.className = 'line-card' + (p.discontinued ? ' line-card--discontinued' : '') + (p.featured ? ' line-card--featured' : '');
     const main = document.createElement('button');
@@ -1909,8 +1909,10 @@
       '<span class="line-card-text">' +
         '<span class="line-card-name">' + escapeAttr(p.name) + (p.featured ? ' <span class="line-card-star" title="Featured on homepage">\u2605</span>' : '') + '</span>' +
         (showFamilyName ? '<span class="line-card-meta">' + escapeAttr(p.category || 'Other') + '</span>' : '') +
-        '<span class="line-card-meta">' + dates + ' date' + (dates === 1 ? '' : 's') + '</span>' +
+        '<span class="line-card-meta">' + escapeAttr([lifespanText(p), dates + ' date' + (dates === 1 ? '' : 's')].filter(Boolean).join(' \u00b7 ')) + '</span>' +
+        (showAdded && p.created_at ? '<span class="line-card-meta">Added ' + escapeAttr(formatAdminDate(String(p.created_at).slice(0, 10))) + '</span>' : '') +
         '<span class="line-card-status' + (p.discontinued ? ' line-card-status--discontinued' : (!last ? ' line-card-status--empty' : '')) + '">' + escapeAttr(meta) + '</span>' +
+        (p.discontinued && p.last_in_line ? '<span class="line-card-last">Last of the line</span>' : '') +
       '</span>';
     main.addEventListener('click', () => openProduct(p.id));
 
@@ -2358,13 +2360,21 @@
     const familyLabel = document.getElementById('products-screen-family');
     familyLabel.innerHTML = iconHtml(selectedFamily, null, 22) + '<span>' + escapeAttr(selectedFamily) + '</span>';
     productListEl.innerHTML = '';
-    const inFamily = cachedProducts
-      .filter((p) => (p.category || '').trim().toLowerCase() === selectedFamily.toLowerCase())
-      .sort((a, b) => {
-        if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
-        return a.name.localeCompare(b.name);
-      });
-    inFamily.forEach((p) => productListEl.appendChild(productCard(p, false)));
+    const inFamily = sortFamilyProducts(cachedProducts
+      .filter((p) => (p.category || '').trim().toLowerCase() === selectedFamily.toLowerCase()), productSort);
+    document.querySelectorAll('[data-product-sort]').forEach((btn) => {
+      const on = btn.getAttribute('data-product-sort') === productSort;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    // A family whose last product is marked: said once, above the tiles.
+    const endedNote = document.getElementById('line-ended-note');
+    const last = inFamily.every((p) => p.discontinued) && inFamily.find((p) => p.last_in_line);
+    if (endedNote) {
+      endedNote.hidden = !last;
+      endedNote.textContent = last ? 'Line ended' + (last.discontinued_date ? ' ' + formatAdminDate(last.discontinued_date) : '') + ': the ' + last.name + ' was the last ' + selectedFamily + '.' : '';
+    }
+    inFamily.forEach((p) => productListEl.appendChild(productCard(p, false, productSort === 'added')));
 
     const newCard = document.createElement('button');
     newCard.type = 'button';
@@ -2376,6 +2386,54 @@
 
   const productSearchInputEl = document.getElementById('product-search-input');
   if (productSearchInputEl) productSearchInputEl.addEventListener('input', renderProductList);
+
+  // A family's products in order: by when they came out (their life on
+  // sale, newest or oldest first), when they were added here, or A to Z.
+  // The choice is remembered on this device.
+  const PRODUCT_SORT_KEY = 'admin-product-sort';
+  let productSort = 'newest';
+  try { productSort = localStorage.getItem(PRODUCT_SORT_KEY) || 'newest'; } catch (e) { /* private mode */ }
+  function productFirstDate(p) {
+    const dates = (p.refresh_history || []).slice().sort();
+    return p.original_launch_date || dates[0] || '';
+  }
+  function sortFamilyProducts(list, mode) {
+    const byName = (a, b) => a.name.localeCompare(b.name);
+    const sorted = list.slice();
+    if (mode === 'name') {
+      return sorted.sort((a, b) => (!!a.discontinued !== !!b.discontinued ? (a.discontinued ? 1 : -1) : byName(a, b)));
+    }
+    if (mode === 'added') {
+      return sorted.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')) || byName(a, b));
+    }
+    // Newest or oldest by first date; a product with no dates yet (just
+    // added) goes at the top of Newest and the end of Oldest.
+    return sorted.sort((a, b) => {
+      const da = productFirstDate(a);
+      const db = productFirstDate(b);
+      if (!da || !db) return (!da && !db) ? byName(a, b) : (!da ? -1 : 1) * (mode === 'oldest' ? -1 : 1);
+      const cmp = da.localeCompare(db) || (productLastDate(a) || '').localeCompare(productLastDate(b) || '');
+      return (mode === 'oldest' ? cmp : -cmp) || byName(a, b);
+    });
+  }
+  document.querySelectorAll('[data-product-sort]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      productSort = btn.getAttribute('data-product-sort');
+      try { localStorage.setItem(PRODUCT_SORT_KEY, productSort); } catch (e) { /* private mode */ }
+      renderProductList();
+    });
+  });
+
+  // "Oct 2001 – Apr 2003", "Since Sep 2025" or "Coming Nov 2026": how long
+  // the product was (or has been) on sale, for the tiles.
+  function lifespanText(p) {
+    const today = new Date().toISOString().slice(0, 10);
+    const first = productFirstDate(p);
+    if (!first) return '';
+    const month = (d) => new Date(String(d).slice(0, 10) + 'T12:00:00Z').toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+    if (p.discontinued) return month(first) + (p.discontinued_date ? ' \u2013 ' + month(p.discontinued_date) : '');
+    return (first > today ? 'Coming ' : 'Since ') + month(first);
+  }
 
   // Home and New product sit either side of the pinned search, so they
   // are on screen from anywhere in the Products tab, mid-form included.
@@ -2835,6 +2893,17 @@
     return checked ? checked.value : 'release';
   }
 
+  // "The last iPod: Apple ended the iPod line with this one"
+  function updateLastInLineText() {
+    const el = document.getElementById('last-in-line-text');
+    if (!el) return;
+    const family = canonicalFamily(document.getElementById('category').value);
+    el.textContent = family
+      ? 'The last ' + family + ': Apple ended the ' + family + ' line with this one'
+      : 'The last of its family: Apple ended the line with this one';
+  }
+  document.getElementById('category').addEventListener('input', updateLastInLineText);
+
   // Status is simply read off the dates, so there is no separate switch
   // to keep in step with them.
   function updateStatusReadout() {
@@ -2842,6 +2911,7 @@
     const isDiscontinued = !!currentDiscontinuedDate;
     document.getElementById('discontinued').checked = isDiscontinued;
     document.getElementById('discontinued-fields').style.display = isDiscontinued ? '' : 'none';
+    updateLastInLineText();
     readout.className = 'admin-status-readout admin-status-readout--' + (isDiscontinued ? 'discontinued' : 'current');
     readout.textContent = isDiscontinued
       ? 'Discontinued ' + formatAdminDate(currentDiscontinuedDate) + '. Add or remove that date in step 3 to change this.'
@@ -3127,6 +3197,7 @@
     if (rk) rk.checked = true;
     updatePreviousModelChoice();
     document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
+    document.getElementById('last_in_line').checked = !!p.last_in_line;
     currentDiscontinuedDate = p.discontinued ? (p.discontinued_date || null) : null;
     expandedGenerations.clear();
     resetGenerationPanel();
@@ -3600,6 +3671,11 @@
       // before supabase-schema-update-32.sql has been run.
       const specsGone = document.getElementById('specs_url_unavailable').checked;
       if (specsGone || cachedProducts.some((p) => 'specs_url_unavailable' in p)) payload.specs_url_unavailable = specsGone;
+      // Likewise before supabase-schema-update-33.sql. Only a discontinued
+      // product can be the last of its line.
+      const lastInLine = isDiscontinued && document.getElementById('last_in_line').checked;
+      const lineColumn = cachedProducts.some((p) => 'last_in_line' in p);
+      if (lastInLine || lineColumn) payload.last_in_line = lastInLine;
       if (factDateColumnExists()) {
         const factDate = document.getElementById('did_you_know_date').value || null;
         payload.did_you_know_date = payload.did_you_know ? (factDate || todayIso()) : null;
@@ -3611,6 +3687,10 @@
 
       if (result.error) {
         console.error('Save failed:', result.error);
+        if (/last_in_line/.test(result.error.message || '')) {
+          window.alert('Save failed: run supabase-schema-update-33.sql in the Supabase SQL editor first, so a product can be marked as the last of its line.');
+          return;
+        }
         const missingColumns = /generation_details|icon_url|specs_url|press_release_url|in_countdown|did_you_know/.test(result.error.message || '');
         window.alert(missingColumns
           ? 'Save failed because the database hasn\u2019t been updated yet. Run the latest supabase-schema-update SQL file in the Supabase SQL editor, then save again.'
@@ -3632,6 +3712,15 @@
         const repointError = repointed.find((r) => r.error);
         if (repointError) {
           window.alert('The new web address was saved, but links from other products to this one could not be updated: ' + repointError.error.message);
+        }
+      }
+      // One last product per family: marking this one unmarks any other.
+      if (lastInLine) {
+        const others = cachedProducts.filter((p) => p.last_in_line && p.slug !== slug &&
+          (p.category || '').trim().toLowerCase() === category.trim().toLowerCase());
+        for (const other of others) {
+          const res = await client.from('products').update({ last_in_line: false }).eq('id', other.id);
+          if (res.error) console.error('Could not unmark ' + other.name + ':', res.error);
         }
       }
       await autoDiscontinuePreviousModel(payload, document.querySelector('input[name="previous_model_action"]:checked').value === 'discontinue');

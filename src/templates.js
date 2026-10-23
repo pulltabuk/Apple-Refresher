@@ -691,6 +691,31 @@ function familyCadence(items) {
   };
 }
 
+// The product a family ended with: the one marked "last of the line" in
+// the admin, while nothing else in the family is on sale. Without the
+// mark, a family with nothing on sale is just "none on sale now".
+function familyEnding(items) {
+  const products = items.map((i) => i.product || i);
+  if (!products.length || products.some((p) => !p.discontinued)) return null;
+  const byDate = (a, b) => String(a.discontinued_date || '').localeCompare(String(b.discontinued_date || ''));
+  const marked = products.filter((p) => p.last_in_line).sort(byDate).pop();
+  const last = marked || products.slice().sort(byDate).pop();
+  // Unmarked, every product that went on that last day is named.
+  const names = marked ? [marked.name] : products
+    .filter((p) => (p.discontinued_date || null) === (last.discontinued_date || null))
+    .map((p) => p.name).sort((a, b) => a.localeCompare(b));
+  return { product: last, names, date: last.discontinued_date || null, ended: !!marked };
+}
+
+// "about 20½ years", "about 8 months": a length of time read naturally.
+function spanText(days) {
+  if (days < 330) { const m = Math.max(1, Math.round(days / 30.4)); return m === 1 ? 'about a month' : `about ${m} months`; }
+  const years = Math.round((days / 365.25) * 2) / 2;
+  if (years === 1) return 'about a year';
+  const whole = Math.floor(years);
+  return `about ${years % 1 ? whole + '½' : whole} years`;
+}
+
 function categoryStatsSentence(category, items) {
   // Measured across the whole family, since that is where the real
   // history lives: one product usually has a single release date, and a
@@ -702,11 +727,8 @@ function categoryStatsSentence(category, items) {
   )).sort();
   const today = new Date().toISOString().slice(0, 10);
   const past = dates.filter((d) => d <= today);
-  if (past.length < 2) return '';
-
   const toDays = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
-  const avg = Math.round(toDays(past[0], past[past.length - 1]) / (past.length - 1));
-  const sinceLast = toDays(past[past.length - 1], today);
+  const avg = past.length >= 2 ? Math.round(toDays(past[0], past[past.length - 1]) / (past.length - 1)) : null;
   // Half-year precision reads naturally ("every 3½ years") without
   // rounding 3.5 up to a misleading 4.
   const cadence = (d) => {
@@ -714,17 +736,48 @@ function categoryStatsSentence(category, items) {
     const years = Math.round((d / 365.25) * 2) / 2;
     if (years === 1) return 'about once a year';
     const whole = Math.floor(years);
-    return `roughly every ${years % 1 ? whole + '\u00bd' : whole} years`;
+    return `roughly every ${years % 1 ? whole + '½' : whole} years`;
   };
+  const cat = escapeHtml(category);
 
-  const parts = [`Across the ${past.length} release dates recorded here (several products often launch on the same day), Apple has updated ${escapeHtml(category)} ${cadence(avg)}.`];
+  // Nothing in the family on sale: no "next is due" talk. Marked as the
+  // last of the line in the admin, it says the line has ended.
+  const ending = familyEnding(items);
+  if (ending) {
+    const name = escapeHtml(ending.product.name);
+    const parts = [];
+    if (ending.ended) {
+      parts.push(ending.date
+        ? `Apple ended the ${cat} line on ${formatDate(ending.date)}, when it discontinued the ${name}, the last one.`
+        : `Apple has ended the ${cat} line. The ${name} was the last one.`);
+    } else if (ending.date) {
+      const many = ending.names.length > 1;
+      const who = ending.names.length > 2 ? `the ${ending.names[0]} and others` : `the ${ending.names.join(' and the ')}`;
+      parts.push(`No ${cat} is on sale now. The last ${many ? 'ones' : 'one'}, ${escapeHtml(who)}, ${many ? 'were' : 'was'} discontinued on ${formatDate(ending.date)}.`);
+    } else {
+      parts.push(`No ${cat} is on sale now.`);
+    }
+    if (past.length) {
+      const end = ending.date && ending.date >= past[past.length - 1] ? ending.date : past[past.length - 1];
+      const ran = ending.ended ? 'The line ran' : 'The family ran';
+      const span = past[0] < end ? `${ran} for ${spanText(toDays(past[0], end))}, from ${formatDate(past[0])}` : `${ran} from ${formatDate(past[0])}`;
+      parts.push(avg != null
+        ? `${span}, and across the ${past.length} release dates recorded here Apple updated it ${cadence(avg)}.`
+        : `${span}.`);
+    }
+    return `<p class="page-stats">${parts.join(' ')}</p>`;
+  }
+
+  if (past.length < 2) return '';
+  const sinceLast = toDays(past[past.length - 1], today);
+  const parts = [`Across the ${past.length} release dates recorded here (several products often launch on the same day), Apple has updated ${cat} ${cadence(avg)}.`];
   // Name the release this counts from: on a product page it can be a
   // different product in the family, and an unnamed number reads as this
   // product's own count. Keep in step with familyCadenceJS() in app.js.
   const lastDate = past[past.length - 1];
   const lastNames = items.filter((i) => (i.product.refresh_history || []).indexOf(lastDate) !== -1).map((i) => i.product.name).sort((a, b) => a.localeCompare(b));
   const who = lastNames.length > 2 ? `the ${lastNames[0]} and others` : lastNames.length ? `the ${lastNames.join(' and the ')}` : '';
-  const latest = `The latest ${escapeHtml(category)} release${who ? `, ${escapeHtml(who)},` : ''} was ${plural(sinceLast, 'day', 'days')} ago`;
+  const latest = `The latest ${cat} release${who ? `, ${escapeHtml(who)},` : ''} was ${plural(sinceLast, 'day', 'days')} ago`;
   if (sinceLast > avg * 1.25) {
     parts.push(`${latest}, well past the usual gap.`);
   } else if (sinceLast > avg) {
@@ -2083,7 +2136,8 @@ function categoryRowHtml({ category, items }) {
   let next;
   if (!current.length) {
     const year = products.map((p) => p.discontinued_date).filter(Boolean).sort().pop();
-    next = year ? { kind: 'gone', value: year.slice(0, 4), caption: 'line discontinued' } : { kind: 'gone', value: 'Discontinued', caption: 'whole line' };
+    const ended = products.some((p) => p.last_in_line);
+    next = year ? { kind: 'gone', value: year.slice(0, 4), caption: ended ? 'line ended' : 'line discontinued' } : { kind: 'gone', value: ended ? 'Ended' : 'Discontinued', caption: 'whole line' };
   } else if (upcoming) {
     next = { kind: 'coming', value: formatDate(upcoming), caption: 'next release' };
   } else if (!cad) {
@@ -2763,6 +2817,14 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <div id="products-screen" style="display:none;">
         <button type="button" id="back-to-families-btn" class="admin-back-link">&larr; All families</button>
         <h2 class="admin-screen-title"><span class="admin-step-num">2</span> Pick a product <span id="products-screen-family" class="admin-screen-family"></span></h2>
+        <div class="admin-sort-row" role="group" aria-label="Sort products">
+          <span class="admin-sort-label">Sort</span>
+          <button type="button" class="admin-sort-btn" data-product-sort="newest">Newest</button>
+          <button type="button" class="admin-sort-btn" data-product-sort="oldest">Oldest</button>
+          <button type="button" class="admin-sort-btn" data-product-sort="added">Recently added</button>
+          <button type="button" class="admin-sort-btn" data-product-sort="name">A&ndash;Z</button>
+        </div>
+        <p id="line-ended-note" class="admin-line-ended" hidden></p>
         <div id="product-list" class="line-card-grid"></div>
       </div>
       <button type="button" id="new-product-btn" hidden></button>
@@ -2967,6 +3029,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
           <div id="discontinued-fields" class="admin-discontinued-fields" style="display:none;">
             <label><span class="admin-label-row">Why it went <span class="admin-optional">Optional</span></span><textarea id="discontinued_reason" rows="2"></textarea></label>
+            <label class="checkbox-label"><input type="checkbox" id="last_in_line"> <span id="last-in-line-text">The last of its family: Apple ended the line with this one</span></label>
+            <p class="admin-hint">The family&rsquo;s page then says the line has ended, rather than counting down to a next model. Only one product per family can be the last, so ticking this unticks any other.</p>
           </div>
         </section>
 

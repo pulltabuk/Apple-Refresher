@@ -2420,7 +2420,8 @@
     var next;
     if (!current.length) {
       var year = products.map(function (p) { return p.discontinued_date; }).filter(Boolean).sort().pop();
-      next = year ? { kind: 'gone', value: String(year).slice(0, 4), caption: 'line discontinued' } : { kind: 'gone', value: 'Discontinued', caption: 'whole line' };
+      var ended = products.some(function (p) { return p.last_in_line; });
+      next = year ? { kind: 'gone', value: String(year).slice(0, 4), caption: ended ? 'line ended' : 'line discontinued' } : { kind: 'gone', value: ended ? 'Ended' : 'Discontinued', caption: 'whole line' };
     } else if (upcoming) {
       next = { kind: 'coming', value: formatDateJS(upcoming), caption: 'next release' };
     } else if (!cad) {
