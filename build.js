@@ -643,6 +643,21 @@ ${sitemapUrls.map((u) => `  <url><loc>${SITE_URL}${u.path}</loc>${u.lastmod ? `<
   fs.writeFileSync(path.join(DIST, '_redirects'), allRedirectLines.join('\n') + '\n');
   console.log(`Wrote ${allRedirectLines.length} redirect${allRedirectLines.length === 1 ? '' : 's'} (canonical host: ${canonicalHost}).`);
 
+  // Browser security headers on every page: no guessing file types, no
+  // framing this site inside someone else's page (clickjacking the admin),
+  // only the site's address (not the full page) sent to other sites, and
+  // no location or microphone access. YouTube embeds still work: they are
+  // frames inside this site, not this site inside a frame. A _headers file
+  // rather than netlify.toml, as Netlify reports these per deploy.
+  fs.writeFileSync(path.join(DIST, '_headers'), [
+    '/*',
+    '  X-Content-Type-Options: nosniff',
+    '  X-Frame-Options: SAMEORIGIN',
+    '  Referrer-Policy: strict-origin-when-cross-origin',
+    '  Permissions-Policy: geolocation=(), microphone=()',
+    '',
+  ].join('\n'));
+
   const robotsTxt = `User-agent: *
 Disallow: /admin/
 Disallow: /upload/

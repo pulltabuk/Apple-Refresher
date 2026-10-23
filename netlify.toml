@@ -26,15 +26,4 @@
 # then forwards to <page>. The function claims /c/* itself (its
 # config.path); see netlify/functions/card.mjs.
 
-# Standard browser security headers on every page: no guessing file
-# types, no framing this site inside someone else's page (clickjacking
-# the admin), only the site's address (not the full page) sent to other
-# sites, and no location or microphone access. YouTube embeds still work:
-# they are frames inside this site, not this site inside a frame.
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "SAMEORIGIN"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "geolocation=(), microphone=()"
+# Browser security headers are written to dist/_headers by build.js.
