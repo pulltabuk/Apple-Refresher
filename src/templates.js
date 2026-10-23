@@ -699,7 +699,20 @@ function familyCadence(items) {
     releases: past.length,
     avg: Math.round(toDays(past[0], past[past.length - 1]) / (past.length - 1)),
     sinceLast: toDays(past[past.length - 1], today),
+    lastDate: past[past.length - 1],
   };
+}
+
+// "roughly every 10 months", "about once a year", "roughly every 3½
+// years": a family's average gap in words. Half-year precision reads
+// naturally without rounding 3.5 up to a misleading 4.
+// Must match roughCadenceJS() in public/app.js.
+function roughCadence(d) {
+  if (d < 330) { const m = Math.max(1, Math.round(d / 30.4)); return m === 1 ? 'about once a month' : `roughly every ${m} months`; }
+  const years = Math.round((d / 365.25) * 2) / 2;
+  if (years === 1) return 'about once a year';
+  const whole = Math.floor(years);
+  return `roughly every ${years % 1 ? whole + '½' : whole} years`;
 }
 
 // The product a family ended with: the one marked "last of the line" in
@@ -740,15 +753,7 @@ function categoryStatsSentence(category, items) {
   const past = dates.filter((d) => d <= today);
   const toDays = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
   const avg = past.length >= 2 ? Math.round(toDays(past[0], past[past.length - 1]) / (past.length - 1)) : null;
-  // Half-year precision reads naturally ("every 3½ years") without
-  // rounding 3.5 up to a misleading 4.
-  const cadence = (d) => {
-    if (d < 330) { const m = Math.max(1, Math.round(d / 30.4)); return m === 1 ? 'about once a month' : `roughly every ${m} months`; }
-    const years = Math.round((d / 365.25) * 2) / 2;
-    if (years === 1) return 'about once a year';
-    const whole = Math.floor(years);
-    return `roughly every ${years % 1 ? whole + '½' : whole} years`;
-  };
+  const cadence = roughCadence;
   const cat = escapeHtml(category);
 
   // Nothing in the family on sale: no "next is due" talk. Marked as the
@@ -2377,12 +2382,16 @@ function heroCycle(product, status, sortedDates, allProducts) {
   // The product's own gaps when it has enough history, otherwise the
   // family's real gaps, labelled so it is clear which is being shown.
   // Never the built-in category default, which is a guess.
+  // Must match heroCycleJS() in public/app.js.
   if (sortedDates.length > 1 && status) return { days: status.avgCycleDays, family: null };
-  // One release: there is no cycle to measure against, so no bar and no
-  // borrowed family figure either.
-  if (sortedDates.length <= 1) return null;
   const fam = familyCadence((allProducts || []).filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })));
-  return fam ? { days: fam.avg, family: product.category || null } : null;
+  if (!fam) return null;
+  // One release: the product has no gaps of its own, so the family's are
+  // quoted, in numbers, beside its latest release. Not as a bar: one
+  // model ageing past the family's gap is not a missed update when the
+  // family itself has moved on (the iPhone 16 after the iPhone 17).
+  if (sortedDates.length <= 1) return { days: fam.avg, family: product.category || null, single: true, lastDate: fam.lastDate, sinceLast: fam.sinceLast };
+  return { days: fam.avg, family: product.category || null };
 }
 
 function heroStatHtml(product, statusInfo, cycleDays) {
@@ -2407,7 +2416,18 @@ function heroStatHtml(product, statusInfo, cycleDays) {
   // gives the big number something to be measured against, and uses the
   // space the number alone leaves empty.
   let bar = '';
-  if (cycleDays && cycleDays.days > 0) {
+  const first = (product.refresh_history || []).slice().sort()[0];
+  const when = first ? formatDate(first) : null;
+  // One release: its age, then the family's cycle in numbers, the same
+  // figures the family paragraph further down gives.
+  if (cycleDays && cycleDays.single && cycleDays.days > 0) {
+    const fam = escapeHtml(cycleDays.family || 'this family');
+    const latestIsThis = first && first === cycleDays.lastDate;
+    const text = `${when ? `Released ${when}` : 'Released'}${latestIsThis ? `, the latest ${fam} release` : ', its only release recorded here'}. ` +
+      `Across the family, Apple updates ${fam} about every ${plural(cycleDays.days, 'day', 'days')} (${roughCadence(cycleDays.days)})` +
+      (latestIsThis ? '.' : `, most recently ${cycleDays.sinceLast === 0 ? 'today' : `${plural(cycleDays.sinceLast, 'day', 'days')} ago`}.`);
+    bar = `<span class="days-hero-caption">${text}</span>`;
+  } else if (cycleDays && cycleDays.days > 0) {
     const gap = cycleDays.days;
     const pct = Math.max(2, Math.min(100, Math.round((info.days / gap) * 100)));
     const over = info.days > gap;
@@ -2426,14 +2446,14 @@ function heroStatHtml(product, statusInfo, cycleDays) {
     // one sitting untouched for years is a genuine wait. Neither claims
     // Apple has skipped an update, since earlier releases may just not be
     // recorded here yet.
-    const first = (product.refresh_history || []).slice().sort()[0];
-    const when = first ? formatDate(first) : null;
     const text = info.days < 365
       ? `Released ${when || 'recently'}. This is the only release recorded here, so there is nothing yet to measure a refresh cycle against.`
       : `${when ? `Released ${when}, and no` : 'No'} update has been recorded since, so there is nothing yet to measure a refresh cycle against.`;
     bar = `<span class="days-hero-caption">${text}</span>`;
   }
-  return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> ${info.days === 1 ? 'day' : 'days'} ${info.suffix}${bar}</p>`;
+  // One release has never been refreshed: its days count from release.
+  const suffix = info.suffix === 'since refresh' && (product.refresh_history || []).length <= 1 ? 'since release' : info.suffix;
+  return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> ${info.days === 1 ? 'day' : 'days'} ${suffix}${bar}</p>`;
 }
 
 // A Wikipedia link is named after the article it opens: Wikipedia often
@@ -2459,6 +2479,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   const latest = sortedDates[sortedDates.length - 1] || null;
 
   const allProducts = productsBySlug ? Object.values(productsBySlug) : [product];
+  const cycle = heroCycle(product, status, sortedDates, allProducts);
   const timelinePoints = categoryTimelinePoints(product, allProducts);
   const timelineHtml = verticalTimelineHtml(product, allProducts);
   // When the timeline above already lists exactly this product's own
@@ -2525,7 +2546,9 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     })(),
     keyFact('Launch price from', product.price ? escapeHtml(formatPrice(product.price)) : null),
     keyFact('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDate(product.original_launch_date) : null),
-    keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}` : null),
+    keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}`
+      // One release: the family's cycle, said to be the family's.
+      : !product.discontinued && cycle && cycle.single ? `About every ${plural(cycle.days, 'day', 'days')}<span class="key-fact-note">across ${escapeHtml(cycle.family || 'the family')}</span>` : null),
     (() => {
       if (!status || sortedDates.length <= 1 || product.discontinued) return '';
       const due = new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000);
@@ -2590,7 +2613,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
         </div>
       </div>
 
-      <div class="product-facts">${heroStatHtml(product, status, heroCycle(product, status, sortedDates, allProducts))}
+      <div class="product-facts">${heroStatHtml(product, status, cycle)}
         <div class="key-facts-row" data-facts="${(keyFacts.match(/key-fact-label/g) || []).length}">${keyFacts}</div>
       </div>
 
