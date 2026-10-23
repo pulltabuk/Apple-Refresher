@@ -3199,3 +3199,6 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 @media (max-width: 900px) {
   .league-status .badge--end { display: block; width: max-content; margin: 6px 0 0; white-space: nowrap; }
 }
+
+/* A key fact quoted from the family ("across iPhone") rather than the product */
+.key-fact-note { display: block; margin-top: 3px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }

@@ -989,13 +989,29 @@
     return (wikiArticleTitleJS(product.external_link) || product.name) + ' on Wikipedia';
   }
 
+  // Must match roughCadence() in src/templates.js.
+  function roughCadenceJS(d) {
+    if (d < 330) { var m = Math.max(1, Math.round(d / 30.4)); return m === 1 ? 'about once a month' : 'roughly every ' + m + ' months'; }
+    var years = Math.round((d / 365.25) * 2) / 2;
+    if (years === 1) return 'about once a year';
+    var whole = Math.floor(years);
+    return 'roughly every ' + (years % 1 ? whole + '\u00bd' : whole) + ' years';
+  }
+
   // Must stay in step with heroCycle() in src/templates.js.
   function heroCycleJS(product, status, sortedDates, allProducts) {
     if (sortedDates.length > 1 && status) return { days: status.avgCycleDays, family: null };
-    // One release: no cycle to measure, so no bar (matches heroCycle()).
-    if (sortedDates.length <= 1) return null;
-    var avg = familyAvgCycleJS((allProducts || []).filter(function (p) { return (p.category || '') === (product.category || ''); }));
-    return avg ? { days: avg, family: product.category || null } : null;
+    var family = (allProducts || []).filter(function (p) { return (p.category || '') === (product.category || ''); });
+    var avg = familyAvgCycleJS(family);
+    if (!avg) return null;
+    if (sortedDates.length <= 1) {
+      var today = new Date().toISOString().slice(0, 10);
+      var lastDate = '';
+      family.forEach(function (p) { (p.refresh_history || []).forEach(function (d) { if (d <= today && d > lastDate) lastDate = d; }); });
+      return { days: avg, family: product.category || null, single: true, lastDate: lastDate,
+        sinceLast: Math.round((new Date(today) - new Date(lastDate)) / 86400000) };
+    }
+    return { days: avg, family: product.category || null };
   }
 
   function heroStatHtmlJS(product, statusInfo, cycleDays) {
@@ -1013,7 +1029,17 @@
         (due ? '<span class="product-countdown-clock days-hero-clock" data-product-countdown-clock></span>' : '') + '</p>';
     }
     var bar = '';
-    if (cycleDays && cycleDays.days > 0) {
+    var first = (product.refresh_history || []).slice().sort()[0];
+    var when = first ? formatDateJS(first) : null;
+    if (cycleDays && cycleDays.single && cycleDays.days > 0) {
+      // Must match heroStatHtml() in src/templates.js.
+      var fam = escapeHtmlJS(cycleDays.family || 'this family');
+      var latestIsThis = first && first === cycleDays.lastDate;
+      var text1 = (when ? 'Released ' + when : 'Released') + (latestIsThis ? ', the latest ' + fam + ' release' : ', its only release recorded here') + '. ' +
+        'Across the family, Apple updates ' + fam + ' about every ' + pluralJS(cycleDays.days, 'day', 'days') + ' (' + roughCadenceJS(cycleDays.days) + ')' +
+        (latestIsThis ? '.' : ', most recently ' + (cycleDays.sinceLast === 0 ? 'today' : pluralJS(cycleDays.sinceLast, 'day', 'days') + ' ago') + '.');
+      bar = '<span class="days-hero-caption">' + text1 + '</span>';
+    } else if (cycleDays && cycleDays.days > 0) {
       var gap = cycleDays.days;
       var pct = Math.max(2, Math.min(100, Math.round((info.days / gap) * 100)));
       var over = info.days > gap;
@@ -1027,14 +1053,13 @@
     }
     if (!bar) {
       // Must stay in step with heroStatHtml() in src/templates.js.
-      var first = (product.refresh_history || []).slice().sort()[0];
-      var when = first ? formatDateJS(first) : null;
       var text = info.days < 365
         ? 'Released ' + (when || 'recently') + '. This is the only release recorded here, so there is nothing yet to measure a refresh cycle against.'
         : (when ? 'Released ' + when + ', and no' : 'No') + ' update has been recorded since, so there is nothing yet to measure a refresh cycle against.';
       bar = '<span class="days-hero-caption">' + text + '</span>';
     }
-    return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> ' + (info.days === 1 ? 'day' : 'days') + ' ' + info.suffix + bar + '</p>';
+    var suffix = info.suffix === 'since refresh' && (product.refresh_history || []).length <= 1 ? 'since release' : info.suffix;
+    return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> ' + (info.days === 1 ? 'day' : 'days') + ' ' + suffix + bar + '</p>';
   }
 
   // Must stay in step with relatedProductsHtml() in src/templates.js.
@@ -1090,6 +1115,8 @@
     var daysInfo = status ? badgeDaysInfoJS(product, status) : null;
 
     // Mirrors the key facts grid plus secondary list in src/templates.js.
+    var cycleProducts = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
+    var cycle = heroCycleJS(product, status, sortedDates, cycleProducts);
     var keyFacts = [
       (function () {
         var releases = releaseDatesJS(product);
@@ -1103,7 +1130,8 @@
       })(),
       keyFactJS('Launch price from', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
       keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null),
-      keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days') : null),
+      keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days')
+        : !product.discontinued && cycle && cycle.single ? 'About every ' + pluralJS(cycle.days, 'day', 'days') + '<span class="key-fact-note">across ' + escapeHtmlJS(cycle.family || 'the family') + '</span>' : null),
       (function () {
         if (!status || sortedDates.length <= 1 || product.discontinued) return '';
         var due = new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000);
@@ -1162,7 +1190,7 @@
               '<button type="button" class="admin-edit-link tweet-btn" data-slug="' + product.slug + '" style="display:none;" data-admin-label="Draft a post for X"></button>' +
             '</div>' +
           '</div>' +
-          '<div class="product-facts">' + heroStatHtmlJS(product, status, heroCycleJS(product, status, sortedDates, allProducts)) +
+          '<div class="product-facts">' + heroStatHtmlJS(product, status, cycle) +
             '<div class="key-facts-row" data-facts="' + (keyFacts.match(/key-fact-label/g) || []).length + '">' + keyFacts + '</div>' +
           '</div>' +
           (product.discontinued ? '' : familyCadenceJS(product.category || 'this category',
