@@ -330,6 +330,16 @@ function releaseHistoryHeading(name) {
   return !n || n.toLowerCase() === 'other' ? 'Release history' : `${escapeHtml(n)} release history`;
 }
 
+// The product a family ended with: marked "last of the line" in the
+// admin, while nothing else in its family is on sale. Shown as a black
+// "End of the line" pill on its timeline entry, product page and family
+// list. Must match isEndOfLineJS() in public/app.js.
+function isEndOfLine(product, allProducts) {
+  if (!product || !product.last_in_line || !product.discontinued) return false;
+  const family = (product.category || '').trim().toLowerCase();
+  return !(allProducts || []).some((p) => (p.category || '').trim().toLowerCase() === family && !p.discontinued);
+}
+
 function categoryTimelinePoints(product, allProducts) {
   const groupKey = normaliseGroupKey(product.timeline_name || product.category);
   const sameCategory = (allProducts || []).filter((p) => normaliseGroupKey(p.timeline_name || p.category) === groupKey);
@@ -389,7 +399,7 @@ function categoryTimelinePoints(product, allProducts) {
 
   sameCategory.forEach((p) => {
     if (p.discontinued && p.discontinued_date) {
-      points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name });
+      points.push({ date: p.discontinued_date, label: 'Discontinued', type: 'discontinued', productName: p.name, endOfLine: isEndOfLine(p, allProducts) });
     }
   });
   // Mark the newest released entry of each product still on sale, so the
@@ -492,6 +502,7 @@ function verticalTimelineHtml(product, allProducts) {
         // "Released" rather than "Refresh": it says what happened that day.
         `<span class="tl-entry-type tl-entry-type--${e.type}">${e.type === 'refresh' ? 'Released' : e.label}</span>`,
         e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '',
+        e.endOfLine ? '<span class="tl-entry-type tl-entry-type--end">End of the line</span>' : '',
       ].filter(Boolean).join('');
       return `<p class="tl-entry">
         <span class="tl-entry-name">${escapeHtml(e.displayName || e.productName)}</span>
@@ -2194,7 +2205,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
   });
 }
 
-function leagueRowHtml(product, statusInfo, rank) {
+function leagueRowHtml(product, statusInfo, rank, endOfLine) {
   const status = productStatusKey(product);
   const launch = launchDate(product);
   const days = statusInfo && status === 'current' ? statusInfo.daysSince : '';
@@ -2205,7 +2216,7 @@ function leagueRowHtml(product, statusInfo, rank) {
   return `<tr class="league-row${status === 'discontinued' ? ' league-row--discontinued' : ''}" data-href="/products/${product.slug}/" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-wait="${days !== '' ? statusInfo.ratio.toFixed(3) : ''}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   <td class="league-rank">${rank}</td>
   <td class="league-name"><a href="/products/${product.slug}/" class="league-name-link">${productIcon(product, 24)}<span>${escapeHtml(product.name)}</span></a></td>
-  <td class="league-status">${productBadge(product, statusInfo)}</td>
+  <td class="league-status">${productBadge(product, statusInfo)}${endOfLine ? ' <span class="badge badge--end">End of the line</span>' : ''}</td>
   <td class="league-launch">${launch ? formatDate(launch) : '\u2014'}</td>
   <td class="league-price">${product.price ? escapeHtml(formatPrice(product.price)) : '\u2014'}</td>
 </tr>`;
@@ -2223,7 +2234,7 @@ function leagueTableHtml(items, category) {
     </tr>
   </thead>
   <tbody>
-    ${items.map((i, idx) => leagueRowHtml(i.product, i.status, idx + 1)).join('\n')}
+    ${items.map((i, idx) => leagueRowHtml(i.product, i.status, idx + 1, isEndOfLine(i.product, items.map((x) => x.product)))).join('\n')}
   </tbody>
 </table>`;
 }
@@ -2524,7 +2535,10 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     keyFact('Discontinued', product.discontinued && product.discontinued_date ? formatDate(product.discontinued_date) : null),
     keyFact('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanText(launch, product.discontinued_date) : null),
     keyFact('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null),
-  ].filter(Boolean).slice(0, 6).join('\n');
+  ].filter(Boolean).slice(0, isEndOfLine(product, allProducts) ? 5 : 6)
+    // The last of its line always gets a tile, in the grid's last place.
+    .concat(isEndOfLine(product, allProducts) ? [`<div class="key-fact key-fact--end"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ${escapeHtml(product.category || 'of its line')}</p></div>`] : [])
+    .join('\n');
 
   const specs = [
     specRow('Category', categoryPill(product.category)),
