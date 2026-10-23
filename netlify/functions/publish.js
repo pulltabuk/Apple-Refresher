@@ -3,6 +3,13 @@
 // variable, never in page source, and the caller must present a valid
 // Supabase session so this cannot be triggered by a passer-by.
 
+// The site owner's login(s). ADMIN_EMAILS in Netlify's environment
+// variables (comma separated) overrides the default.
+const OWNER_EMAILS = (process.env.ADMIN_EMAILS || 'jgprice@mac.com').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+function isOwner(user) {
+  return !!(user && user.email && OWNER_EMAILS.indexOf(String(user.email).toLowerCase()) !== -1);
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
@@ -24,18 +31,24 @@ exports.handler = async (event) => {
     return { statusCode: 401, body: JSON.stringify({ error: 'Not signed in.' }) };
   }
 
-  // Confirm the token belongs to a real signed-in user before building.
-  if (supabaseUrl && anonKey) {
-    try {
-      const check = await fetch(supabaseUrl + '/auth/v1/user', {
-        headers: { apikey: anonKey, Authorization: 'Bearer ' + token },
-      });
-      if (!check.ok) {
-        return { statusCode: 401, body: JSON.stringify({ error: 'Session is not valid. Sign in again.' }) };
-      }
-    } catch (err) {
-      return { statusCode: 502, body: JSON.stringify({ error: 'Could not verify the session: ' + err.message }) };
+  // Confirm the token belongs to the site owner before building: a real
+  // signed-in user isn't enough, since anyone could create an account.
+  if (!supabaseUrl || !anonKey) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'Supabase is not configured.' }) };
+  }
+  try {
+    const check = await fetch(supabaseUrl + '/auth/v1/user', {
+      headers: { apikey: anonKey, Authorization: 'Bearer ' + token },
+    });
+    if (!check.ok) {
+      return { statusCode: 401, body: JSON.stringify({ error: 'Session is not valid. Sign in again.' }) };
     }
+    const user = await check.json();
+    if (!isOwner(user)) {
+      return { statusCode: 403, body: JSON.stringify({ error: 'This account can\u2019t publish the site.' }) };
+    }
+  } catch (err) {
+    return { statusCode: 502, body: JSON.stringify({ error: 'Could not verify the session: ' + err.message }) };
   }
 
   try {
