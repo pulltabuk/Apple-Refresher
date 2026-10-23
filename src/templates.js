@@ -3279,6 +3279,15 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <div id="tab-x" class="admin-tab-panel" style="display:none;">
     <p class="admin-hint">Posts for the Apple Sunset X account only. Nothing here is saved or shown on the website.</p>
 
+    <section class="x-drafts" id="x-drafts" aria-labelledby="x-drafts-title">
+      <div class="x-drafts-head">
+        <h3 class="admin-form-section" id="x-drafts-title">Drafts to review</h3>
+        <button type="button" id="x-drafts-make" class="admin-btn admin-btn--small">Make drafts now</button>
+      </div>
+      <p class="admin-hint" id="x-drafts-status">Each morning: posts from your data, and researched ones from Claude, ready to send to Buffer or reject.</p>
+      <div id="x-drafts-list" class="x-drafts-list"></div>
+    </section>
+
     <h3 class="admin-form-section">1. Pick an idea, or write one with Claude</h3>
     <div class="x-source-row">
       <button type="button" id="x-ideas-btn" class="admin-btn admin-btn--primary">Ideas from my data</button>
@@ -3336,10 +3345,17 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
     <img id="x-card" class="x-card" alt="" hidden>
     <div class="x-actions">
       <button type="button" id="x-post-btn" class="admin-btn admin-btn--primary">Post to X</button>
+      <button type="button" id="x-buffer-queue-btn" class="admin-btn">Add to Buffer queue</button>
+      <button type="button" id="x-buffer-schedule-btn" class="admin-btn">Schedule in Buffer&hellip;</button>
       <button type="button" id="x-copy-btn" class="admin-btn">Copy text</button>
       <button type="button" id="x-card-btn" class="admin-btn" hidden>Download card</button>
       <button type="button" id="x-clear-btn" class="admin-btn">Clear</button>
     </div>
+    <div id="x-buffer-when" class="x-buffer-when" hidden>
+      <input type="datetime-local" id="x-buffer-at" aria-label="When to post">
+      <button type="button" id="x-buffer-at-btn" class="admin-btn admin-btn--primary">Schedule</button>
+    </div>
+    <p id="x-buffer-note" class="admin-hint" hidden></p>
     <p id="x-over" class="x-over" hidden><span id="x-over-text"></span> <button type="button" id="x-over-tags" class="admin-btn admin-btn--small">Remove the hashtags</button></p>
     <div id="x-after" class="x-after" hidden>
       <p><strong>Your post is open in X.</strong> Once it&rsquo;s posted, what next?</p>
