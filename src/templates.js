@@ -1726,6 +1726,7 @@ function countdownHtml(countdown) {
     // given (e.g. "1:30pm PT"), else 8am UK on the day.
     const target = item.time ? FactsKit.eventStartMs({ event_date: item.date, event_time: item.time }) : Date.parse(item.date + 'T07:00:00Z');
     const days = Math.max(0, Math.floor((target - Date.now()) / 86400000));
+    const over = target <= Date.now();
     // What the tile says once its moment arrives (app.js switches to it,
     // e.g. in a tab left open overnight; the next build drops the tile).
     const isEvent = /^\/events\//.test(item.href);
@@ -1734,16 +1735,19 @@ function countdownHtml(countdown) {
       : isEvent
       ? { kicker: 'Happening now', text: 'Live now', date: '' }
       : { kicker: 'Results day', text: 'Results are out', date: '' };
-    return `<a class="countdown${isEvent ? ' countdown--event' : ''}" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
-    <span class="countdown-label">${escapeHtml(item.kicker || 'Counting down to')}</span>
+    // Built after the moment (a rebuild on release day): already finished.
+    return `<a class="countdown${isEvent ? ' countdown--event' : ''}${over ? ' countdown--done' : ''}" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
+    <span class="countdown-label">${escapeHtml(over ? done.kicker : (item.kicker || 'Counting down to'))}</span>
     ${item.product
       // A product counts down with its icon, as on the featured tile.
       ? `<span class="countdown-name-row"><span class="countdown-icon">${productIcon(item.product, 32)}</span><span class="countdown-name">${escapeHtml(item.label)}</span></span>`
       : `<span class="countdown-name">${escapeHtml(item.label)}</span>`}
     <span class="countdown-clock" data-countdown-clock>
-      <span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>
+      ${over
+        ? `<span class="countdown-done-badge">${escapeHtml(done.text)}</span>`
+        : `<span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>`}
     </span>
-    <span class="countdown-date">${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}</span>
+    <span class="countdown-date">${over && done.date ? escapeHtml(done.date) : `${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}`}</span>
   </a>`;
   }).join('\n');
 }
@@ -1771,19 +1775,6 @@ function earningsLineHtml(e) {
   // UK calendar days, kept current in the browser by app.js.
   const when = FactsKit.daysUntilText(e.report_date);
   return `<a class="earnings-next" href="/earnings/"><span class="earnings-next-label">Next earnings &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span><span class="earnings-next-text">Apple ${earningsQuarter(e)} results, ${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></a>`;
-}
-
-// When nothing is counting down: the latest release, in the same box.
-function latestReleaseHeroHtml(latest, days) {
-  if (!latest) return '';
-  return `<a class="countdown countdown--latest" href="/products/${escapeHtml(latest.slug)}/">
-    <span class="countdown-label">Latest release</span>
-    <span class="countdown-name">${escapeHtml(latest.name)}</span>
-    <span class="countdown-clock">
-      <span class="countdown-unit"><span class="countdown-value">${days === 0 ? 'Today' : days}</span> <span class="countdown-unit-label">${days === 0 ? '' : days === 1 ? 'day ago' : 'days ago'}</span></span>
-    </span>
-    <span class="countdown-date">Released ${formatDate(latest.date)}</span>
-  </a>`;
 }
 
 function earningsPage({ earnings, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -1928,9 +1919,9 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   const body = `
 <section class="intro-hero">
   <div class="intro-hero-layout">
-    <div class="intro-hero-text">
+    <div class="intro-hero-text${countdown ? '' : ' intro-hero-text--calm'}">
       <h1 class="intro-heading">${pageHeading(pageContent, 'Apple Sunset')}</h1>
-      ${countdown ? countdownHtml(countdown) : latestReleaseHeroHtml(stats && stats.latest, stats && stats.latestDays)}
+      ${countdown ? countdownHtml(countdown) : ''}
       ${earningsLineHtml(earningsNext)}
       ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
