@@ -4066,6 +4066,63 @@
     countryOptions.innerHTML = countries.map((v) => `<option value="${v.replace(/"/g, '&quot;')}">`).join('');
   }
 
+  // A gallery photo's 800px copy, or the photo itself if there isn't one.
+  function smallPhoto(img, url) {
+    const small = FactsKit.sizedPhotoUrl(url, 800);
+    img.src = small;
+    if (small !== url) img.onerror = () => { img.onerror = null; img.src = url; };
+  }
+
+  // --- Quick-loading copies ---
+  // Photos added before October 2026 have no smaller copies, so pages load
+  // them at full size. Checked once per visit; the button makes the copies.
+  const speedBox = document.getElementById('gallery-speed');
+  const speedText = document.getElementById('gallery-speed-text');
+  const speedBtn = document.getElementById('gallery-speed-btn');
+  let photosWithoutCopies = null;
+  let copiesRunning = false;
+
+  async function checkPhotoCopies(albums) {
+    if (photosWithoutCopies !== null || copiesRunning) return;
+    photosWithoutCopies = [];
+    try {
+      photosWithoutCopies = await FactsKit.photosMissingCopies(albums);
+    } catch (err) {
+      console.error('Checking photo copies failed:', err);
+      return;
+    }
+    if (!photosWithoutCopies.length) return;
+    const n = photosWithoutCopies.length;
+    speedText.textContent = n + (n === 1 ? ' photo loads' : ' photos load') + ' slowly on the site because ' + (n === 1 ? 'it has' : 'they have') + ' no quick-loading copies yet. Making them takes a few seconds a photo; keep this page open until it finishes.';
+    speedBtn.hidden = false;
+    speedBox.hidden = false;
+  }
+
+  speedBtn.addEventListener('click', async () => {
+    if (copiesRunning || !photosWithoutCopies || !photosWithoutCopies.length) return;
+    copiesRunning = true;
+    speedBtn.hidden = true;
+    const todo = photosWithoutCopies.slice();
+    const failed = [];
+    for (let i = 0; i < todo.length; i++) {
+      speedText.textContent = 'Making quick-loading copies: ' + (i + 1) + ' of ' + todo.length + '…';
+      try {
+        await FactsKit.makePhotoCopies(client, todo[i]);
+      } catch (err) {
+        console.error('Copies failed for', todo[i], err);
+        failed.push(todo[i]);
+      }
+    }
+    copiesRunning = false;
+    photosWithoutCopies = failed;
+    if (failed.length) {
+      speedText.textContent = (todo.length - failed.length) + ' done, but ' + failed.length + ' couldn’t be copied. Try again, and if it keeps failing, tell Claude.';
+      speedBtn.hidden = false;
+    } else {
+      speedText.textContent = 'Done: every gallery photo now has quick-loading copies.';
+    }
+  });
+
   async function loadGalleryPhotos() {
     const { data, error } = await client.from('gallery_photos').select('*').order('created_at', { ascending: false });
     galleryListEl.innerHTML = '';
@@ -4075,6 +4132,7 @@
     }
     cachedGalleryPhotos = data;
     updateGalleryLocationCountryOptions();
+    checkPhotoCopies(data);
     if (!data.length) {
       galleryListEl.textContent = 'No photos yet, add your first one below.';
       return;
@@ -4093,7 +4151,7 @@
       const thumbUrl = (photo.image_urls && photo.image_urls[0]) || photo.image_url;
       if (thumbUrl) {
         const img = document.createElement('img');
-        img.src = thumbUrl;
+        smallPhoto(img, thumbUrl);
         img.alt = '';
         photoTd.appendChild(img);
       } else {
@@ -4184,7 +4242,7 @@
       });
 
       const img = document.createElement('img');
-      img.src = url;
+      smallPhoto(img, url);
       wrap.appendChild(img);
 
       if (i === 0) {
@@ -4245,7 +4303,9 @@
     }
     for (const file of toUpload) {
       try {
-        const url = await uploadFile(file);
+        // Resized to at most 2560px with location data removed, plus the
+        // smaller copies the gallery loads (as on the phone upload page).
+        const url = await FactsKit.uploadGalleryPhoto(client, file);
         currentGalleryImageUrls.push(url);
         renderGalleryImageThumbs();
       } catch (err) {

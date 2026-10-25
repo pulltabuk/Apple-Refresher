@@ -2077,12 +2077,134 @@
     return n ? n + ' characters' + (n > 300 ? ', longer than the 300 or so that reads best' : '') : '';
   }
 
+  // Netlify's Image CDN answered every request with 400 (October 2026), so
+  // each image cost a failed request before the original loaded. Off until
+  // that's fixed; gallery photos use their own smaller copies instead
+  // (sizedPhotoUrl). Same switch as IMAGE_CDN in src/templates.js and app.js.
+  const IMAGE_CDN = false;
+
   // An <img> through Netlify's Image CDN at the size shown, falling back
   // to the original. Same markup as cdnImgHtml() in src/templates.js.
   function cdnImgHtml(url, width, attrs, square) {
-    if (!/^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//.test(String(url || ''))) return '<img src="' + escapeHtml(url) + '"' + (attrs || '') + '>';
+    if (!IMAGE_CDN || !/^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//.test(String(url || ''))) return '<img src="' + escapeHtml(url) + '"' + (attrs || '') + '>';
     const cdn = '/.netlify/images?url=' + encodeURIComponent(url) + '&w=' + width + '&q=80' + (square ? '&h=' + width + '&fit=cover' : '');
     return '<img src="' + escapeHtml(cdn) + '" data-full="' + escapeHtml(url) + '" onerror="this.onerror=null;this.src=this.dataset.full"' + (attrs || '') + '>';
+  }
+
+  // --- Gallery photo sizes ---
+  // Each gallery photo is kept three times in Supabase storage: the photo
+  // (at most 2560px, location data removed) and smaller copies under
+  // sized/800/ and sized/1600/ with the same name. Tiles load the 800px
+  // copy and album pages the 1600px one, falling back to the photo itself
+  // when a copy is missing. Keep in step with sizedPhotoUrlJS() in app.js.
+  const PHOTO_MAX_EDGE = 2560;
+  const PHOTO_COPY_WIDTHS = [800, 1600];
+  const PHOTO_URL_RE = /^(https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\/product-images\/)(?!sized\/)([^?#]+)$/;
+
+  function sizedPhotoUrl(url, width) {
+    const m = PHOTO_URL_RE.exec(String(url || ''));
+    return m ? m[1] + 'sized/' + width + '/' + m[2] : url;
+  }
+
+  // The photo's path inside the product-images bucket.
+  function photoStoragePath(url) {
+    const m = PHOTO_URL_RE.exec(String(url || ''));
+    return m ? decodeURIComponent(m[2]) : null;
+  }
+
+  function loadPhoto(blob) {
+    const src = URL.createObjectURL(blob);
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ img, src });
+      img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('Could not read this photo.')); };
+      img.src = src;
+    });
+  }
+
+  // JPEG copies of a photo (File or Blob) with their longest side at most
+  // each of the given sizes. Redrawing through a canvas also drops the
+  // EXIF block, including GPS location. One decode for every size.
+  async function photoJpegs(blob, edges, quality) {
+    const { img, src } = await loadPhoto(blob);
+    try {
+      const out = {};
+      for (const edge of edges) {
+        const scale = Math.min(1, edge / Math.max(img.naturalWidth, img.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        out[edge] = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality(edge)));
+        canvas.width = 0;
+        canvas.height = 0;
+        if (!out[edge]) throw new Error('Could not prepare this photo.');
+      }
+      return out;
+    } finally {
+      URL.revokeObjectURL(src);
+    }
+  }
+
+  const photoQuality = (edge) => (edge <= 800 ? 0.78 : edge <= 1600 ? 0.8 : 0.85);
+  // Never-changing names, so browsers and Supabase's CDN can keep them a year.
+  const PHOTO_UPLOAD = { contentType: 'image/jpeg', cacheControl: '31536000' };
+
+  async function storePhotoCopies(client, path, jpegs) {
+    for (const w of PHOTO_COPY_WIDTHS) {
+      const { error } = await client.storage.from('product-images').upload('sized/' + w + '/' + path, jpegs[w], PHOTO_UPLOAD);
+      // Already there from an earlier try: that's fine.
+      if (error && !/exists|duplicate/i.test(error.message || '')) throw error;
+    }
+  }
+
+  // Uploads a new gallery photo and its smaller copies; returns the
+  // photo's public URL. If only the copies fail, the photo still saves and
+  // pages show the photo itself until "Make quick-loading copies" is run.
+  async function uploadGalleryPhoto(client, file) {
+    const jpegs = await photoJpegs(file, [PHOTO_MAX_EDGE].concat(PHOTO_COPY_WIDTHS), photoQuality);
+    const path = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '-gallery.jpg';
+    const { error } = await client.storage.from('product-images').upload(path, jpegs[PHOTO_MAX_EDGE], PHOTO_UPLOAD);
+    if (error) throw error;
+    try {
+      await storePhotoCopies(client, path, jpegs);
+    } catch (err) {
+      console.error('Smaller copies of ' + path + ' failed:', err);
+    }
+    return client.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+  }
+
+  // Gallery photo URLs (from the given albums) missing a smaller copy.
+  async function photosMissingCopies(albums) {
+    const urls = [];
+    (albums || []).forEach((a) => {
+      const list = a.image_urls && a.image_urls.length ? a.image_urls : a.image_url ? [a.image_url] : [];
+      list.forEach((u) => { if (photoStoragePath(u) && urls.indexOf(u) === -1) urls.push(u); });
+    });
+    const missing = [];
+    let next = 0;
+    const has = (u) => fetch(u, { method: 'HEAD', cache: 'no-store' }).then((r) => r.ok, () => false);
+    async function worker() {
+      while (next < urls.length) {
+        const url = urls[next++];
+        const found = await Promise.all(PHOTO_COPY_WIDTHS.map((w) => has(sizedPhotoUrl(url, w))));
+        if (found.indexOf(false) !== -1) missing.push(url);
+      }
+    }
+    await Promise.all([worker(), worker(), worker(), worker(), worker(), worker()]);
+    return urls.filter((u) => missing.indexOf(u) !== -1);
+  }
+
+  // Makes the smaller copies for a photo that's already uploaded.
+  async function makePhotoCopies(client, url) {
+    const path = photoStoragePath(url);
+    if (!path) return;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Couldn’t download ' + path + ' (' + res.status + ').');
+    const jpegs = await photoJpegs(await res.blob(), PHOTO_COPY_WIDTHS, photoQuality);
+    await storePhotoCopies(client, path, jpegs);
   }
 
   // --- Apple Events in the homepage hero ---
@@ -2467,6 +2589,10 @@
     xOverNote,
     summaryToEditorHtml,
     cdnImgHtml,
+    sizedPhotoUrl,
+    uploadGalleryPhoto,
+    photosMissingCopies,
+    makePhotoCopies,
     summaryFromEditor,
     summaryLengthNote,
     CARD_ICON_NAMES,

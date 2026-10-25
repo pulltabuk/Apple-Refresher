@@ -3245,5 +3245,12 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 }
 
 /* Gallery: an album's story, under its title */
-.card-story { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* Whole sentences only (storyPreview), so no line clamp. */
+.card-story { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary); }
 .gallery-photo-story { max-width: 680px; margin: 6px 0 14px; font-size: 17px; line-height: 1.5; color: var(--text); }
+
+/* Admin gallery: photos still without their quick-loading copies. */
+.gallery-speed { margin: 14px 0; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 12px; background: var(--accent-bg); }
+.gallery-speed[hidden], .gallery-speed button[hidden] { display: none; }
+.gallery-speed p { margin: 0 0 10px; font-size: 14px; line-height: 1.5; }
+.gallery-speed p:last-child { margin-bottom: 0; }
