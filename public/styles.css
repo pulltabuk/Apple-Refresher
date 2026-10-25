@@ -611,7 +611,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
   position: relative;
 }
 .card-image img { width: 100%; height: 100%; object-fit: cover; }
-.card-grid[data-mode="events"] .card-image img { object-fit: contain; }
+/* Event artwork fills its box whatever shape it was uploaded in: no bars. */
+.card-grid[data-mode="events"] .card-image img { object-fit: cover; }
 .placeholder-icon { position: relative; z-index: 1; filter: drop-shadow(0 6px 10px rgba(20, 33, 61, 0.12)); }
 
 .card--featured {
@@ -853,8 +854,10 @@ label.admin-btn { cursor: pointer; color: #fff; }
   gap: 14px;
   margin-top: 1.5rem;
 }
-.card-grid[data-mode="events"] { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
-.card-grid[data-mode="gallery"] { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+/* min(): on a phone narrower than 360px a column is the full width,
+   rather than running off the side of the screen. */
+.card-grid[data-mode="events"] { grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); }
+.card-grid[data-mode="gallery"] { grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); }
 .card {
   border: 1px solid #c7c4b8;
   border-radius: 12px;
@@ -3341,3 +3344,20 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .card--event-archive .event-card-head { display: flex; flex-direction: column; gap: 4px; }
 .card--event-archive .event-card-title { font-size: 22px; font-weight: 800; line-height: 1.2; letter-spacing: -0.01em; color: var(--event); -webkit-line-clamp: 2; }
 .card--event-archive .event-card-date { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+
+/* Events page on a phone: the same 16px between tiles as the page's own
+   margin either side of them. */
+@media (max-width: 700px) {
+  .card-grid[data-mode="events"] { gap: 16px; }
+}
+
+/* An event tile framed in its artwork's main colour (--tint, from the
+   build), with a soft glow of the same colour. */
+.card--event-archive.card--tinted { border-color: var(--tint); box-shadow: 0 0 0 1px var(--tint), 0 14px 30px -16px var(--tint); }
+.card--event-archive.card--tinted { box-shadow: 0 0 0 1px var(--tint), 0 14px 32px -14px color-mix(in srgb, var(--tint) 70%, transparent); }
+.card--event-archive.card--tinted:hover { border-color: var(--tint); box-shadow: 0 0 0 2px var(--tint), 0 18px 38px -14px color-mix(in srgb, var(--tint) 80%, transparent); }
+/* The rest of the tile follows suit: the title in the same colour, a
+   shade darker so it reads well, and the product pills tinted to match. */
+.card--event-archive.card--tinted .event-card-title { color: color-mix(in srgb, var(--tint) 82%, #000); }
+.card.card--event-archive.card--tinted .gallery-tags-row .pill:not(.pill--muted) { background: color-mix(in srgb, var(--tint) 10%, #fff); border-color: color-mix(in srgb, var(--tint) 35%, #fff); color: color-mix(in srgb, var(--tint) 75%, #000); }
+.card.card--event-archive.card--tinted .gallery-tags-row .pill--link:hover { background: var(--tint); border-color: var(--tint); color: #fff; }

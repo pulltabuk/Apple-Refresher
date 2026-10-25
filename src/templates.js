@@ -1689,6 +1689,13 @@ function normalizedAnnouncedProducts(event) {
   return (event.announced_products || []).map((p) => (typeof p === 'string' ? { name: p, featured: false } : p));
 }
 
+// The main colour of each event's artwork (src/event-colours.js), keyed by
+// image address, for the tile's frame and glow. Set by build.js.
+let eventTints = {};
+function setEventTints(map) {
+  eventTints = map || {};
+}
+
 function eventArchiveCardHtml(event, productsBySlug) {
   const dateText = [formatDate(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
   const products = normalizedAnnouncedProducts(event);
@@ -1716,7 +1723,8 @@ function eventArchiveCardHtml(event, productsBySlug) {
   // data-search lets the page filter match the announced products as
   // well as the event's own title and date.
   const searchText = [event.heading, dateText, ...products.map((p) => p.name)].filter(Boolean).join(' ');
-  return `<article class="card card--event-archive" data-search="${escapeHtml(searchText.toLowerCase())}">
+  const tint = event.image_url && /^#[0-9a-f]{6}$/i.test(eventTints[event.image_url] || '') ? eventTints[event.image_url] : '';
+  return `<article class="card card--event-archive${tint ? ' card--tinted' : ''}"${tint ? ` style="--tint: ${tint}"` : ''} data-search="${escapeHtml(searchText.toLowerCase())}">
   <a class="card-link" href="/events/${eventSlug(event)}/">${inner}</a>
   ${tags ? `<div class="gallery-tags"><div class="gallery-tags-row">${tags}</div></div>` : ''}
 </article>`;
@@ -4080,6 +4088,7 @@ module.exports = {
   factRelatedLink,
   galleryPhotoCardHtml,
   setServedPhotos,
+  setEventTints,
   setLinkProducts,
   missingProductLinks,
   eventsPage,

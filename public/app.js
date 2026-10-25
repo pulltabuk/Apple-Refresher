@@ -2908,7 +2908,8 @@
   }
 
   // Must match eventArchiveCardHtml() in templates.js.
-  function eventArchiveCardHtmlJS(event, productByName) {
+  // tints: { event page address: '#rrggbb' }, read from the built tiles.
+  function eventArchiveCardHtmlJS(event, productByName, tints) {
     var dateText = [formatDateJS(event.event_date), event.event_time].filter(Boolean).join(' \u00b7 ');
     var products = (event.announced_products || []).map(function (p) { return typeof p === 'string' ? { name: p, featured: false } : p; });
     var featured = products.filter(function (p) { return p.featured; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
@@ -2926,7 +2927,9 @@
       (dateText ? '<p class="card-meta event-card-date">' + escapeHtmlJS(dateText) + '</p>' : '') + '</div>' +
       '<div class="card-image">' + (event.image_url ? cdnImgHtmlJS(event.image_url, 800, ' alt="" loading="lazy"') : '') + '</div>';
     var searchText = [event.heading, dateText].concat(products.map(function (p) { return p.name; })).filter(Boolean).join(' ');
-    return '<article class="card card--event-archive" data-search="' + escapeHtmlJS(searchText.toLowerCase()) + '"><a class="card-link" href="/events/' + eventSlugJS(event) + '/">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
+    var href = '/events/' + eventSlugJS(event) + '/';
+    var tint = tints && /^#[0-9a-f]{6}$/i.test(tints[href] || '') ? tints[href] : '';
+    return '<article class="card card--event-archive' + (tint ? ' card--tinted" style="--tint: ' + tint : '') + '" data-search="' + escapeHtmlJS(searchText.toLowerCase()) + '"><a class="card-link" href="' + href + '">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
   }
 
   if (gridSection && gridSection.getAttribute('data-mode') === 'events' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
@@ -2942,7 +2945,15 @@
         // Announced products we track link straight to their pages.
         var productByName = {};
         (Array.isArray(results[1]) ? results[1] : []).forEach(function (p) { if (p && p.name && p.slug) productByName[p.name.toLowerCase()] = p; });
-        gridSection.innerHTML = events.map(function (event) { return eventArchiveCardHtmlJS(event, productByName); }).join('');
+        // Each tile's colour comes from its artwork, worked out by the
+        // build: carried over from the built tiles (a new event, not yet
+        // built, keeps the standard violet).
+        var tints = {};
+        Array.prototype.forEach.call(gridSection.querySelectorAll('article.card--tinted'), function (card) {
+          var link = card.querySelector('a.card-link');
+          if (link) tints[link.getAttribute('href')] = card.style.getPropertyValue('--tint').trim();
+        });
+        gridSection.innerHTML = events.map(function (event) { return eventArchiveCardHtmlJS(event, productByName, tints); }).join('');
         var noEvents = document.getElementById('no-events');
         if (noEvents) noEvents.style.display = events.length ? 'none' : '';
       })
