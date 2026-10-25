@@ -2759,7 +2759,7 @@
 
   function galleryPhotoCardHtmlJS(photo) {
     var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
-    var searchText = [photo.caption, photo.location, photo.country].concat(photo.tags || []).filter(Boolean).join(' ').toLowerCase();
+    var searchText = [photo.caption, photo.story, photo.location, photo.country].concat(photo.tags || []).filter(Boolean).join(' ').toLowerCase();
     var images = galleryPhotoImagesJS(photo);
     var tagsHtml = galleryTagsHtmlJS(photo);
     var footer = tagsHtml ? '<div class="gallery-card-footer">' + tagsHtml + '</div>' : '';
@@ -2778,6 +2778,7 @@
         '<div class="card-image">' + media + '</div>' +
         '<p class="card-name">' + escapeHtmlJS(displayName) + '</p>' +
         (photo.date_taken ? '<p class="card-meta">' + formatDateJS(photo.date_taken) + '</p>' : '') +
+        (photo.story ? '<p class="card-story">' + escapeHtmlJS(photo.story) + '</p>' : '') +
       '</a>' +
       footer +
     '</article>';
@@ -2923,6 +2924,7 @@
               '<a class="admin-edit-link" data-admin-href="/admin/?editPhoto=' + photo.id + '" data-admin-label="Edit" style="display:none;"></a>' +
             '</div>' +
             (photo.date_taken ? '<p class="gallery-photo-date">' + formatDateJS(photo.date_taken) + '</p>' : '') +
+            (photo.story ? '<p class="gallery-photo-story">' + escapeHtmlJS(photo.story) + '</p>' : '') +
             galleryTagsHtmlJS(photo, true) +
           '</div>' +
           '<div class="gallery-photo-images"></div>' +

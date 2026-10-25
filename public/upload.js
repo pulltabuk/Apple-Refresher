@@ -601,6 +601,10 @@
         country: $('up-country').value.trim() || null,
         tags: selectedTags.slice(),
       };
+      // Sent when written, or once the column exists (an album loaded here
+      // has it), so saving still works before supabase-schema-update-36.sql.
+      const story = $('up-story').value.trim();
+      if (story || gallerySets.some((s) => 'story' in s)) payload.story = story || null;
       const wasEditing = !!editingId;
       const { data: saved, error } = wasEditing
         ? await client.from('gallery_photos').update(payload).eq('id', editingId)
@@ -658,6 +662,7 @@
     selectedTags = [];
     showAllTags = false;
     $('up-title').value = '';
+    $('up-story').value = '';
     if (!keepPlace) {
       $('up-location').value = '';
       $('up-country').value = '';
@@ -779,6 +784,7 @@
     editingId = id;
     photos = setImages(set).map((url) => ({ id: ++photoSeq, file: null, preview: url, url, status: 'done', promise: Promise.resolve() }));
     $('up-title').value = set.caption || '';
+    $('up-story').value = set.story || '';
     $('up-location').value = set.location || '';
     $('up-country').value = set.country || '';
     selectedTags = (set.tags || []).slice();

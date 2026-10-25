@@ -3243,3 +3243,7 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 @media (max-width: 700px) {
   .x-draft-body { grid-template-columns: 1fr; }
 }
+
+/* Gallery: an album's story, under its title */
+.card-story { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.gallery-photo-story { max-width: 680px; margin: 6px 0 14px; font-size: 17px; line-height: 1.5; color: var(--text); }
