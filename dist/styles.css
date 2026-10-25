@@ -3286,8 +3286,12 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-text--calm > .earnings-next { margin-top: 0.25rem; }
 }
 
-/* The next earnings: a little bigger, with more room around its words. */
-.earnings-next { gap: 6px; padding: 16px 20px; border-radius: 14px; font-size: 16px; line-height: 1.35; }
-.earnings-next-label { font-size: 12px; }
+/* The next earnings: a results-chart icon beside the label and the date,
+   with room around and between them. */
+.earnings-next { flex-direction: row; align-items: center; gap: 16px; padding: 20px 22px; border-radius: 16px; font-size: 17px; line-height: 1.4; }
+.earnings-next-icon { flex: none; display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 14px; background: rgba(255, 255, 255, 0.18); color: #fff; }
+.earnings-next-icon svg { width: 34px; height: 34px; flex: none; }
+.earnings-next-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.earnings-next-label { font-size: 12px; letter-spacing: 0.08em; }
 /* The day and time stay together, so a line breaks after "results,". */
 .earnings-next-when { white-space: nowrap; }
