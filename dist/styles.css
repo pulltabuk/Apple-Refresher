@@ -3315,3 +3315,22 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-text--calm > .earnings-next--clock .earnings-next-extra { display: block; }
   .intro-hero-text--calm > .earnings-next--clock .earnings-next-clock { display: grid; }
 }
+
+/* The title ("Apple Q4 FY2026 results") in bold and a size up from the
+   date. In the tall tile it takes a line of its own, larger again, with
+   the date and time under it. */
+.earnings-next-title { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+@media (min-width: 901px) {
+  /* The icon heads the tile beside the label, so the title below has the
+     tile's full width and stays on one line. */
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-head { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; row-gap: 0; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-body { display: contents; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-icon { width: 40px; height: 40px; border-radius: 11px; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-icon svg { width: 26px; height: 26px; }
+  .intro-hero-text--calm > .earnings-next--clock :is(.earnings-next-text, .earnings-next-extra) { grid-column: 1 / -1; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-text { margin-top: 14px; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-extra { margin-top: 4px; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-title { display: block; font-size: 24px; line-height: 1.2; margin-bottom: 4px; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-sep { display: none; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-when { display: block; font-size: 16px; }
+}
