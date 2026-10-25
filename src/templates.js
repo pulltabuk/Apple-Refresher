@@ -1985,7 +1985,7 @@ function earningsLineHtml(e) {
   const today = new Date().toISOString().slice(0, 10);
   // UK calendar days, kept current in the browser by app.js.
   const when = FactsKit.daysUntilText(e.report_date);
-  return `<a class="earnings-next" href="/earnings/"><span class="earnings-next-label">Next earnings &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span><span class="earnings-next-text">Apple ${earningsQuarter(e)} results, ${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></a>`;
+  return `<a class="earnings-next" href="/earnings/"><span class="earnings-next-label">Next earnings &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span><span class="earnings-next-text">Apple ${earningsQuarter(e)} results, <span class="earnings-next-when">${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></span></a>`;
 }
 
 function earningsPage({ earnings, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
