@@ -55,12 +55,70 @@ function productIcon(product, size) {
   return categoryIcon(product && product.category, size);
 }
 
+// A product name or address reduced to its words, so Apple's wording and
+// the site's match: "AirPods (2nd generation)", "airpods-2nd-generation"
+// and "AirPods 2" all give "airpods 2", and a first generation drops its
+// number ("AirPods (1st generation)" gives "airpods", like "AirPods").
+// Keep in step with productKeyJS() in app.js.
+function productKey(text) {
+  return String(text || '').toLowerCase()
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/\b(\d+)(?:st|nd|rd|th)[\s-]+gen(?:eration)?\b/g, ' $1')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/ 1$/, '');
+}
+
+// Every product, for repairing links in written text (set by build.js).
+let linkProducts = [];
+const missingProductLinks = new Set();
+function setLinkProducts(products) {
+  linkProducts = products || [];
+}
+
+// A link in written text (notes, "Did you know?", page copy) to a product
+// page that doesn't exist, such as /products/airpods-1st-generation/
+// typed from Apple's name for a product the site calls AirPods: sent to
+// the right page when its address or its words name exactly one product.
+// Anything else is left alone and listed at the end of the build. Keep in
+// step with fixProductLinksJS() in app.js.
+function fixProductLinks(html, siteHost) {
+  if (!linkProducts.length) return html;
+  const known = new Set(linkProducts.map((p) => p.slug));
+  const byKey = {};
+  linkProducts.forEach((p) => {
+    [productKey(p.name), productKey(p.slug)].forEach((k) => {
+      if (!k) return;
+      byKey[k] = byKey[k] || new Set();
+      byKey[k].add(p.slug);
+    });
+  });
+  const only = (k) => (byKey[k] && byKey[k].size === 1 ? Array.from(byKey[k])[0] : null);
+  return html.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (whole, attrs, inner) => {
+    const m = attrs.match(/href\s*=\s*(["'])([^"']*)\1/i);
+    if (!m) return whole;
+    let url;
+    try { url = new URL(m[2]); } catch (e) { return whole; }
+    if (!siteHost || url.host.replace(/^www\./, '') !== siteHost.replace(/^www\./, '')) return whole;
+    const slug = (url.pathname.match(/^\/products\/([^/]+)\/?$/) || [])[1];
+    if (!slug || known.has(slug)) return whole;
+    const target = only(productKey(slug)) || only(productKey(inner));
+    if (!target) {
+      missingProductLinks.add(url.pathname);
+      return whole;
+    }
+    url.pathname = '/products/' + target + '/';
+    return '<a' + attrs.replace(m[0], 'href="' + url.href + '"') + '>' + inner + '</a>';
+  });
+}
+
 function sanitizeRichText(html, siteUrl) {
   if (!html) return '';
   const allowed = new Set(['p', 'b', 'strong', 'i', 'em', 'u', 'br', 'a']);
   let siteHost = '';
   try { siteHost = siteUrl ? new URL(siteUrl).host : ''; } catch (e) { siteHost = ''; }
-  let out = String(html);
+  let out = fixProductLinks(String(html), siteHost);
   out = out.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
   out = out.replace(/<div([^>]*)>/gi, '<p>').replace(/<\/div>/gi, '</p>');
   out = out.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g, (match, tag, attrs) => {
@@ -2415,8 +2473,11 @@ function relatedProductsHtml(product, productsBySlug, statusBySlug, jumpToHistor
   const siblings = Object.keys(productsBySlug)
     .map((slug) => productsBySlug[slug])
     .filter((p) => p.slug !== product.slug && (p.category || '') === (product.category || ''))
+    // Newest first, by when each was first released.
     .sort((a, b) => {
-      if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
+      const da = launchDate(a);
+      const db = launchDate(b);
+      if (da !== db) return !da ? 1 : !db ? -1 : da < db ? 1 : -1;
       return a.name.localeCompare(b.name);
     })
     .slice(0, 6);
@@ -3999,6 +4060,8 @@ module.exports = {
   factRelatedLink,
   galleryPhotoCardHtml,
   setServedPhotos,
+  setLinkProducts,
+  missingProductLinks,
   eventsPage,
   eventDetailPage,
   factsPage,
