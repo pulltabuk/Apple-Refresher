@@ -2682,8 +2682,12 @@
   }
 
   // Must stay in step with cdnImage() / galleryCarouselImgHtml() in src/templates.js.
+  // Off while Netlify's Image CDN fails every request; same switch as
+  // IMAGE_CDN in src/templates.js.
+  var IMAGE_CDN = false;
+
   function cdnImageJS(url, width) {
-    if (!/^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//.test(url)) return url;
+    if (!IMAGE_CDN || !/^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//.test(url)) return url;
     return '/.netlify/images?url=' + encodeURIComponent(url) + '&w=' + width + '&q=80';
   }
 
@@ -2699,11 +2703,56 @@
     return size <= 40 ? 120 : 240;
   }
 
+  // A gallery photo's smaller copy (sized/<width>/ beside it in storage).
+  // Must stay in step with sizedPhotoUrl() in public/facts-kit.js.
+  function sizedPhotoUrlJS(url, width) {
+    var m = /^(https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\/product-images\/)(?!sized\/)([^?#]+)$/.exec(String(url || ''));
+    return m ? m[1] + 'sized/' + width + '/' + m[2] : url;
+  }
+
+  // Must stay in step with photoImgHtml() in src/templates.js.
+  function photoImgHtmlJS(url, attrs) {
+    var small = sizedPhotoUrlJS(url, 800);
+    if (small === url) return '<img src="' + escapeHtmlJS(url) + '"' + (attrs || '') + '>';
+    return '<img src="' + escapeHtmlJS(small) + '" data-full="' + escapeHtmlJS(url) + '" onerror="this.onerror=null;this.src=this.dataset.full"' + (attrs || '') + '>';
+  }
+
+  // Must stay in step with galleryCarouselImgHtml() in src/templates.js.
   function galleryCarouselImgHtmlJS(url, alt, index) {
-    var cdn = cdnImageJS(url, 1280);
-    var srcset = cdn === url ? '' : ' srcset="' + [640, 960, 1280, 1920].map(function (w) { return escapeHtmlJS(cdnImageJS(url, w)) + ' ' + w + 'w'; }).join(', ') + '" sizes="(max-width: 700px) 100vw, 640px"';
-    var fallback = cdn === url ? '' : ' onerror="this.onerror=null;this.removeAttribute(\'srcset\');this.src=this.dataset.full"';
-    return '<img src="' + escapeHtmlJS(cdn) + '"' + srcset + ' data-full="' + escapeHtmlJS(url) + '"' + (cdn === url ? '' : ' data-zoom="' + escapeHtmlJS(cdnImageJS(url, 2048)) + '"') + ' alt="' + escapeHtmlJS(alt) + '"' + (index === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async"' + fallback + '>';
+    var small = sizedPhotoUrlJS(url, 800);
+    var load = index === 0 ? ' fetchpriority="high"' : ' loading="lazy"';
+    if (small === url) return '<img src="' + escapeHtmlJS(url) + '" data-full="' + escapeHtmlJS(url) + '" alt="' + escapeHtmlJS(alt) + '"' + load + ' decoding="async">';
+    var medium = sizedPhotoUrlJS(url, 1600);
+    return '<img src="' + escapeHtmlJS(medium) + '" srcset="' + escapeHtmlJS(small) + ' 800w, ' + escapeHtmlJS(medium) + ' 1600w" sizes="(max-width: 700px) 100vw, 640px" data-full="' + escapeHtmlJS(url) + '" alt="' + escapeHtmlJS(alt) + '"' + load + ' decoding="async" onerror="this.onerror=null;this.removeAttribute(\'srcset\');this.src=this.dataset.full">';
+  }
+
+  // Must stay in step with tileLoading() in src/templates.js.
+  function tileLoadingJS(index, first) {
+    if (index === 0 && first) return ' fetchpriority="high"';
+    return index < 3 ? '' : ' loading="lazy"';
+  }
+
+  // Whole sentences only. Must stay in step with storyPreview() in
+  // src/templates.js.
+  function storyPreviewJS(story) {
+    var max = 160;
+    var text = String(story || '').replace(/\s+/g, ' ').trim();
+    if (text.length <= max) return text;
+    var ends = /[.!?]+["'\u2019\u201d)]*(?= |$)/g;
+    var shown = '';
+    var start = 0;
+    var m;
+    while ((m = ends.exec(text))) {
+      var end = m.index + m[0].length;
+      var lastWord = text.slice(start, m.index).split(' ').pop();
+      var atEnd = end >= text.length;
+      if (!atEnd && (/^(?:St|Mr|Mrs|Ms|Dr|Jr|Sr|No|vs|approx|Mt|Rd|[A-Z]|[a-z]\.[a-z]|e\.g|i\.e)$/i.test(lastWord) || !/^ ["'\u2018\u201c(]?(?:[A-Z0-9]|i[A-Z])/.test(text.slice(end)))) continue;
+      var sentence = text.slice(start, end);
+      if (shown && (shown + sentence).length > max) break;
+      shown += sentence;
+      start = end;
+    }
+    return shown ? shown.trim() : text;
   }
 
   // Must stay in step with galleryImageAlt() in src/templates.js.
@@ -2722,10 +2771,10 @@
     var images = galleryPhotoImagesJS(photo);
     // Must stay in step with galleryStripItemHtml() in src/templates.js.
     var media = images.length > 1
-      ? '<span class="gallery-strip-mosaic' + (images.length === 2 ? ' gallery-strip-mosaic--two' : '') + '"><span class="gallery-strip-main">' + cdnImgHtmlJS(images[0], 600, ' alt="' + escapeHtmlJS(displayName) + '" loading="lazy"') + '</span><span class="gallery-strip-side' + (images.length === 2 ? ' gallery-strip-side--one' : '') + '">' +
-        images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb">' + cdnImgHtmlJS(u, 300, ' alt="" loading="lazy"', true) + '</span>'; }).join('') +
+      ? '<span class="gallery-strip-mosaic' + (images.length === 2 ? ' gallery-strip-mosaic--two' : '') + '"><span class="gallery-strip-main">' + photoImgHtmlJS(images[0], ' alt="' + escapeHtmlJS(displayName) + '" loading="lazy"') + '</span><span class="gallery-strip-side' + (images.length === 2 ? ' gallery-strip-side--one' : '') + '">' +
+        images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb">' + photoImgHtmlJS(u, ' alt="" loading="lazy"') + '</span>'; }).join('') +
         (images.length > 3 ? '<span class="gallery-strip-more">+' + (images.length - 3) + '</span>' : '') + '</span></span>'
-      : '<span class="gallery-strip-single">' + (images[0] ? cdnImgHtmlJS(images[0], 600, ' alt="' + escapeHtmlJS(displayName) + '" loading="lazy"', true) : '') + '</span>';
+      : '<span class="gallery-strip-single">' + (images[0] ? photoImgHtmlJS(images[0], ' alt="' + escapeHtmlJS(displayName) + '" loading="lazy"') : '') + '</span>';
     var tags = (photo.tags || []).slice().sort(function (a, b) { return a.localeCompare(b); }).slice(0, 3).map(function (t) {
       return '<span class="pill pill--tag">' + escapeHtmlJS(t) + '</span>';
     }).join('');
@@ -2757,7 +2806,8 @@
     return rows.length ? '<div class="gallery-tags">' + rows.join('') + '</div>' : '';
   }
 
-  function galleryPhotoCardHtmlJS(photo) {
+  function galleryPhotoCardHtmlJS(photo, index) {
+    var i = typeof index === 'number' ? index : 99;
     var displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
     var searchText = [photo.caption, photo.story, photo.location, photo.country].concat(photo.tags || []).filter(Boolean).join(' ').toLowerCase();
     var images = galleryPhotoImagesJS(photo);
@@ -2766,19 +2816,19 @@
     // Must stay in step with galleryPhotoCardHtml() in src/templates.js.
     var media = images.length > 1
       ? '<span class="gallery-strip-mosaic' + (images.length === 2 ? ' gallery-strip-mosaic--two' : '') + '">' +
-          '<span class="gallery-strip-main">' + cdnImgHtmlJS(images[0], 600, ' alt="' + escapeHtmlJS(displayName) + '" loading="lazy"') + '</span>' +
+          '<span class="gallery-strip-main">' + photoImgHtmlJS(images[0], ' alt="' + escapeHtmlJS(displayName) + '"' + tileLoadingJS(i, true)) + '</span>' +
           '<span class="gallery-strip-side' + (images.length === 2 ? ' gallery-strip-side--one' : '') + '">' +
-            images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb">' + cdnImgHtmlJS(u, 300, ' alt="" loading="lazy"', true) + '</span>'; }).join('') +
+            images.slice(1, 3).map(function (u) { return '<span class="gallery-strip-thumb">' + photoImgHtmlJS(u, ' alt=""' + tileLoadingJS(i)) + '</span>'; }).join('') +
             (images.length > 3 ? '<span class="gallery-strip-more">+' + (images.length - 3) + '</span>' : '') +
           '</span></span>' +
           '<span class="gallery-strip-count">' + images.length + ' photos</span>'
-      : (images[0] ? cdnImgHtmlJS(images[0], 800, ' alt="' + escapeHtmlJS(displayName) + '" loading="lazy"') : '');
+      : (images[0] ? photoImgHtmlJS(images[0], ' alt="' + escapeHtmlJS(displayName) + '"' + tileLoadingJS(i, true)) : '');
     return '<article class="card" data-date="' + dateToTimestampJS(photo.date_taken) + '" data-created="' + dateToTimestampJS(photo.created_at) + '" data-search="' + escapeHtmlJS(searchText) + '">' +
       '<a class="card-link" href="/gallery/' + galleryPhotoSlugJS(photo) + '/">' +
         '<div class="card-image">' + media + '</div>' +
         '<p class="card-name">' + escapeHtmlJS(displayName) + '</p>' +
         (photo.date_taken ? '<p class="card-meta">' + formatDateJS(photo.date_taken) + '</p>' : '') +
-        (photo.story ? '<p class="card-story">' + escapeHtmlJS(photo.story) + '</p>' : '') +
+        (photo.story ? '<p class="card-story">' + escapeHtmlJS(storyPreviewJS(photo.story)) + '</p>' : '') +
       '</a>' +
       footer +
     '</article>';
@@ -2881,11 +2931,36 @@
       .then(function (res) { return res.json(); })
       .then(function (photos) {
         if (!Array.isArray(photos)) return;
-        gridSection.innerHTML = photos.map(galleryPhotoCardHtmlJS).join('');
-        applySort();
-        applyFilters();
+        var fresh = photos.map(galleryPhotoCardHtmlJS).join('');
+        // Unchanged since the page was built: leave it, so photos already
+        // loading or loaded aren't thrown away and fetched again.
+        if (sameCardsJS(gridSection, fresh)) return;
+        gridSection.innerHTML = fresh;
+        applySort(true);
+        applyFilters(true);
       })
       .catch(function () {});
+  }
+
+  // Whether the cards in html say and show the same as those on the page,
+  // whatever order they're in now (spacing between tags ignored, as the
+  // build and this file lay out the same markup slightly differently).
+  function sameCardsJS(container, html) {
+    var temp = document.createElement('div');
+    temp.innerHTML = html;
+    function sigs(root) {
+      return Array.prototype.map.call(root.querySelectorAll('article.card'), function (card) {
+        var link = card.querySelector('a');
+        return [link ? link.getAttribute('href') : '', card.getAttribute('data-date'), card.getAttribute('data-created'), card.getAttribute('data-search'),
+          card.textContent.replace(/\s+/g, '')].concat(Array.prototype.map.call(card.querySelectorAll('img'), function (img) {
+          // data-full: the photo itself, whichever copy ended up showing.
+          return img.getAttribute('data-full') || img.getAttribute('src');
+        })).join('|');
+      }).sort();
+    }
+    var a = sigs(container);
+    var b = sigs(temp);
+    return a.length === b.length && a.every(function (x, n) { return x === b[n]; });
   }
 
   // --- Live refresh: a single gallery photo page, matched by its URL id.

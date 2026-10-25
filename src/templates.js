@@ -1235,7 +1235,15 @@ function galleryTagsHtml(photo, singleRow) {
   return rows ? `<div class="gallery-tags">${rows}</div>` : '';
 }
 
-function galleryPhotoCardHtml(photo) {
+// The first album tiles are on screen straight away: load them now
+// rather than lazily, the very first one ahead of everything else.
+function tileLoading(index, first) {
+  if (index === 0 && first) return ' fetchpriority="high"';
+  return index < 3 ? '' : ' loading="lazy"';
+}
+
+function galleryPhotoCardHtml(photo, index) {
+  const i = typeof index === 'number' ? index : 99;
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
   const searchText = [photo.caption, photo.story, photo.location, photo.country, ...(photo.tags || [])].filter(Boolean).join(' ');
   const images = galleryPhotoImages(photo);
@@ -1246,28 +1254,43 @@ function galleryPhotoCardHtml(photo) {
     <div class="card-image">
       ${images.length > 1
         ? `<span class="gallery-strip-mosaic${images.length === 2 ? ' gallery-strip-mosaic--two' : ''}">
-            <span class="gallery-strip-main">${cdnImgHtml(images[0], 600, ` alt="${escapeHtml(displayName)}" loading="lazy"`)}</span>
+            <span class="gallery-strip-main">${photoImgHtml(images[0], ` alt="${escapeHtml(displayName)}"${tileLoading(i, true)}`)}</span>
             <span class="gallery-strip-side${images.length === 2 ? ' gallery-strip-side--one' : ''}">
-              ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb">${cdnImgHtml(url, 300, ' alt="" loading="lazy"', true)}</span>`).join('')}
+              ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb">${photoImgHtml(url, ` alt=""${tileLoading(i)}`)}</span>`).join('')}
               ${images.length > 3 ? `<span class="gallery-strip-more">+${images.length - 3}</span>` : ''}
             </span>
           </span>`
-        : images[0] ? cdnImgHtml(images[0], 800, ` alt="${escapeHtml(displayName)}" loading="lazy"`) : ''}
+        : images[0] ? photoImgHtml(images[0], ` alt="${escapeHtml(displayName)}"${tileLoading(i, true)}`) : ''}
       ${images.length > 1 ? `<span class="gallery-strip-count">${images.length} photos</span>` : ''}
     </div>
     <p class="card-name">${escapeHtml(displayName)}</p>
     ${photo.date_taken ? `<p class="card-meta">${formatDate(photo.date_taken)}</p>` : ''}
-    ${photo.story ? `<p class="card-story">${escapeHtml(photo.story)}</p>` : ''}
+    ${photo.story ? `<p class="card-story">${escapeHtml(storyPreview(photo.story))}</p>` : ''}
   </a>
   ${footer}
 </article>`;
+}
+
+// Netlify's Image CDN answered every request with 400 (October 2026), so
+// each image cost a failed request before the original loaded. Off until
+// that's fixed; gallery photos use their own smaller copies instead
+// (photoImgHtml). Same switch in app.js and public/facts-kit.js.
+const IMAGE_CDN = false;
+
+// A gallery photo's <img>: its 800px copy (see sizedPhotoUrl in
+// public/facts-kit.js), or the photo itself if that copy is missing.
+// Keep in step with photoImgHtmlJS() in app.js.
+function photoImgHtml(url, attrs) {
+  const small = FactsKit.sizedPhotoUrl(url, 800);
+  if (small === url) return `<img src="${escapeHtml(url)}"${attrs || ''}>`;
+  return `<img src="${escapeHtml(small)}" data-full="${escapeHtml(url)}" onerror="this.onerror=null;this.src=this.dataset.full"${attrs || ''}>`;
 }
 
 // Netlify Image CDN version of a remote photo at a given width. Only
 // Supabase storage is allowed as a source (see netlify.toml); anything
 // else is used as-is.
 function cdnImage(url, width) {
-  if (!/^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//.test(url)) return url;
+  if (!IMAGE_CDN || !/^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//.test(url)) return url;
   return `/.netlify/images?url=${encodeURIComponent(url)}&w=${width}&q=80`;
 }
 
@@ -1288,14 +1311,16 @@ function iconPixels(size) {
   return size <= 40 ? 120 : 240;
 }
 
-// A carousel photo: right-sized for the page via srcset, with the
-// original in data-full for the full-screen viewer. Falls back to the
-// original if the CDN can't serve it.
+// A carousel photo: its 800px or 1600px copy via srcset, whichever suits
+// the screen, with the photo itself in data-full for the full-screen
+// viewer and as the fallback if a copy is missing. Keep in step with
+// galleryCarouselImgHtmlJS() in app.js.
 function galleryCarouselImgHtml(url, alt, index) {
-  const cdn = cdnImage(url, 1280);
-  const srcset = cdn === url ? '' : ` srcset="${[640, 960, 1280, 1920].map((w) => `${escapeHtml(cdnImage(url, w))} ${w}w`).join(', ')}" sizes="(max-width: 700px) 100vw, 640px"`;
-  const fallback = cdn === url ? '' : ` onerror="this.onerror=null;this.removeAttribute('srcset');this.src=this.dataset.full"`;
-  return `<img src="${escapeHtml(cdn)}"${srcset} data-full="${escapeHtml(url)}"${cdn === url ? '' : ` data-zoom="${escapeHtml(cdnImage(url, 2048))}"`} alt="${escapeHtml(alt)}"${index === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async"${fallback}>`;
+  const small = FactsKit.sizedPhotoUrl(url, 800);
+  const load = index === 0 ? ' fetchpriority="high"' : ' loading="lazy"';
+  if (small === url) return `<img src="${escapeHtml(url)}" data-full="${escapeHtml(url)}" alt="${escapeHtml(alt)}"${load} decoding="async">`;
+  const medium = FactsKit.sizedPhotoUrl(url, 1600);
+  return `<img src="${escapeHtml(medium)}" srcset="${escapeHtml(small)} 800w, ${escapeHtml(medium)} 1600w" sizes="(max-width: 700px) 100vw, 640px" data-full="${escapeHtml(url)}" alt="${escapeHtml(alt)}"${load} decoding="async" onerror="this.onerror=null;this.removeAttribute('srcset');this.src=this.dataset.full">`;
 }
 
 // Where a photo was taken, e.g. "London, UK" (either part may be missing).
@@ -1311,12 +1336,38 @@ function galleryImageAlt(displayName, photo, index, total) {
   return `${displayName}${total > 1 ? ` — photo ${index + 1} of ${total}` : ''}${place ? `, ${place}` : ''}`;
 }
 
+// The start of an album's story for its gallery tile: whole sentences
+// only, as many as fit in about 160 characters and always the first, so
+// a tile never stops mid-sentence. A full stop after an abbreviation
+// ("Apple St. David's", "7 a.m.") or an initial isn't a sentence end.
+// Keep in step with storyPreviewJS() in app.js.
+const STORY_MAX = 160;
+function storyPreview(story) {
+  const text = String(story || '').replace(/\s+/g, ' ').trim();
+  if (text.length <= STORY_MAX) return text;
+  const ends = /[.!?]+["'\u2019\u201d)]*(?= |$)/g;
+  let shown = '';
+  let start = 0;
+  let m;
+  while ((m = ends.exec(text))) {
+    const end = m.index + m[0].length;
+    const lastWord = text.slice(start, m.index).split(' ').pop();
+    const atEnd = end >= text.length;
+    if (!atEnd && (/^(?:St|Mr|Mrs|Ms|Dr|Jr|Sr|No|vs|approx|Mt|Rd|[A-Z]|[a-z]\.[a-z]|e\.g|i\.e)$/i.test(lastWord) || !/^ ["'\u2018\u201c(]?(?:[A-Z0-9]|i[A-Z])/.test(text.slice(end)))) continue;
+    const sentence = text.slice(start, end);
+    if (shown && (shown + sentence).length > STORY_MAX) break;
+    shown += sentence;
+    start = end;
+  }
+  return shown ? shown.trim() : text;
+}
+
 // A search-result summary built from the album's own details, led by its
-// story when it has one.
+// story (its first sentence or two) when it has one.
 function galleryPhotoDescription(displayName, photo, count) {
   const place = galleryPlace(photo);
   if (photo.story) {
-    const story = String(photo.story).trim().replace(/([^.!?])$/, '$1.');
+    const story = storyPreview(photo.story).replace(/([^.!?"'\u2019\u201d)])$/, '$1.');
     return `${story} ${count > 1 ? `${count} photos` : 'A photo'}${place ? ` taken in ${place}` : ''}${photo.date_taken ? `, ${formatDate(photo.date_taken)}` : ''}, from the Apple Sunset gallery.`;
   }
   const tags = (photo.tags || []).filter((t) => t !== displayName).slice(0, 5);
@@ -1534,13 +1585,13 @@ function galleryStripItemHtml(photo) {
   // it reads as a set at a glance rather than a single picture.
   const media = images.length > 1
     ? `<span class="gallery-strip-mosaic${images.length === 2 ? ' gallery-strip-mosaic--two' : ''}">
-        <span class="gallery-strip-main">${cdnImgHtml(images[0], 600, ` alt="${escapeHtml(displayName)}" loading="lazy"`)}</span>
+        <span class="gallery-strip-main">${photoImgHtml(images[0], ` alt="${escapeHtml(displayName)}" loading="lazy"`)}</span>
         <span class="gallery-strip-side${images.length === 2 ? ' gallery-strip-side--one' : ''}">
-          ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb">${cdnImgHtml(url, 300, ' alt="" loading="lazy"', true)}</span>`).join('')}
+          ${images.slice(1, 3).map((url) => `<span class="gallery-strip-thumb">${photoImgHtml(url, ' alt="" loading="lazy"')}</span>`).join('')}
           ${images.length > 3 ? `<span class="gallery-strip-more">+${images.length - 3}</span>` : ''}
         </span>
       </span>`
-    : `<span class="gallery-strip-single">${images[0] ? cdnImgHtml(images[0], 600, ` alt="${escapeHtml(displayName)}" loading="lazy"`, true) : ''}</span>`;
+    : `<span class="gallery-strip-single">${images[0] ? photoImgHtml(images[0], ` alt="${escapeHtml(displayName)}" loading="lazy"`) : ''}</span>`;
   // Subject tags (e.g. iPod), in orange like the gallery tiles.
   const tags = (photo.tags || []).slice().sort((a, b) => a.localeCompare(b)).slice(0, 3)
     .map((t) => `<span class="pill pill--tag">${escapeHtml(t)}</span>`).join('');
@@ -3158,6 +3209,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <div id="tab-gallery" class="admin-tab-panel" style="display:none;">
     <div id="gallery-list-view">
       <button id="new-photo-btn" class="admin-btn admin-btn--primary">Add new photo</button>
+      <div id="gallery-speed" class="gallery-speed" hidden>
+        <p id="gallery-speed-text"></p>
+        <button type="button" id="gallery-speed-btn" class="admin-btn">Make quick-loading copies</button>
+      </div>
       <div id="gallery-list" class="admin-list"></div>
     </div>
 
@@ -3173,8 +3228,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </div>
 
         <label>Caption (optional)<input type="text" id="gallery-caption" placeholder="e.g. iPhone 17 Pro in Cosmic Orange" autocomplete="off"></label>
-        <label>Story (optional)<textarea id="gallery-story" rows="2" maxlength="200" placeholder="e.g. Taken at a very busy Apple Store in Cardiff the day after the iPhone Duo launch."></textarea></label>
-        <p class="admin-hint">A line or two of context, shown under the title on the gallery and the album&rsquo;s page, and in Google results. Up to 200 characters.</p>
+        <label>Story (optional)<textarea id="gallery-story" rows="3" maxlength="300" placeholder="e.g. Taken at a very busy Apple Store in Cardiff the day after the iPhone Duo launch."></textarea></label>
+        <p class="admin-hint">A few lines of context, shown in full on the album&rsquo;s page and in Google results. Gallery tiles show its first sentence or two, never cut off mid-sentence. Up to 300 characters.</p>
 
         ${datePrecisionFieldHtml('gallery_date_taken', 'Date taken')}
 
@@ -3830,7 +3885,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
 
       <div class="up-card">
         <label>Title<input type="text" id="up-title" placeholder="e.g. iPhone 17 Pro in Cosmic Orange" autocomplete="off" enterkeyhint="next"></label>
-        <label>Story <span class="up-optional">optional</span><textarea id="up-story" rows="2" maxlength="200" placeholder="e.g. Taken at a very busy Apple Store in Cardiff the day after the iPhone Duo launch."></textarea></label>
+        <label>Story <span class="up-optional">optional</span><textarea id="up-story" rows="3" maxlength="300" placeholder="e.g. Taken at a very busy Apple Store in Cardiff the day after the iPhone Duo launch."></textarea></label>
         <label>Date taken
           <input type="text" id="up-date" placeholder="e.g. 15 Oct 2024, or Oct 2024" autocomplete="off" spellcheck="false" enterkeyhint="next">
         </label>

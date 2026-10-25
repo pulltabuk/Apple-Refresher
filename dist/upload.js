@@ -40,16 +40,15 @@
   let editingId = null; // null while adding a new set
   let gallerySets = []; // every gallery_photos row, newest first
 
-  // Small, cached thumbnails via Netlify's Image CDN instead of full-size
-  // photos. If the CDN can't serve one (or on a local preview), the image
-  // falls back to the original file.
-  function thumbUrl(url, size) {
-    if (!/^https?:\/\//.test(url) || location.protocol !== 'https:') return url;
-    return '/.netlify/images?url=' + encodeURIComponent(url) + '&w=' + size + '&h=' + size + '&fit=cover&q=70';
+  // A gallery photo's small copy (see sizedPhotoUrl in facts-kit.js)
+  // instead of the full-size photo; anything else, or a photo without
+  // copies, falls back to the original file.
+  function thumbUrl(url) {
+    return FactsKit.sizedPhotoUrl(url, 800);
   }
 
   function thumbImg(img, url, size) {
-    img.src = thumbUrl(url, size);
+    img.src = thumbUrl(url);
     if (img.src !== url) {
       img.addEventListener('error', function fallback() {
         img.removeEventListener('error', fallback);
@@ -444,13 +443,6 @@
     }
   }
 
-  async function uploadBlob(blob) {
-    const path = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '-gallery.jpg';
-    const { error } = await client.storage.from('product-images').upload(path, blob, { contentType: 'image/jpeg' });
-    if (error) throw error;
-    return client.storage.from('product-images').getPublicUrl(path).data.publicUrl;
-  }
-
   function processPhoto(entry) {
     entry.status = 'working';
     entry.error = null;
@@ -459,7 +451,8 @@
     entry.promise = processQueue = processQueue.then(async () => {
       if (!photos.includes(entry)) return;
       try {
-        entry.url = await uploadBlob(await prepareImage(entry.file));
+        // Resized, location data removed, plus the smaller copies pages load.
+        entry.url = await FactsKit.uploadGalleryPhoto(client, entry.file);
         entry.status = 'done';
       } catch (err) {
         entry.status = 'error';

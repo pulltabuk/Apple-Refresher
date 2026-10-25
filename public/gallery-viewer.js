@@ -526,8 +526,8 @@
     container.dataset.viewer = 'on';
 
     var photos = imgs.map(function (img) {
-      // The large copy from the image CDN when there is one; the original
-      // stays as the fallback.
+      // The photo itself (data-full), for full detail when zoomed; a
+      // data-zoom copy is used instead if a page provides one.
       var original = img.getAttribute('data-full') || img.currentSrc || img.src;
       return { full: img.getAttribute('data-zoom') || original, original: original, alt: img.alt };
     });
