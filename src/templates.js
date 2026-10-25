@@ -1237,7 +1237,7 @@ function galleryTagsHtml(photo, singleRow) {
 
 function galleryPhotoCardHtml(photo) {
   const displayName = photo.caption || (photo.tags && photo.tags[0]) || 'Untitled photo';
-  const searchText = [photo.caption, photo.location, photo.country, ...(photo.tags || [])].filter(Boolean).join(' ');
+  const searchText = [photo.caption, photo.story, photo.location, photo.country, ...(photo.tags || [])].filter(Boolean).join(' ');
   const images = galleryPhotoImages(photo);
   const tagsHtml = galleryTagsHtml(photo);
   const footer = tagsHtml ? `<div class="gallery-card-footer">${tagsHtml}</div>` : '';
@@ -1257,6 +1257,7 @@ function galleryPhotoCardHtml(photo) {
     </div>
     <p class="card-name">${escapeHtml(displayName)}</p>
     ${photo.date_taken ? `<p class="card-meta">${formatDate(photo.date_taken)}</p>` : ''}
+    ${photo.story ? `<p class="card-story">${escapeHtml(photo.story)}</p>` : ''}
   </a>
   ${footer}
 </article>`;
@@ -1310,9 +1311,14 @@ function galleryImageAlt(displayName, photo, index, total) {
   return `${displayName}${total > 1 ? ` — photo ${index + 1} of ${total}` : ''}${place ? `, ${place}` : ''}`;
 }
 
-// A search-result summary built from the album's own details.
+// A search-result summary built from the album's own details, led by its
+// story when it has one.
 function galleryPhotoDescription(displayName, photo, count) {
   const place = galleryPlace(photo);
+  if (photo.story) {
+    const story = String(photo.story).trim().replace(/([^.!?])$/, '$1.');
+    return `${story} ${count > 1 ? `${count} photos` : 'A photo'}${place ? ` taken in ${place}` : ''}${photo.date_taken ? `, ${formatDate(photo.date_taken)}` : ''}, from the Apple Sunset gallery.`;
+  }
   const tags = (photo.tags || []).filter((t) => t !== displayName).slice(0, 5);
   let text = `${count > 1 ? `${count} photos` : 'A photo'} of ${displayName}`;
   if (place) text += ` taken in ${place}`;
@@ -1338,6 +1344,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
       <a class="admin-edit-link" data-admin-href="/admin/?editPhoto=${photo.id}" data-admin-label="Edit" style="display:none;"></a>
     </div>
     ${photo.date_taken ? `<p class="gallery-photo-date">${formatDate(photo.date_taken)}</p>` : ''}
+    ${photo.story ? `<p class="gallery-photo-story">${escapeHtml(photo.story)}</p>` : ''}
     ${galleryTagsHtml(photo, true)}
   </div>
   <div class="gallery-photo-images">${imagesHtml}</div>
@@ -3166,6 +3173,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </div>
 
         <label>Caption (optional)<input type="text" id="gallery-caption" placeholder="e.g. iPhone 17 Pro in Cosmic Orange" autocomplete="off"></label>
+        <label>Story (optional)<textarea id="gallery-story" rows="2" maxlength="200" placeholder="e.g. Taken at a very busy Apple Store in Cardiff the day after the iPhone Duo launch."></textarea></label>
+        <p class="admin-hint">A line or two of context, shown under the title on the gallery and the album&rsquo;s page, and in Google results. Up to 200 characters.</p>
 
         ${datePrecisionFieldHtml('gallery_date_taken', 'Date taken')}
 
@@ -3821,6 +3830,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
 
       <div class="up-card">
         <label>Title<input type="text" id="up-title" placeholder="e.g. iPhone 17 Pro in Cosmic Orange" autocomplete="off" enterkeyhint="next"></label>
+        <label>Story <span class="up-optional">optional</span><textarea id="up-story" rows="2" maxlength="200" placeholder="e.g. Taken at a very busy Apple Store in Cardiff the day after the iPhone Duo launch."></textarea></label>
         <label>Date taken
           <input type="text" id="up-date" placeholder="e.g. 15 Oct 2024, or Oct 2024" autocomplete="off" spellcheck="false" enterkeyhint="next">
         </label>

@@ -4261,6 +4261,7 @@
     editingGalleryId = id;
     document.getElementById('gallery-form-title').textContent = 'Edit photo';
     document.getElementById('gallery-caption').value = photo.caption || '';
+    document.getElementById('gallery-story').value = photo.story || '';
     document.getElementById('gallery-location').value = photo.location || '';
     document.getElementById('gallery-country').value = photo.country || '';
     setDatePrecisionValue('gallery_date_taken', photo.date_taken || null);
@@ -4312,11 +4313,17 @@
         country: document.getElementById('gallery-country').value.trim() || null,
         tags: currentGalleryTags,
       };
+      // Sent when written, or once the column exists, so saving still
+      // works before supabase-schema-update-36.sql has been run.
+      const story = document.getElementById('gallery-story').value.trim();
+      if (story || cachedGalleryPhotos.some((p) => 'story' in p)) payload.story = story || null;
       const result = editingGalleryId
         ? await client.from('gallery_photos').update(payload).eq('id', editingGalleryId)
         : await client.from('gallery_photos').insert(payload);
       if (result.error) {
-        window.alert('Save failed: ' + result.error.message);
+        window.alert(/story/.test(result.error.message || '')
+          ? 'Save failed: run supabase-schema-update-36.sql in the Supabase SQL editor first, so albums can have a story.'
+          : 'Save failed: ' + result.error.message);
         return;
       }
       galleryForm.reset();

@@ -54,7 +54,8 @@ body {
 .up-form input[type="email"],
 .up-form input[type="password"],
 .up-form input[type="url"],
-.up-form input[type="date"] {
+.up-form input[type="date"],
+.up-form textarea {
   font: inherit;
   font-size: 17px; /* 16px+ stops iOS zooming in on focus */
   font-weight: 400;
@@ -67,6 +68,9 @@ body {
   min-width: 0;
 }
 .up-form input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+.up-form textarea { resize: vertical; line-height: 1.4; box-sizing: border-box; }
+.up-form textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+.up-optional { font-weight: 500; color: var(--text-secondary); font-size: 13px; }
 
 .up-muted { color: var(--text-secondary); margin: 0; }
 .up-hint { color: var(--text-secondary); font-size: 13px; margin: -4px 0 0; min-height: 0; }
