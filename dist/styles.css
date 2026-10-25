@@ -3288,10 +3288,30 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 
 /* The next earnings: a results-chart icon beside the label and the date,
    with room around and between them. */
-.earnings-next { flex-direction: row; align-items: center; gap: 16px; padding: 20px 22px; border-radius: 16px; font-size: 17px; line-height: 1.4; }
+.earnings-next { flex-direction: column; align-items: stretch; gap: 0; padding: 20px 22px; border-radius: 16px; font-size: 17px; line-height: 1.4; }
+.earnings-next-head { display: flex; align-items: center; gap: 16px; }
 .earnings-next-icon { flex: none; display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 14px; background: rgba(255, 255, 255, 0.18); color: #fff; }
 .earnings-next-icon svg { width: 34px; height: 34px; flex: none; }
 .earnings-next-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .earnings-next-label { font-size: 12px; letter-spacing: 0.08em; }
 /* The day and time stay together, so a line breaks after "results,". */
 .earnings-next-when { white-space: nowrap; }
+
+/* Beside the hero tiles with nothing else counting down, the earnings box
+   is a tile of its own: it runs down to the tiles' bottom edge, and the
+   room holds a clock counting down to the results (in the event tile's
+   style, in white on orange), their UK time and the call time. The "in 8
+   days" in the label gives way to the clock. Elsewhere (phones, iPads, or
+   under a countdown) the clock and extra line stay hidden. */
+.earnings-next-extra { display: none; margin-top: 2px; font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.85); }
+.earnings-next-clock { display: none; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.earnings-next-clock[hidden] { display: none !important; }
+.earnings-next-clock .countdown-unit { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 4px 9px; border-radius: 12px; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.22); }
+.earnings-next-clock .countdown-value { font-size: 28px; font-weight: 800; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.earnings-next-clock .countdown-unit-label { font-size: 10px; font-weight: 700; line-height: 1; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.82); }
+@media (min-width: 901px) {
+  .intro-hero-text--calm > .earnings-next--clock { flex: 1 1 auto; justify-content: space-between; gap: 16px; padding: 22px; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-in { display: none; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-extra { display: block; }
+  .intro-hero-text--calm > .earnings-next--clock .earnings-next-clock { display: grid; }
+}
