@@ -2106,6 +2106,14 @@
     return m ? m[1] + 'sized/' + width + '/' + m[2] : url;
   }
 
+  // Where the build serves a gallery photo's copies from this site (see
+  // src/photo-mirror.js), e.g. /photos/800/1789-IMG_1.jpg. Keep in step
+  // with localPhotoPathJS() in app.js.
+  function localPhotoPath(url, width) {
+    const m = PHOTO_URL_RE.exec(String(url || ''));
+    return m ? '/photos/' + width + '/' + m[2].replace(/\.[a-z0-9]+$/i, '') + '.jpg' : null;
+  }
+
   // The photo's path inside the product-images bucket.
   function photoStoragePath(url) {
     const m = PHOTO_URL_RE.exec(String(url || ''));
@@ -2590,6 +2598,7 @@
     summaryToEditorHtml,
     cdnImgHtml,
     sizedPhotoUrl,
+    localPhotoPath,
     uploadGalleryPhoto,
     photosMissingCopies,
     makePhotoCopies,

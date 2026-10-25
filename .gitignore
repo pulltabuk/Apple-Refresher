@@ -1,3 +1,7 @@
 # Local Netlify folder
 .netlify
 node_modules/
+
+# Gallery photo copies made by the build (src/photo-mirror.js)
+.photo-cache/
+dist/photos/

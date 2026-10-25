@@ -1277,11 +1277,23 @@ function galleryPhotoCardHtml(photo, index) {
 // (photoImgHtml). Same switch in app.js and public/facts-kit.js.
 const IMAGE_CDN = false;
 
-// A gallery photo's <img>: its 800px copy (see sizedPhotoUrl in
-// public/facts-kit.js), or the photo itself if that copy is missing.
-// Keep in step with photoImgHtmlJS() in app.js.
+// Gallery photos the build copied onto this site (src/photo-mirror.js).
+let servedPhotos = new Set();
+function setServedPhotos(set) {
+  servedPhotos = set || new Set();
+}
+
+// A gallery photo at a given width: this site's copy when the build made
+// one, else the smaller copy in Supabase (see sizedPhotoUrl in
+// public/facts-kit.js). Keep in step with photoSrcJS() in app.js.
+function photoSrc(url, width) {
+  return servedPhotos.has(url) ? FactsKit.localPhotoPath(url, width) : FactsKit.sizedPhotoUrl(url, width);
+}
+
+// A gallery photo's <img>: its 800px copy, or the photo itself if that
+// copy is missing. Keep in step with photoImgHtmlJS() in app.js.
 function photoImgHtml(url, attrs) {
-  const small = FactsKit.sizedPhotoUrl(url, 800);
+  const small = photoSrc(url, 800);
   if (small === url) return `<img src="${escapeHtml(url)}"${attrs || ''}>`;
   return `<img src="${escapeHtml(small)}" data-full="${escapeHtml(url)}" onerror="this.onerror=null;this.src=this.dataset.full"${attrs || ''}>`;
 }
@@ -1316,10 +1328,10 @@ function iconPixels(size) {
 // viewer and as the fallback if a copy is missing. Keep in step with
 // galleryCarouselImgHtmlJS() in app.js.
 function galleryCarouselImgHtml(url, alt, index) {
-  const small = FactsKit.sizedPhotoUrl(url, 800);
+  const small = photoSrc(url, 800);
   const load = index === 0 ? ' fetchpriority="high"' : ' loading="lazy"';
   if (small === url) return `<img src="${escapeHtml(url)}" data-full="${escapeHtml(url)}" alt="${escapeHtml(alt)}"${load} decoding="async">`;
-  const medium = FactsKit.sizedPhotoUrl(url, 1600);
+  const medium = photoSrc(url, 1600);
   return `<img src="${escapeHtml(medium)}" srcset="${escapeHtml(small)} 800w, ${escapeHtml(medium)} 1600w" sizes="(max-width: 700px) 100vw, 640px" data-full="${escapeHtml(url)}" alt="${escapeHtml(alt)}"${load} decoding="async" onerror="this.onerror=null;this.removeAttribute('srcset');this.src=this.dataset.full">`;
 }
 
@@ -1417,7 +1429,9 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
-    ogImage: images[0],
+    // Shared links show this site's 1600px copy: quicker, and well under
+    // the size limits social sites set, which a camera original can pass.
+    ogImage: images[0] && servedPhotos.has(images[0]) ? siteUrl + FactsKit.localPhotoPath(images[0], 1600) : images[0],
     ogType: 'article',
     extraJsonLd: {
       '@context': 'https://schema.org',
@@ -2089,6 +2103,7 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
     <div class="intro-hero-cards" id="hero-cards">
       ${heroCardsHtml}
     </div>
+    ${earningsNext ? earningsLineHtml(earningsNext).replace('class="earnings-next"', 'class="earnings-next earnings-next--stacked"') : ''}
     <script>(function(){var c=document.querySelectorAll('#hero-cards [data-hero-slug]');if(c.length<2)return;var k=Math.floor(Math.random()*c.length);for(var i=0;i<c.length;i++)c[i].hidden=i!==k;window.__heroPick=c[k].getAttribute('data-hero-slug');})();</script>
   </div>
 </section>
@@ -3983,6 +3998,7 @@ module.exports = {
   photoLicencePage,
   factRelatedLink,
   galleryPhotoCardHtml,
+  setServedPhotos,
   eventsPage,
   eventDetailPage,
   factsPage,

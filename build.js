@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate } = require('./src/templates');
+const { appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos } = require('./src/templates');
+const photoMirror = require('./src/photo-mirror');
 
 const DEFAULT_ABOUT = {
   heading: 'About Apple Sunset',
@@ -361,6 +362,8 @@ async function main() {
   const earningsNext = upcomingEarnings;
   const countdown = countdowns.length ? countdowns : null;
   const galleryPhotos = await loadGalleryPhotos();
+  // Gallery photos served from this site's own CDN (src/photo-mirror.js).
+  setServedPhotos(await photoMirror.mirror(galleryPhotos, DIST));
 
   const productsBySlug = {};
   products.forEach((p) => { productsBySlug[p.slug] = p; });
@@ -655,6 +658,10 @@ ${sitemapUrls.map((u) => `  <url><loc>${SITE_URL}${u.path}</loc>${u.lastmod ? `<
     '  X-Frame-Options: SAMEORIGIN',
     '  Referrer-Policy: strict-origin-when-cross-origin',
     '  Permissions-Policy: geolocation=(), microphone=()',
+    // Gallery photo copies never change under the same name, so browsers
+    // can keep them for a year.
+    '/photos/*',
+    '  Cache-Control: public, max-age=31536000, immutable',
     '',
   ].join('\n'));
 

@@ -3254,3 +3254,22 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .gallery-speed[hidden], .gallery-speed button[hidden] { display: none; }
 .gallery-speed p { margin: 0 0 10px; font-size: 14px; line-height: 1.5; }
 .gallery-speed p:last-child { margin-bottom: 0; }
+
+/* Stacked hero with an Apple Event: the event comes before the earnings
+   line. A second copy of the line sits after the tiles (homePage); on a
+   phone the tiles are laid out as part of the hero itself so the line
+   lands between the event and the Live counts. Side by side, and with
+   no event, the line stays under the heading as before. */
+.earnings-next--stacked { display: none; }
+@media (max-width: 900px) {
+  /* Stacked, the tiles don't need lining up with the heading beside them. */
+  .intro-hero-cards { margin-top: 0; }
+  .intro-hero-layout:has(.event-hero) .intro-hero-text > .earnings-next { display: none; }
+  .intro-hero-layout:has(.event-hero) > .earnings-next--stacked { display: flex; margin-top: 0; }
+}
+@media (max-width: 700px) {
+  .intro-hero-layout:has(.event-hero) > .intro-hero-cards { display: contents; }
+  .intro-hero-layout:has(.event-hero) .event-hero { order: 1; }
+  .intro-hero-layout:has(.event-hero) > .earnings-next--stacked { order: 2; }
+  .intro-hero-layout:has(.event-hero) .site-stats { order: 3; }
+}
