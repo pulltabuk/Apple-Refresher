@@ -1027,8 +1027,10 @@
   // as "1,000,000" is one word, so it has to shrink rather than wrap) and
   // nothing below maxBottom when given. Returns the y below the last line.
   // keepWhole: for a list, keep shrinking (down to that size) until every
-  // typed line fits on one line, before letting any wrap.
-  function fitText(ctx, text, x, y, maxWidth, weight, size, minSize, maxLines, maxBottom, keepWhole) {
+  // typed line fits on one line, before letting any wrap. leading: the
+  // line height as a multiple of the font size (1.18 when not given).
+  function fitText(ctx, text, x, y, maxWidth, weight, size, minSize, maxLines, maxBottom, keepWhole, leading) {
+    const LH = leading || 1.18;
     let lines;
     let s = size;
     // A little extra space between typed lines (list items), so an item
@@ -1036,7 +1038,7 @@
     let starts = [];
     const gapsBefore = (n) => starts.filter((i) => i > 0 && i < n).length;
     const gapOf = (sz) => Math.round(sz * 0.32);
-    const bottomAt = (n, sz) => y + sz + (n - 1) * Math.round(sz * 1.18) + gapsBefore(n) * gapOf(sz) + Math.round(sz * 0.3);
+    const bottomAt = (n, sz) => y + sz + (n - 1) * Math.round(sz * LH) + gapsBefore(n) * gapOf(sz) + Math.round(sz * 0.3);
     for (;;) {
       ctx.font = weight + ' ' + s + 'px ' + FONT;
       lines = wrapLines(ctx, text, maxWidth);
@@ -1058,7 +1060,7 @@
       while (last && ctx.measureText(last + '\u2026').width > maxWidth) last = last.replace(/\s*\S+$/, '');
       lines[allowed - 1] = (last || '') + '\u2026';
     }
-    const lh = Math.round(s * 1.18);
+    const lh = Math.round(s * LH);
     // maxWidth here squeezes a word that is still too wide at the
     // smallest size, rather than letting it run off the card.
     lines.forEach((line, i) => ctx.fillText(line, x, y + s + i * lh + gapsBefore(i + 1) * gapOf(s), maxWidth));
@@ -1228,6 +1230,18 @@
     const TEXT_BOTTOM = subject.sub ? BOTTOM - SUB_SIZE - SUB_GAP : BOTTOM;
     // Space between the title ("iPhone Duo") and what follows it.
     const TITLE_GAP = 16;
+    // The explanation under the headline: a clear gap above it, a little
+    // air between its lines, and the size the headline makes room for.
+    const CAPTION_GAP = 18;
+    const CAPTION_LEADING = 1.26;
+    const CAPTION_SIZE = 40;
+    // How tall text would be at a size (at most maxLines lines), without
+    // drawing it.
+    const textHeight = (text, size, leading, maxLines) => {
+      ctx.font = '700 ' + size + 'px ' + FONT;
+      const n = Math.min(maxLines, wrapLines(ctx, text, cw).length);
+      return size + (n - 1) * Math.round(size * leading) + Math.round(size * 0.3);
+    };
     ctx.fillStyle = '#ffffff';
     // A date ("Tuesday 23 October 2012", on an On this day card) stays
     // on one line, a little smaller, rather than breaking before the year.
@@ -1241,11 +1255,14 @@
       // two lines rather than being cut off or crowding out the line.
       const wordy = /\s/.test(subject.big.trim()) && !/^[$\u00a3\u20ac]?\d/.test(subject.big.trim());
       fitText.cut = false;
-      // A figure ("221 days", "25 years ago") shrinks to stay on one line
-      // before it would break in two, and the headline always leaves room
-      // for two lines of the explanation under it.
-      const room = subject.caption ? TEXT_BOTTOM - 100 : TEXT_BOTTOM;
-      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', wordy ? 84 : 150, 48, 2, room, wordy ? 0 : 96);
+      // A figure or date ("221 days", "28 October 2024") shrinks to stay on
+      // one line rather than break in two, and the headline leaves the
+      // explanation under it room at a comfortable size (CAPTION_SIZE),
+      // shrinking itself first, so the line is never squeezed to the edge.
+      const room = subject.caption
+        ? Math.max(y + 4 + 72, TEXT_BOTTOM - CAPTION_GAP - textHeight(subject.caption, CAPTION_SIZE, CAPTION_LEADING, 4))
+        : TEXT_BOTTOM;
+      y = fitText(ctx, subject.big, cx, y + 4, cw, '800', wordy ? 84 : 150, 48, 2, room, wordy ? 0 : 64, 1.08);
       lineCut = fitText.cut;
     } else if (!own) {
       // No figure: the label says it all, in big type.
@@ -1258,8 +1275,8 @@
       // With no headline, the line takes its space, in larger type.
       const listy = /\n\s*\S/.test(subject.caption);
       y = own && !subject.big
-        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', listy ? 44 : 58, listy ? 26 : 38, listy ? 10 : 5, TEXT_BOTTOM, listy ? 32 : 0)
-        : fitText(ctx, subject.caption, cx, y + (listy ? 6 : 0), cw, '700', listy ? 40 : 46, listy ? 24 : 34, listy ? 9 : 4, TEXT_BOTTOM, listy ? 28 : 0);
+        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', listy ? 44 : 58, listy ? 26 : 38, listy ? 10 : 5, TEXT_BOTTOM, listy ? 32 : 0, listy ? 0 : CAPTION_LEADING)
+        : fitText(ctx, subject.caption, cx, y + (subject.big ? CAPTION_GAP : 0) + (listy ? 6 : 0), cw, '700', listy ? 40 : CAPTION_SIZE + 2, listy ? 24 : 34, listy ? 9 : 4, TEXT_BOTTOM, listy ? 28 : 0, listy ? 0 : CAPTION_LEADING);
       lineCut = lineCut || fitText.cut;
     }
     if (subject.sub) {

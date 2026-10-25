@@ -3273,3 +3273,14 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-layout:has(.event-hero) > .earnings-next--stacked { order: 2; }
   .intro-hero-layout:has(.event-hero) .site-stats { order: 3; }
 }
+
+/* Side by side: the heading's top lines up with the tiles' top (they used
+   to be dropped to meet a countdown that now sits lower down), and with
+   nothing counting down, the earnings line sits level with their bottom. */
+@media (min-width: 901px) {
+  .intro-hero-cards { margin-top: 0; }
+  /* The letters, not the line box, meet the tiles' top edge. */
+  .intro-hero-text > .intro-heading { margin-top: -0.18em; }
+  .intro-hero-text--calm { justify-content: flex-start; }
+  .intro-hero-text--calm > .earnings-next { margin-top: auto; }
+}
