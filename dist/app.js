@@ -947,11 +947,57 @@
     return product[field] ? specRowJS(label, '<a href="' + product[field] + '" target="_blank" rel="noopener">' + linkText + ' &#8599;</a>') : '';
   }
 
+  // Must stay in step with productKey() in src/templates.js.
+  function productKeyJS(text) {
+    return String(text || '').toLowerCase()
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/\b(\d+)(?:st|nd|rd|th)[\s-]+gen(?:eration)?\b/g, ' $1')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/ 1$/, '');
+  }
+
+  // Every product, once fetched, for repairing links in written text.
+  var linkProductsJS = [];
+
+  // Must stay in step with fixProductLinks() in src/templates.js.
+  function fixProductLinksJS(html, siteHost) {
+    if (!linkProductsJS.length) return html;
+    var known = {};
+    var byKey = {};
+    linkProductsJS.forEach(function (p) {
+      known[p.slug] = true;
+      [productKeyJS(p.name), productKeyJS(p.slug)].forEach(function (k) {
+        if (!k) return;
+        byKey[k] = byKey[k] || {};
+        byKey[k][p.slug] = true;
+      });
+    });
+    function only(k) {
+      var slugs = byKey[k] ? Object.keys(byKey[k]) : [];
+      return slugs.length === 1 ? slugs[0] : null;
+    }
+    return html.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, function (whole, attrs, inner) {
+      var m = attrs.match(/href\s*=\s*(["'])([^"']*)\1/i);
+      if (!m) return whole;
+      var url;
+      try { url = new URL(m[2]); } catch (e) { return whole; }
+      if (!siteHost || url.host.replace(/^www\./, '') !== siteHost.replace(/^www\./, '')) return whole;
+      var slug = (url.pathname.match(/^\/products\/([^/]+)\/?$/) || [])[1];
+      if (!slug || known[slug]) return whole;
+      var target = only(productKeyJS(slug)) || only(productKeyJS(inner));
+      if (!target) return whole;
+      url.pathname = '/products/' + target + '/';
+      return '<a' + attrs.replace(m[0], 'href="' + url.href + '"') + '>' + inner + '</a>';
+    });
+  }
+
   function sanitizeRichTextJS(html) {
     if (!html) return '';
     var allowed = { p: 1, b: 1, strong: 1, i: 1, em: 1, u: 1, br: 1, a: 1 };
     var siteHost = window.location.host;
-    var out = String(html);
+    var out = fixProductLinksJS(String(html), siteHost);
     out = out.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
     out = out.replace(/<div([^>]*)>/gi, '<p>').replace(/<\/div>/gi, '</p>');
     out = out.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g, function (match, tag, attrs) {
@@ -1074,8 +1120,11 @@
     var siblings = Object.keys(productsBySlug)
       .map(function (k) { return productsBySlug[k]; })
       .filter(function (p) { return p.slug !== product.slug && (p.category || '') === (product.category || ''); })
+      // Newest first. Must match relatedProductsHtml() in src/templates.js.
       .sort(function (a, b) {
-        if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
+        var da = launchDateJS(a);
+        var db = launchDateJS(b);
+        if (da !== db) return !da ? 1 : !db ? -1 : da < db ? 1 : -1;
         return a.name.localeCompare(b.name);
       })
       .slice(0, 6);
@@ -1090,6 +1139,7 @@
   }
 
   function productBodyHtmlJS(product, status, productsBySlug, galleryPhotos) {
+    if (productsBySlug) linkProductsJS = Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; });
     var sortedDates = sortedHistoryJS(product);
     var launch = product.original_launch_date || sortedDates[0] || null;
     var latest = sortedDates[sortedDates.length - 1] || null;
@@ -1255,7 +1305,10 @@
   function fetchAllProductsJS() {
     return fetch(window.SUPABASE_URL + '/rest/v1/products?select=*', {
       headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
-    }).then(function (res) { return res.json(); }).then(appleNamesJS);
+    }).then(function (res) { return res.json(); }).then(appleNamesJS).then(function (products) {
+      if (Array.isArray(products) && products.length) linkProductsJS = products;
+      return products;
+    });
   }
 
   // --- Waiting button: works whether rendered at build time or injected live.

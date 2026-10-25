@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos } = require('./src/templates');
+const { appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos, setLinkProducts, missingProductLinks } = require('./src/templates');
 const photoMirror = require('./src/photo-mirror');
 
 const DEFAULT_ABOUT = {
@@ -316,6 +316,8 @@ function pickRandom(arr, n) {
 
 async function main() {
   const products = await loadProducts();
+  // Links typed into notes and descriptions are checked against these.
+  setLinkProducts(products);
   const aboutContent = await loadSiteContent();
   const categoryIcons = await loadCategoryIcons();
   setCustomCategoryIcons(categoryIcons);
@@ -672,6 +674,9 @@ Sitemap: ${SITE_URL}/sitemap.xml
 `;
   fs.writeFileSync(path.join(DIST, 'robots.txt'), robotsTxt);
 
+  if (missingProductLinks.size) {
+    console.warn(`Links to product pages that don't exist (fix them in the admin): ${Array.from(missingProductLinks).join(', ')}`);
+  }
   console.log(`Built ${allItems.length} product pages (${discontinuedItems.length} discontinued), ${categoryNames.length} category pages, ${galleryPhotos.length} gallery photos, 1 home page.`);
 }
 
