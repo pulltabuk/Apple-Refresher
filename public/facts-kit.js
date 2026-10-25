@@ -2506,6 +2506,21 @@
     return first.slice(0, limit).replace(/[\s,;:]+\S*$/, '') + '\u2026';
   }
 
+  // An event's artwork colour (#rrggbb, worked out by the build: see
+  // src/event-colours.js) as the colours its homepage tile is drawn in,
+  // in place of the standard violet: the frame and kicker a shade darker,
+  // the title darker again, a pale wash and outline, and a soft glow.
+  function eventTintStyle(hex) {
+    const m = /^#([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return '';
+    const n = parseInt(m[1], 16);
+    const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    const mix = (to, t) => '#' + c.map((v) => Math.round(v + (to - v) * t).toString(16).padStart(2, '0')).join('');
+    return '--tint:' + hex.toLowerCase() + ';--event:' + mix(0, 0.18) + ';--event-dark:' + mix(0, 0.35) +
+      ';--event-bg:' + mix(255, 0.9) + ';--event-border:' + mix(255, 0.62) + ';--event-glow:rgba(' + c.join(',') + ',0.24)';
+  }
+
+  // opts.tint: the artwork's colour, for eventTintStyle.
   function eventHeroHtml(event, opts) {
     const o = opts || {};
     const now = o.now == null ? Date.now() : o.now;
@@ -2555,7 +2570,8 @@
         .concat(named.filter((p) => !p.featured).sort((a, b) => a.name.localeCompare(b.name)));
       const bySlugName = {};
       (o.products || []).forEach((p) => { if (p && p.name && p.slug) bySlugName[p.name.toLowerCase()] = p.slug; });
-      const shown = ordered.slice(0, 12);
+      // The headline products make the cut first; the list reads A to Z.
+      const shown = ordered.slice(0, 12).sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true, sensitivity: 'base' }));
       const more = ordered.length - shown.length;
       // The summary's opening sentence, a line or two on what was announced.
       const lead = eventSummaryLead(event.summary);
@@ -2568,7 +2584,10 @@
       cta = '<a class="event-hero-cta" href="' + href + '">' + (ordered.length || lead ? 'See everything announced' : 'Go to the event page') + ' <span aria-hidden="true">&rarr;</span></a>';
     }
     const many = phase === 'recap' && (event.announced_products || []).length > 4;
-    return '<article class="card card--featured card--event event-hero event-hero--' + phase + (many ? ' event-hero--many' : '') + '" data-event-hero data-phase-until="' + until + '">' +
+    const tintStyle = eventTintStyle(o.tint);
+    return '<article class="card card--featured card--event event-hero event-hero--' + phase + (many ? ' event-hero--many' : '') + (tintStyle ? ' event-hero--tinted' : '') + '"' +
+      (tintStyle ? ' style="' + tintStyle + '" data-tint="' + o.tint.toLowerCase() + '" data-tint-for="' + escapeHtml(String(event.id || '')) + '"' : '') +
+      ' data-event-hero data-phase-until="' + until + '">' +
       kicker + art +
       '<div class="event-hero-head"><h2 class="event-hero-title"><a class="event-hero-link" href="' + href + '">' + title + '</a></h2>' +
       '<p class="event-hero-when">' + whenLine + '</p></div>' +
@@ -2579,6 +2598,7 @@
   const FactsKit = {
     eventStartMs,
     eventClockUnits,
+    eventTintStyle,
     eventPhase,
     pickHeroEvent,
     eventHeroHtml,

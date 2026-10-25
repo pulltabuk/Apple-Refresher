@@ -2413,10 +2413,15 @@
         heroRest = heroRest.concat(pickRandomJS(releasedOnly.filter(function (i) { return i !== heroFeatured && heroRest.indexOf(i) === -1; }), 2 - heroRest.length));
       }
 
-      // Must match eventHeroTileHtml() in src/templates.js.
+      // Must match eventHeroTileHtml() in src/templates.js. The artwork's
+      // colour comes from the built tile when it shows the same event (a
+      // newly added one keeps the standard violet until the next build).
+      var builtTile = heroCardsSection.querySelector('[data-event-hero][data-tint]');
+      var heroTint = activeEvent && builtTile && builtTile.getAttribute('data-tint-for') === String(activeEvent.id || '') ? builtTile.getAttribute('data-tint') : '';
       var featuredSlotHtml = activeEvent
         ? window.FactsKit.eventHeroHtml(activeEvent, {
             href: '/events/' + eventSlugJS(activeEvent) + '/',
+            tint: heroTint,
             products: products.map(function (p) { return { name: p.name, slug: p.slug }; }),
           })
         : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');
@@ -2914,7 +2919,7 @@
     var products = (event.announced_products || []).map(function (p) { return typeof p === 'string' ? { name: p, featured: false } : p; });
     var featured = products.filter(function (p) { return p.featured; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
     var rest = products.filter(function (p) { return !p.featured; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
-    var shown = featured.concat(rest).slice(0, 10);
+    var shown = featured.concat(rest).slice(0, 10).sort(function (a, b) { return a.name.localeCompare(b.name, 'en', { numeric: true, sensitivity: 'base' }); });
     var remaining = products.length - shown.length;
     var tags = shown.map(function (p) {
       var match = productByName[p.name.toLowerCase()];

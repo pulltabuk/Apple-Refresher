@@ -3361,3 +3361,24 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .card--event-archive.card--tinted .event-card-title { color: color-mix(in srgb, var(--tint) 82%, #000); }
 .card.card--event-archive.card--tinted .gallery-tags-row .pill:not(.pill--muted) { background: color-mix(in srgb, var(--tint) 10%, #fff); border-color: color-mix(in srgb, var(--tint) 35%, #fff); color: color-mix(in srgb, var(--tint) 75%, #000); }
 .card.card--event-archive.card--tinted .gallery-tags-row .pill--link:hover { background: var(--tint); border-color: var(--tint); color: #fff; }
+
+/* The homepage event tile in its artwork's colours (eventTintStyle in
+   facts-kit.js sets --event and friends on the tile). Live stays red. */
+.event-hero--tinted:not(.event-hero--live) { box-shadow: 0 10px 28px var(--event-glow); }
+.event-hero--tinted:not(.event-hero--live):hover { box-shadow: 0 12px 32px var(--event-glow); }
+.event-hero--tinted .event-hero-kicker:not(.event-hero-kicker--live) { box-shadow: 0 2px 8px var(--event-glow); }
+
+/* Product pills on event tiles: a little larger, with more room around
+   and between them. */
+.card--event-archive .gallery-tags { margin-top: 4px; }
+.card--event-archive .gallery-tags-row { gap: 8px; }
+.card.card--event-archive .gallery-tags-row .pill { font-size: 11px; padding: 5px 11px; letter-spacing: 0.03em; line-height: 1.2; }
+.event-hero-products--many { gap: 8px; }
+.event-hero-products--many li { padding: 6px 11px; }
+@media (min-width: 701px) {
+  .intro-hero-cards .event-hero--many .event-hero-products--many { gap: 7px; }
+  .intro-hero-cards .event-hero--many .event-hero-products--many li { padding: 5px 10px; }
+}
+@media (max-width: 700px) {
+  .card.card--event-archive .gallery-tags-row .pill { font-size: 10.5px; padding: 5px 10px; }
+}
