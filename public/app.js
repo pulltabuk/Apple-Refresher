@@ -2710,19 +2710,39 @@
     return m ? m[1] + 'sized/' + width + '/' + m[2] : url;
   }
 
+  // Must stay in step with localPhotoPath() in public/facts-kit.js.
+  function localPhotoPathJS(url, width) {
+    var m = /^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\/product-images\/(?!sized\/)([^?#]+)$/.exec(String(url || ''));
+    return m ? '/photos/' + width + '/' + m[1].replace(/\.[a-z0-9]+$/i, '') + '.jpg' : null;
+  }
+
+  // Photos the build copied onto this site: the ones the built page shows
+  // from /photos/. Read once, before any redraw replaces them. A photo
+  // added since the build isn't there yet, so it loads from Supabase.
+  var servedPhotosJS = null;
+  function photoSrcJS(url, width) {
+    if (!servedPhotosJS) {
+      servedPhotosJS = {};
+      Array.prototype.forEach.call(document.querySelectorAll('img[data-full]'), function (img) {
+        if ((img.getAttribute('src') || '').indexOf('/photos/') === 0) servedPhotosJS[img.getAttribute('data-full')] = true;
+      });
+    }
+    return servedPhotosJS[url] ? localPhotoPathJS(url, width) : sizedPhotoUrlJS(url, width);
+  }
+
   // Must stay in step with photoImgHtml() in src/templates.js.
   function photoImgHtmlJS(url, attrs) {
-    var small = sizedPhotoUrlJS(url, 800);
+    var small = photoSrcJS(url, 800);
     if (small === url) return '<img src="' + escapeHtmlJS(url) + '"' + (attrs || '') + '>';
     return '<img src="' + escapeHtmlJS(small) + '" data-full="' + escapeHtmlJS(url) + '" onerror="this.onerror=null;this.src=this.dataset.full"' + (attrs || '') + '>';
   }
 
   // Must stay in step with galleryCarouselImgHtml() in src/templates.js.
   function galleryCarouselImgHtmlJS(url, alt, index) {
-    var small = sizedPhotoUrlJS(url, 800);
+    var small = photoSrcJS(url, 800);
     var load = index === 0 ? ' fetchpriority="high"' : ' loading="lazy"';
     if (small === url) return '<img src="' + escapeHtmlJS(url) + '" data-full="' + escapeHtmlJS(url) + '" alt="' + escapeHtmlJS(alt) + '"' + load + ' decoding="async">';
-    var medium = sizedPhotoUrlJS(url, 1600);
+    var medium = photoSrcJS(url, 1600);
     return '<img src="' + escapeHtmlJS(medium) + '" srcset="' + escapeHtmlJS(small) + ' 800w, ' + escapeHtmlJS(medium) + ' 1600w" sizes="(max-width: 700px) 100vw, 640px" data-full="' + escapeHtmlJS(url) + '" alt="' + escapeHtmlJS(alt) + '"' + load + ' decoding="async" onerror="this.onerror=null;this.removeAttribute(\'srcset\');this.src=this.dataset.full">';
   }
 

@@ -16,6 +16,11 @@
 [functions."x-drafts-daily"]
   schedule = "0 6 * * *"
 
+# Keeps the gallery photo copies the build makes (src/photo-mirror.js)
+# from one build to the next.
+[[plugins]]
+  package = "/netlify/plugins/photo-cache"
+
 # Lets Netlify's Image CDN (/.netlify/images) resize photos stored in
 # Supabase, so the phone upload page can show small thumbnails instead of
 # downloading every full-size photo.
