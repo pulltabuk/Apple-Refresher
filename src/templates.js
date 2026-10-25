@@ -1980,14 +1980,28 @@ function nextEarnings(earnings, today) {
 }
 
 // The homepage line under the countdown: the next results, days to go.
-function earningsLineHtml(e) {
+// stacked: the copy placed after the hero tiles for stacked layouts.
+function earningsLineHtml(e, stacked) {
   if (!e) return '';
   const today = new Date().toISOString().slice(0, 10);
   // UK calendar days, kept current in the browser by app.js.
   const when = FactsKit.daysUntilText(e.report_date);
   // A results chart (rising bars) beside the words.
   const icon = '<span class="earnings-next-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><rect x="5" y="13" width="3.2" height="5" rx="1"/><rect x="10.4" y="9" width="3.2" height="9" rx="1"/><rect x="15.8" y="4.5" width="3.2" height="13.5" rx="1"/></svg></span>';
-  return `<a class="earnings-next" href="/earnings/">${icon}<span class="earnings-next-body"><span class="earnings-next-label">Next earnings &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span><span class="earnings-next-text">Apple ${earningsQuarter(e)} results, <span class="earnings-next-when">${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></span></span></a>`;
+  // With a time, the box can also hold a clock counting down to the
+  // results, plus their time in the UK and when the call starts. They show
+  // only when the box has room for them (beside the hero tiles with
+  // nothing else counting down: see .earnings-next--clock in styles.css).
+  // The clock ticks with the site's others (app.js, data-countdown-at) and
+  // hides itself once the results are out.
+  const at = e.report_time ? FactsKit.eventStartMs({ event_date: e.report_date, event_time: e.report_time }) : NaN;
+  const hasClock = !isNaN(at) && at > Date.now();
+  const uk = e.report_time ? FactsKit.eventUkTime({ event_date: e.report_date, event_time: e.report_time }) : '';
+  const extra = [uk, e.call_time ? `call at ${escapeHtml(e.call_time)}` : ''].filter(Boolean).join(' &middot; ');
+  const clock = hasClock
+    ? `<span class="earnings-next-clock" data-countdown-at="${at}" data-countdown-box role="timer" aria-label="Time until Apple's results">${FactsKit.eventClockUnits(at - Date.now())}</span>`
+    : '';
+  return `<a class="earnings-next${stacked ? ' earnings-next--stacked' : ''}${hasClock ? ' earnings-next--clock' : ''}" href="/earnings/"><span class="earnings-next-head">${icon}<span class="earnings-next-body"><span class="earnings-next-label">Next earnings<span class="earnings-next-in"> &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span></span><span class="earnings-next-text">Apple ${earningsQuarter(e)} results, <span class="earnings-next-when">${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></span>${hasClock && extra ? `<span class="earnings-next-extra">${extra}</span>` : ''}</span></span>${clock}</a>`;
 }
 
 function earningsPage({ earnings, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -2163,7 +2177,7 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
     <div class="intro-hero-cards" id="hero-cards">
       ${heroCardsHtml}
     </div>
-    ${earningsNext ? earningsLineHtml(earningsNext).replace('class="earnings-next"', 'class="earnings-next earnings-next--stacked"') : ''}
+    ${earningsNext ? earningsLineHtml(earningsNext, true) : ''}
     <script>(function(){var c=document.querySelectorAll('#hero-cards [data-hero-slug]');if(c.length<2)return;var k=Math.floor(Math.random()*c.length);for(var i=0;i<c.length;i++)c[i].hidden=i!==k;window.__heroPick=c[k].getAttribute('data-hero-slug');})();</script>
   </div>
 </section>

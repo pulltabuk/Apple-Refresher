@@ -2578,6 +2578,7 @@
 
   const FactsKit = {
     eventStartMs,
+    eventClockUnits,
     eventPhase,
     pickHeroEvent,
     eventHeroHtml,
