@@ -1706,9 +1706,13 @@ function eventArchiveCardHtml(event, productsBySlug) {
       ? `<a class="pill pill--link" href="/products/${match.slug}/">${escapeHtml(p.name)}</a>`
       : `<span class="pill">${escapeHtml(p.name)}</span>`;
   }).join('') + (remaining > 0 ? `<span class="pill pill--muted">+${remaining} more</span>` : '');
-  const inner = `<div class="card-image">${event.image_url ? cdnImgHtml(event.image_url, 800, ' alt="" loading="lazy"') : ''}</div>
-    <p class="card-name">${escapeHtml(event.heading)}</p>
-    ${dateText ? `<p class="card-meta">${escapeHtml(dateText)}</p>` : ''}`;
+  // The event's name, big and bold, with its date and time under it,
+  // above the artwork. Must match eventArchiveCardHtmlJS() in app.js.
+  const inner = `<div class="event-card-head">
+      <p class="card-name event-card-title">${escapeHtml(event.heading)}</p>
+      ${dateText ? `<p class="card-meta event-card-date">${escapeHtml(dateText)}</p>` : ''}
+    </div>
+    <div class="card-image">${event.image_url ? cdnImgHtml(event.image_url, 800, ' alt="" loading="lazy"') : ''}</div>`;
   // data-search lets the page filter match the announced products as
   // well as the event's own title and date.
   const searchText = [event.heading, dateText, ...products.map((p) => p.name)].filter(Boolean).join(' ');

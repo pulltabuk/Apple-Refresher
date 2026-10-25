@@ -3334,3 +3334,10 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-text--calm > .earnings-next--clock .earnings-next-sep { display: none; }
   .intro-hero-text--calm > .earnings-next--clock .earnings-next-when { display: block; font-size: 16px; }
 }
+
+/* Events page tiles: the event's name, big and bold in the events'
+   violet, with its date and time under it, above the artwork. */
+.card--event-archive .card-link { gap: 12px; }
+.card--event-archive .event-card-head { display: flex; flex-direction: column; gap: 4px; }
+.card--event-archive .event-card-title { font-size: 22px; font-weight: 800; line-height: 1.2; letter-spacing: -0.01em; color: var(--event); -webkit-line-clamp: 2; }
+.card--event-archive .event-card-date { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
