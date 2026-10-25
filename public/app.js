@@ -2921,9 +2921,10 @@
         ? '<a class="pill pill--link" href="/products/' + match.slug + '/">' + escapeHtmlJS(p.name) + '</a>'
         : '<span class="pill">' + escapeHtmlJS(p.name) + '</span>';
     }).join('') + (remaining > 0 ? '<span class="pill pill--muted">+' + remaining + ' more</span>' : '');
-    var inner = '<div class="card-image">' + (event.image_url ? cdnImgHtmlJS(event.image_url, 800, ' alt="" loading="lazy"') : '') + '</div>' +
-      '<p class="card-name">' + escapeHtmlJS(event.heading) + '</p>' +
-      (dateText ? '<p class="card-meta">' + escapeHtmlJS(dateText) + '</p>' : '');
+    // Must match eventArchiveCardHtml() in src/templates.js.
+    var inner = '<div class="event-card-head"><p class="card-name event-card-title">' + escapeHtmlJS(event.heading) + '</p>' +
+      (dateText ? '<p class="card-meta event-card-date">' + escapeHtmlJS(dateText) + '</p>' : '') + '</div>' +
+      '<div class="card-image">' + (event.image_url ? cdnImgHtmlJS(event.image_url, 800, ' alt="" loading="lazy"') : '') + '</div>';
     var searchText = [event.heading, dateText].concat(products.map(function (p) { return p.name; })).filter(Boolean).join(' ');
     return '<article class="card card--event-archive" data-search="' + escapeHtmlJS(searchText.toLowerCase()) + '"><a class="card-link" href="/events/' + eventSlugJS(event) + '/">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
   }
