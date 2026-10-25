@@ -1681,6 +1681,8 @@ function galleryStripItemHtml(photo) {
 function eventHeroTileHtml(event, productsBySlug) {
   return FactsKit.eventHeroHtml(event, {
     href: `/events/${eventSlug(event)}/`,
+    // The artwork's colour, as on the Events page (src/event-colours.js).
+    tint: (event.image_url && eventTints[event.image_url]) || '',
     products: Object.values(productsBySlug || {}).map((p) => ({ name: p.name, slug: p.slug })),
   });
 }
@@ -1701,7 +1703,10 @@ function eventArchiveCardHtml(event, productsBySlug) {
   const products = normalizedAnnouncedProducts(event);
   const featured = products.filter((p) => p.featured).sort((a, b) => a.name.localeCompare(b.name));
   const rest = products.filter((p) => !p.featured).sort((a, b) => a.name.localeCompare(b.name));
-  const shown = featured.concat(rest).slice(0, 10);
+  // The headline products make the cut first when there are many, and
+  // the pills read A to Z. Must match eventArchiveCardHtmlJS() in app.js.
+  const shown = featured.concat(rest).slice(0, 10)
+    .sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true, sensitivity: 'base' }));
   const remaining = products.length - shown.length;
   // A pill for a product we track links straight to it, which also
   // means the event page is no longer a dead end.
