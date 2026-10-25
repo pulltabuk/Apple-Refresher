@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos, setLinkProducts, missingProductLinks } = require('./src/templates');
+const { appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos, setLinkProducts, missingProductLinks, setEventTints } = require('./src/templates');
+const { eventColours } = require('./src/event-colours');
 const photoMirror = require('./src/photo-mirror');
 
 const DEFAULT_ABOUT = {
@@ -322,6 +323,8 @@ async function main() {
   const categoryIcons = await loadCategoryIcons();
   setCustomCategoryIcons(categoryIcons);
   const events = await loadEvents();
+  // Each event tile takes the main colour of its artwork.
+  setEventTints(await eventColours(events));
   const facts = await loadFacts();
   const latestFact = facts[0] || null;
   const today = new Date().toISOString().slice(0, 10);
