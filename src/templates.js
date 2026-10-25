@@ -1985,7 +1985,9 @@ function earningsLineHtml(e) {
   const today = new Date().toISOString().slice(0, 10);
   // UK calendar days, kept current in the browser by app.js.
   const when = FactsKit.daysUntilText(e.report_date);
-  return `<a class="earnings-next" href="/earnings/"><span class="earnings-next-label">Next earnings &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span><span class="earnings-next-text">Apple ${earningsQuarter(e)} results, <span class="earnings-next-when">${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></span></a>`;
+  // A results chart (rising bars) beside the words.
+  const icon = '<span class="earnings-next-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><rect x="5" y="13" width="3.2" height="5" rx="1"/><rect x="10.4" y="9" width="3.2" height="9" rx="1"/><rect x="15.8" y="4.5" width="3.2" height="13.5" rx="1"/></svg></span>';
+  return `<a class="earnings-next" href="/earnings/">${icon}<span class="earnings-next-body"><span class="earnings-next-label">Next earnings &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span><span class="earnings-next-text">Apple ${earningsQuarter(e)} results, <span class="earnings-next-when">${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></span></span></a>`;
 }
 
 function earningsPage({ earnings, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
