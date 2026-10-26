@@ -3453,7 +3453,9 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .countdown-next-icon { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 8px; background: #fff; border: 1px solid #d3e4bf; }
 .countdown-next-icon :is(svg, img) { width: 20px; height: 20px; }
 .countdown-next-name { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; line-height: 1.25; }
-.countdown-next-date { flex: none; font-size: 13px; font-weight: 700; opacity: 0.85; white-space: nowrap; }
+.countdown-next-when { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; text-align: right; white-space: nowrap; }
+.countdown-next-date { font-size: 13px; font-weight: 700; }
+.countdown-next-in { font-size: 11.5px; font-weight: 600; opacity: 0.75; }
 .countdown-more { flex: none; }
 .countdown-more > summary { justify-content: space-between; font-size: 13px; font-weight: 700; cursor: pointer; list-style: none; }
 .countdown-more > summary::-webkit-details-marker { display: none; }
@@ -3611,15 +3613,18 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
 .countdown-more-all:hover { text-decoration: underline; }
 
 /* Apple Events page: an event still to come counts down at the foot of
-   its tile, on a dark shade of the tile's own colour (the artwork's, or
-   the standard violet) with white figures. It goes once the event
+   its tile, drawn as the homepage's event tile draws its clock: white
+   boxes edged and figured in the event's colour (the artwork's, or the
+   standard violet), here on a pale wash of it. It goes once the event
    starts. */
-.event-card-countdown { display: flex; flex-direction: column; gap: 10px; margin-top: auto; padding: 14px; border-radius: 12px; background: color-mix(in srgb, var(--event-dark) 70%, #0b0614); color: #fff; text-decoration: none; }
+.event-card-countdown { display: flex; flex-direction: column; gap: 10px; margin-top: auto; padding: 14px; border-radius: 12px; background: var(--event-bg); color: var(--event); text-decoration: none; }
 .event-card-countdown[hidden] { display: none; }
-.card--event-archive.card--tinted .event-card-countdown { background: linear-gradient(135deg, color-mix(in srgb, var(--tint) 52%, #0b0b10), color-mix(in srgb, var(--tint) 30%, #0b0b10)); }
-.event-card-countdown:hover { filter: brightness(1.12); }
-.event-card-countdown-label { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.78); }
+.event-card-countdown:hover { box-shadow: inset 0 0 0 1px var(--event-border); }
+.event-card-countdown-label { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
 .event-card-clock { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.event-card-clock .countdown-unit { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 2px; border-radius: 10px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.16); }
-.event-card-clock .countdown-value { font-size: 26px; color: #fff; }
-.event-card-clock .countdown-unit-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255, 255, 255, 0.75); opacity: 1; }
+.event-card-clock .countdown-unit { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 2px; border-radius: 10px; background: #fff; border: 1px solid var(--event-border); color: var(--event); }
+.event-card-clock .countdown-value { font-size: 26px; }
+.event-card-clock .countdown-unit-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85; }
+.card--event-archive.card--tinted .event-card-countdown { background: color-mix(in srgb, var(--tint) 9%, #fff); color: color-mix(in srgb, var(--tint) 82%, #000); }
+.card--event-archive.card--tinted .event-card-countdown:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 38%, #fff); }
+.card--event-archive.card--tinted .event-card-clock .countdown-unit { border-color: color-mix(in srgb, var(--tint) 38%, #fff); color: color-mix(in srgb, var(--tint) 82%, #000); }
