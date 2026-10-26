@@ -3609,3 +3609,17 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
 /* The homepage's opened "+2 more coming": a way on to the whole list. */
 .countdown-more-all { align-self: center; padding: 4px 8px; color: var(--fresh-text); font-size: 13px; font-weight: 700; text-decoration: none; }
 .countdown-more-all:hover { text-decoration: underline; }
+
+/* Apple Events page: an event still to come counts down at the foot of
+   its tile, on a dark shade of the tile's own colour (the artwork's, or
+   the standard violet) with white figures. It goes once the event
+   starts. */
+.event-card-countdown { display: flex; flex-direction: column; gap: 10px; margin-top: auto; padding: 14px; border-radius: 12px; background: color-mix(in srgb, var(--event-dark) 70%, #0b0614); color: #fff; text-decoration: none; }
+.event-card-countdown[hidden] { display: none; }
+.card--event-archive.card--tinted .event-card-countdown { background: linear-gradient(135deg, color-mix(in srgb, var(--tint) 52%, #0b0b10), color-mix(in srgb, var(--tint) 30%, #0b0b10)); }
+.event-card-countdown:hover { filter: brightness(1.12); }
+.event-card-countdown-label { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.78); }
+.event-card-clock { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.event-card-clock .countdown-unit { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 2px; border-radius: 10px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.16); }
+.event-card-clock .countdown-value { font-size: 26px; color: #fff; }
+.event-card-clock .countdown-unit-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255, 255, 255, 0.75); opacity: 1; }

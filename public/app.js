@@ -2936,7 +2936,9 @@
     var searchText = [event.heading, dateText].concat(products.map(function (p) { return p.name; })).filter(Boolean).join(' ');
     var href = '/events/' + eventSlugJS(event) + '/';
     var tint = tints && /^#[0-9a-f]{6}$/i.test(tints[href] || '') ? tints[href] : '';
-    return '<article class="card card--event-archive' + (tint ? ' card--tinted" style="--tint: ' + tint : '') + '" data-search="' + escapeHtmlJS(searchText.toLowerCase()) + '"><a class="card-link" href="' + href + '">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + '</article>';
+    // Still to come: a clock at the foot of the tile (facts-kit.js).
+    var clock = window.FactsKit && window.FactsKit.eventCardCountdownHtml ? window.FactsKit.eventCardCountdownHtml(event, href) : '';
+    return '<article class="card card--event-archive' + (tint ? ' card--tinted" style="--tint: ' + tint : '') + '" data-search="' + escapeHtmlJS(searchText.toLowerCase()) + '"><a class="card-link" href="' + href + '">' + inner + '</a>' + (tags ? '<div class="gallery-tags"><div class="gallery-tags-row">' + tags + '</div></div>' : '') + clock + '</article>';
   }
 
   if (gridSection && gridSection.getAttribute('data-mode') === 'events' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
