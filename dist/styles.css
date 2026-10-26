@@ -3192,7 +3192,7 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 /* An event's page: the day and time as pills under the heading. They
    span the image's width in equal halves; stacked, full width, on phones. */
 .event-date-pills { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; margin: 0.25rem 0 1.5rem; }
-.event-date-pill { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; padding: 11px 14px; border-radius: 999px; background: var(--event); color: #fff; border: 1px solid var(--event); font-size: 18px; font-weight: 700; line-height: 1.2; box-shadow: 0 4px 14px rgba(109, 40, 217, 0.28); white-space: nowrap; }
+.event-date-pill { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; padding: 11px 14px; border-radius: 999px; background: var(--event); color: #fff; border: 1px solid var(--event); font-size: 18px; font-weight: 700; line-height: 1.2; box-shadow: 0 4px 14px var(--event-glow, rgba(109, 40, 217, 0.28)); white-space: nowrap; }
 .event-date-pill svg { flex: none; }
 .event-date-pill > :not(svg) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .event-date-pill--time { background: var(--event-bg); color: var(--event); border-color: var(--event-border); box-shadow: none; }
@@ -3629,3 +3629,8 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
 .card--event-archive.card--tinted .event-card-countdown { background: color-mix(in srgb, var(--tint) 9%, #fff); color: color-mix(in srgb, var(--tint) 82%, #000); }
 .card--event-archive.card--tinted .event-card-countdown:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 38%, #fff); }
 .card--event-archive.card--tinted .event-card-clock .countdown-unit { border-color: color-mix(in srgb, var(--tint) 38%, #fff); color: color-mix(in srgb, var(--tint) 82%, #000); }
+
+/* An event's own page: its date and time pills and its clock in the
+   event's colour (set on the page from its artwork, FactsKit
+   eventTintStyle), or burnt orange when the artwork has no colour. */
+.event-detail-page--orange { --event: var(--accent); --event-dark: var(--accent-dark); --event-bg: var(--accent-bg); --event-border: #f0c9a8; --event-glow: rgba(194, 84, 12, 0.28); }
