@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos, setLinkProducts, missingProductLinks, setEventTints } = require('./src/templates');
+const { appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, comingSoonPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos, setLinkProducts, missingProductLinks, setEventTints } = require('./src/templates');
 const { eventColours } = require('./src/event-colours');
 const photoMirror = require('./src/photo-mirror');
 
@@ -516,6 +516,7 @@ async function main() {
   }));
   write('products/index.html', allProductsPage({ items: productsPageItems, pageContent: pageContent.products || null, ...opts }));
   write('discontinued/index.html', discontinuedPage({ items: discontinued, pageContent: pageContent.discontinued || null, ...opts }));
+  write('coming-soon/index.html', comingSoonPage({ products, pageContent: pageContent['coming-soon'] || null, ...opts }));
   write('about/index.html', aboutPage({ content: aboutContent, counts: aboutCounts({ products, events, photos: galleryPhotos }), ...opts }));
   write('contact/index.html', contactPage(opts));
   write('contact/thanks/index.html', contactThanksPage(opts));
