@@ -1180,8 +1180,11 @@ function productRowInner(product, statusInfo) {
     if (launch && product.discontinued_date) meta.push(`Lived ${lifespanText(launch, product.discontinued_date)}`);
     if (launch) meta.push(`Released ${formatDate(launch)}`);
     const year = product.discontinued_date ? String(product.discontinued_date).slice(0, 4) : '';
+    // The year, big, on the Discontinued page; in lists that mix in
+    // current products (More in, All products), the plain date instead,
+    // so it never reads like a current product's day count (styles.css).
     figure = year
-      ? `<span class="prow-num">${year}</span> <span class="prow-unit">discontinued ${escapeHtml(formatDate(product.discontinued_date).replace(/ \d{4}$/, ''))}</span>`
+      ? `<span class="prow-num">${year}</span> <span class="prow-unit">discontinued ${escapeHtml(formatDate(product.discontinued_date).replace(/ \d{4}$/, ''))}</span><span class="prow-ended">${escapeHtml(formatDate(product.discontinued_date))}</span>`
       : '<span class="prow-unit">Discontinued</span>';
     status = '<span class="prow-status prow-status--discontinued">Discontinued</span>';
   } else if (statusInfo) {
@@ -1965,34 +1968,47 @@ function groupCountdowns(countdown) {
   return out;
 }
 
-// opts.slim: after the first (the soonest, with the full clock), each
-// countdown is a slim row: its name and date, with the days and hours
-// to go. Keeps the homepage hero short when several things count down.
-// opts.max: show that many; the rest wait behind "+2 more coming", which
-// opens them in place as more slim rows.
+// opts.stack: one box. The first (the soonest) has the clock; everything
+// after it is a line under it in the same box, its name and date only.
+// When the first has launched, the next day's build drops it and the
+// next moves up and takes the clock.
+// opts.max: how many show in the box, the first included; the rest wait
+// behind "+2 more coming" at its foot, which opens them in place.
 function countdownHtml(countdown, opts) {
   if (!countdown) return '';
   // Accepts one countdown or several, so more than one upcoming product
   // can be shown at once.
   const items = Array.isArray(countdown) ? countdown : [countdown];
   if (!items.length) return '';
-  const max = opts && opts.max ? opts.max : items.length;
-  const shown = items.slice(0, max).map((item, index) => oneCountdownHtml(item, !!(opts && opts.slim && index > 0)));
-  const rest = items.slice(max);
-  if (!rest.length) return shown.join('\n');
-  // Counted in products: two launching together are two more.
-  const more = rest.reduce((n, item) => n + (item.group ? item.group.length : 1), 0);
-  return `${shown.join('\n')}
-  <details class="countdown-more">
-    <summary><span class="countdown-more-closed">+${more} more coming</span><span class="countdown-more-open">Show fewer</span></summary>
-    <div class="countdown-more-list">
-      ${rest.map((item) => oneCountdownHtml(item, true)).join('\n')}
+  if (!(opts && opts.stack) || items.length < 2) return items.map((item) => oneCountdownHtml(item)).join('\n');
+  const [first, ...rest] = items;
+  // A line per product: two launching on the same day are two lines.
+  const lines = rest.flatMap((item) => (item.group && item.group.length > 1 ? item.group : [item]));
+  const room = Math.max(0, (opts.max || items.length) - 1);
+  const shown = lines.slice(0, room);
+  const hidden = lines.slice(room);
+  const list = `<div class="countdown-next-list">
+    ${shown.map(countdownLineHtml).join('\n    ')}
+    ${hidden.length ? `<details class="countdown-more">
+      <summary><span class="countdown-more-closed">+${hidden.length} more coming</span><span class="countdown-more-open">Show fewer</span></summary>
+      ${hidden.map(countdownLineHtml).join('\n      ')}
       <a class="countdown-more-all" href="/coming-soon/">Everything coming soon &rarr;</a>
-    </div>
-  </details>`;
+    </details>` : ''}
+  </div>`;
+  return oneCountdownHtml(first, list);
 }
 
-function oneCountdownHtml(item, slim) {
+// One of the later launches in the box: icon, name and date (this year's
+// without the year), linking to its page.
+function countdownLineHtml(item) {
+  const year = String(new Date().getUTCFullYear());
+  const date = formatDate(item.date).replace(new RegExp(' ' + year + '$'), '');
+  return `<a class="countdown-next" href="${item.href}">${item.product ? `<span class="countdown-next-icon">${productIcon(item.product, 22)}</span>` : ''}<span class="countdown-next-name">${escapeHtml(item.label)}</span><span class="countdown-next-date">${escapeHtml(date)}</span></a>`;
+}
+
+// tail: the later launches' lines, inside the same box (opts.stack). The
+// box then holds several links, so it isn't one itself: its name is.
+function oneCountdownHtml(item, tail) {
   // Whole days to go, as the ticking clock shows them: to the time
   // given (e.g. "1:30pm PT"), else 8am UK on the day.
   const target = item.time ? FactsKit.eventStartMs({ event_date: item.date, event_time: item.time }) : Date.parse(item.date + 'T07:00:00Z');
@@ -2009,12 +2025,13 @@ function oneCountdownHtml(item, slim) {
   // Several products at the same moment: one tile, each name its own
   // link (so the tile itself isn't one).
   const members = item.group && item.group.length > 1 ? item.group : null;
-  const tag = members ? 'div' : 'a';
+  const linkedNames = !!(members || tail);
+  const tag = linkedNames ? 'div' : 'a';
   // A product counts down with its icon, as on the featured tile.
   const nameHtml = (m, linked) => (m.product
     ? `<${linked ? `a href="${m.href}"` : 'span'} class="countdown-name-row"><span class="countdown-icon">${productIcon(m.product, 32)}</span><span class="countdown-name">${escapeHtml(m.label)}</span></${linked ? 'a' : 'span'}>`
-    : `<span class="countdown-name">${escapeHtml(m.label)}</span>`);
-  const namesHtml = members ? members.map((m) => nameHtml(m, true)).join('') : nameHtml(item, false);
+    : linked ? `<a class="countdown-name" href="${m.href}">${escapeHtml(m.label)}</a>` : `<span class="countdown-name">${escapeHtml(m.label)}</span>`);
+  const namesHtml = (members || [item]).map((m) => nameHtml(m, linkedNames)).join('');
   const clockHtml = `<span class="countdown-clock" data-countdown-clock>
     ${over
       ? `<span class="countdown-done-badge">${escapeHtml(done.text)}</span>`
@@ -2022,14 +2039,12 @@ function oneCountdownHtml(item, slim) {
   </span>`;
   const dateHtml = `<span class="countdown-date">${over && done.date ? escapeHtml(done.date) : `${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}`}</span>`;
   // Built after the moment (a rebuild on release day): already finished.
-  return `<${tag} class="countdown${isEvent ? ' countdown--event' : ''}${item.product ? ' countdown--product' : ''}${members ? ' countdown--group' : ''}${slim ? ' countdown--slim' : ''}${over ? ' countdown--done' : ''}"${members ? '' : ` href="${item.href}"`} data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
+  return `<${tag} class="countdown${isEvent ? ' countdown--event' : ''}${item.product ? ' countdown--product' : ''}${linkedNames ? ' countdown--group' : ''}${tail ? ' countdown--stack' : ''}${over ? ' countdown--done' : ''}"${linkedNames ? '' : ` href="${item.href}"`} data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
   <span class="countdown-label">${escapeHtml(over ? done.kicker : (item.kicker || 'Counting down to'))}</span>
-  ${slim
-    ? `<span class="countdown-slim-main">${namesHtml}${dateHtml}</span>
-  ${clockHtml}`
-    : `${namesHtml}
+  ${namesHtml}
   ${clockHtml}
-  ${dateHtml}`}
+  ${dateHtml}
+  ${tail || ''}
   </${tag}>`;
 }
 
@@ -2193,10 +2208,10 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   const heroCardsHtml = heroFeatured || activeEvent ? featuredSlotHtml : emptyState('products');
   // What's coming up: product countdowns and the next earnings. Beside
   // the words when something counts down (three columns), else under them.
-  // The soonest countdown has the full clock, the next two a slim row
-  // each, and any more open from "+2 more coming".
+  // One box: the soonest has the clock, the next two a line each under
+  // it, and any more open from "+2 more coming" at its foot.
   const countdowns = groupCountdowns(countdown);
-  const sideHtml = `${countdownHtml(countdowns, { slim: true, max: 3 })}${earningsLineHtml(earningsNext)}`;
+  const sideHtml = `${countdownHtml(countdowns, { stack: true, max: 3 })}${earningsLineHtml(earningsNext)}`;
 
   // Pills on desktop, a native picker on mobile: thirteen families wrap
   // into five rows on a phone, and a scrolling row would hide most of
@@ -2250,7 +2265,7 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
       ${countdowns.length && earningsNext ? earningsLineHtml(earningsNext, 'words') : ''}
     </div>
-    ${sideHtml.trim() ? `<div class="intro-hero-text intro-hero-side${countdowns.length ? ' intro-hero-side--countdown' : ' intro-hero-text--calm'}${countdowns.length > 1 ? ' intro-hero-side--several' : ''}">
+    ${sideHtml.trim() ? `<div class="intro-hero-text intro-hero-side${countdowns.length ? ' intro-hero-side--countdown' : ' intro-hero-text--calm'}">
       ${sideHtml}
     </div>` : ''}
     <div class="intro-hero-cards" id="hero-cards">

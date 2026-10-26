@@ -848,7 +848,8 @@
       if (launch) meta.push('Released ' + formatDateJS(launch));
       var year = product.discontinued_date ? String(product.discontinued_date).slice(0, 4) : '';
       figure = year
-        ? '<span class="prow-num">' + year + '</span> <span class="prow-unit">discontinued ' + escapeHtmlJS(formatDateJS(product.discontinued_date).replace(/ \d{4}$/, '')) + '</span>'
+        ? '<span class="prow-num">' + year + '</span> <span class="prow-unit">discontinued ' + escapeHtmlJS(formatDateJS(product.discontinued_date).replace(/ \d{4}$/, '')) + '</span>' +
+          '<span class="prow-ended">' + escapeHtmlJS(formatDateJS(product.discontinued_date)) + '</span>'
         : '<span class="prow-unit">Discontinued</span>';
       status = '<span class="prow-status prow-status--discontinued">Discontinued</span>';
     } else if (statusInfo) {
