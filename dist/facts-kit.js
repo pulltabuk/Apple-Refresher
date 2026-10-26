@@ -2487,6 +2487,19 @@
       '<div class="event-hero-countdown" data-countdown-at="' + start + '" role="timer" aria-label="Time until the event">' + eventClockUnits(start - t) + '</div></div>';
   }
 
+  // The Apple Events page: an event still to come counts down at the foot
+  // of its tile, to the second (app.js ticks data-countdown-at), and the
+  // strip goes once the event starts (data-countdown-box). href: the
+  // event's page. Used by the build and by app.js's live refresh.
+  function eventCardCountdownHtml(event, href, now) {
+    const start = eventStartMs(event);
+    const t = now == null ? Date.now() : now;
+    if (isNaN(start) || t >= start) return '';
+    return '<a class="event-card-countdown" href="' + escapeHtml(href) + '" data-countdown-box>' +
+      '<span class="event-card-countdown-label">Starts in</span>' +
+      '<span class="event-card-clock" data-countdown-at="' + start + '" role="timer" aria-label="Time until the event">' + eventClockUnits(start - t) + '</span></a>';
+  }
+
   // The hero tile. opts: href (the event's page on this site), products
   // (every product as { name, slug }, to link what was announced) and now.
   const APPLE_NEWSROOM_URL = 'https://www.apple.com/newsroom/';
@@ -2603,6 +2616,7 @@
     pickHeroEvent,
     eventHeroHtml,
     eventCountdownHtml,
+    eventCardCountdownHtml,
     eventSlug,
     liveFacts,
     daysUntilText,

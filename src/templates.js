@@ -1735,9 +1735,11 @@ function eventArchiveCardHtml(event, productsBySlug) {
   // well as the event's own title and date.
   const searchText = [event.heading, dateText, ...products.map((p) => p.name)].filter(Boolean).join(' ');
   const tint = event.image_url && /^#[0-9a-f]{6}$/i.test(eventTints[event.image_url] || '') ? eventTints[event.image_url] : '';
+  // Still to come: a clock at the foot of the tile.
   return `<article class="card card--event-archive${tint ? ' card--tinted' : ''}"${tint ? ` style="--tint: ${tint}"` : ''} data-search="${escapeHtml(searchText.toLowerCase())}">
   <a class="card-link" href="/events/${eventSlug(event)}/">${inner}</a>
   ${tags ? `<div class="gallery-tags"><div class="gallery-tags-row">${tags}</div></div>` : ''}
+  ${FactsKit.eventCardCountdownHtml(event, `/events/${eventSlug(event)}/`)}
 </article>`;
 }
 
@@ -1843,6 +1845,8 @@ ${events.length ? '' : '<p id="no-events" class="page-intro">No events yet.</p>'
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
+    // facts-kit.js: the live refresh redraws the upcoming event's clock.
+    scripts: [`<script src="${assetUrl('facts-kit.js')}" defer></script>`].concat(DEFAULT_SCRIPTS),
   });
 }
 
