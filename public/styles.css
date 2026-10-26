@@ -3030,6 +3030,17 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 /* Every row on the Discontinued page is discontinued, so the pill adds nothing there. */
 .card-grid[data-mode="discontinued"] .prow-status--discontinued { display: none; }
 .card--discontinued .card-name { color: var(--text); }
+/* Lists that mix discontinued products in with current ones (More in,
+   All products): a discontinued row steps back. Its icon and name are
+   muted, and on the right it has the Discontinued pill and the date it
+   went, small and grey, rather than a big year that reads like a
+   current product's day count. The Discontinued page keeps the year. */
+.prow-ended { display: none; }
+.card-grid.product-list:not([data-mode="discontinued"]) .card--discontinued { opacity: 1; }
+.card-grid.product-list:not([data-mode="discontinued"]) .card--discontinued .prow-figure > :not(.prow-ended) { display: none; }
+.card-grid.product-list:not([data-mode="discontinued"]) .card--discontinued .prow-ended { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+.card-grid.product-list:not([data-mode="discontinued"]) .card--discontinued .prow-icon { opacity: 0.45; }
+.card-grid.product-list:not([data-mode="discontinued"]) .card--discontinued .card-name { color: var(--text-secondary); font-weight: 600; }
 /* Phones: icon, name and details, the number on the right with the
    status under it. */
 @media (max-width: 700px) {
@@ -3432,76 +3443,57 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .intro-hero-layout:not(:has(> .intro-hero-side)) { grid-template-areas: "words words" "cards cards"; }
 }
 
-/* Several things counting down: the soonest keeps the full clock and
-   fills what room the column has; each later one is a slim row (its
-   icon, name and date, with the days and hours to go), so the hero stays
-   about as tall as with one. */
-.intro-hero-side--several { gap: 10px; }
-.intro-hero-side--several > .countdown + .countdown { margin-top: 0; }
-.intro-hero-side .countdown.countdown--slim { flex: none; display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; box-sizing: border-box; margin: 0; padding: 10px 12px; border-radius: 12px; }
-.intro-hero-side .countdown.countdown--slim > * { flex: none; }
-.intro-hero-side .countdown.countdown--slim .countdown-label { display: none; }
-.intro-hero-side .countdown.countdown--slim > .countdown-slim-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.intro-hero-side .countdown.countdown--slim .countdown-name-row { gap: 10px; }
-.intro-hero-side .countdown.countdown--slim .countdown-icon { width: 34px; height: 34px; border-radius: 9px; }
-.intro-hero-side .countdown.countdown--slim .countdown-icon :is(svg, img) { width: 22px; height: 22px; }
-.intro-hero-side .countdown.countdown--slim .countdown-name { font-size: 15px; line-height: 1.25; }
-.intro-hero-side .countdown.countdown--slim .countdown-date { font-size: 12px; padding-left: 44px; }
-.intro-hero-side .countdown.countdown--slim:not(.countdown--product) .countdown-date { padding-left: 0; }
-.intro-hero-side .countdown.countdown--slim .countdown-clock { display: flex; gap: 6px; width: auto; }
-.intro-hero-side .countdown.countdown--slim .countdown-unit { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 46px; box-sizing: border-box; padding: 6px 4px; background: #fff; border: 1px solid #f0d9c4; border-radius: 8px; }
-.intro-hero-side .countdown.countdown--slim .countdown-unit:nth-child(n+3) { display: none; }
-.intro-hero-side .countdown.countdown--slim .countdown-value { font-size: 18px; }
-.intro-hero-side .countdown.countdown--slim .countdown-unit-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; }
-.intro-hero-side .countdown.countdown--slim .countdown-done-badge { font-size: 13px; padding: 6px 10px; }
-.intro-hero-side--several > .earnings-next { margin-top: auto; }
-
-/* More than three things counting down: "+2 more coming" under the
-   third, opening the rest in place as more slim rows. */
+/* Several things counting down: one box. The soonest has the clock;
+   each later launch is a line under it, its icon, name and date only,
+   between thin rules. More than three: "+2 more coming" at the foot
+   opens the rest in place. */
+.countdown-next-list { display: flex; flex-direction: column; align-self: stretch; width: 100%; box-sizing: border-box; margin-top: 2px; text-align: left; }
+.countdown-next, .countdown-more > summary { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent); color: inherit; text-decoration: none; }
+.countdown-next:hover .countdown-next-name { text-decoration: underline; }
+.countdown-next-icon { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 8px; background: #fff; border: 1px solid #d3e4bf; }
+.countdown-next-icon :is(svg, img) { width: 20px; height: 20px; }
+.countdown-next-name { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; line-height: 1.25; }
+.countdown-next-date { flex: none; font-size: 13px; font-weight: 700; opacity: 0.85; white-space: nowrap; }
 .countdown-more { flex: none; }
-/* After the countdowns (which an older rule puts in order 3), before the earnings. */
-.intro-hero-text > .countdown-more { order: 3; }
-.countdown-more > summary { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 1px dashed #b9d39c; border-radius: 12px; background: #fff; color: var(--fresh-text); font-size: 13px; font-weight: 700; cursor: pointer; list-style: none; }
+.countdown-more > summary { justify-content: space-between; font-size: 13px; font-weight: 700; cursor: pointer; list-style: none; }
 .countdown-more > summary::-webkit-details-marker { display: none; }
-.countdown-more > summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+.countdown-more > summary::after { content: ""; flex: none; width: 7px; height: 7px; margin: -3px 4px 0 0; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
 .countdown-more[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
-.countdown-more > summary:hover { border-style: solid; background: var(--fresh-bg); }
-.countdown-more > summary:focus-visible { outline: 2px solid #3d7a1e; outline-offset: 2px; }
+.countdown-more > summary:hover { text-decoration: underline; }
+.countdown-more > summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
 .countdown-more-open { display: none; }
 .countdown-more[open] .countdown-more-open { display: inline; }
 .countdown-more[open] .countdown-more-closed { display: none; }
-.countdown-more-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.countdown-more-all { display: block; padding: 10px 0 2px; border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent); color: inherit; font-size: 13px; font-weight: 700; text-decoration: none; }
+.countdown-more-all:hover { text-decoration: underline; }
 
 /* Products launching at the same moment share one clock, each name its
-   own link. */
-.countdown--group a.countdown-name-row { color: inherit; text-decoration: none; }
-.countdown--group a.countdown-name-row:hover .countdown-name { text-decoration: underline; }
+   own link; so does the box with later launches in it. */
+.countdown--group a.countdown-name-row, .countdown--group a.countdown-name { color: inherit; text-decoration: none; }
+.countdown--group a.countdown-name-row:hover .countdown-name, .countdown--group a.countdown-name:hover { text-decoration: underline; }
 .countdown--group .countdown-name-row + .countdown-name-row { margin-top: -2px; }
 
 /* Laptops, with something counting down: the next earnings sits under the
    words (at the foot of that column, level with the big tile's bottom),
-   so the three columns share the room evenly; the countdowns have the
-   middle column to themselves. */
+   so the three columns share the room evenly; the countdown has the
+   middle column to itself. */
 .earnings-next--words { display: none; }
 @media (min-width: 901px) {
   .intro-hero-words > .earnings-next--words { display: flex; margin-top: auto; }
   .intro-hero-side--countdown > .earnings-next { display: none; }
-  .intro-hero-side--several > .countdown:not(.countdown--slim),
-  .intro-hero-side--countdown > .countdown.countdown--done:not(.countdown--slim) { flex: 1 1 auto; margin: 0; justify-content: center; }
+  .intro-hero-side--countdown > .countdown { flex: 1 1 auto; margin: 0; justify-content: center; }
 }
 /* Out today: a centred column, the badge on one line, sized for a third
    of the hero. */
-.intro-hero-side > .countdown.countdown--done:not(.countdown--slim) { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; }
-.intro-hero-side > .countdown.countdown--done:not(.countdown--slim) .countdown-name-row { justify-content: center; }
-.intro-hero-side--several > .countdown.countdown--done:not(.countdown--slim) { margin: 0; }
-.intro-hero-side--countdown > .countdown.countdown--done:not(.countdown--slim) .countdown-done-badge { font-size: 22px; padding: 11px 22px; white-space: nowrap; }
+.intro-hero-side > .countdown.countdown--done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; }
+.intro-hero-side > .countdown.countdown--done .countdown-name-row { justify-content: center; }
+.intro-hero-side--countdown > .countdown.countdown--done .countdown-done-badge { font-size: 22px; padding: 11px 22px; white-space: nowrap; }
 
 /* A product counting down is green, as on its own page ("Coming 6 Nov");
    events stay violet and the next earnings orange. */
 .countdown.countdown--product { background: var(--fresh-bg); color: var(--fresh-text); border-color: #d3e4bf; }
 .countdown.countdown--product:hover { border-color: #8fb86a; }
 .countdown--product .countdown-icon { border-color: #d3e4bf; }
-.intro-hero-side .countdown.countdown--product.countdown--slim .countdown-unit { border-color: #d3e4bf; }
 .intro-hero-text > .countdown.countdown--product .countdown-unit { border-color: #d3e4bf; }
 .countdown.countdown--product.countdown--done { border-color: #3d7a1e; box-shadow: 0 10px 26px rgba(61, 122, 30, 0.18); }
 .countdown--product .countdown-done-badge { background: #3d7a1e; box-shadow: 0 4px 14px rgba(61, 122, 30, 0.3); }
