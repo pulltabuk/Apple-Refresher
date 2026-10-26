@@ -2266,48 +2266,44 @@
   let slotPickerQuery = '';
   let focusSlotPicker = false;
 
-  // The picker under the strip: products on sale and not featured, newest
-  // release first, with a search box. Picking one puts it in the slot.
-  function slotPicker(slot, today) {
+  // A picker under the strip: a search box over a list of products, and
+  // picking one calls onPick. Fills a featured slot, or adds a coming
+  // product to the countdown.
+  function stripPicker(opts) {
     const box = document.createElement('div');
     box.className = 'slot-picker';
     const head = document.createElement('div');
     head.className = 'slot-picker-head';
     const title = document.createElement('strong');
-    title.textContent = 'Fill slot ' + slot + (slot === 1 ? ' (the big tile)' : '');
+    title.textContent = opts.title;
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'slot-picker-close';
     close.textContent = '\u00d7';
     close.title = 'Close';
     close.setAttribute('aria-label', 'Close');
-    const shut = () => { slotPickerFor = null; renderHomepageStrip(); };
-    close.addEventListener('click', shut);
+    close.addEventListener('click', opts.onClose);
     head.appendChild(title);
     head.appendChild(close);
     const input = document.createElement('input');
     input.type = 'search';
     input.className = 'admin-search-input slot-picker-search';
-    input.placeholder = 'Search products on sale\u2026';
-    input.setAttribute('aria-label', 'Search products to feature');
+    input.placeholder = opts.placeholder;
+    input.setAttribute('aria-label', opts.ariaLabel);
     input.autocomplete = 'off';
-    input.value = slotPickerQuery;
+    input.value = opts.query || '';
     const list = document.createElement('div');
     list.className = 'slot-picker-list';
-    const newest = (p) => (p.refresh_history || []).slice().sort().pop() || '';
-    const candidates = cachedProducts
-      .filter((p) => !p.discontinued && !p.featured)
-      .sort((a, b) => newest(b).localeCompare(newest(a)) || a.name.localeCompare(b.name));
     function fill() {
       const words = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
-      const matches = candidates
+      const matches = opts.candidates
         .filter((p) => words.every((w) => (p.name + ' ' + (p.category || '')).toLowerCase().includes(w)))
         .slice(0, words.length ? 12 : 8);
       list.innerHTML = '';
       if (!matches.length) {
         const none = document.createElement('p');
         none.className = 'slot-picker-empty';
-        none.textContent = 'No products on sale match.';
+        none.textContent = opts.empty(words.length > 0);
         list.appendChild(none);
         return;
       }
@@ -2325,19 +2321,18 @@
         name.textContent = p.name;
         const meta = document.createElement('span');
         meta.className = 'slot-picker-meta';
-        const last = newest(p);
-        meta.textContent = [p.category, last ? (last > today ? 'Coming ' : 'Released ') + formatAdminDate(last) : ''].filter(Boolean).join(' \u00b7 ');
+        meta.textContent = opts.meta(p);
         text.appendChild(name);
         text.appendChild(meta);
         item.appendChild(icon);
         item.appendChild(text);
-        item.addEventListener('click', () => fillFeaturedSlot(p, slot, item));
+        item.addEventListener('click', () => opts.onPick(p, item));
         list.appendChild(item);
       });
     }
-    input.addEventListener('input', () => { slotPickerQuery = input.value; fill(); });
+    input.addEventListener('input', () => { opts.onQuery(input.value); fill(); });
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); shut(); }
+      if (e.key === 'Escape') { e.preventDefault(); opts.onClose(); }
       if (e.key === 'Enter') {
         e.preventDefault();
         const first = list.querySelector('.slot-picker-item');
@@ -2354,6 +2349,79 @@
       setTimeout(() => input.focus(), 0);
     }
     return box;
+  }
+
+  // Filling a featured slot: products on sale and not featured, newest
+  // release first. Picking one puts it in the slot.
+  function slotPicker(slot, today) {
+    const newest = (p) => (p.refresh_history || []).slice().sort().pop() || '';
+    return stripPicker({
+      title: 'Fill slot ' + slot + (slot === 1 ? ' (the big tile)' : ''),
+      placeholder: 'Search products on sale\u2026',
+      ariaLabel: 'Search products to feature',
+      query: slotPickerQuery,
+      onQuery: (q) => { slotPickerQuery = q; },
+      candidates: cachedProducts
+        .filter((p) => !p.discontinued && !p.featured)
+        .sort((a, b) => newest(b).localeCompare(newest(a)) || a.name.localeCompare(b.name)),
+      meta: (p) => {
+        const last = newest(p);
+        return [p.category, last ? (last > today ? 'Coming ' : 'Released ') + formatAdminDate(last) : ''].filter(Boolean).join(' \u00b7 ');
+      },
+      empty: () => 'No products on sale match.',
+      onClose: () => { slotPickerFor = null; renderHomepageStrip(); },
+      onPick: (p, item) => fillFeaturedSlot(p, slot, item),
+    });
+  }
+
+  // The homepage countdown: up to five coming products. The homepage
+  // shows three, and the rest behind "+2 more coming".
+  const COUNTDOWN_MAX = 5;
+  let countdownPickerOpen = false;
+  let countdownPickerQuery = '';
+
+  // Adding to the countdown: products with a release date still to come
+  // that aren't counting down yet, soonest first.
+  function countdownPicker(today, count) {
+    const due = (p) => (p.refresh_history || []).filter((d) => d > today).sort()[0] || '';
+    return stripPicker({
+      title: 'Add a coming product to the countdown (' + count + ' of ' + COUNTDOWN_MAX + ')',
+      placeholder: 'Search coming products\u2026',
+      ariaLabel: 'Search coming products',
+      query: countdownPickerQuery,
+      onQuery: (q) => { countdownPickerQuery = q; },
+      candidates: cachedProducts
+        .filter((p) => !p.discontinued && !p.in_countdown && due(p))
+        .sort((a, b) => due(a).localeCompare(due(b)) || a.name.localeCompare(b.name)),
+      meta: (p) => [p.category, 'Coming ' + formatAdminDate(due(p))].filter(Boolean).join(' \u00b7 '),
+      empty: (searching) => (searching
+        ? 'No coming products match.'
+        : 'No other product has a release date still to come. Give one a future release date, then add it here.'),
+      onClose: () => { countdownPickerOpen = false; renderHomepageStrip(); },
+      onPick: (p, item) => addToCountdown(p, item),
+    });
+  }
+
+  async function addToCountdown(product, button) {
+    if (button) button.disabled = true;
+    const result = await client.from('products').update({ in_countdown: true }).eq('id', product.id);
+    if (result.error) {
+      window.alert('Failed to add "' + product.name + '" to the countdown: ' + result.error.message);
+      if (button) button.disabled = false;
+      return;
+    }
+    countdownPickerOpen = false;
+    countdownPickerQuery = '';
+    // The countdown is built into the page, so it needs a rebuild to show.
+    const published = await rebuildSite();
+    const statusEl = document.getElementById('publish-status');
+    if (statusEl) {
+      statusEl.textContent = published.ok
+        ? product.name + ' is in the countdown. Live in about a minute.'
+        : product.name + ' is in the countdown, but the rebuild didn\u2019t start (' + published.error + '). Press Publish changes.';
+      statusEl.className = 'admin-hint admin-publish-status' + (published.ok ? ' is-ok' : ' is-error');
+    }
+    loadProducts();
   }
 
   async function fillFeaturedSlot(product, slot, button) {
@@ -2430,6 +2498,7 @@
         empty.addEventListener('click', () => {
           slotPickerFor = slotPickerFor === i + 1 ? null : i + 1;
           slotPickerQuery = '';
+          countdownPickerOpen = false;
           focusSlotPicker = true;
           renderHomepageStrip();
         });
@@ -2439,10 +2508,30 @@
     }));
     if (slotPickerFor && !slots[slotPickerFor - 1]) strip.appendChild(slotPicker(slotPickerFor, today));
     else slotPickerFor = null;
-    if (counting.length) {
-      row('\u23f1 Countdown', counting.map((x) => chip(x.p.name + ' \u00b7 ' + formatAdminDate(x.due), x.p,
-        'Take ' + x.p.name + ' out of the countdown', () => removeFromCountdown(x.p))));
+    // The countdown: what's counting down, and while there's room (five),
+    // a picker to add another coming product from here.
+    const countdownChips = counting.map((x) => chip(x.p.name + ' \u00b7 ' + formatAdminDate(x.due), x.p,
+      'Take ' + x.p.name + ' out of the countdown', () => removeFromCountdown(x.p)));
+    if (counting.length < COUNTDOWN_MAX) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'homepage-chip homepage-chip--empty homepage-chip--add' + (countdownPickerOpen ? ' is-open' : '');
+      add.textContent = '+ Add a coming product';
+      add.title = 'Count down to another product (up to ' + COUNTDOWN_MAX + ')';
+      add.setAttribute('aria-expanded', countdownPickerOpen ? 'true' : 'false');
+      add.addEventListener('click', () => {
+        countdownPickerOpen = !countdownPickerOpen;
+        countdownPickerQuery = '';
+        slotPickerFor = null;
+        focusSlotPicker = true;
+        renderHomepageStrip();
+      });
+      countdownChips.push(add);
+    } else {
+      countdownPickerOpen = false;
     }
+    row('\u23f1 Countdown', countdownChips);
+    if (countdownPickerOpen) strip.appendChild(countdownPicker(today, counting.length));
     // The next results: the line under the homepage countdown (or the
     // countdown itself when nothing else is coming). Hidden until the
     // earnings table exists.
