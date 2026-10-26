@@ -878,6 +878,10 @@
       $x('x-topic').value = '';
       $x('x-ideas').innerHTML = '';
       $x('x-after').hidden = true;
+      // The last post's Buffer message and draft go with it.
+      composerDraft = null;
+      $x('x-buffer-note').hidden = true;
+      $x('x-buffer-when').hidden = true;
       unlockFields();
       refresh();
     }
@@ -1001,12 +1005,14 @@
     // The composer's own Buffer buttons: the post as written above, with
     // the card attached as an image (so the post carries the plain link,
     // not the card link that X would otherwise preview).
+    let bufferSending = false;
     async function sendComposer(mode, dueAt) {
       const note = $x('x-buffer-note');
       note.hidden = false;
       note.classList.remove('x-card-note');
       const body = $x('x-text').value.trim();
       if (!body) { note.textContent = 'Write a post first.'; return; }
+      bufferSending = true;
       const link = $x('x-link-on').checked ? $x('x-link').value.trim() : '';
       const text = previewOwn ? postText() : window.FactsKit.xPostText(body, { hashtags: $x('x-tags').checked, products: cachedProducts, link });
       note.textContent = 'Sending to Buffer\u2026';
@@ -1026,7 +1032,17 @@
         note.classList.add('x-card-note');
         note.textContent = 'Not sent: ' + err.message;
       }
+      bufferSending = false;
     }
+    // A Buffer message ("Not sent: ...", "Added to your queue") is about the
+    // post as it was when sent: once the post or its options change, it
+    // goes, so it never looks like a verdict on the new wording.
+    function forgetBufferNote(e) {
+      if (bufferSending || e.target.closest('#x-buffer-when, #x-drafts')) return;
+      $x('x-buffer-note').hidden = true;
+    }
+    ['input', 'change'].forEach((type) => $x('tab-x').addEventListener(type, forgetBufferNote));
+    ['x-card-icon-picker', 'x-emoji-row', 'x-over-tags', 'x-preview-reset'].forEach((id) => $x(id).addEventListener('click', forgetBufferNote));
     $x('x-buffer-queue-btn').addEventListener('click', () => sendComposer('queue'));
     $x('x-buffer-schedule-btn').addEventListener('click', () => {
       const row = $x('x-buffer-when');
@@ -1240,8 +1256,19 @@
       btn.classList.add('active');
       const tab = btn.getAttribute('data-tab');
       // The tab goes in the address (#facts), so a refresh comes back to it.
+      // The product being edited (?edit=) stays in the address only while
+      // its form is on screen: otherwise a refresh on another tab would
+      // reopen that product instead of the tab.
       if (window.history && window.history.replaceState) {
-        window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search + (tab === 'products' ? '' : '#' + tab));
+        const params = new URLSearchParams(window.location.search);
+        const formView = document.getElementById('product-form-view');
+        let search = '';
+        if (tab === 'products' && formView && formView.style.display !== 'none') {
+          search = editingId ? '?edit=' + encodeURIComponent(editingId) : (params.get('new') ? '?new=1' : '');
+        } else if (tab === 'gallery' && params.get('editPhoto')) {
+          search = '?editPhoto=' + encodeURIComponent(params.get('editPhoto'));
+        }
+        window.history.replaceState(window.history.state, '', window.location.pathname + search + (tab === 'products' ? '' : '#' + tab));
       }
       document.getElementById('tab-products').style.display = tab === 'products' ? 'block' : 'none';
       document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
