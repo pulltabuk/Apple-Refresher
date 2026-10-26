@@ -1800,8 +1800,12 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
       : `<li><span class="event-product-plain">${escapeHtml(p.name)}</span></li>`)).join('\n')}
   </ul>`
     : '';
+  // The date and time pills and the clock take the event's own colour,
+  // from its artwork (as its tile does on the Events page and homepage);
+  // burnt orange, the site's colour, when the artwork has none.
+  const tint = event.image_url && /^#[0-9a-f]{6}$/i.test(eventTints[event.image_url] || '') ? eventTints[event.image_url] : '';
   const body = `
-<article class="event-detail-page">
+<article class="event-detail-page${tint ? '' : ' event-detail-page--orange'}"${tint ? ` style="${FactsKit.eventTintStyle(tint)}"` : ''}>
   <div class="page-header-row">
     <h1>${escapeHtml(event.heading)}</h1>
     <a class="admin-edit-link" data-admin-href="/admin/" data-admin-label="Admin" style="display:none;"></a>
