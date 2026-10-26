@@ -5317,6 +5317,7 @@
       { key: 'products', label: 'All products page', path: '/products/' },
       { key: 'categories', label: 'Browse by category page', path: '/categories/' },
       { key: 'discontinued', label: 'Discontinued page', path: '/discontinued/' },
+      { key: 'coming-soon', label: 'Coming soon page', path: '/coming-soon/' },
       { key: 'gallery', label: 'Gallery page', path: '/gallery/' },
       { key: 'events', label: 'Apple Events page', path: '/events/' },
       { key: 'facts', label: 'Facts page', path: '/facts/' },

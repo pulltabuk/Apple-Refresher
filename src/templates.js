@@ -1104,6 +1104,7 @@ ${extraJsonLd ? `<script type="application/ld+json">${JSON.stringify(extraJsonLd
     </button>
     <nav class="site-nav" id="site-nav">
       <a href="/products/">All products</a>
+      <a href="/coming-soon/">Coming soon</a>
       <a href="/categories/">Categories</a>
       <a href="/discontinued/">Discontinued</a>
       <a href="/gallery/">Photo Gallery</a>
@@ -1984,6 +1985,7 @@ function countdownHtml(countdown, opts) {
     <summary><span class="countdown-more-closed">+${more} more coming</span><span class="countdown-more-open">Show fewer</span></summary>
     <div class="countdown-more-list">
       ${rest.map((item) => oneCountdownHtml(item, true)).join('\n')}
+      <a class="countdown-more-all" href="/coming-soon/">Everything coming soon &rarr;</a>
     </div>
   </details>`;
 }
@@ -2353,6 +2355,116 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
     description: 'An archive of the Apple products that have been discontinued: when they launched, when they went, how long they lasted, and what replaced them.',
     siteUrl,
     path: '/discontinued/',
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
+}
+
+// --- Coming soon: every product with a release date still to come ---
+
+// { date, products } for each launch day still ahead (today included, so
+// a launch-day visit sees it arrive), soonest first. Products sharing a
+// day share an entry. A product's coming date is its newest release
+// when that is still ahead, as its own page and badge show it.
+function comingSoonGroups(products, today) {
+  const day = today || new Date().toISOString().slice(0, 10);
+  const byDate = {};
+  (products || []).forEach((p) => {
+    if (p.discontinued) return;
+    const due = (p.refresh_history || []).slice().sort().pop();
+    if (!due || due < day) return;
+    (byDate[due] = byDate[due] || []).push(p);
+  });
+  return Object.keys(byDate).sort().map((date) => ({
+    date,
+    products: byDate[date].sort((a, b) => a.name.localeCompare(b.name)),
+  }));
+}
+
+// The day in full ("Friday 30 October 2026"); a month or year alone
+// (an expected date) as the site writes it elsewhere.
+function comingDateText(date) {
+  if (datePrecision(date) !== 'day') return formatDate(date);
+  const d = new Date(date + 'T12:00:00Z');
+  const part = (o) => d.toLocaleDateString('en-GB', Object.assign({ timeZone: 'UTC' }, o));
+  return `${part({ weekday: 'long' })} ${part({ day: 'numeric' })} ${part({ month: 'long' })} ${part({ year: 'numeric' })}`;
+}
+
+// The clock: ticks in app.js (data-countdown, to 8am UK on the day, as
+// the homepage countdown does); whole days until then.
+function comingClockHtml(date) {
+  const target = Date.parse(date + 'T07:00:00Z');
+  const days = Math.max(0, Math.floor((target - Date.now()) / 86400000));
+  return target <= Date.now()
+    ? '<span class="countdown-done-badge">🎉 Available now</span>'
+    : `<span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>`;
+}
+
+// What the clock turns into on the day (app.js, data-done-*).
+function comingDoneAttrs(date) {
+  return `data-done-kicker="Launch day" data-done-text="🎉 Available now" data-done-date="Released ${escapeHtml(formatDate(date))}"`;
+}
+
+function comingSoonPage({ products, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const groups = comingSoonGroups(products);
+  const exact = (g) => datePrecision(g.date) === 'day';
+  const [next, ...later] = groups;
+  let body;
+  if (!next) {
+    body = `
+<h1>${pageHeading(pageContent, 'Coming soon')}</h1>
+${pageStandardLine(pageContent, '<p class="page-intro">Nothing has a release date yet. When Apple announces a product and when it reaches shops, it shows here with a countdown.</p>')}
+${pageIntroHtml(pageContent, siteUrl, 'intro')}
+<p><a class="intro-cta" href="/events/">See Apple Events</a></p>`;
+  } else {
+    // The next to launch: first and biggest, counting down to the second.
+    const single = next.products.length === 1 ? next.products[0] : null;
+    const extras = single ? upcomingExtras(single) : {};
+    const facts = single ? [
+      extras.announced ? `Announced ${formatDate(extras.announced)}` : '',
+      extras.preorder ? `Pre-orders ${formatDate(extras.preorder)}` : '',
+      single.price ? `From ${escapeHtml(formatPrice(single.price))}` : '',
+    ].filter(Boolean) : [];
+    const nameHtml = (p, linked) => `<${linked ? `a href="/products/${p.slug}/"` : 'span'} class="coming-next-product"><span class="coming-next-icon">${productIcon(p, 56)}</span><span class="coming-next-text"><span class="coming-next-name">${escapeHtml(p.name)}</span><span class="coming-next-family">${escapeHtml(p.category || '')}</span></span></${linked ? 'a' : 'span'}>`;
+    const tag = single ? 'a' : 'div';
+    const nextHtml = `<section class="coming-next-wrap" aria-label="Next to launch">
+  <${tag} class="coming-next${exact(next) ? '' : ' coming-next--expected'}"${single ? ` href="/products/${single.slug}/"` : ''}${exact(next) ? ` data-countdown="${escapeHtml(next.date)}" ${comingDoneAttrs(next.date)}` : ''}>
+    <span class="coming-next-main">
+      <span class="coming-next-kicker countdown-label">Next to launch</span>
+      <span class="coming-next-names">${next.products.map((p) => nameHtml(p, !single)).join('')}</span>
+      <span class="coming-next-date countdown-date">${exact(next) ? 'Coming ' : 'Expected '}${escapeHtml(comingDateText(next.date))}</span>
+      ${facts.length ? `<span class="coming-next-facts">${facts.map((f) => `<span>${f}</span>`).join(' &middot; ')}</span>` : ''}
+      ${single ? '<span class="coming-next-cta">See the product &rarr;</span>' : ''}
+    </span>
+    ${exact(next) ? `<span class="coming-clock" data-countdown-clock role="timer">${comingClockHtml(next.date)}</span>` : ''}
+  </${tag}>
+</section>`;
+    // Then everything after it, soonest first: one card each.
+    const cards = later.flatMap((g) => g.products.map((p) => `<a class="coming-card" href="/products/${p.slug}/"${exact(g) ? ` data-countdown="${escapeHtml(g.date)}" ${comingDoneAttrs(g.date)}` : ''}>
+    <span class="coming-card-head"><span class="coming-card-icon">${productIcon(p, 34)}</span><span class="coming-card-text"><span class="coming-card-name">${escapeHtml(p.name)}</span><span class="coming-card-family">${escapeHtml(p.category || '')}</span></span></span>
+    ${exact(g) ? `<span class="coming-clock coming-clock--small" data-countdown-clock role="timer">${comingClockHtml(g.date)}</span>` : ''}
+    <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}</span>
+  </a>`));
+    body = `
+<h1>${pageHeading(pageContent, 'Coming soon')}</h1>
+${pageStandardLine(pageContent, '<p class="page-intro">Every Apple product with a release date still to come, soonest first, counting down to the day it reaches shops.</p>')}
+${pageIntroHtml(pageContent, siteUrl, 'intro')}
+${nextHtml}
+${cards.length ? `<h2 class="coming-later-title">Also on the way</h2>
+<div class="coming-grid">
+  ${cards.join('\n  ')}
+</div>` : ''}
+${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
+  }
+  const names = groups.flatMap((g) => g.products.map((p) => p.name));
+  return shell({
+    title: 'Coming soon: Apple products with a release date | Apple Sunset',
+    description: names.length
+      ? `Countdowns to Apple's next releases: ${names.slice(0, 4).join(', ')}${names.length > 4 ? ' and more' : ''}.`
+      : 'Countdowns to Apple products with a release date still to come.',
+    siteUrl,
+    path: '/coming-soon/',
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
@@ -4163,6 +4275,7 @@ module.exports = {
   homePage,
   allProductsPage,
   discontinuedPage,
+  comingSoonPage,
   categoriesIndexPage,
   categoryPage,
   productPage,
