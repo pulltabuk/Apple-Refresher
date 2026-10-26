@@ -1943,13 +1943,36 @@ function factBoxInnerHtml(fact, related) {
 // A live countdown to whatever is next: a pinned Apple Event, or the
 // nearest future release date. The days are rendered here so the page
 // is correct before any script runs; the script only adds the clock.
-function countdownHtml(countdown) {
+// Products launching at the same moment share one clock: their names
+// are listed together on one tile instead of two identical countdowns.
+function groupCountdowns(countdown) {
+  const items = !countdown ? [] : Array.isArray(countdown) ? countdown : [countdown];
+  const out = [];
+  const byMoment = {};
+  items.forEach((item) => {
+    const key = item.product ? `${item.date}|${item.time || ''}` : null;
+    if (key && byMoment[key]) {
+      byMoment[key].group.push(item);
+      return;
+    }
+    const entry = item.product ? { ...item, group: [item] } : item;
+    if (key) byMoment[key] = entry;
+    out.push(entry);
+  });
+  return out;
+}
+
+// opts.slim: after the first (the soonest, with the full clock), each
+// countdown is a slim row: its name and date, with the days and hours
+// to go. Keeps the homepage hero short when several things count down.
+function countdownHtml(countdown, opts) {
   if (!countdown) return '';
   // Accepts one countdown or several, so more than one upcoming product
   // can be shown at once.
   const items = Array.isArray(countdown) ? countdown : [countdown];
   if (!items.length) return '';
-  return items.map((item) => {
+  return items.map((item, index) => {
+    const slim = !!(opts && opts.slim && index > 0);
     // Whole days to go, as the ticking clock shows them: to the time
     // given (e.g. "1:30pm PT"), else 8am UK on the day.
     const target = item.time ? FactsKit.eventStartMs({ event_date: item.date, event_time: item.time }) : Date.parse(item.date + 'T07:00:00Z');
@@ -1959,24 +1982,35 @@ function countdownHtml(countdown) {
     // e.g. in a tab left open overnight; the next build drops the tile).
     const isEvent = /^\/events\//.test(item.href);
     const done = item.product
-      ? { kicker: 'Out today', text: '\ud83c\udf89 Available now', date: `Released ${formatDate(item.date)}` }
+      ? { kicker: 'Out today', text: '🎉 Available now', date: `Released ${formatDate(item.date)}` }
       : isEvent
       ? { kicker: 'Happening now', text: 'Live now', date: '' }
       : { kicker: 'Results day', text: 'Results are out', date: '' };
-    // Built after the moment (a rebuild on release day): already finished.
-    return `<a class="countdown${isEvent ? ' countdown--event' : ''}${over ? ' countdown--done' : ''}" href="${item.href}" data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
-    <span class="countdown-label">${escapeHtml(over ? done.kicker : (item.kicker || 'Counting down to'))}</span>
-    ${item.product
-      // A product counts down with its icon, as on the featured tile.
-      ? `<span class="countdown-name-row"><span class="countdown-icon">${productIcon(item.product, 32)}</span><span class="countdown-name">${escapeHtml(item.label)}</span></span>`
-      : `<span class="countdown-name">${escapeHtml(item.label)}</span>`}
-    <span class="countdown-clock" data-countdown-clock>
+    // Several products at the same moment: one tile, each name its own
+    // link (so the tile itself isn't one).
+    const members = item.group && item.group.length > 1 ? item.group : null;
+    const tag = members ? 'div' : 'a';
+    // A product counts down with its icon, as on the featured tile.
+    const nameHtml = (m, linked) => (m.product
+      ? `<${linked ? `a href="${m.href}"` : 'span'} class="countdown-name-row"><span class="countdown-icon">${productIcon(m.product, 32)}</span><span class="countdown-name">${escapeHtml(m.label)}</span></${linked ? 'a' : 'span'}>`
+      : `<span class="countdown-name">${escapeHtml(m.label)}</span>`);
+    const namesHtml = members ? members.map((m) => nameHtml(m, true)).join('') : nameHtml(item, false);
+    const clockHtml = `<span class="countdown-clock" data-countdown-clock>
       ${over
         ? `<span class="countdown-done-badge">${escapeHtml(done.text)}</span>`
         : `<span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>`}
-    </span>
-    <span class="countdown-date">${over && done.date ? escapeHtml(done.date) : `${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}`}</span>
-  </a>`;
+    </span>`;
+    const dateHtml = `<span class="countdown-date">${over && done.date ? escapeHtml(done.date) : `${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}`}</span>`;
+    // Built after the moment (a rebuild on release day): already finished.
+    return `<${tag} class="countdown${isEvent ? ' countdown--event' : ''}${item.product ? ' countdown--product' : ''}${members ? ' countdown--group' : ''}${slim ? ' countdown--slim' : ''}${over ? ' countdown--done' : ''}"${members ? '' : ` href="${item.href}"`} data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
+    <span class="countdown-label">${escapeHtml(over ? done.kicker : (item.kicker || 'Counting down to'))}</span>
+    ${slim
+      ? `<span class="countdown-slim-main">${namesHtml}${dateHtml}</span>
+    ${clockHtml}`
+      : `${namesHtml}
+    ${clockHtml}
+    ${dateHtml}`}
+  </${tag}>`;
   }).join('\n');
 }
 
@@ -1997,8 +2031,10 @@ function nextEarnings(earnings, today) {
 }
 
 // The homepage line under the countdown: the next results, days to go.
-// stacked: the copy placed after the hero tiles for stacked layouts.
-function earningsLineHtml(e, stacked) {
+// where: 'stacked' for the copy placed after the hero tiles for stacked
+// layouts; 'words' for the copy under the hero's words, shown on laptops
+// when something else counts down beside them.
+function earningsLineHtml(e, where) {
   if (!e) return '';
   const today = new Date().toISOString().slice(0, 10);
   // UK calendar days, kept current in the browser by app.js.
@@ -2018,7 +2054,7 @@ function earningsLineHtml(e, stacked) {
   const clock = hasClock
     ? `<span class="earnings-next-clock" data-countdown-at="${at}" data-countdown-box role="timer" aria-label="Time until Apple's results">${FactsKit.eventClockUnits(at - Date.now())}</span>`
     : '';
-  return `<a class="earnings-next${stacked ? ' earnings-next--stacked' : ''}${hasClock ? ' earnings-next--clock' : ''}" href="/earnings/"><span class="earnings-next-head">${icon}<span class="earnings-next-body"><span class="earnings-next-label">Next earnings<span class="earnings-next-in"> &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span></span><span class="earnings-next-text"><span class="earnings-next-title">Apple ${earningsQuarter(e)} results</span><span class="earnings-next-sep">, </span><span class="earnings-next-when">${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></span>${hasClock && extra ? `<span class="earnings-next-extra">${extra}</span>` : ''}</span></span>${clock}</a>`;
+  return `<a class="earnings-next${where ? ` earnings-next--${where}` : ''}${hasClock ? ' earnings-next--clock' : ''}" href="/earnings/"><span class="earnings-next-head">${icon}<span class="earnings-next-body"><span class="earnings-next-label">Next earnings<span class="earnings-next-in"> &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span></span><span class="earnings-next-text"><span class="earnings-next-title">Apple ${earningsQuarter(e)} results</span><span class="earnings-next-sep">, </span><span class="earnings-next-when">${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></span>${hasClock && extra ? `<span class="earnings-next-extra">${extra}</span>` : ''}</span></span>${clock}</a>`;
 }
 
 function earningsPage({ earnings, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -2133,10 +2169,14 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
     : heroFeatured
     ? featuredCardHtml(heroFeatured.product, heroFeatured.status, productsBySlug)
     : '';
-  // The big featured tile, with the Live counts as a tall panel beside it.
-  const heroCardsHtml = heroFeatured || activeEvent
-    ? `${featuredSlotHtml}${siteStatsHtml(stats)}`
-    : emptyState('products');
+  // The big tile: an Apple Event or a featured product. The Live counts
+  // run in a strip under the hero (below).
+  const heroCardsHtml = heroFeatured || activeEvent ? featuredSlotHtml : emptyState('products');
+  // What's coming up: product countdowns and the next earnings. Beside
+  // the words when something counts down (three columns), else under them.
+  // The soonest countdown has the full clock, any others a slim row.
+  const countdowns = groupCountdowns(countdown);
+  const sideHtml = `${countdownHtml(countdowns, { slim: true })}${earningsLineHtml(earningsNext)}`;
 
   // Pills on desktop, a native picker on mobile: thirteen families wrap
   // into five rows on a phone, and a scrolling row would hide most of
@@ -2184,19 +2224,22 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   const body = `
 <section class="intro-hero">
   <div class="intro-hero-layout">
-    <div class="intro-hero-text${countdown ? '' : ' intro-hero-text--calm'}">
+    <div class="intro-hero-text intro-hero-words">
       <h1 class="intro-heading">${pageHeading(pageContent, 'Apple Sunset')}</h1>
-      ${countdown ? countdownHtml(countdown) : ''}
-      ${earningsLineHtml(earningsNext)}
       ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
+      ${countdowns.length && earningsNext ? earningsLineHtml(earningsNext, 'words') : ''}
     </div>
+    ${sideHtml.trim() ? `<div class="intro-hero-text intro-hero-side${countdowns.length ? ' intro-hero-side--countdown' : ' intro-hero-text--calm'}${countdowns.length > 1 ? ' intro-hero-side--several' : ''}">
+      ${sideHtml}
+    </div>` : ''}
     <div class="intro-hero-cards" id="hero-cards">
       ${heroCardsHtml}
     </div>
-    ${earningsNext ? earningsLineHtml(earningsNext, true) : ''}
+    ${earningsNext ? earningsLineHtml(earningsNext, 'stacked') : ''}
     <script>(function(){var c=document.querySelectorAll('#hero-cards [data-hero-slug]');if(c.length<2)return;var k=Math.floor(Math.random()*c.length);for(var i=0;i<c.length;i++)c[i].hidden=i!==k;window.__heroPick=c[k].getAttribute('data-hero-slug');})();</script>
   </div>
+  ${siteStatsHtml(stats)}
 </section>
 ${overdueSection}
 ${categoryLinksHtml}

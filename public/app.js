@@ -2425,8 +2425,9 @@
             products: products.map(function (p) { return { name: p.name, slug: p.slug }; }),
           })
         : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');
-      // Must match homePage(): the featured tile, then the Live counts panel.
-      var heroHtml = featuredSlotHtml + siteStatsHtmlJS(siteStatsJS(products));
+      // Must match homePage(): the big tile only (the Live counts are a
+      // strip under the hero, refreshed above).
+      var heroHtml = featuredSlotHtml;
       // Usually the live tiles say exactly what the built ones do; then
       // nothing is touched, so nothing on the page can move.
       if (sameContentJS(heroCardsSection.innerHTML, heroHtml)) return;
