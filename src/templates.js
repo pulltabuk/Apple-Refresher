@@ -2424,6 +2424,14 @@ function comingClockHtml(date) {
     : `<span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>`;
 }
 
+// How far off a launch day is ("in 10 days", "tomorrow"), kept current in
+// the browser by app.js. Only for an exact day.
+function comingAwayHtml(date) {
+  if (datePrecision(date) !== 'day') return '';
+  const away = FactsKit.daysUntilText(date);
+  return away ? `<span class="coming-away"> &middot; <span data-days-until="${escapeHtml(date)}">${escapeHtml(away)}</span></span>` : '';
+}
+
 // What the clock turns into on the day (app.js, data-done-*).
 function comingDoneAttrs(date) {
   return `data-done-kicker="Launch day" data-done-text="🎉 Available now" data-done-date="Released ${escapeHtml(formatDate(date))}"`;
@@ -2456,7 +2464,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     <span class="coming-next-main">
       <span class="coming-next-kicker countdown-label">Next to launch</span>
       <span class="coming-next-names">${next.products.map((p) => nameHtml(p, !single)).join('')}</span>
-      <span class="coming-next-date countdown-date">${exact(next) ? 'Coming ' : 'Expected '}${escapeHtml(comingDateText(next.date))}</span>
+      <span class="coming-next-date countdown-date">${exact(next) ? 'Coming ' : 'Expected '}${escapeHtml(comingDateText(next.date))}${comingAwayHtml(next.date)}</span>
       ${facts.length ? `<span class="coming-next-facts">${facts.map((f) => `<span>${f}</span>`).join(' &middot; ')}</span>` : ''}
       ${single ? '<span class="coming-next-cta">See the product &rarr;</span>' : ''}
     </span>
@@ -2467,7 +2475,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     const cards = later.flatMap((g) => g.products.map((p) => `<a class="coming-card" href="/products/${p.slug}/"${exact(g) ? ` data-countdown="${escapeHtml(g.date)}" ${comingDoneAttrs(g.date)}` : ''}>
     <span class="coming-card-head"><span class="coming-card-icon">${productIcon(p, 34)}</span><span class="coming-card-text"><span class="coming-card-name">${escapeHtml(p.name)}</span><span class="coming-card-family">${escapeHtml(p.category || '')}</span></span></span>
     ${exact(g) ? `<span class="coming-clock coming-clock--small" data-countdown-clock role="timer">${comingClockHtml(g.date)}</span>` : ''}
-    <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}</span>
+    <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${comingAwayHtml(g.date)}</span>
   </a>`));
     body = `
 <h1>${pageHeading(pageContent, 'Coming soon')}</h1>
@@ -2491,6 +2499,8 @@ ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
     bodyHtml: body,
     supabaseUrl,
     supabaseAnonKey,
+    // facts-kit.js: keeps the "in 10 days" notes current (app.js).
+    scripts: [`<script src="${assetUrl('facts-kit.js')}" defer></script>`].concat(DEFAULT_SCRIPTS),
   });
 }
 
