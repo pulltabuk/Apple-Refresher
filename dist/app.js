@@ -2298,7 +2298,7 @@
     var label = days === 0 ? 'Apple\u2019s latest release' : 'since Apple\u2019s last release';
     return '<a class="site-stat site-stat--latest" href="/products/' + escapeHtmlJS(latest.slug) + '/">' + num + ' <span class="site-stat-label">' + label + '</span>' +
       '<span class="site-stat-sub"><span class="site-stat-sub-name">' + escapeHtmlJS(latest.name) + '</span>' + more + '</span>' +
-      '<span class="site-stat-date">Out ' + formatDateJS(latest.date) + '</span></a>';
+      '<span class="site-stat-date">Released ' + formatDateJS(latest.date) + '</span></a>';
   }
   function siteStatsHtmlJS(s) {
     if (!s || !s.total) return '';

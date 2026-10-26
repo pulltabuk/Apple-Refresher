@@ -1965,53 +1965,68 @@ function groupCountdowns(countdown) {
 // opts.slim: after the first (the soonest, with the full clock), each
 // countdown is a slim row: its name and date, with the days and hours
 // to go. Keeps the homepage hero short when several things count down.
+// opts.max: show that many; the rest wait behind "+2 more coming", which
+// opens them in place as more slim rows.
 function countdownHtml(countdown, opts) {
   if (!countdown) return '';
   // Accepts one countdown or several, so more than one upcoming product
   // can be shown at once.
   const items = Array.isArray(countdown) ? countdown : [countdown];
   if (!items.length) return '';
-  return items.map((item, index) => {
-    const slim = !!(opts && opts.slim && index > 0);
-    // Whole days to go, as the ticking clock shows them: to the time
-    // given (e.g. "1:30pm PT"), else 8am UK on the day.
-    const target = item.time ? FactsKit.eventStartMs({ event_date: item.date, event_time: item.time }) : Date.parse(item.date + 'T07:00:00Z');
-    const days = Math.max(0, Math.floor((target - Date.now()) / 86400000));
-    const over = target <= Date.now();
-    // What the tile says once its moment arrives (app.js switches to it,
-    // e.g. in a tab left open overnight; the next build drops the tile).
-    const isEvent = /^\/events\//.test(item.href);
-    const done = item.product
-      ? { kicker: 'Out today', text: '🎉 Available now', date: `Released ${formatDate(item.date)}` }
-      : isEvent
-      ? { kicker: 'Happening now', text: 'Live now', date: '' }
-      : { kicker: 'Results day', text: 'Results are out', date: '' };
-    // Several products at the same moment: one tile, each name its own
-    // link (so the tile itself isn't one).
-    const members = item.group && item.group.length > 1 ? item.group : null;
-    const tag = members ? 'div' : 'a';
-    // A product counts down with its icon, as on the featured tile.
-    const nameHtml = (m, linked) => (m.product
-      ? `<${linked ? `a href="${m.href}"` : 'span'} class="countdown-name-row"><span class="countdown-icon">${productIcon(m.product, 32)}</span><span class="countdown-name">${escapeHtml(m.label)}</span></${linked ? 'a' : 'span'}>`
-      : `<span class="countdown-name">${escapeHtml(m.label)}</span>`);
-    const namesHtml = members ? members.map((m) => nameHtml(m, true)).join('') : nameHtml(item, false);
-    const clockHtml = `<span class="countdown-clock" data-countdown-clock>
-      ${over
-        ? `<span class="countdown-done-badge">${escapeHtml(done.text)}</span>`
-        : `<span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>`}
-    </span>`;
-    const dateHtml = `<span class="countdown-date">${over && done.date ? escapeHtml(done.date) : `${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}`}</span>`;
-    // Built after the moment (a rebuild on release day): already finished.
-    return `<${tag} class="countdown${isEvent ? ' countdown--event' : ''}${item.product ? ' countdown--product' : ''}${members ? ' countdown--group' : ''}${slim ? ' countdown--slim' : ''}${over ? ' countdown--done' : ''}"${members ? '' : ` href="${item.href}"`} data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
-    <span class="countdown-label">${escapeHtml(over ? done.kicker : (item.kicker || 'Counting down to'))}</span>
-    ${slim
-      ? `<span class="countdown-slim-main">${namesHtml}${dateHtml}</span>
-    ${clockHtml}`
-      : `${namesHtml}
-    ${clockHtml}
-    ${dateHtml}`}
+  const max = opts && opts.max ? opts.max : items.length;
+  const shown = items.slice(0, max).map((item, index) => oneCountdownHtml(item, !!(opts && opts.slim && index > 0)));
+  const rest = items.slice(max);
+  if (!rest.length) return shown.join('\n');
+  // Counted in products: two launching together are two more.
+  const more = rest.reduce((n, item) => n + (item.group ? item.group.length : 1), 0);
+  return `${shown.join('\n')}
+  <details class="countdown-more">
+    <summary><span class="countdown-more-closed">+${more} more coming</span><span class="countdown-more-open">Show fewer</span></summary>
+    <div class="countdown-more-list">
+      ${rest.map((item) => oneCountdownHtml(item, true)).join('\n')}
+    </div>
+  </details>`;
+}
+
+function oneCountdownHtml(item, slim) {
+  // Whole days to go, as the ticking clock shows them: to the time
+  // given (e.g. "1:30pm PT"), else 8am UK on the day.
+  const target = item.time ? FactsKit.eventStartMs({ event_date: item.date, event_time: item.time }) : Date.parse(item.date + 'T07:00:00Z');
+  const days = Math.max(0, Math.floor((target - Date.now()) / 86400000));
+  const over = target <= Date.now();
+  // What the tile says once its moment arrives (app.js switches to it,
+  // e.g. in a tab left open overnight; the next build drops the tile).
+  const isEvent = /^\/events\//.test(item.href);
+  const done = item.product
+    ? { kicker: 'Out today', text: '🎉 Available now', date: `Released ${formatDate(item.date)}` }
+    : isEvent
+    ? { kicker: 'Happening now', text: 'Live now', date: '' }
+    : { kicker: 'Results day', text: 'Results are out', date: '' };
+  // Several products at the same moment: one tile, each name its own
+  // link (so the tile itself isn't one).
+  const members = item.group && item.group.length > 1 ? item.group : null;
+  const tag = members ? 'div' : 'a';
+  // A product counts down with its icon, as on the featured tile.
+  const nameHtml = (m, linked) => (m.product
+    ? `<${linked ? `a href="${m.href}"` : 'span'} class="countdown-name-row"><span class="countdown-icon">${productIcon(m.product, 32)}</span><span class="countdown-name">${escapeHtml(m.label)}</span></${linked ? 'a' : 'span'}>`
+    : `<span class="countdown-name">${escapeHtml(m.label)}</span>`);
+  const namesHtml = members ? members.map((m) => nameHtml(m, true)).join('') : nameHtml(item, false);
+  const clockHtml = `<span class="countdown-clock" data-countdown-clock>
+    ${over
+      ? `<span class="countdown-done-badge">${escapeHtml(done.text)}</span>`
+      : `<span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>`}
+  </span>`;
+  const dateHtml = `<span class="countdown-date">${over && done.date ? escapeHtml(done.date) : `${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}`}</span>`;
+  // Built after the moment (a rebuild on release day): already finished.
+  return `<${tag} class="countdown${isEvent ? ' countdown--event' : ''}${item.product ? ' countdown--product' : ''}${members ? ' countdown--group' : ''}${slim ? ' countdown--slim' : ''}${over ? ' countdown--done' : ''}"${members ? '' : ` href="${item.href}"`} data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
+  <span class="countdown-label">${escapeHtml(over ? done.kicker : (item.kicker || 'Counting down to'))}</span>
+  ${slim
+    ? `<span class="countdown-slim-main">${namesHtml}${dateHtml}</span>
+  ${clockHtml}`
+    : `${namesHtml}
+  ${clockHtml}
+  ${dateHtml}`}
   </${tag}>`;
-  }).join('\n');
 }
 
 // The homepage's at-a-glance counts. Must stay in step with
@@ -2141,7 +2156,7 @@ function latestReleaseStatHtml(latest, days) {
     ? '<span class="site-stat-num site-stat-num--word">New today</span>'
     : `<span class="site-stat-num">${days}<small> ${days === 1 ? 'day' : 'days'}</small></span>`;
   const label = days === 0 ? 'Apple\u2019s latest release' : 'since Apple\u2019s last release';
-  return `<a class="site-stat site-stat--latest" href="/products/${escapeHtml(latest.slug)}/">${num} <span class="site-stat-label">${label}</span><span class="site-stat-sub"><span class="site-stat-sub-name">${escapeHtml(latest.name)}</span>${more}</span><span class="site-stat-date">Out ${formatDate(latest.date)}</span></a>`;
+  return `<a class="site-stat site-stat--latest" href="/products/${escapeHtml(latest.slug)}/">${num} <span class="site-stat-label">${label}</span><span class="site-stat-sub"><span class="site-stat-sub-name">${escapeHtml(latest.name)}</span>${more}</span><span class="site-stat-date">Released ${formatDate(latest.date)}</span></a>`;
 }
 
 function siteStatsHtml(s) {
@@ -2174,9 +2189,10 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   const heroCardsHtml = heroFeatured || activeEvent ? featuredSlotHtml : emptyState('products');
   // What's coming up: product countdowns and the next earnings. Beside
   // the words when something counts down (three columns), else under them.
-  // The soonest countdown has the full clock, any others a slim row.
+  // The soonest countdown has the full clock, the next two a slim row
+  // each, and any more open from "+2 more coming".
   const countdowns = groupCountdowns(countdown);
-  const sideHtml = `${countdownHtml(countdowns, { slim: true })}${earningsLineHtml(earningsNext)}`;
+  const sideHtml = `${countdownHtml(countdowns, { slim: true, max: 3 })}${earningsLineHtml(earningsNext)}`;
 
   // Pills on desktop, a native picker on mobile: thirteen families wrap
   // into five rows on a phone, and a scrolling row would hide most of
