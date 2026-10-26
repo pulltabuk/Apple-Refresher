@@ -2003,11 +2003,13 @@ function countdownHtml(countdown, opts) {
 }
 
 // One of the later launches in the box: icon, name and date (this year's
-// without the year), linking to its page.
+// without the year) with how far off it is ("in 10 days", kept current
+// in the browser by app.js), linking to its page.
 function countdownLineHtml(item) {
   const year = String(new Date().getUTCFullYear());
   const date = formatDate(item.date).replace(new RegExp(' ' + year + '$'), '');
-  return `<a class="countdown-next" href="${item.href}">${item.product ? `<span class="countdown-next-icon">${productIcon(item.product, 22)}</span>` : ''}<span class="countdown-next-name">${escapeHtml(item.label)}</span><span class="countdown-next-date">${escapeHtml(date)}</span></a>`;
+  const away = FactsKit.daysUntilText(item.date);
+  return `<a class="countdown-next" href="${item.href}">${item.product ? `<span class="countdown-next-icon">${productIcon(item.product, 22)}</span>` : ''}<span class="countdown-next-name">${escapeHtml(item.label)}</span><span class="countdown-next-when"><span class="countdown-next-date">${escapeHtml(date)}</span>${away ? `<span class="countdown-next-in" data-days-until="${escapeHtml(item.date)}">${escapeHtml(away)}</span>` : ''}</span></a>`;
 }
 
 // tail: the later launches' lines, inside the same box (opts.stack). The
