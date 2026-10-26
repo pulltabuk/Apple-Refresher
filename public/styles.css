@@ -3602,6 +3602,7 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
 .coming-card:hover .coming-card-name { text-decoration: underline; }
 .coming-card-family { font-size: 13px; font-weight: 600; opacity: 0.8; }
 .coming-card-date { font-size: 13px; font-weight: 700; }
+.coming-away { font-weight: 600; opacity: 0.8; white-space: nowrap; }
 .coming-clock--small { gap: 6px; }
 .coming-clock--small .countdown-unit { padding: 8px 2px; border-radius: 10px; }
 .coming-clock--small .countdown-value { font-size: 22px; }
