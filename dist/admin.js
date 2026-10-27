@@ -16,6 +16,9 @@
   // The product's countdown tick as it was when opened, so a save that
   // changes it rebuilds the site.
   let loadedInCountdown = false;
+  // The Coming soon list (every product with a release date still ahead)
+  // in place of the family tiles.
+  let comingView = false;
   // An announcement added before any release date exists. It attaches
   // itself to the first release added, so dates can be entered in any order.
   let pendingAnnouncedDate = null;
@@ -2171,12 +2174,24 @@
       btn.innerHTML = iconHtml(familyValue === null ? 'All' : familyValue, null, 32) + '<span class="family-tile-name">' + escapeAttr(label) + '</span><span class="family-tile-count">' + count + '</span>';
       btn.addEventListener('click', () => {
         selectedFamily = familyValue;
+        comingView = false;
         if (productSearchInputEl) productSearchInputEl.value = '';
         renderProductList();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
       tilesEl.appendChild(btn);
     };
+    // Every product with a release date still ahead, as one list.
+    const comingCount = comingProducts().length;
+    if (comingCount) {
+      const comingTile = document.createElement('button');
+      comingTile.type = 'button';
+      comingTile.className = 'family-tile family-tile--coming';
+      comingTile.innerHTML = '<span class="family-tile-plus" aria-hidden="true">\u23f1</span><span class="family-tile-name">Coming soon</span><span class="family-tile-count">' + comingCount + '</span>';
+      comingTile.title = 'Every product with a release date still ahead';
+      comingTile.addEventListener('click', openComingList);
+      tilesEl.appendChild(comingTile);
+    }
     families.forEach((f) => makeTile(f, counts[f], f));
     const newFamily = document.createElement('button');
     newFamily.type = 'button';
@@ -2560,13 +2575,13 @@
     } else {
       countdownPickerOpen = false;
     }
-    // A quick look at the public Coming soon page.
-    const comingLink = document.createElement('a');
+    // Every coming product, as tiles here in the admin.
+    const comingLink = document.createElement('button');
+    comingLink.type = 'button';
     comingLink.className = 'homepage-chip homepage-chip--link';
-    comingLink.href = '/coming-soon/';
-    comingLink.target = '_blank';
-    comingLink.rel = 'noopener';
-    comingLink.textContent = 'Coming soon page \u2197';
+    comingLink.textContent = 'All coming soon (' + comingProducts().length + ') \u2192';
+    comingLink.title = 'Every product with a release date still ahead';
+    comingLink.addEventListener('click', openComingList);
     countdownChips.push(comingLink);
     row('\u23f1 Countdown', countdownChips);
     if (countdownPickerOpen) strip.appendChild(countdownPicker(today, counting.length));
@@ -2739,6 +2754,26 @@
     loadProducts();
   }
 
+  // Products with a release date still ahead, soonest first.
+  function comingProducts() {
+    const today = new Date().toISOString().slice(0, 10);
+    const due = (p) => (p.refresh_history || []).filter((d) => d > today).sort()[0] || '';
+    return cachedProducts
+      .filter((p) => !p.discontinued && due(p))
+      .sort((a, b) => due(a).localeCompare(due(b)) || a.name.localeCompare(b.name));
+  }
+  function openComingList() {
+    if (productFormView.style.display !== 'none' && productFormDirty &&
+        !window.confirm('Leave this product without saving your changes?')) return;
+    comingView = true;
+    selectedFamily = null;
+    if (productSearchInputEl) productSearchInputEl.value = '';
+    showProductList();
+    renderProductList();
+    const screen = document.getElementById('coming-screen');
+    if (screen) screen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function renderProductList() {
     renderRetireCheck();
     renderHomepageStrip();
@@ -2772,6 +2807,22 @@
       return;
     }
     document.getElementById('search-screen').style.display = 'none';
+    const comingScreen = document.getElementById('coming-screen');
+    if (comingScreen) comingScreen.style.display = 'none';
+
+    // The Coming soon list: one tile per product, soonest first.
+    if (comingView && comingScreen) {
+      document.getElementById('family-screen').style.display = 'none';
+      document.getElementById('products-screen').style.display = 'none';
+      comingScreen.style.display = '';
+      const list = document.getElementById('coming-list');
+      const coming = comingProducts();
+      document.getElementById('coming-count').textContent = coming.length + ' product' + (coming.length === 1 ? '' : 's');
+      list.innerHTML = '';
+      if (!coming.length) list.textContent = 'Nothing has a release date still ahead. Add a future release date to a product and it shows here.';
+      coming.forEach((p) => list.appendChild(productCard(p, true)));
+      return;
+    }
 
     if (!selectedFamily) {
       showFamilyScreen();
@@ -2868,6 +2919,7 @@
   document.getElementById('admin-home-btn').addEventListener('click', () => {
     if (!okToLeaveForm()) return;
     selectedFamily = null;
+    comingView = false;
     editingId = null;
     editingSlug = null;
     if (productSearchInputEl) productSearchInputEl.value = '';
@@ -3702,6 +3754,11 @@
   }
 
   document.getElementById('back-to-list-btn').addEventListener('click', backToList);
+  document.getElementById('coming-back-btn').addEventListener('click', () => {
+    comingView = false;
+    renderProductList();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
   document.getElementById('back-to-families-btn').addEventListener('click', () => {
     selectedFamily = null;
     if (productSearchInputEl) productSearchInputEl.value = '';
