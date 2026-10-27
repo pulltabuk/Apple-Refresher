@@ -357,7 +357,7 @@ async function main() {
   futureReleases
     .filter((r) => r.product.in_countdown)
     .forEach((r) => {
-      countdowns.push({ label: r.product.name, date: r.date, time: null, href: `/products/${r.product.slug}/`, datePrefix: 'Coming', product: r.product });
+      countdowns.push({ label: r.product.name, date: r.date, time: r.product.release_time || null, href: `/products/${r.product.slug}/`, datePrefix: 'Coming', product: r.product });
     });
   countdowns.sort((a, b) => (a.date < b.date ? -1 : 1));
   // The next quarterly results: always the compact line, never the big
