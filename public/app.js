@@ -1074,7 +1074,8 @@
       // Must match heroStatHtml() in src/templates.js; productCountdown()
       // below fills in and ticks the clock.
       var due = (product.refresh_history || []).slice().sort().pop();
-      return '<p class="days-hero days-hero--upcoming"' + (due ? ' data-product-countdown="' + due + '"' : '') + '><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">' + (due ? formatDateJS(due) : 'soon') + '</span>' +
+      var at = product.release_time ? escapeHtmlJS(product.release_time) : '';
+      return '<p class="days-hero days-hero--upcoming"' + (due ? ' data-product-countdown="' + due + '"' + (at ? ' data-product-countdown-time="' + at + '"' : '') : '') + '><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">' + (due ? formatDateJS(due) + (at ? ' \u00b7 ' + at : '') : 'soon') + '</span>' +
         (due ? '<span class="product-countdown-clock days-hero-clock" data-product-countdown-clock></span>' : '') + '</p>';
     }
     var bar = '';
@@ -2215,8 +2216,9 @@
       ? (daysInfo.days < 0
           ? (function () {
               var due = (product.refresh_history || []).slice().sort().pop();
-              return '<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="' + due + '">' +
-                '<span class="card-featured-count-due">Coming ' + formatDateJS(due) + '</span>' +
+              var at = product.release_time ? escapeHtmlJS(product.release_time) : '';
+              return '<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="' + due + '"' + (at ? ' data-product-countdown-time="' + at + '"' : '') + '>' +
+                '<span class="card-featured-count-due">Coming ' + formatDateJS(due) + (at ? ' \u00b7 ' + at : '') + '</span>' +
                 '<span class="product-countdown-clock" data-product-countdown-clock></span></div>';
             })()
           : '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span> <span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>')
@@ -3442,9 +3444,11 @@
       if (!clock) return;
       var dateStr = el.getAttribute('data-product-countdown');
       if (!dateStr) return;
-      // Releases are treated as landing at 8am local time, which is when
-      // Apple stores typically open on a launch day.
-      var target = new Date(dateStr + 'T08:00:00').getTime();
+      // To the product's release time when it has one ("9am ET", set in
+      // the admin); otherwise 8am local time, which is when Apple stores
+      // typically open on a launch day.
+      var timeText = el.getAttribute('data-product-countdown-time');
+      var target = timeText ? countdownTarget(dateStr, timeText) : new Date(dateStr + 'T08:00:00').getTime();
       var left = target - Date.now();
       if (isNaN(target)) return;
       if (left <= 0) {

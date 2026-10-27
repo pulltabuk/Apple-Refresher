@@ -1598,7 +1598,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
             const fallback = away !== null && away > 0
               ? `<span class="countdown-unit countdown-unit--wide"><span class="countdown-value">${away}</span> <span class="countdown-unit-label">${away === 1 ? 'day' : 'days'}</span></span>`
               : '<span class="countdown-unit countdown-unit--wide"><span class="countdown-value">Today</span></span>';
-            return `<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="${due}"><span class="card-featured-count-due">Coming ${formatDate(due)}</span><span class="product-countdown-clock" data-product-countdown-clock>${fallback}</span></div>`;
+            return `<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="${due}"${product.release_time ? ` data-product-countdown-time="${escapeHtml(product.release_time)}"` : ''}><span class="card-featured-count-due">Coming ${formatDate(due)}${product.release_time ? ` &middot; ${escapeHtml(product.release_time)}` : ''}</span><span class="product-countdown-clock" data-product-countdown-clock>${fallback}</span></div>`;
           })()
         : `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span> <span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`)
     : productBadge(product, statusInfo);
@@ -2218,10 +2218,10 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   const heroCardsHtml = heroFeatured || activeEvent ? featuredSlotHtml : emptyState('products');
   // What's coming up: product countdowns and the next earnings. Beside
   // the words when something counts down (three columns), else under them.
-  // One box: the soonest has the clock, the next two a line each under
+  // One box: the soonest has the clock, the next four a line each under
   // it, and any more open from "+2 more coming" at its foot.
   const countdowns = groupCountdowns(countdown);
-  const sideHtml = `${countdownHtml(countdowns, { stack: true, max: 3 })}${earningsLineHtml(earningsNext)}`;
+  const sideHtml = `${countdownHtml(countdowns, { stack: true, max: 5 })}${earningsLineHtml(earningsNext)}`;
 
   // Pills on desktop, a native picker on mobile: thirteen families wrap
   // into five rows on a phone, and a scrolling row would hide most of
@@ -2396,17 +2396,24 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
 // when that is still ahead, as its own page and badge show it.
 function comingSoonGroups(products, today) {
   const day = today || new Date().toISOString().slice(0, 10);
-  const byDate = {};
+  const byMoment = {};
   (products || []).forEach((p) => {
     if (p.discontinued) return;
     const due = (p.refresh_history || []).slice().sort().pop();
     if (!due || due < day) return;
-    (byDate[due] = byDate[due] || []).push(p);
+    const key = due + '|' + (p.release_time || '');
+    (byMoment[key] = byMoment[key] || { date: due, time: p.release_time || null, products: [] }).products.push(p);
   });
-  return Object.keys(byDate).sort().map((date) => ({
-    date,
-    products: byDate[date].sort((a, b) => a.name.localeCompare(b.name)),
-  }));
+  // Soonest first: by day, then by the moment on that day.
+  return Object.values(byMoment)
+    .map((g) => ({ ...g, at: comingTargetMs(g.date, g.time), products: g.products.sort((a, b) => a.name.localeCompare(b.name)) }))
+    .sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : (a.at || 0) - (b.at || 0)));
+}
+
+// The moment a release lands: its release time ("9am ET") when it has
+// one, else 8am UK on the day.
+function comingTargetMs(date, time) {
+  return time ? FactsKit.eventStartMs({ event_date: date, event_time: time }) : Date.parse(date + 'T07:00:00Z');
 }
 
 // The day in full ("Friday 30 October 2026"); a month or year alone
@@ -2420,8 +2427,8 @@ function comingDateText(date) {
 
 // The clock: ticks in app.js (data-countdown, to 8am UK on the day, as
 // the homepage countdown does); whole days until then.
-function comingClockHtml(date) {
-  const target = Date.parse(date + 'T07:00:00Z');
+function comingClockHtml(date, time) {
+  const target = comingTargetMs(date, time);
   const days = Math.max(0, Math.floor((target - Date.now()) / 86400000));
   return target <= Date.now()
     ? '<span class="countdown-done-badge">🎉 Available now</span>'
@@ -2464,22 +2471,22 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     const nameHtml = (p, linked) => `<${linked ? `a href="/products/${p.slug}/"` : 'span'} class="coming-next-product"><span class="coming-next-icon">${productIcon(p, 56)}</span><span class="coming-next-text"><span class="coming-next-name">${escapeHtml(p.name)}</span><span class="coming-next-family">${escapeHtml(p.category || '')}</span></span></${linked ? 'a' : 'span'}>`;
     const tag = single ? 'a' : 'div';
     const nextHtml = `<section class="coming-next-wrap" aria-label="Next to launch">
-  <${tag} class="coming-next${exact(next) ? '' : ' coming-next--expected'}"${single ? ` href="/products/${single.slug}/"` : ''}${exact(next) ? ` data-countdown="${escapeHtml(next.date)}" ${comingDoneAttrs(next.date)}` : ''}>
+  <${tag} class="coming-next${exact(next) ? '' : ' coming-next--expected'}"${single ? ` href="/products/${single.slug}/"` : ''}${exact(next) ? ` data-countdown="${escapeHtml(next.date)}"${next.time ? ` data-countdown-time="${escapeHtml(next.time)}"` : ''} ${comingDoneAttrs(next.date)}` : ''}>
     <span class="coming-next-main">
       <span class="coming-next-kicker countdown-label">Next to launch</span>
       <span class="coming-next-names">${next.products.map((p) => nameHtml(p, !single)).join('')}</span>
-      <span class="coming-next-date countdown-date">${exact(next) ? 'Coming ' : 'Expected '}${escapeHtml(comingDateText(next.date))}${comingAwayHtml(next.date)}</span>
+      <span class="coming-next-date countdown-date">${exact(next) ? 'Coming ' : 'Expected '}${escapeHtml(comingDateText(next.date))}${exact(next) && next.time ? ` &middot; ${escapeHtml(next.time)}` : ''}${comingAwayHtml(next.date)}</span>
       ${facts.length ? `<span class="coming-next-facts">${facts.map((f) => `<span>${f}</span>`).join(' &middot; ')}</span>` : ''}
       ${single ? '<span class="coming-next-cta">See the product &rarr;</span>' : ''}
     </span>
-    ${exact(next) ? `<span class="coming-clock" data-countdown-clock role="timer">${comingClockHtml(next.date)}</span>` : ''}
+    ${exact(next) ? `<span class="coming-clock" data-countdown-clock role="timer">${comingClockHtml(next.date, next.time)}</span>` : ''}
   </${tag}>
 </section>`;
     // Then everything after it, soonest first: one card each.
-    const cards = later.flatMap((g) => g.products.map((p) => `<a class="coming-card" href="/products/${p.slug}/"${exact(g) ? ` data-countdown="${escapeHtml(g.date)}" ${comingDoneAttrs(g.date)}` : ''}>
+    const cards = later.flatMap((g) => g.products.map((p) => `<a class="coming-card" href="/products/${p.slug}/"${exact(g) ? ` data-countdown="${escapeHtml(g.date)}"${g.time ? ` data-countdown-time="${escapeHtml(g.time)}"` : ''} ${comingDoneAttrs(g.date)}` : ''}>
     <span class="coming-card-head"><span class="coming-card-icon">${productIcon(p, 34)}</span><span class="coming-card-text"><span class="coming-card-name">${escapeHtml(p.name)}</span><span class="coming-card-family">${escapeHtml(p.category || '')}</span></span></span>
-    ${exact(g) ? `<span class="coming-clock coming-clock--small" data-countdown-clock role="timer">${comingClockHtml(g.date)}</span>` : ''}
-    <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${comingAwayHtml(g.date)}</span>
+    ${exact(g) ? `<span class="coming-clock coming-clock--small" data-countdown-clock role="timer">${comingClockHtml(g.date, g.time)}</span>` : ''}
+    <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${exact(g) && g.time ? ` &middot; ${escapeHtml(g.time)}` : ''}${comingAwayHtml(g.date)}</span>
   </a>`));
     body = `
 <h1>${pageHeading(pageContent, 'Coming soon')}</h1>
@@ -2810,7 +2817,7 @@ function heroStatHtml(product, statusInfo, cycleDays) {
     const fallback = away !== null && away > 0
       ? `<span class="countdown-unit countdown-unit--wide"><span class="countdown-value">${away}</span> <span class="countdown-unit-label">${away === 1 ? 'day' : 'days'}</span></span>`
       : '';
-    return `<p class="days-hero days-hero--upcoming"${due ? ` data-product-countdown="${due}"` : ''}><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">${due ? formatDate(due) : 'soon'}</span>${due ? `<span class="product-countdown-clock days-hero-clock" data-product-countdown-clock>${fallback}</span>` : ''}</p>`;
+    return `<p class="days-hero days-hero--upcoming"${due ? ` data-product-countdown="${due}"${product.release_time ? ` data-product-countdown-time="${escapeHtml(product.release_time)}"` : ''}` : ''}><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">${due ? formatDate(due) + (product.release_time ? ` &middot; ${escapeHtml(product.release_time)}` : '') : 'soon'}</span>${due ? `<span class="product-countdown-clock days-hero-clock" data-product-countdown-clock>${fallback}</span>` : ''}</p>`;
   }
   // A bar showing how far through the family's usual gap this product is
   // gives the big number something to be measured against, and uses the
@@ -3316,6 +3323,22 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <div id="in-countdown-wrap" class="admin-countdown-option" style="display:none;">
             <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
             <p class="admin-hint">Only for a product whose release date is still ahead. More than one can be counted down at once, and each drops off by itself once its date passes.</p>
+            <div class="admin-release-time">
+              <span class="admin-release-time-label">Release time <span class="admin-optional">Optional</span></span>
+              <div class="admin-release-time-row">
+                <input type="time" id="release_time_clock" aria-label="Release time">
+                <select id="release_time_zone" aria-label="Time zone">
+                  <option value="UK">UK time (GMT/BST)</option>
+                  <option value="GMT">GMT</option>
+                  <option value="ET">ET (New York)</option>
+                  <option value="CT">CT (Chicago)</option>
+                  <option value="PT">PT (California)</option>
+                  <option value="CET">CET (Paris, Berlin)</option>
+                </select>
+                <button type="button" id="release_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear</button>
+              </div>
+              <p class="admin-hint">Every countdown to this release runs to this moment. Leave it blank for 8am on the day, when Apple Stores open.</p>
+            </div>
           </div>
           <p class="admin-hint">The featured products take turns in the big homepage tile, a different one on each visit. A featured Apple Event takes the big tile.</p>
           <div class="admin-subfield">

@@ -16,6 +16,8 @@
   // The product's countdown tick as it was when opened, so a save that
   // changes it rebuilds the site.
   let loadedInCountdown = false;
+  // Its release time ("9am ET") as opened, for the same reason.
+  let loadedReleaseTime = null;
   // The Coming soon list (every product with a release date still ahead)
   // in place of the family tiles.
   let comingView = false;
@@ -2439,9 +2441,9 @@
     });
   }
 
-  // The homepage countdown: up to five coming products. The homepage
-  // shows three, and the rest behind "+2 more coming".
-  const COUNTDOWN_MAX = 5;
+  // The homepage countdown: up to ten coming products. The homepage
+  // shows five, and the rest behind "+2 more coming".
+  const COUNTDOWN_MAX = 10;
   let countdownPickerOpen = false;
   let countdownPickerQuery = '';
 
@@ -2991,6 +2993,35 @@
     if (currentDiscontinuedDate && dates.indexOf(currentDiscontinuedDate) === -1) dates.push(currentDiscontinuedDate);
     return dates.sort();
   }
+
+  // A release time as stored ("9am ET", "8:30pm UK") from the form's
+  // clock (24-hour "09:00") and zone, and back. The site's countdowns
+  // read the same words (FactsKit.eventStartMs, app.js countdownTarget).
+  function releaseTimeText(clock, zone) {
+    const m = /^(\d{1,2}):(\d{2})/.exec(clock || '');
+    if (!m) return null;
+    const h = +m[1];
+    const min = +m[2];
+    const h12 = h % 12 || 12;
+    return h12 + (min ? ':' + String(min).padStart(2, '0') : '') + (h < 12 ? 'am' : 'pm') + ' ' + (zone || 'UK');
+  }
+  function releaseTimeParts(text) {
+    const m = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*([A-Za-z]{2,4})?/i.exec(text || '');
+    if (!m) return { clock: '', zone: 'UK' };
+    let h = +m[1];
+    const ampm = (m[3] || '').toLowerCase();
+    if (ampm === 'pm' && h < 12) h += 12;
+    if (ampm === 'am' && h === 12) h = 0;
+    return { clock: String(h).padStart(2, '0') + ':' + String(+(m[2] || 0)).padStart(2, '0'), zone: (m[4] || 'UK').toUpperCase() };
+  }
+  function setReleaseTimeFields(text) {
+    const parts = releaseTimeParts(text);
+    document.getElementById('release_time_clock').value = text ? parts.clock : '';
+    const zoneEl = document.getElementById('release_time_zone');
+    zoneEl.value = Array.from(zoneEl.options).some((o) => o.value === parts.zone) ? parts.zone : 'UK';
+  }
+  const releaseTimeClearBtn = document.getElementById('release_time_clear');
+  if (releaseTimeClearBtn) releaseTimeClearBtn.addEventListener('click', () => { setReleaseTimeFields(null); productFormDirty = true; });
 
   // The countdown option only makes sense while a release date is still
   // in the future, so it stays hidden otherwise.
@@ -3673,6 +3704,8 @@
     updateFeaturedSlotOptions(p.id);
     document.getElementById('in_countdown').checked = !!p.in_countdown;
     loadedInCountdown = !!p.in_countdown;
+    setReleaseTimeFields(p.release_time || null);
+    loadedReleaseTime = p.release_time || null;
     document.getElementById('did_you_know_editor').innerHTML = p.did_you_know || '';
     updateDidYouKnowCount();
     loadedFactText = (document.getElementById('did_you_know_editor').textContent || '').trim();
@@ -3719,6 +3752,7 @@
     editingId = null;
     editingSlug = null;
     loadedInCountdown = false;
+    loadedReleaseTime = null;
     pendingAnnouncedDate = null;
     pendingPreorderDate = null;
     clearFormErrors();
@@ -4181,6 +4215,10 @@
       const lastInLine = isDiscontinued && document.getElementById('last_in_line').checked;
       const lineColumn = cachedProducts.some((p) => 'last_in_line' in p);
       if (lastInLine || lineColumn) payload.last_in_line = lastInLine;
+      // The release time: sent when set, or once the column exists, so
+      // saving still works before supabase-schema-update-37.sql is run.
+      const releaseTime = releaseTimeText(document.getElementById('release_time_clock').value, document.getElementById('release_time_zone').value);
+      if (releaseTime || cachedProducts.some((p) => 'release_time' in p)) payload.release_time = releaseTime;
       if (factDateColumnExists()) {
         const factDate = document.getElementById('did_you_know_date').value || null;
         payload.did_you_know_date = payload.did_you_know ? (factDate || todayIso()) : null;
@@ -4196,6 +4234,14 @@
       // The "last of the line" column missing (supabase-schema-update-33.sql
       // not run, or Supabase not caught up with it yet) must never cost the
       // rest of the product: save without it, then say so.
+      // Likewise the release time, before supabase-schema-update-37.sql.
+      let timeNotSaved = false;
+      if (result.error && /release_time/.test(result.error.message || '') && 'release_time' in payload) {
+        console.error('Save failed on release_time, saving without it:', result.error);
+        timeNotSaved = !!payload.release_time;
+        delete payload.release_time;
+        result = await saveRow(payload);
+      }
       let lineNotSaved = false;
       if (result.error && /last_in_line/.test(result.error.message || '') && 'last_in_line' in payload) {
         console.error('Save failed on last_in_line, saving without it:', result.error);
@@ -4215,6 +4261,9 @@
       if (!result.data || !result.data.length) {
         window.alert('Nothing was saved: the database didn\u2019t accept the change, and no error came back. This usually means the login has lapsed. Log out and in again, then save again (your changes are still in the form).');
         return;
+      }
+      if (timeNotSaved) {
+        window.alert('Saved, except the release time: the database doesn\u2019t have that column yet.\n\nIn the Supabase SQL editor, run supabase-schema-update-37.sql (or: alter table products add column if not exists release_time text;), then set the time and save again.');
       }
       if (lineNotSaved) {
         window.alert('Saved, dates and all, except the \u201clast of the line\u201d tick: the database doesn\u2019t have that column yet.\n\nIn the Supabase SQL editor, run:\n\nalter table products add column if not exists last_in_line boolean not null default false;\nnotify pgrst, \'reload schema\';\n\nThen tick it and save again.');
@@ -4255,7 +4304,8 @@
       // the site now, so it shows within a minute (rather than waiting on
       // the database's own change hook, which can start a build before
       // the save lands).
-      if (!!payload.in_countdown !== loadedInCountdown) {
+      const timeChanged = 'release_time' in payload && (payload.release_time || null) !== loadedReleaseTime;
+      if (!!payload.in_countdown !== loadedInCountdown || (payload.in_countdown && timeChanged)) {
         const published = await rebuildSite();
         const statusEl = document.getElementById('publish-status');
         if (statusEl) {
@@ -4268,6 +4318,7 @@
         }
       }
       loadedInCountdown = false;
+      loadedReleaseTime = null;
       selectedFamily = category;
       editingId = null;
       editingSlug = null;
