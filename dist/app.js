@@ -3495,4 +3495,79 @@
     setInterval(tickAll, 1000);
   })();
 
+  // Coming soon page: sort and family filter. Soonest first with every
+  // family is the page as built, the next to launch in its big tile. Any
+  // other sort, or a family the big tile isn't in, lays every product out
+  // as a card. The choice stays in the address (?sort=late&family=Mac),
+  // so Back from a product returns to it.
+  (function comingSort() {
+    var controls = document.querySelector('[data-coming-controls]');
+    var grid = document.querySelector('[data-coming-grid]');
+    if (!controls || !grid) return;
+    var lead = document.querySelector('[data-coming-lead]');
+    var title = document.querySelector('.coming-later-title');
+    var cards = Array.prototype.slice.call(grid.querySelectorAll('.coming-card'));
+    var SORT_NAMES = { soon: 'soonest first', late: 'latest first', az: 'A\u2013Z', family: 'by family' };
+    var byOrder = function (a, b) { return +a.getAttribute('data-order') - +b.getAttribute('data-order'); };
+    var SORTS = {
+      soon: byOrder,
+      late: function (a, b) { return byOrder(b, a); },
+      az: function (a, b) { return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name')) || byOrder(a, b); },
+      family: function (a, b) { return a.getAttribute('data-family').localeCompare(b.getAttribute('data-family')) || byOrder(a, b); }
+    };
+    var hasFamily = function (value) {
+      return !value || !!controls.querySelector('[data-coming-family="' + (window.CSS && CSS.escape ? CSS.escape(value) : value) + '"]');
+    };
+    var params = new URLSearchParams(location.search);
+    var state = { sort: SORTS[params.get('sort')] ? params.get('sort') : 'soon', family: params.get('family') || '' };
+    if (!hasFamily(state.family)) state.family = '';
+
+    function apply(remember) {
+      var leadFamilies = lead ? (lead.getAttribute('data-families') || '').split('|') : [];
+      var showLead = !!lead && state.sort === 'soon' && (!state.family || leadFamilies.indexOf(state.family) !== -1);
+      if (lead) lead.hidden = !showLead;
+      var shown = 0;
+      cards.slice().sort(SORTS[state.sort]).forEach(function (card) {
+        var match = !state.family || card.getAttribute('data-family') === state.family;
+        var isLead = card.classList.contains('coming-card--lead');
+        var visible = match && !(isLead && showLead);
+        card.hidden = !visible;
+        if (visible) shown++;
+        grid.appendChild(card);
+      });
+      if (title) {
+        title.hidden = !shown;
+        title.textContent = showLead
+          ? 'Also on the way'
+          : (state.family || 'Everything') + ' coming soon, ' + SORT_NAMES[state.sort];
+      }
+      controls.querySelectorAll('[data-coming-sort]').forEach(function (b) {
+        var on = b.getAttribute('data-coming-sort') === state.sort;
+        b.classList.toggle('is-on', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      controls.querySelectorAll('[data-coming-family]').forEach(function (b) {
+        var on = b.getAttribute('data-coming-family') === state.family;
+        b.classList.toggle('is-on', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      if (remember && window.history && history.replaceState) {
+        var q = new URLSearchParams(location.search);
+        if (state.sort === 'soon') q.delete('sort'); else q.set('sort', state.sort);
+        if (state.family) q.set('family', state.family); else q.delete('family');
+        var qs = q.toString();
+        history.replaceState(history.state, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+      }
+    }
+
+    controls.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-coming-sort], [data-coming-family]');
+      if (!btn) return;
+      if (btn.hasAttribute('data-coming-sort')) state.sort = btn.getAttribute('data-coming-sort');
+      else state.family = btn.getAttribute('data-coming-family');
+      apply(true);
+    });
+    if (state.sort !== 'soon' || state.family) apply(false);
+  })();
+
 })();
