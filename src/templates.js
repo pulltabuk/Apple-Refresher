@@ -3267,6 +3267,12 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <p id="line-ended-note" class="admin-line-ended" hidden></p>
         <div id="product-list" class="line-card-grid"></div>
       </div>
+      <div id="coming-screen" style="display:none;">
+        <button type="button" id="coming-back-btn" class="admin-back-link">&larr; All families</button>
+        <h2 class="admin-screen-title">&#9201; Coming soon <span id="coming-count" class="admin-screen-family"></span></h2>
+        <p class="admin-hint">Every product with a release date still ahead, soonest first. &#9201; Countdown puts one in the homepage countdown (up to five).</p>
+        <div id="coming-list" class="line-card-grid"></div>
+      </div>
       <button type="button" id="new-product-btn" hidden></button>
     </div>
 
