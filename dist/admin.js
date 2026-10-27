@@ -3033,26 +3033,119 @@
   const preorderTimeClearBtn = document.getElementById('preorder_time_clear');
   if (preorderTimeClearBtn) preorderTimeClearBtn.addEventListener('click', () => { setPreorderTimeFields(null); productFormDirty = true; });
 
-  // The countdown option only makes sense while a release date is still
-  // in the future, so it stays hidden otherwise.
+  // The upcoming release: the soonest date still ahead (null if none).
+  function upcomingReleaseDate() {
+    const today = new Date().toISOString().slice(0, 10);
+    return currentRefreshHistory.filter((d) => d > today).sort()[0] || null;
+  }
+  const isFullDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
+
+  // The countdown panel: the release date and time, and when pre-orders
+  // open. The dates are the product's own (the upcoming release in the
+  // dates list, and its pre-order date), so changing one here changes it
+  // there too. Ticking the countdown needs a release date still ahead.
   function updateCountdownOption() {
     const wrap = document.getElementById('in-countdown-wrap');
     if (!wrap) return;
     const today = new Date().toISOString().slice(0, 10);
-    const hasFuture = currentRefreshHistory.some((d) => d > today);
-    // Beside the pre-order time: the pre-order date it belongs to.
-    const note = document.getElementById('preorder-date-note');
-    if (note) {
-      const next = currentRefreshHistory.filter((d) => d > today).sort()[0];
-      const pre = next && currentGenerationDetails[next] && currentGenerationDetails[next].preorder;
-      note.textContent = pre ? '\u00b7 pre-orders open ' + formatAdminDate(pre) : '\u00b7 no pre-order date yet';
+    const next = upcomingReleaseDate();
+    const box = document.getElementById('in_countdown');
+    const releaseInput = document.getElementById('release_date_input');
+    const preInput = document.getElementById('preorder_date_input');
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    if (releaseInput) {
+      releaseInput.min = tomorrow;
+      releaseInput.value = isFullDate(next) ? next : '';
     }
-    wrap.style.display = hasFuture ? '' : 'none';
-    if (!hasFuture) {
-      const box = document.getElementById('in_countdown');
-      if (box) box.checked = false;
+    const releaseHint = document.getElementById('release-date-hint');
+    if (releaseHint) {
+      releaseHint.textContent = next && !isFullDate(next)
+        ? 'Expected ' + formatAdminDate(next) + '. Pick the exact day here once Apple confirms it. Leave the time blank for 8am on the day, when Apple Stores open.'
+        : next
+          ? 'This is the upcoming release in the dates below; changing it here moves it there too. Leave the time blank for 8am on the day, when Apple Stores open.'
+          : 'A date ahead adds the upcoming release to this product\u2019s dates below. Leave the time blank for 8am on the day, when Apple Stores open.';
+    }
+    const pre = next && currentGenerationDetails[next] && currentGenerationDetails[next].preorder;
+    if (preInput) {
+      preInput.disabled = !next;
+      preInput.max = isFullDate(next) ? next : '';
+      preInput.value = isFullDate(pre) ? pre : '';
+    }
+    const preHint = document.getElementById('preorder-date-hint');
+    if (preHint) {
+      preHint.textContent = !next
+        ? 'Add the release date first, then the day pre-orders open.'
+        : (pre && !isFullDate(pre) ? 'Expected ' + formatAdminDate(pre) + '. ' : '') +
+          'With a pre-order date, the homepage counts down to pre-orders first, then to the release once they open. Leave the time blank for 1pm UK, when Apple\u2019s pre-orders usually open.';
+    }
+    // A discontinued product has nothing coming.
+    wrap.style.display = currentDiscontinuedDate && currentDiscontinuedDate <= today && !next ? 'none' : '';
+    if (box) {
+      box.disabled = !next;
+      if (!next) box.checked = false;
+    }
+    const cdHint = document.getElementById('in-countdown-hint');
+    if (cdHint) {
+      cdHint.textContent = next
+        ? 'More than one product can be counted down at once, and each drops off by itself once its date passes.'
+        : 'Add a release date after today (below) to switch this on.';
     }
   }
+
+  // The release date box: moves the upcoming release (with its name,
+  // announced and pre-order dates), or adds one when there is none.
+  const releaseDateInput = document.getElementById('release_date_input');
+  if (releaseDateInput) releaseDateInput.addEventListener('change', () => {
+    const value = releaseDateInput.value;
+    const current = upcomingReleaseDate();
+    const today = new Date().toISOString().slice(0, 10);
+    if (!value || value === current) { updateCountdownOption(); return; }
+    if (value <= today) {
+      window.alert('Pick a day after today. Past releases go in the dates list below.');
+      updateCountdownOption();
+      return;
+    }
+    if (currentRefreshHistory.indexOf(value) !== -1) {
+      window.alert('There is already a date on ' + formatAdminDate(value) + '.');
+      updateCountdownOption();
+      return;
+    }
+    if (current) {
+      currentRefreshHistory = currentRefreshHistory.map((d) => (d === current ? value : d)).sort();
+      if (currentGenerationDetails[current]) {
+        currentGenerationDetails[value] = currentGenerationDetails[current];
+        delete currentGenerationDetails[current];
+      }
+      if (currentOriginalLaunchDate === current) currentOriginalLaunchDate = value;
+      if (expandedGenerations.delete(current)) expandedGenerations.add(value);
+    } else {
+      currentRefreshHistory = currentRefreshHistory.concat(value).sort();
+      if (pendingAnnouncedDate) { detailFor(value).announced = pendingAnnouncedDate; pendingAnnouncedDate = null; }
+      if (pendingPreorderDate) { detailFor(value).preorder = pendingPreorderDate; pendingPreorderDate = null; }
+    }
+    // A pre-order date can't come after the release it belongs to.
+    const info = currentGenerationDetails[value];
+    if (info && isFullDate(info.preorder) && info.preorder > value) info.preorder = null;
+    productFormDirty = true;
+    renderRefreshHistory();
+    updateStatusReadout();
+  });
+
+  // The pre-order date box: the upcoming release's pre-order date.
+  const preorderDateInput = document.getElementById('preorder_date_input');
+  if (preorderDateInput) preorderDateInput.addEventListener('change', () => {
+    const next = upcomingReleaseDate();
+    if (!next) { updateCountdownOption(); return; }
+    const value = preorderDateInput.value || null;
+    if (value && isFullDate(next) && value > next) {
+      window.alert('Pre-orders open before the release on ' + formatAdminDate(next) + '.');
+      updateCountdownOption();
+      return;
+    }
+    detailFor(next).preorder = value;
+    productFormDirty = true;
+    renderRefreshHistory();
+  });
 
   function renderRefreshHistory() {
     refreshHistoryListEl.innerHTML = '';

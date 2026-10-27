@@ -2474,6 +2474,29 @@ function comingDoneAttrs(date) {
   return `data-done-kicker="Launch day" data-done-text="🎉 Available now" data-done-date="Released ${escapeHtml(formatDate(date))}"`;
 }
 
+// Sort and family filter for the Coming soon page. Soonest first is the
+// default; app.js does the sorting and filtering in the page. Only shown
+// once there are three products or more to arrange.
+const COMING_SORTS = [['soon', 'Soonest first'], ['late', 'Latest first'], ['az', 'A\u2013Z'], ['family', 'By family']];
+function comingControlsHtml(groups) {
+  const all = groups.flatMap((g) => g.products);
+  if (all.length < 3) return '';
+  const counts = {};
+  all.forEach((p) => { const f = p.category || ''; if (f) counts[f] = (counts[f] || 0) + 1; });
+  const families = Object.keys(counts).sort((a, b) => a.localeCompare(b));
+  const chip = (attr, value, label, on, count) => `<button type="button" class="coming-chip${on ? ' is-on' : ''}" ${attr}="${escapeHtml(value)}" aria-pressed="${on ? 'true' : 'false'}">${escapeHtml(label)}${count != null ? ` <span class="coming-chip-count">${count}</span>` : ''}</button>`;
+  return `<div class="coming-controls" data-coming-controls>
+  <div class="coming-control-group" role="group" aria-label="Sort">
+    <span class="coming-control-label">Sort</span>
+    <div class="coming-chips">${COMING_SORTS.map(([v, l], i) => chip('data-coming-sort', v, l, i === 0)).join('')}</div>
+  </div>
+  ${families.length > 1 ? `<div class="coming-control-group" role="group" aria-label="Show">
+    <span class="coming-control-label">Show</span>
+    <div class="coming-chips">${chip('data-coming-family', '', 'All', true, all.length)}${families.map((f) => chip('data-coming-family', f, f, false, counts[f])).join('')}</div>
+  </div>` : ''}
+</div>`;
+}
+
 function comingSoonPage({ products, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const groups = comingSoonGroups(products);
   const exact = (g) => datePrecision(g.date) === 'day';
@@ -2496,7 +2519,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     ].filter(Boolean) : [];
     const nameHtml = (p, linked) => `<${linked ? `a href="/products/${p.slug}/"` : 'span'} class="coming-next-product"><span class="coming-next-icon">${productIcon(p, 56)}</span><span class="coming-next-text"><span class="coming-next-name">${escapeHtml(p.name)}</span><span class="coming-next-family">${escapeHtml(p.category || '')}</span></span></${linked ? 'a' : 'span'}>`;
     const tag = single ? 'a' : 'div';
-    const nextHtml = `<section class="coming-next-wrap" aria-label="Next to launch">
+    const nextHtml = `<section class="coming-next-wrap" aria-label="Next to launch" data-coming-lead data-families="${escapeHtml(next.products.map((p) => p.category || '').join('|'))}">
   <${tag} class="coming-next${exact(next) ? '' : ' coming-next--expected'}"${single ? ` href="/products/${single.slug}/"` : ''}${exact(next) ? ` data-countdown="${escapeHtml(next.date)}"${next.time ? ` data-countdown-time="${escapeHtml(next.time)}"` : ''} ${comingDoneAttrs(next.date)}` : ''}>
     <span class="coming-next-main">
       <span class="coming-next-kicker countdown-label">Next to launch</span>
@@ -2508,8 +2531,11 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     ${exact(next) ? `<span class="coming-clock" data-countdown-clock role="timer">${comingClockHtml(next.date, next.time)}</span>` : ''}
   </${tag}>
 </section>`;
-    // Then everything after it, soonest first: one card each.
-    const cards = later.flatMap((g) => g.products.map((p) => `<a class="coming-card" href="/products/${p.slug}/"${exact(g) ? ` data-countdown="${escapeHtml(g.date)}"${g.time ? ` data-countdown-time="${escapeHtml(g.time)}"` : ''} ${comingDoneAttrs(g.date)}` : ''}>
+    // Then everything after it, soonest first: one card each. The next
+    // to launch has cards too, hidden while its big tile shows, so a
+    // sort or a family filter (app.js) can lay every product out alike.
+    let order = 0;
+    const cards = groups.flatMap((g, gi) => g.products.map((p) => `<a class="coming-card${gi === 0 ? ' coming-card--lead' : ''}" href="/products/${p.slug}/" data-order="${order++}" data-name="${escapeHtml(p.name.toLowerCase())}" data-family="${escapeHtml(p.category || '')}"${gi === 0 ? ' hidden' : ''}${exact(g) ? ` data-countdown="${escapeHtml(g.date)}"${g.time ? ` data-countdown-time="${escapeHtml(g.time)}"` : ''} ${comingDoneAttrs(g.date)}` : ''}>
     <span class="coming-card-head"><span class="coming-card-icon">${productIcon(p, 34)}</span><span class="coming-card-text"><span class="coming-card-name">${escapeHtml(p.name)}</span><span class="coming-card-family">${escapeHtml(p.category || '')}</span></span></span>
     ${exact(g) ? `<span class="coming-clock coming-clock--small" data-countdown-clock role="timer">${comingClockHtml(g.date, g.time)}</span>` : ''}
     <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${exact(g) && g.time ? ` &middot; ${escapeHtml(g.time)}` : ''}${comingAwayHtml(g.date)}</span>
@@ -2519,11 +2545,12 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <h1>${pageHeading(pageContent, 'Coming soon')}</h1>
 ${pageStandardLine(pageContent, '<p class="page-intro">Every Apple product with a release date still to come, soonest first, counting down to the day it reaches shops.</p>')}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
+${comingControlsHtml(groups)}
 ${nextHtml}
-${cards.length ? `<h2 class="coming-later-title">Also on the way</h2>
-<div class="coming-grid">
+<h2 class="coming-later-title"${cards.length > next.products.length ? '' : ' hidden'}>Also on the way</h2>
+<div class="coming-grid" data-coming-grid>
   ${cards.join('\n  ')}
-</div>` : ''}
+</div>
 ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   }
   const names = groups.flatMap((g) => g.products.map((p) => p.name));
@@ -3349,10 +3376,11 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </label>
           <div id="in-countdown-wrap" class="admin-countdown-option" style="display:none;">
             <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
-            <p class="admin-hint">Only for a product whose release date is still ahead. More than one can be counted down at once, and each drops off by itself once its date passes.</p>
+            <p id="in-countdown-hint" class="admin-hint">Only for a product whose release date is still ahead. More than one can be counted down at once, and each drops off by itself once its date passes.</p>
             <div class="admin-release-time">
-              <span class="admin-release-time-label">Release time <span class="admin-optional">Optional</span></span>
+              <span class="admin-release-time-label">Release date and time</span>
               <div class="admin-release-time-row">
+                <input type="date" id="release_date_input" aria-label="Release date">
                 <input type="time" id="release_time_clock" aria-label="Release time">
                 <select id="release_time_zone" aria-label="Time zone">
                   <option value="UK">UK time (GMT/BST)</option>
@@ -3362,13 +3390,14 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
                   <option value="PT">PT (California)</option>
                   <option value="CET">CET (Paris, Berlin)</option>
                 </select>
-                <button type="button" id="release_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear</button>
+                <button type="button" id="release_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear time</button>
               </div>
-              <p class="admin-hint">Every countdown to this release runs to this moment. Leave it blank for 8am on the day, when Apple Stores open.</p>
+              <p id="release-date-hint" class="admin-hint">The date is the upcoming release in this product&rsquo;s dates below; changing it here moves it there too. Every countdown runs to this moment. Leave the time blank for 8am on the day, when Apple Stores open.</p>
             </div>
             <div class="admin-release-time">
-              <span class="admin-release-time-label">Pre-order time <span class="admin-optional">Optional</span> <span id="preorder-date-note" class="admin-release-time-note"></span></span>
+              <span class="admin-release-time-label">Pre-orders open <span class="admin-optional">Optional</span></span>
               <div class="admin-release-time-row">
+                <input type="date" id="preorder_date_input" aria-label="Pre-order date">
                 <input type="time" id="preorder_time_clock" aria-label="Pre-order time">
                 <select id="preorder_time_zone" aria-label="Pre-order time zone">
                   <option value="UK">UK time (GMT/BST)</option>
@@ -3378,9 +3407,9 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
                   <option value="PT">PT (California)</option>
                   <option value="CET">CET (Paris, Berlin)</option>
                 </select>
-                <button type="button" id="preorder_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear</button>
+                <button type="button" id="preorder_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear time</button>
               </div>
-              <p class="admin-hint">With a Pre-order date added to this release (above), the homepage counts down to pre-orders first, then to the release once they open. Leave it blank for 1pm UK, when Apple&rsquo;s pre-orders usually open.</p>
+              <p id="preorder-date-hint" class="admin-hint">With a pre-order date, the homepage counts down to pre-orders first, then to the release once they open. Leave the time blank for 1pm UK, when Apple&rsquo;s pre-orders usually open.</p>
             </div>
           </div>
           <p class="admin-hint">The featured products take turns in the big homepage tile, a different one on each visit. A featured Apple Event takes the big tile.</p>
