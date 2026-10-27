@@ -326,6 +326,7 @@ a { color: inherit; text-decoration: none; }
 /* Its release time: a clock and a time zone. */
 .admin-release-time { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #cfe0b8; }
 .admin-release-time-label { font-size: 14px; font-weight: 700; }
+.admin-release-time-note { font-size: 13px; font-weight: 600; opacity: 0.8; }
 .admin-release-time-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .admin-release-time-row input[type="time"], .admin-release-time-row select { font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid #b9d39c; border-radius: 8px; background: #fff; color: var(--text); }
 .homepage-chip--link { align-items: center; padding: 5px 12px; font: inherit; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--fresh-text); background: #fff; border-color: #b9d39c; cursor: pointer; }
@@ -3356,10 +3357,10 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .earnings-next-clock .countdown-value { font-size: 28px; font-weight: 800; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
 .earnings-next-clock .countdown-unit-label { font-size: 10px; font-weight: 700; line-height: 1; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.82); }
 @media (min-width: 701px) {
-  .intro-hero-text--calm > .earnings-next--clock { flex: 1 1 auto; justify-content: space-between; gap: 16px; padding: 22px; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-in { display: none; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-extra { display: block; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-clock { display: grid; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) { flex: 1 1 auto; justify-content: space-between; gap: 16px; padding: 22px; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-in { display: none; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-extra { display: block; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-clock { display: grid; }
 }
 
 /* The title ("Apple Q4 FY2026 results") in bold and a size up from the
@@ -3369,16 +3370,16 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 @media (min-width: 701px) {
   /* The icon heads the tile beside the label, so the title below has the
      tile's full width and stays on one line. */
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-head { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; row-gap: 0; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-body { display: contents; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-icon { width: 40px; height: 40px; border-radius: 11px; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-icon svg { width: 26px; height: 26px; }
-  .intro-hero-text--calm > .earnings-next--clock :is(.earnings-next-text, .earnings-next-extra) { grid-column: 1 / -1; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-text { margin-top: 14px; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-extra { margin-top: 4px; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-title { display: block; font-size: 24px; line-height: 1.2; margin-bottom: 4px; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-sep { display: none; }
-  .intro-hero-text--calm > .earnings-next--clock .earnings-next-when { display: block; font-size: 16px; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-head { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; row-gap: 0; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-body { display: contents; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-icon { width: 40px; height: 40px; border-radius: 11px; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-icon svg { width: 26px; height: 26px; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) :is(.earnings-next-text, .earnings-next-extra) { grid-column: 1 / -1; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-text { margin-top: 14px; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-extra { margin-top: 4px; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-title { display: block; font-size: 24px; line-height: 1.2; margin-bottom: 4px; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-sep { display: none; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-when { display: block; font-size: 16px; }
 }
 
 /* Events page tiles: the event's name, big and bold in the events'
@@ -3486,6 +3487,9 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .countdown-stop-icon :is(svg, img) { width: 17px; height: 17px; }
 .countdown-stop-name { min-width: 0; font-size: 14px; font-weight: 700; line-height: 1.25; }
 .countdown-stop-item:hover .countdown-stop-name { text-decoration: underline; }
+.countdown-stop-item-time { font-size: 12px; font-weight: 600; opacity: 0.75; white-space: nowrap; }
+.countdown-stop-tag { display: inline-block; margin-left: 2px; padding: 1px 7px; border-radius: 999px; background: #fff; border: 1px solid #b9d39c; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 1px; white-space: nowrap; }
+.coming-card-preorder { font-size: 12.5px; font-weight: 600; opacity: 0.85; }
 .countdown-more { flex: none; }
 .countdown-more { margin-bottom: 10px; }
 .countdown-more > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 0 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; list-style: none; }
@@ -3514,6 +3518,10 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .earnings-next--words { display: none; }
 @media (min-width: 901px) {
   .intro-hero-words > .earnings-next--words { display: flex; margin-top: auto; }
+  /* With room to spare beside a tall countdown, it grows into the space
+     under the words and shows its own clock and details, as the tall
+     tile does (app.js decides, so the hero never grows for it). */
+  .intro-hero-words > .earnings-next--words.is-roomy { margin-top: 1.5rem; }
   .intro-hero-side--countdown > .earnings-next { display: none; }
   .intro-hero-side--countdown > .countdown { flex: 1 1 auto; margin: 0; justify-content: center; }
 }

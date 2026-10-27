@@ -3434,6 +3434,31 @@
 
   // Live countdown on a featured product that has not been released yet.
   // Re-scanned after any client-side re-render, and ticks every second.
+  // The homepage hero on laptops: the next earnings sits at the foot of
+  // the words column, which can be left with room to spare beside a tall
+  // countdown. When there's room, it grows into it and shows its own clock
+  // and details (styles.css, .is-roomy); tried each time the layout
+  // settles, and kept only if the hero's row doesn't grow taller for it.
+  (function fitHeroEarnings() {
+    var tile = document.querySelector('.intro-hero-words > .earnings-next--words.earnings-next--clock');
+    var row = tile && tile.closest ? tile.closest('.intro-hero-layout') : null;
+    if (!tile || !row) return;
+    function fit() {
+      tile.classList.remove('is-roomy');
+      if (!tile.offsetParent || window.innerWidth < 901) return;
+      var before = row.offsetHeight;
+      tile.classList.add('is-roomy');
+      if (row.offsetHeight > before + 1) tile.classList.remove('is-roomy');
+    }
+    fit();
+    var timer = null;
+    window.addEventListener('resize', function () { clearTimeout(timer); timer = setTimeout(fit, 150); });
+    window.addEventListener('load', fit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    // Opening or closing "+2 more coming" changes the countdown's height.
+    document.addEventListener('toggle', fit, true);
+  })();
+
   (function productCountdown() {
     function unit(value, label, extraClass) {
       return '<span class="countdown-unit' + (extraClass ? ' ' + extraClass : '') + '"><span class="countdown-value">' + value +
