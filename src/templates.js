@@ -1977,7 +1977,7 @@ function groupCountdowns(countdown) {
 }
 
 // opts.stack: one box. The first (the soonest) has the clock; everything
-// after it is a line under it in the same box, its name and date only.
+// after it is on a short timeline under it in the same box.
 // When the first has launched, the next day's build drops it and the
 // next moves up and takes the clock.
 // opts.max: how many show in the box, the first included; the rest wait
@@ -1990,30 +1990,44 @@ function countdownHtml(countdown, opts) {
   if (!items.length) return '';
   if (!(opts && opts.stack) || items.length < 2) return items.map((item) => oneCountdownHtml(item)).join('\n');
   const [first, ...rest] = items;
-  // A line per product: two launching on the same day are two lines.
-  const lines = rest.flatMap((item) => (item.group && item.group.length > 1 ? item.group : [item]));
+  // Every later launch, one per product (two on the same day are two).
+  const later = rest.flatMap((item) => (item.group && item.group.length > 1 ? item.group : [item]));
   const room = Math.max(0, (opts.max || items.length) - 1);
-  const shown = lines.slice(0, room);
-  const hidden = lines.slice(room);
+  const shown = later.slice(0, room);
+  const hidden = later.slice(room);
   const list = `<div class="countdown-next-list">
-    ${shown.map(countdownLineHtml).join('\n    ')}
+    <p class="countdown-next-label">Up next</p>
+    ${countdownStopsHtml(shown)}
     ${hidden.length ? `<details class="countdown-more">
       <summary><span class="countdown-more-closed">+${hidden.length} more coming</span><span class="countdown-more-open">Show fewer</span></summary>
-      ${hidden.map(countdownLineHtml).join('\n      ')}
-      <a class="countdown-more-all" href="/coming-soon/">Everything coming soon &rarr;</a>
+      ${countdownStopsHtml(hidden)}
     </details>` : ''}
+    <a class="countdown-more-all" href="/coming-soon/">Everything coming soon &rarr;</a>
   </div>`;
   return oneCountdownHtml(first, list);
 }
 
-// One of the later launches in the box: icon, name and date (this year's
-// without the year) with how far off it is ("in 10 days", kept current
-// in the browser by app.js), linking to its page.
-function countdownLineHtml(item) {
+// The later launches as a short timeline under the clock: a stop per
+// launch day (and time, when one is set), with its date and how far off
+// it is ("in 10 days", kept current by app.js) beside every product
+// launching then, each linking to its page.
+function countdownStopsHtml(items) {
   const year = String(new Date().getUTCFullYear());
-  const date = formatDate(item.date).replace(new RegExp(' ' + year + '$'), '');
-  const away = FactsKit.daysUntilText(item.date);
-  return `<a class="countdown-next" href="${item.href}">${item.product ? `<span class="countdown-next-icon">${productIcon(item.product, 22)}</span>` : ''}<span class="countdown-next-name">${escapeHtml(item.label)}</span><span class="countdown-next-when"><span class="countdown-next-date">${escapeHtml(date)}</span>${away ? `<span class="countdown-next-in" data-days-until="${escapeHtml(item.date)}">${escapeHtml(away)}</span>` : ''}</span></a>`;
+  const stops = [];
+  items.forEach((item) => {
+    const key = item.date + '|' + (item.time || '');
+    const last = stops[stops.length - 1];
+    if (last && last.key === key) last.items.push(item);
+    else stops.push({ key, date: item.date, time: item.time || null, items: [item] });
+  });
+  return stops.map((stop) => {
+    const date = formatDate(stop.date).replace(new RegExp(' ' + year + '$'), '');
+    const away = FactsKit.daysUntilText(stop.date);
+    return `<div class="countdown-stop">
+      <span class="countdown-stop-when"><span class="countdown-stop-date">${escapeHtml(date)}</span>${stop.time ? `<span class="countdown-stop-time">${escapeHtml(stop.time)}</span>` : ''}${away ? `<span class="countdown-stop-in" data-days-until="${escapeHtml(stop.date)}">${escapeHtml(away)}</span>` : ''}</span>
+      <span class="countdown-stop-items">${stop.items.map((item) => `<a class="countdown-stop-item" href="${item.href}">${item.product ? `<span class="countdown-stop-icon">${productIcon(item.product, 18)}</span>` : ''}<span class="countdown-stop-name">${escapeHtml(item.label)}</span></a>`).join('')}</span>
+    </div>`;
+  }).join('\n    ');
 }
 
 // tail: the later launches' lines, inside the same box (opts.stack). The
@@ -2218,10 +2232,10 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
   const heroCardsHtml = heroFeatured || activeEvent ? featuredSlotHtml : emptyState('products');
   // What's coming up: product countdowns and the next earnings. Beside
   // the words when something counts down (three columns), else under them.
-  // One box: the soonest has the clock, the next four a line each under
-  // it, and any more open from "+2 more coming" at its foot.
+  // One box: the soonest has the clock, every other launch ticked in the
+  // admin (up to ten in all) on an "Up next" timeline under it.
   const countdowns = groupCountdowns(countdown);
-  const sideHtml = `${countdownHtml(countdowns, { stack: true, max: 5 })}${earningsLineHtml(earningsNext)}`;
+  const sideHtml = `${countdownHtml(countdowns, { stack: true, max: 10 })}${earningsLineHtml(earningsNext)}`;
 
   // Pills on desktop, a native picker on mobile: thirteen families wrap
   // into five rows on a phone, and a scrolling row would hide most of
@@ -3277,7 +3291,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <div id="coming-screen" style="display:none;">
         <button type="button" id="coming-back-btn" class="admin-back-link">&larr; All families</button>
         <h2 class="admin-screen-title">&#9201; Coming soon <span id="coming-count" class="admin-screen-family"></span></h2>
-        <p class="admin-hint">Every product with a release date still ahead, soonest first. &#9201; Countdown puts one in the homepage countdown (up to five).</p>
+        <p class="admin-hint">Every product with a release date still ahead, soonest first. &#9201; Countdown puts one in the homepage countdown (up to ten).</p>
         <div id="coming-list" class="line-card-grid"></div>
       </div>
       <button type="button" id="new-product-btn" hidden></button>
