@@ -18,6 +18,7 @@
   let loadedInCountdown = false;
   // Its release time ("9am ET") as opened, for the same reason.
   let loadedReleaseTime = null;
+  let loadedPreorderTime = null;
   // The Coming soon list (every product with a release date still ahead)
   // in place of the family tiles.
   let comingView = false;
@@ -3022,6 +3023,15 @@
   }
   const releaseTimeClearBtn = document.getElementById('release_time_clear');
   if (releaseTimeClearBtn) releaseTimeClearBtn.addEventListener('click', () => { setReleaseTimeFields(null); productFormDirty = true; });
+  // The pre-order time: the same clock and zone, for when pre-orders open.
+  function setPreorderTimeFields(text) {
+    const parts = releaseTimeParts(text);
+    document.getElementById('preorder_time_clock').value = text ? parts.clock : '';
+    const zoneEl = document.getElementById('preorder_time_zone');
+    zoneEl.value = Array.from(zoneEl.options).some((o) => o.value === parts.zone) ? parts.zone : 'UK';
+  }
+  const preorderTimeClearBtn = document.getElementById('preorder_time_clear');
+  if (preorderTimeClearBtn) preorderTimeClearBtn.addEventListener('click', () => { setPreorderTimeFields(null); productFormDirty = true; });
 
   // The countdown option only makes sense while a release date is still
   // in the future, so it stays hidden otherwise.
@@ -3030,6 +3040,13 @@
     if (!wrap) return;
     const today = new Date().toISOString().slice(0, 10);
     const hasFuture = currentRefreshHistory.some((d) => d > today);
+    // Beside the pre-order time: the pre-order date it belongs to.
+    const note = document.getElementById('preorder-date-note');
+    if (note) {
+      const next = currentRefreshHistory.filter((d) => d > today).sort()[0];
+      const pre = next && currentGenerationDetails[next] && currentGenerationDetails[next].preorder;
+      note.textContent = pre ? '\u00b7 pre-orders open ' + formatAdminDate(pre) : '\u00b7 no pre-order date yet';
+    }
     wrap.style.display = hasFuture ? '' : 'none';
     if (!hasFuture) {
       const box = document.getElementById('in_countdown');
@@ -3706,6 +3723,8 @@
     loadedInCountdown = !!p.in_countdown;
     setReleaseTimeFields(p.release_time || null);
     loadedReleaseTime = p.release_time || null;
+    setPreorderTimeFields(p.preorder_time || null);
+    loadedPreorderTime = p.preorder_time || null;
     document.getElementById('did_you_know_editor').innerHTML = p.did_you_know || '';
     updateDidYouKnowCount();
     loadedFactText = (document.getElementById('did_you_know_editor').textContent || '').trim();
@@ -3753,6 +3772,7 @@
     editingSlug = null;
     loadedInCountdown = false;
     loadedReleaseTime = null;
+    loadedPreorderTime = null;
     pendingAnnouncedDate = null;
     pendingPreorderDate = null;
     clearFormErrors();
@@ -4219,6 +4239,9 @@
       // saving still works before supabase-schema-update-37.sql is run.
       const releaseTime = releaseTimeText(document.getElementById('release_time_clock').value, document.getElementById('release_time_zone').value);
       if (releaseTime || cachedProducts.some((p) => 'release_time' in p)) payload.release_time = releaseTime;
+      // Likewise the pre-order time, before supabase-schema-update-38.sql.
+      const preorderTime = releaseTimeText(document.getElementById('preorder_time_clock').value, document.getElementById('preorder_time_zone').value);
+      if (preorderTime || cachedProducts.some((p) => 'preorder_time' in p)) payload.preorder_time = preorderTime;
       if (factDateColumnExists()) {
         const factDate = document.getElementById('did_you_know_date').value || null;
         payload.did_you_know_date = payload.did_you_know ? (factDate || todayIso()) : null;
@@ -4236,11 +4259,13 @@
       // rest of the product: save without it, then say so.
       // Likewise the release time, before supabase-schema-update-37.sql.
       let timeNotSaved = false;
-      if (result.error && /release_time/.test(result.error.message || '') && 'release_time' in payload) {
-        console.error('Save failed on release_time, saving without it:', result.error);
-        timeNotSaved = !!payload.release_time;
-        delete payload.release_time;
-        result = await saveRow(payload);
+      for (const column of ['release_time', 'preorder_time']) {
+        if (result.error && new RegExp(column).test(result.error.message || '') && column in payload) {
+          console.error('Save failed on ' + column + ', saving without it:', result.error);
+          timeNotSaved = timeNotSaved || !!payload[column];
+          delete payload[column];
+          result = await saveRow(payload);
+        }
       }
       let lineNotSaved = false;
       if (result.error && /last_in_line/.test(result.error.message || '') && 'last_in_line' in payload) {
@@ -4263,7 +4288,7 @@
         return;
       }
       if (timeNotSaved) {
-        window.alert('Saved, except the release time: the database doesn\u2019t have that column yet.\n\nIn the Supabase SQL editor, run supabase-schema-update-37.sql (or: alter table products add column if not exists release_time text;), then set the time and save again.');
+        window.alert('Saved, except the release or pre-order time: the database doesn\u2019t have those columns yet.\n\nIn the Supabase SQL editor, run supabase-schema-update-37.sql and supabase-schema-update-38.sql, then set the time and save again.');
       }
       if (lineNotSaved) {
         window.alert('Saved, dates and all, except the \u201clast of the line\u201d tick: the database doesn\u2019t have that column yet.\n\nIn the Supabase SQL editor, run:\n\nalter table products add column if not exists last_in_line boolean not null default false;\nnotify pgrst, \'reload schema\';\n\nThen tick it and save again.');
@@ -4304,7 +4329,8 @@
       // the site now, so it shows within a minute (rather than waiting on
       // the database's own change hook, which can start a build before
       // the save lands).
-      const timeChanged = 'release_time' in payload && (payload.release_time || null) !== loadedReleaseTime;
+      const timeChanged = ('release_time' in payload && (payload.release_time || null) !== loadedReleaseTime) ||
+        ('preorder_time' in payload && (payload.preorder_time || null) !== loadedPreorderTime);
       if (!!payload.in_countdown !== loadedInCountdown || (payload.in_countdown && timeChanged)) {
         const published = await rebuildSite();
         const statusEl = document.getElementById('publish-status');

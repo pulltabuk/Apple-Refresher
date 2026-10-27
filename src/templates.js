@@ -1635,7 +1635,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
   const detailRows = [
     product.price ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price from</span> ${escapeHtml(formatPrice(product.price))}</div>` : '',
     extras.announced ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Announced</span> ${formatDate(extras.announced)}</div>` : '',
-    extras.preorder ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Pre-orders open</span> ${formatDate(extras.preorder)}</div>` : '',
+    extras.preorder ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Pre-orders open</span> ${formatDate(extras.preorder)}${product.preorder_time ? ` &middot; ${escapeHtml(product.preorder_time)}` : ''}</div>` : '',
     launch && !isUpcoming ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ${formatDate(launch)}</div>` : '',
     product.discontinued && product.discontinued_date
       ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ${formatDate(product.discontinued_date)}</div>`
@@ -2008,24 +2008,26 @@ function countdownHtml(countdown, opts) {
 }
 
 // The later launches as a short timeline under the clock: a stop per
-// launch day (and time, when one is set), with its date and how far off
-// it is ("in 10 days", kept current by app.js) beside every product
-// launching then, each linking to its page.
+// launch day, with its date and how far off it is ("in 10 days", kept
+// current by app.js) beside every product launching then, each linking
+// to its page. A time the whole day shares goes by the date; otherwise
+// each product carries its own. Pre-orders are tagged as such.
 function countdownStopsHtml(items) {
   const year = String(new Date().getUTCFullYear());
   const stops = [];
   items.forEach((item) => {
-    const key = item.date + '|' + (item.time || '');
     const last = stops[stops.length - 1];
-    if (last && last.key === key) last.items.push(item);
-    else stops.push({ key, date: item.date, time: item.time || null, items: [item] });
+    if (last && last.date === item.date) last.items.push(item);
+    else stops.push({ date: item.date, items: [item] });
   });
   return stops.map((stop) => {
     const date = formatDate(stop.date).replace(new RegExp(' ' + year + '$'), '');
     const away = FactsKit.daysUntilText(stop.date);
+    const times = Array.from(new Set(stop.items.map((item) => item.time || '')));
+    const shared = times.length === 1 ? times[0] : '';
     return `<div class="countdown-stop">
-      <span class="countdown-stop-when"><span class="countdown-stop-date">${escapeHtml(date)}</span>${stop.time ? `<span class="countdown-stop-time">${escapeHtml(stop.time)}</span>` : ''}${away ? `<span class="countdown-stop-in" data-days-until="${escapeHtml(stop.date)}">${escapeHtml(away)}</span>` : ''}</span>
-      <span class="countdown-stop-items">${stop.items.map((item) => `<a class="countdown-stop-item" href="${item.href}">${item.product ? `<span class="countdown-stop-icon">${productIcon(item.product, 18)}</span>` : ''}<span class="countdown-stop-name">${escapeHtml(item.label)}</span></a>`).join('')}</span>
+      <span class="countdown-stop-when"><span class="countdown-stop-date">${escapeHtml(date)}</span>${shared ? `<span class="countdown-stop-time">${escapeHtml(shared)}</span>` : ''}${away ? `<span class="countdown-stop-in" data-days-until="${escapeHtml(stop.date)}">${escapeHtml(away)}</span>` : ''}</span>
+      <span class="countdown-stop-items">${stop.items.map((item) => `<a class="countdown-stop-item" href="${item.href}">${item.product ? `<span class="countdown-stop-icon">${productIcon(item.product, 18)}</span>` : ''}<span class="countdown-stop-name">${escapeHtml(item.label)}${item.kind === 'preorder' ? ' <span class="countdown-stop-tag">Pre-orders</span>' : ''}${!shared && item.time ? ` <span class="countdown-stop-item-time">${escapeHtml(item.time)}</span>` : ''}</span></a>`).join('')}</span>
     </div>`;
   }).join('\n    ');
 }
@@ -2041,7 +2043,9 @@ function oneCountdownHtml(item, tail) {
   // What the tile says once its moment arrives (app.js switches to it,
   // e.g. in a tab left open overnight; the next build drops the tile).
   const isEvent = /^\/events\//.test(item.href);
-  const done = item.product
+  const done = item.kind === 'preorder'
+    ? { kicker: 'Pre-orders open', text: '🛒 Pre-order now', date: `Pre-orders opened ${formatDate(item.date)}` }
+    : item.product
     ? { kicker: 'Out today', text: '🎉 Available now', date: `Released ${formatDate(item.date)}` }
     : isEvent
     ? { kicker: 'Happening now', text: 'Live now', date: '' }
@@ -2457,6 +2461,14 @@ function comingAwayHtml(date) {
   return away ? `<span class="coming-away"> &middot; <span data-days-until="${escapeHtml(date)}">${escapeHtml(away)}</span></span>` : '';
 }
 
+// Pre-orders still to open for a coming release: when, as a line.
+function comingPreorderHtml(product, date) {
+  const info = (product.generation_details && product.generation_details[date]) || {};
+  const today = new Date().toISOString().slice(0, 10);
+  if (!info.preorder || info.preorder < today) return '';
+  return `<span class="coming-card-preorder">Pre-orders ${escapeHtml(formatDate(info.preorder))}${product.preorder_time ? ` &middot; ${escapeHtml(product.preorder_time)}` : ''}</span>`;
+}
+
 // What the clock turns into on the day (app.js, data-done-*).
 function comingDoneAttrs(date) {
   return `data-done-kicker="Launch day" data-done-text="🎉 Available now" data-done-date="Released ${escapeHtml(formatDate(date))}"`;
@@ -2479,7 +2491,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     const extras = single ? upcomingExtras(single) : {};
     const facts = single ? [
       extras.announced ? `Announced ${formatDate(extras.announced)}` : '',
-      extras.preorder ? `Pre-orders ${formatDate(extras.preorder)}` : '',
+      extras.preorder ? `Pre-orders ${formatDate(extras.preorder)}${single.preorder_time ? ` &middot; ${escapeHtml(single.preorder_time)}` : ''}` : '',
       single.price ? `From ${escapeHtml(formatPrice(single.price))}` : '',
     ].filter(Boolean) : [];
     const nameHtml = (p, linked) => `<${linked ? `a href="/products/${p.slug}/"` : 'span'} class="coming-next-product"><span class="coming-next-icon">${productIcon(p, 56)}</span><span class="coming-next-text"><span class="coming-next-name">${escapeHtml(p.name)}</span><span class="coming-next-family">${escapeHtml(p.category || '')}</span></span></${linked ? 'a' : 'span'}>`;
@@ -2501,6 +2513,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     <span class="coming-card-head"><span class="coming-card-icon">${productIcon(p, 34)}</span><span class="coming-card-text"><span class="coming-card-name">${escapeHtml(p.name)}</span><span class="coming-card-family">${escapeHtml(p.category || '')}</span></span></span>
     ${exact(g) ? `<span class="coming-clock coming-clock--small" data-countdown-clock role="timer">${comingClockHtml(g.date, g.time)}</span>` : ''}
     <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${exact(g) && g.time ? ` &middot; ${escapeHtml(g.time)}` : ''}${comingAwayHtml(g.date)}</span>
+    ${comingPreorderHtml(p, g.date)}
   </a>`));
     body = `
 <h1>${pageHeading(pageContent, 'Coming soon')}</h1>
@@ -3352,6 +3365,22 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
                 <button type="button" id="release_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear</button>
               </div>
               <p class="admin-hint">Every countdown to this release runs to this moment. Leave it blank for 8am on the day, when Apple Stores open.</p>
+            </div>
+            <div class="admin-release-time">
+              <span class="admin-release-time-label">Pre-order time <span class="admin-optional">Optional</span> <span id="preorder-date-note" class="admin-release-time-note"></span></span>
+              <div class="admin-release-time-row">
+                <input type="time" id="preorder_time_clock" aria-label="Pre-order time">
+                <select id="preorder_time_zone" aria-label="Pre-order time zone">
+                  <option value="UK">UK time (GMT/BST)</option>
+                  <option value="GMT">GMT</option>
+                  <option value="ET">ET (New York)</option>
+                  <option value="CT">CT (Chicago)</option>
+                  <option value="PT">PT (California)</option>
+                  <option value="CET">CET (Paris, Berlin)</option>
+                </select>
+                <button type="button" id="preorder_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear</button>
+              </div>
+              <p class="admin-hint">With a Pre-order date added to this release (above), the homepage counts down to pre-orders first, then to the release once they open. Leave it blank for 1pm UK, when Apple&rsquo;s pre-orders usually open.</p>
             </div>
           </div>
           <p class="admin-hint">The featured products take turns in the big homepage tile, a different one on each visit. A featured Apple Event takes the big tile.</p>

@@ -354,12 +354,26 @@ async function main() {
   if (nextOtherEvent) {
     countdowns.push({ label: nextOtherEvent.heading || 'Apple Event', date: nextOtherEvent.event_date, time: nextOtherEvent.event_time || null, href: `/events/${eventSlug(nextOtherEvent)}/` });
   }
+  // A release with pre-orders still to open counts down to them first
+  // (at the pre-order time set in the admin, else 1pm UK, when Apple's
+  // usually open), then, from the next build after they open, to the
+  // release itself.
   futureReleases
     .filter((r) => r.product.in_countdown)
     .forEach((r) => {
-      countdowns.push({ label: r.product.name, date: r.date, time: r.product.release_time || null, href: `/products/${r.product.slug}/`, datePrefix: 'Coming', product: r.product });
+      const details = r.product.generation_details && typeof r.product.generation_details === 'object' ? r.product.generation_details : {};
+      const preorder = details[r.date] && details[r.date].preorder;
+      const preorderTime = r.product.preorder_time || '1pm UK';
+      const preorderAt = preorder && /^\d{4}-\d{2}-\d{2}$/.test(preorder) ? FactsKit.eventStartMs({ event_date: preorder, event_time: preorderTime }) : NaN;
+      if (preorderAt > Date.now()) {
+        countdowns.push({ label: r.product.name, date: preorder, time: preorderTime, href: `/products/${r.product.slug}/`, datePrefix: 'Pre-orders', kicker: 'Counting down to pre-orders', kind: 'preorder', product: r.product });
+      } else {
+        countdowns.push({ label: r.product.name, date: r.date, time: r.product.release_time || null, href: `/products/${r.product.slug}/`, datePrefix: 'Coming', product: r.product });
+      }
     });
-  countdowns.sort((a, b) => (a.date < b.date ? -1 : 1));
+  // Soonest first: by day, then by the moment on that day.
+  const momentOf = (c) => (c.time ? FactsKit.eventStartMs({ event_date: c.date, event_time: c.time }) : Date.parse(c.date + 'T07:00:00Z'));
+  countdowns.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : (momentOf(a) || 0) - (momentOf(b) || 0)));
   // The next quarterly results: always the compact line, never the big
   // clock. With no countdown, the hero's text and that line sit centred.
   const earnings = await loadEarnings();
