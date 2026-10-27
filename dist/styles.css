@@ -3477,7 +3477,8 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .countdown-more > summary::after { content: ""; flex: none; width: 7px; height: 7px; margin: -3px 4px 0 0; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
 .countdown-more[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
 .countdown-more > summary:hover { text-decoration: underline; }
-.countdown-more > summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.countdown-more > summary:focus { outline: none; }
+.countdown-more > summary:focus-visible { outline: none; text-decoration: underline; }
 .countdown-more-open { display: none; }
 .countdown-more[open] .countdown-more-open { display: inline; }
 .countdown-more[open] .countdown-more-closed { display: none; }
@@ -3649,3 +3650,9 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
    event's colour (set on the page from its artwork, FactsKit
    eventTintStyle), or burnt orange when the artwork has no colour. */
 .event-detail-page--orange { --event: var(--accent); --event-dark: var(--accent-dark); --event-bg: var(--accent-bg); --event-border: #f0c9a8; --event-glow: rgba(194, 84, 12, 0.28); }
+
+/* Admin: a note at the foot of the screen when a change rebuilds the
+   site ("Live in about a minute"), wherever the page is scrolled to. */
+.admin-toast { position: fixed; left: 50%; bottom: 20px; z-index: 1000; box-sizing: border-box; max-width: min(92vw, 540px); padding: 12px 18px; border-radius: 12px; background: #24470f; color: #fff; font-size: 14px; font-weight: 600; line-height: 1.4; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); transform: translate(-50%, 16px); opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
+.admin-toast.is-shown { opacity: 1; transform: translate(-50%, 0); }
+.admin-toast.is-error { background: #8a1f11; }

@@ -1243,6 +1243,26 @@
 
   // Starts a rebuild of the live site (the same as Publish changes,
   // without asking first).
+  // A note at the foot of the screen, wherever the page is scrolled to,
+  // for a change that rebuilds the site (the status line by Publish
+  // changes is out of sight lower down the page).
+  let toastTimer = null;
+  function adminToast(text, ok) {
+    let el = document.getElementById('admin-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'admin-toast';
+      el.className = 'admin-toast';
+      el.setAttribute('role', 'status');
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.toggle('is-error', !ok);
+    el.classList.add('is-shown');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('is-shown'), ok ? 7000 : 14000);
+  }
+
   async function rebuildSite() {
     try {
       const { data } = await client.auth.getSession();
@@ -2465,6 +2485,7 @@
         ? product.name + ' is in the countdown. Live in about a minute.'
         : product.name + ' is in the countdown, but the rebuild didn\u2019t start (' + published.error + '). Press Publish changes.';
       statusEl.className = 'admin-hint admin-publish-status' + (published.ok ? ' is-ok' : ' is-error');
+      adminToast(statusEl.textContent, published.ok);
     }
     loadProducts();
   }
@@ -2750,6 +2771,7 @@
         ? product.name + ' is out of the countdown. Live in about a minute.'
         : product.name + ' is out of the countdown, but the rebuild didn\u2019t start (' + published.error + '). Press Publish changes.';
       statusEl.className = 'admin-hint admin-publish-status' + (published.ok ? ' is-ok' : ' is-error');
+      adminToast(statusEl.textContent, published.ok);
     }
     loadProducts();
   }
@@ -4242,6 +4264,7 @@
             ? name + (payload.in_countdown ? ' is in' : ' is out of') + ' the homepage countdown. Live in about a minute.'
             : name + '\u2019s countdown tick is saved, but the rebuild didn\u2019t start (' + published.error + '). Press Publish changes.';
           statusEl.className = 'admin-hint admin-publish-status' + (published.ok ? ' is-ok' : ' is-error');
+          adminToast(statusEl.textContent, published.ok);
         }
       }
       loadedInCountdown = false;
