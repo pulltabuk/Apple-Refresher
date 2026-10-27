@@ -3307,7 +3307,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <option value="3">Slot 3</option>
             </select>
           </label>
-          <div id="in-countdown-wrap" style="display:none;">
+          <div id="in-countdown-wrap" class="admin-countdown-option" style="display:none;">
             <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
             <p class="admin-hint">Only for a product whose release date is still ahead. More than one can be counted down at once, and each drops off by itself once its date passes.</p>
           </div>
