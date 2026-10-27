@@ -13,6 +13,9 @@
   const videoStatusEl = document.getElementById('video-status');
 
   let editingId = null;
+  // The product's countdown tick as it was when opened, so a save that
+  // changes it rebuilds the site.
+  let loadedInCountdown = false;
   // An announcement added before any release date exists. It attaches
   // itself to the first release added, so dates can be entered in any order.
   let pendingAnnouncedDate = null;
@@ -2246,6 +2249,33 @@
       }
       actions.appendChild(featureBtn);
     }
+    // While a release date is still ahead: in or out of the homepage
+    // countdown in one tap, lit up green while it counts down.
+    const today = new Date().toISOString().slice(0, 10);
+    if (!p.discontinued && (p.refresh_history || []).some((d) => d > today)) {
+      const cdBtn = document.createElement('button');
+      cdBtn.type = 'button';
+      cdBtn.setAttribute('aria-pressed', p.in_countdown ? 'true' : 'false');
+      if (p.in_countdown) {
+        cdBtn.className = 'admin-btn admin-btn--small admin-btn--countdown is-on';
+        cdBtn.textContent = '\u23f1 Counting down';
+        cdBtn.title = 'In the homepage countdown. Tap to take it out';
+        cdBtn.addEventListener('click', () => removeFromCountdown(p));
+      } else {
+        cdBtn.className = 'admin-btn admin-btn--small admin-btn--countdown';
+        cdBtn.textContent = '\u23f1 Countdown';
+        cdBtn.title = 'Add to the homepage countdown (up to ' + COUNTDOWN_MAX + ')';
+        cdBtn.addEventListener('click', () => {
+          const counting = cachedProducts.filter((x) => x.in_countdown && !x.discontinued && (x.refresh_history || []).some((d) => d > today)).length;
+          if (counting >= COUNTDOWN_MAX) {
+            window.alert('The countdown already has ' + COUNTDOWN_MAX + ' products. Take one out first.');
+            return;
+          }
+          addToCountdown(p, cdBtn);
+        });
+      }
+      actions.appendChild(cdBtn);
+    }
     card.appendChild(main);
     card.appendChild(actions);
     return card;
@@ -2530,6 +2560,14 @@
     } else {
       countdownPickerOpen = false;
     }
+    // A quick look at the public Coming soon page.
+    const comingLink = document.createElement('a');
+    comingLink.className = 'homepage-chip homepage-chip--link';
+    comingLink.href = '/coming-soon/';
+    comingLink.target = '_blank';
+    comingLink.rel = 'noopener';
+    comingLink.textContent = 'Coming soon page \u2197';
+    countdownChips.push(comingLink);
     row('\u23f1 Countdown', countdownChips);
     if (countdownPickerOpen) strip.appendChild(countdownPicker(today, counting.length));
     // The next results: the line under the homepage countdown (or the
@@ -3560,6 +3598,7 @@
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
     updateFeaturedSlotOptions(p.id);
     document.getElementById('in_countdown').checked = !!p.in_countdown;
+    loadedInCountdown = !!p.in_countdown;
     document.getElementById('did_you_know_editor').innerHTML = p.did_you_know || '';
     updateDidYouKnowCount();
     loadedFactText = (document.getElementById('did_you_know_editor').textContent || '').trim();
@@ -3605,6 +3644,7 @@
   function startNewProduct(options) {
     editingId = null;
     editingSlug = null;
+    loadedInCountdown = false;
     pendingAnnouncedDate = null;
     pendingPreorderDate = null;
     clearFormErrors();
@@ -4132,6 +4172,22 @@
         window.alert('Also updated ' + linked.join(' and ') + ' so the two link to each other. Publish when you are ready for that to show on the site.');
       }
       await saveFeaturedSlot(slug);
+      // The countdown is built into the homepage: a changed tick rebuilds
+      // the site now, so it shows within a minute (rather than waiting on
+      // the database's own change hook, which can start a build before
+      // the save lands).
+      if (!!payload.in_countdown !== loadedInCountdown) {
+        const published = await rebuildSite();
+        const statusEl = document.getElementById('publish-status');
+        if (statusEl) {
+          const name = payload.name || 'This product';
+          statusEl.textContent = published.ok
+            ? name + (payload.in_countdown ? ' is in' : ' is out of') + ' the homepage countdown. Live in about a minute.'
+            : name + '\u2019s countdown tick is saved, but the rebuild didn\u2019t start (' + published.error + '). Press Publish changes.';
+          statusEl.className = 'admin-hint admin-publish-status' + (published.ok ? ' is-ok' : ' is-error');
+        }
+      }
+      loadedInCountdown = false;
       selectedFamily = category;
       editingId = null;
       editingSlug = null;
