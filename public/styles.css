@@ -995,8 +995,26 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .page-btn:hover:not(:disabled) { background: var(--accent); color: #fff; }
 .page-btn.active { background: var(--accent); color: #fff; }
 .page-btn:disabled { opacity: 0.4; cursor: default; }
-.page-btn--arrow { padding: 0 14px; width: auto; }
+.page-btn--arrow { padding: 0 14px; width: auto; gap: 6px; }
 .page-ellipsis { color: var(--text-secondary); padding: 0 4px; }
+/* One row: Previous, the page numbers, Next. On phones the numbers give
+   way to "Page 5 of 7", which opens a list of every page. */
+.pagination { flex-wrap: nowrap; gap: 8px; }
+.page-numbers { display: inline-flex; align-items: center; gap: 6px; }
+.page-jump { display: none; position: relative; align-items: center; justify-content: center; gap: 6px; height: 44px; padding: 0 16px; border-radius: 999px; background: var(--accent-bg); color: var(--accent-dark); font-size: 15px; font-weight: 700; white-space: nowrap; }
+.page-jump::after { content: ""; width: 7px; height: 7px; margin: -4px 0 0 2px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+.page-jump-select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: pointer; }
+.page-jump:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .pagination { justify-content: space-between; margin-top: 1.5rem; }
+  .page-numbers { display: none; }
+  .page-jump { display: inline-flex; }
+  .page-btn--arrow { height: 44px; padding: 0 16px; font-size: 15px; font-weight: 700; }
+}
+@media (max-width: 370px) {
+  .page-btn-word { display: none; }
+  .page-btn--arrow { width: 44px; padding: 0; }
+}
 
 .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 1.25rem; align-items: center; }
 .filter-bar + .filter-bar { margin-top: 0.85rem; }
@@ -2307,7 +2325,7 @@ body.is-admin .site-search { display: none; }
 
 /* The first group needs no rule above it, and Current reads as the live
    set, so it takes the brand colour while Discontinued stays muted. */
-.products-status-divider--current { margin-top: 0; padding-top: 0; border-top: none; }
+.products-status-divider--first { margin-top: 0; padding-top: 0; border-top: none; }
 .products-status-divider--current .products-status-divider-label { color: var(--accent-dark); }
 
 /* Green "Current" tag marking the model still on sale in a timeline */
@@ -3059,7 +3077,13 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .product-list > .card { display: block; padding: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: none; box-shadow: none; height: auto; gap: 0; }
 .product-list > .card:hover { background: #fbf7f2; border-color: var(--border); }
 .product-list .products-status-divider { margin: 1.5rem 0 0; padding: 9px 14px; border: 0; border-radius: 8px; background: var(--accent); }
-.product-list .products-status-divider--current { margin-top: 0; }
+.product-list .products-status-divider--first { margin-top: 0; }
+/* Each group's bar: its name, and how many it holds. Coming soon in the
+   site's coming-soon green; on sale and discontinued in orange. */
+.products-status-divider { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.products-status-divider-count { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.product-list .products-status-divider-count { min-width: 26px; padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.22); color: #fff; text-align: center; }
+.product-list .products-status-divider--coming { background: #3d7a1e; }
 .card-grid.product-list:has(> .products-status-divider:first-child) { border-top: 0; }
 .product-list .products-status-divider .products-status-divider-label { color: #fff; font-size: 13px; letter-spacing: 0.06em; }
 .card-grid.product-list .card .prow { display: grid; text-align: left; grid-template-columns: 40px minmax(0, 1fr) 150px 150px; align-items: center; gap: 4px 16px; padding: 14px 8px; color: var(--text); text-decoration: none; }
