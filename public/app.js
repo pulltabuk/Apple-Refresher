@@ -907,8 +907,25 @@
     );
   }
 
-  function keyFactJS(label, value) {
-    return value ? '<div class="key-fact"><p class="key-fact-label">' + label + '</p><p class="key-fact-value">' + value + '</p></div>' : '';
+  // Must match KEY_FACT_ICONS / keyFact() in src/templates.js.
+  var KEY_FACT_ICONS_JS = {
+      announced: '<path d="M3.5 10v4h3l9 5V5l-9 5h-3z"/><path d="M18.5 9.2a3.2 3.2 0 0 1 0 5.6"/><path d="M7.5 14.5 9 19.5h2.6l-1.3-4.3"/>',
+      preorder: '<circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/><path d="M3 4.5h2.2l2.3 10.6a1.5 1.5 0 0 0 1.5 1.2h7.7a1.5 1.5 0 0 0 1.5-1.1L20 8.5H6"/>',
+      release: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/>',
+      price: '<path d="M20.4 13.4 13.4 20.4a2 2 0 0 1-2.8 0L3.5 13.3V3.5h9.8l7.1 7.1a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.5"/>',
+      first: '<path d="M12 3.5l2 5.5 5.5 2-5.5 2-2 5.5-2-5.5-5.5-2 5.5-2z"/><path d="M19 16.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',
+      cycle: '<path d="M19.5 12a7.5 7.5 0 0 1-13.4 4.6"/><path d="M4.5 12a7.5 7.5 0 0 1 13.4-4.6"/><path d="M18.2 3.5v4.2H14"/><path d="M5.8 20.5v-4.2H10"/>',
+      expected: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+      discontinued: '<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9"/><path d="M10 13h4"/>',
+      lifespan: '<path d="M6.5 3.5h11M6.5 20.5h11"/><path d="M7.5 3.5c0 5 4.5 6 4.5 8.5s-4.5 3.5-4.5 8.5"/><path d="M16.5 3.5c0 5-4.5 6-4.5 8.5s4.5 3.5 4.5 8.5"/>',
+      count: '<path d="M12 3.5 3.5 8l8.5 4.5L20.5 8 12 3.5z"/><path d="m3.5 12 8.5 4.5 8.5-4.5"/><path d="m3.5 16 8.5 4.5 8.5-4.5"/>',
+      end: '<path d="M5.5 21V4"/><path d="M5.5 4.5h11l-2.2 4 2.2 4h-11"/>'
+    };
+  function keyFactIconJS(icon) {
+    return KEY_FACT_ICONS_JS[icon] ? '<span class="key-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + KEY_FACT_ICONS_JS[icon] + '</svg></span>' : '';
+  }
+  function keyFactJS(label, value, icon) {
+    return value ? '<div class="key-fact">' + keyFactIconJS(icon) + '<div class="key-fact-text"><p class="key-fact-label">' + label + '</p><p class="key-fact-value">' + value + '</p></div></div>' : '';
   }
 
   // Must stay in step with FactsKit.videoInfo() in public/facts-kit.js.
@@ -1190,38 +1207,37 @@
     // Mirrors the key facts grid plus secondary list in src/templates.js.
     var cycleProducts = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
     var cycle = heroCycleJS(product, status, sortedDates, cycleProducts);
+    // Must match src/templates.js: in the order things happened.
+    var todayKF = new Date().toISOString().slice(0, 10);
+    var newestInfo = latest ? (generationDetailsJS(product)[latest] || {}) : {};
     var keyFacts = [
+      newestInfo.announced ? keyFactJS('Announced', formatDateJS(newestInfo.announced), 'announced') : '',
+      newestInfo.preorder ? keyFactJS(newestInfo.preorder > todayKF ? 'Pre-orders open' : 'Pre-orders opened', formatDateJS(newestInfo.preorder), 'preorder') : '',
       (function () {
         var releases = releaseDatesJS(product);
         var newest = releases[releases.length - 1] || latest;
-        // Must match src/templates.js: a date still ahead isn't "Released" yet.
-        var ahead = newest && newest > new Date().toISOString().slice(0, 10);
+        var ahead = newest && newest > todayKF;
         var label = ahead ? (releases.length > 1 ? 'Next release' : 'Release date') : (releases.length > 1 ? 'Latest release' : 'Released');
-        return keyFactJS(label, newest ? formatDateJS(newest) : (launch ? formatDateJS(launch) : null));
+        return keyFactJS(label, newest ? formatDateJS(newest) : (launch ? formatDateJS(launch) : null), 'release');
       })(),
-      (function () {
-        var info = latest ? (generationDetailsJS(product)[latest] || {}) : {};
-        return (info.announced ? keyFactJS('Announced', formatDateJS(info.announced)) : '') +
-               (info.preorder ? keyFactJS(info.preorder > new Date().toISOString().slice(0, 10) ? 'Pre-orders open' : 'Pre-orders opened', formatDateJS(info.preorder)) : '');
-      })(),
-      keyFactJS('Launch price from', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
-      keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null),
+      keyFactJS('Discontinued', product.discontinued && product.discontinued_date ? formatDateJS(product.discontinued_date) : null, 'discontinued'),
+      keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanTextJS(launch, product.discontinued_date) : null, 'lifespan'),
+      keyFactJS('Launch price from', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null, 'price'),
+      keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null, 'first'),
       keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days')
-        : !product.discontinued && cycle && cycle.single ? 'About every ' + pluralJS(cycle.days, 'day', 'days') + '<span class="key-fact-note">across ' + escapeHtmlJS(cycle.family || 'the family') + '</span>' : null),
+        : !product.discontinued && cycle && cycle.single ? 'About every ' + pluralJS(cycle.days, 'day', 'days') + '<span class="key-fact-note">across ' + escapeHtmlJS(cycle.family || 'the family') + '</span>' : null, 'cycle'),
       (function () {
         if (!status || sortedDates.length <= 1 || product.discontinued) return '';
         var due = new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000);
-        return keyFactJS(due.getTime() < Date.now() ? 'Was expected' : 'Next expected', due.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }));
+        return keyFactJS(due.getTime() < Date.now() ? 'Was expected' : 'Next expected', due.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }), 'expected');
       })(),
-      keyFactJS('Discontinued', product.discontinued && product.discontinued_date ? formatDateJS(product.discontinued_date) : null),
-      keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanTextJS(launch, product.discontinued_date) : null),
-      keyFactJS('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null)
+      keyFactJS('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null, 'count')
     ].filter(Boolean);
     // Must match productPage() in src/templates.js.
     var familyAll = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
     var endOfLine = isEndOfLineJS(product, familyAll);
     keyFacts = keyFacts.slice(0, endOfLine ? 5 : 6).concat(endOfLine
-      ? ['<div class="key-fact key-fact--end"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ' + escapeHtmlJS(product.category || 'of its line') + '</p></div>'] : []).join('');
+      ? ['<div class="key-fact key-fact--end">' + keyFactIconJS('end') + '<div class="key-fact-text"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ' + escapeHtmlJS(product.category || 'of its line') + '</p></div></div>'] : []).join('');
 
     var specs = [
       specRowJS('Category', pillJS(product.category)),
