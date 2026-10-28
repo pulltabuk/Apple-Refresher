@@ -3374,44 +3374,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <option value="3">Slot 3</option>
             </select>
           </label>
-          <div id="in-countdown-wrap" class="admin-countdown-option" style="display:none;">
-            <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
-            <p id="in-countdown-hint" class="admin-hint">Only for a product whose release date is still ahead. More than one can be counted down at once, and each drops off by itself once its date passes.</p>
-            <div class="admin-release-time">
-              <span class="admin-release-time-label">Release date and time</span>
-              <div class="admin-release-time-row">
-                <input type="date" id="release_date_input" aria-label="Release date">
-                <input type="time" id="release_time_clock" aria-label="Release time">
-                <select id="release_time_zone" aria-label="Time zone">
-                  <option value="UK">UK time (GMT/BST)</option>
-                  <option value="GMT">GMT</option>
-                  <option value="ET">ET (New York)</option>
-                  <option value="CT">CT (Chicago)</option>
-                  <option value="PT">PT (California)</option>
-                  <option value="CET">CET (Paris, Berlin)</option>
-                </select>
-                <button type="button" id="release_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear time</button>
-              </div>
-              <p id="release-date-hint" class="admin-hint">The date is the upcoming release in this product&rsquo;s dates below; changing it here moves it there too. Every countdown runs to this moment. Leave the time blank for 8am on the day, when Apple Stores open.</p>
-            </div>
-            <div class="admin-release-time">
-              <span class="admin-release-time-label">Pre-orders open <span class="admin-optional">Optional</span></span>
-              <div class="admin-release-time-row">
-                <input type="date" id="preorder_date_input" aria-label="Pre-order date">
-                <input type="time" id="preorder_time_clock" aria-label="Pre-order time">
-                <select id="preorder_time_zone" aria-label="Pre-order time zone">
-                  <option value="UK">UK time (GMT/BST)</option>
-                  <option value="GMT">GMT</option>
-                  <option value="ET">ET (New York)</option>
-                  <option value="CT">CT (Chicago)</option>
-                  <option value="PT">PT (California)</option>
-                  <option value="CET">CET (Paris, Berlin)</option>
-                </select>
-                <button type="button" id="preorder_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear time</button>
-              </div>
-              <p id="preorder-date-hint" class="admin-hint">With a pre-order date, the homepage counts down to pre-orders first, then to the release once they open. Leave the time blank for 1pm UK, when Apple&rsquo;s pre-orders usually open.</p>
-            </div>
-          </div>
           <p class="admin-hint">The featured products take turns in the big homepage tile, a different one on each visit. A featured Apple Event takes the big tile.</p>
           <div class="admin-subfield">
             <span class="admin-subfield-label">Icon for this product <span class="admin-optional">Optional</span></span>
@@ -3511,28 +3473,88 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         <section class="admin-step" id="step-generations">
           <h3 class="admin-step-title"><span class="admin-step-num">3</span> Dates</h3>
-          <p class="admin-hint">Every release or refresh, plus the day it was discontinued if it has been. The earliest one is marked as its first release automatically.</p>
+          <p class="admin-hint">Every release so far, oldest first. Edit changes one. New dates go in the green box below.</p>
           <ul id="refresh-history-list" class="generation-list"></ul>
-          <div class="generation-add" id="generation-add-panel">
-            <p class="generation-add-title">Add a date</p>
-            <div class="segmented segmented--type" role="radiogroup" aria-label="Type of date">
-              <label><input type="radio" name="entry_type" value="launch"><span>Launch</span></label>
-              <label><input type="radio" name="entry_type" value="release" checked><span>Release</span></label>
-              <label><input type="radio" name="entry_type" value="announced"><span>Announced</span></label>
-              <label><input type="radio" name="entry_type" value="preorder"><span>Pre-order</span></label>
-              <label><input type="radio" name="entry_type" value="discontinued"><span>Discontinued</span></label>
+          <div class="admin-dates-box" id="generation-add-panel">
+            <div class="admin-dates-head">
+              <p class="admin-dates-title" id="dates-box-title">Next release</p>
+              <div class="segmented segmented--small admin-dates-mode" id="dates-mode" role="radiogroup" aria-label="Which release these dates are for" hidden>
+                <label><input type="radio" name="dates_mode" value="next" checked><span id="dates-mode-next">Next release</span></label>
+                <label><input type="radio" name="dates_mode" value="add"><span>Add another release</span></label>
+              </div>
             </div>
-            <div class="generation-add-row">
-              ${datePrecisionFieldHtml('new_refresh_date', 'Date')}
-              <button type="button" id="add-as-refresh-btn" class="admin-btn admin-btn--primary">+ Add</button>
+            <p class="admin-hint" id="dates-box-hint">Fill in what you know, top to bottom. An empty date starts on the one above it: tap &ldquo;Same day&rdquo; to keep it, or open the calendar and pick a day near it.</p>
+
+            <div class="admin-date-row" data-date-row="announced">
+              <span class="admin-release-time-label">Announced <span class="admin-optional">Optional</span></span>
+              <div class="admin-release-time-row">
+                <input type="date" id="announced_date_input" aria-label="Announced date">
+                <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="announced" hidden>&#10003; Same day</button>
+                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="announced">Clear</button>
+              </div>
             </div>
-            <div class="admin-subfield" id="generation-name-field">
-              <label><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="new_generation_name" autocomplete="off"></label>
+
+            <div class="admin-date-row" data-date-row="preorder">
+              <span class="admin-release-time-label">Pre-orders open <span class="admin-optional">Optional</span></span>
+              <div class="admin-release-time-row">
+                <input type="date" id="preorder_date_input" aria-label="Pre-order date">
+                <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="preorder" hidden>&#10003; Same day</button>
+                <input type="time" id="preorder_time_clock" aria-label="Pre-order time">
+                <select id="preorder_time_zone" aria-label="Pre-order time zone">
+                  <option value="UK">UK (GMT/BST)</option>
+                  <option value="GMT">GMT</option>
+                  <option value="ET">ET (New York)</option>
+                  <option value="CT">CT (Chicago)</option>
+                  <option value="PT">PT (California)</option>
+                  <option value="CET">CET (Paris)</option>
+                </select>
+                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="preorder">Clear</button>
+              </div>
+              <p id="preorder-date-hint" class="admin-hint">The homepage counts down to pre-orders first, then to the release once they open. Leave the time blank for 1pm UK, when Apple&rsquo;s pre-orders usually open.</p>
             </div>
-            <div class="admin-subfield" id="announced-target-field" style="display:none;">
-              <label><span id="announced-target-label">Which release was this the announcement for?</span><select id="announced_target"></select></label>
+
+            <div class="admin-date-row" data-date-row="release">
+              <span class="admin-release-time-label admin-date-label-row">Release date and time
+                <select id="release_precision" class="admin-date-precision" aria-label="How exact the release date is">
+                  <option value="day">Exact day</option>
+                  <option value="month">Month only</option>
+                  <option value="year">Year only</option>
+                </select>
+              </span>
+              <div class="admin-release-time-row">
+                <input type="date" id="release_date_input" aria-label="Release date">
+                <input type="month" id="release_month_input" aria-label="Release month" hidden>
+                <input type="number" id="release_year_input" aria-label="Release year" placeholder="YYYY" min="1970" max="2040" hidden>
+                <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="release" hidden>&#10003; Same day</button>
+                <input type="time" id="release_time_clock" aria-label="Release time">
+                <select id="release_time_zone" aria-label="Time zone">
+                  <option value="UK">UK (GMT/BST)</option>
+                  <option value="GMT">GMT</option>
+                  <option value="ET">ET (New York)</option>
+                  <option value="CT">CT (Chicago)</option>
+                  <option value="PT">PT (California)</option>
+                  <option value="CET">CET (Paris)</option>
+                </select>
+                <button type="button" id="release_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear time</button>
+              </div>
+              <p id="release-date-hint" class="admin-hint">Leave the time blank for 8am on the day, when Apple Stores open.</p>
+              <label class="admin-date-name"><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="release_name_input" autocomplete="off"></label>
+              <label class="checkbox-label admin-date-launch"><input type="checkbox" id="release_is_launch"> The first ever release of this product (its launch)</label>
             </div>
-            <p class="admin-hint" id="announced-pending-note" style="display:none;">No release date yet, so this announcement will be held and attached to the first release you add.</p>
+
+            <div id="in-countdown-wrap" class="admin-date-countdown">
+              <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
+              <p id="in-countdown-hint" class="admin-hint">More than one product can be counted down at once, and each drops off by itself once its date passes.</p>
+            </div>
+
+            <div class="admin-date-row admin-date-row--end" data-date-row="discontinued">
+              <span class="admin-release-time-label">Discontinued <span class="admin-optional">Optional</span></span>
+              <div class="admin-release-time-row">
+                <input type="date" id="discontinued_date_input" aria-label="Discontinued date">
+                <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="discontinued" hidden>&#10003; Same day</button>
+                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="discontinued">Clear</button>
+              </div>
+            </div>
             <p id="generation-add-error" class="form-error"></p>
           </div>
           <div class="admin-subfield" id="days-basis-wrap">

@@ -240,7 +240,7 @@
     updateDatePrecisionVisibility(prefix);
   }
 
-  const DATE_FIELD_PREFIXES = ['new_refresh_date', 'gallery_date_taken'];
+  const DATE_FIELD_PREFIXES = ['gallery_date_taken'];
 
   DATE_FIELD_PREFIXES.forEach(wireDatePrecisionField);
 
@@ -2967,11 +2967,6 @@
     return autoGenerationName(name, currentRefreshHistory.length, currentRefreshHistory.length + 1);
   }
 
-  function updateGenerationSuggestion() {
-    const input = document.getElementById('new_generation_name');
-    if (input) input.placeholder = generationSuggestion();
-  }
-
   function detailFor(date) {
     if (!currentGenerationDetails[date]) currentGenerationDetails[date] = {};
     return currentGenerationDetails[date];
@@ -3030,8 +3025,6 @@
     const zoneEl = document.getElementById('preorder_time_zone');
     zoneEl.value = Array.from(zoneEl.options).some((o) => o.value === parts.zone) ? parts.zone : 'UK';
   }
-  const preorderTimeClearBtn = document.getElementById('preorder_time_clear');
-  if (preorderTimeClearBtn) preorderTimeClearBtn.addEventListener('click', () => { setPreorderTimeFields(null); productFormDirty = true; });
 
   // The upcoming release: the soonest date still ahead (null if none).
   function upcomingReleaseDate() {
@@ -3040,112 +3033,270 @@
   }
   const isFullDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
 
-  // The countdown panel: the release date and time, and when pre-orders
-  // open. The dates are the product's own (the upcoming release in the
-  // dates list, and its pre-order date), so changing one here changes it
-  // there too. Ticking the countdown needs a release date still ahead.
-  function updateCountdownOption() {
-    const wrap = document.getElementById('in-countdown-wrap');
-    if (!wrap) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const next = upcomingReleaseDate();
-    const box = document.getElementById('in_countdown');
-    const releaseInput = document.getElementById('release_date_input');
-    const preInput = document.getElementById('preorder_date_input');
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-    if (releaseInput) {
-      releaseInput.min = tomorrow;
-      releaseInput.value = isFullDate(next) ? next : '';
+  // --- The Dates box (green): one row for each thing that happens to a
+  // release, in the order it happens (announced, pre-orders, release),
+  // then the countdown tick and the product's discontinued date. It shows
+  // the upcoming release when there is one. Otherwise, or on "Add another
+  // release", its rows add a new release: the announced and pre-order
+  // dates wait until the release date is picked, then join it.
+  //
+  // Picking a date makes it the starting point of the empty rows after it
+  // (shown pale, as a suggestion): "Same day" keeps it, or the calendar
+  // opens on it to pick a day nearby. A suggestion is never saved by itself.
+  let datesMode = 'next';
+  let pendingName = '';
+  let pendingLaunch = null; // null: launch only when nothing is recorded yet
+  let lastPicked = null; // { row, date }: the last date picked in the box
+  let releasePrecision = 'day';
+  let releasePrecisionFor = undefined;
+  const CHAIN = ['announced', 'preorder', 'release'];
+
+  function datesTarget() {
+    return datesMode === 'next' ? upcomingReleaseDate() : null;
+  }
+  function rowValue(row, target) {
+    if (row === 'discontinued') return currentDiscontinuedDate;
+    if (row === 'release') return target;
+    const info = (target && currentGenerationDetails[target]) || {};
+    if (row === 'announced') return target ? info.announced || null : pendingAnnouncedDate;
+    if (row === 'preorder') return target ? info.preorder || null : pendingPreorderDate;
+    return null;
+  }
+  // An empty row after the last date picked starts on that date.
+  function rowSuggestion(row) {
+    if (!lastPicked || !isFullDate(lastPicked.date)) return null;
+    const at = CHAIN.indexOf(row);
+    if (at === -1) return null;
+    return lastPicked.row === null || CHAIN.indexOf(lastPicked.row) < at ? lastPicked.date : null;
+  }
+  const precisionOf = (d) => (/^\d{4}$/.test(d || '') ? 'year' : /^\d{4}-\d{2}$/.test(d || '') ? 'month' : 'day');
+
+  function rowNote(row, text) {
+    const rowEl = document.querySelector('[data-date-row="' + row + '"]');
+    if (!rowEl) return;
+    let note = rowEl.querySelector('.admin-date-note');
+    if (!note) {
+      note = document.createElement('p');
+      note.className = 'admin-hint admin-date-note';
+      rowEl.querySelector('.admin-release-time-row').insertAdjacentElement('afterend', note);
     }
-    const releaseHint = document.getElementById('release-date-hint');
-    if (releaseHint) {
-      releaseHint.textContent = next && !isFullDate(next)
-        ? 'Expected ' + formatAdminDate(next) + '. Pick the exact day here once Apple confirms it. Leave the time blank for 8am on the day, when Apple Stores open.'
-        : next
-          ? 'This is the upcoming release in the dates below; changing it here moves it there too. Leave the time blank for 8am on the day, when Apple Stores open.'
-          : 'A date ahead adds the upcoming release to this product\u2019s dates below. Leave the time blank for 8am on the day, when Apple Stores open.';
-    }
-    const pre = next && currentGenerationDetails[next] && currentGenerationDetails[next].preorder;
-    if (preInput) {
-      preInput.disabled = !next;
-      preInput.max = isFullDate(next) ? next : '';
-      preInput.value = isFullDate(pre) ? pre : '';
-    }
-    const preHint = document.getElementById('preorder-date-hint');
-    if (preHint) {
-      preHint.textContent = !next
-        ? 'Add the release date first, then the day pre-orders open.'
-        : (pre && !isFullDate(pre) ? 'Expected ' + formatAdminDate(pre) + '. ' : '') +
-          'With a pre-order date, the homepage counts down to pre-orders first, then to the release once they open. Leave the time blank for 1pm UK, when Apple\u2019s pre-orders usually open.';
-    }
-    // A discontinued product has nothing coming.
-    wrap.style.display = currentDiscontinuedDate && currentDiscontinuedDate <= today && !next ? 'none' : '';
-    if (box) {
-      box.disabled = !next;
-      if (!next) box.checked = false;
-    }
-    const cdHint = document.getElementById('in-countdown-hint');
-    if (cdHint) {
-      cdHint.textContent = next
-        ? 'More than one product can be counted down at once, and each drops off by itself once its date passes.'
-        : 'Add a release date after today (below) to switch this on.';
-    }
+    note.textContent = text || '';
+    note.hidden = !text;
   }
 
-  // The release date box: moves the upcoming release (with its name,
-  // announced and pre-order dates), or adds one when there is none.
-  const releaseDateInput = document.getElementById('release_date_input');
-  if (releaseDateInput) releaseDateInput.addEventListener('change', () => {
-    const value = releaseDateInput.value;
-    const current = upcomingReleaseDate();
+  function paintDateRow(row, value, target) {
+    const input = document.getElementById(row + '_date_input');
+    const useBtn = document.querySelector('[data-date-use="' + row + '"]');
+    const clearBtn = document.querySelector('[data-date-clear="' + row + '"]');
+    const suggestion = value ? null : rowSuggestion(row);
+    if (input) {
+      input.value = isFullDate(value) ? value : (suggestion || '');
+      input.classList.toggle('is-suggested', !!suggestion);
+    }
+    if (useBtn) {
+      useBtn.hidden = !suggestion;
+      useBtn.title = suggestion ? 'Use ' + formatAdminDate(suggestion) : '';
+    }
+    if (clearBtn) clearBtn.hidden = !value;
+    rowNote(row, value && !isFullDate(value) ? 'Recorded as ' + formatAdminDate(value) + '. Pick a day to replace it.' : '');
+  }
+
+  function renderDatesBox() {
+    const box = document.getElementById('generation-add-panel');
+    if (!box) return;
     const today = new Date().toISOString().slice(0, 10);
-    if (!value || value === current) { updateCountdownOption(); return; }
-    if (value <= today) {
-      window.alert('Pick a day after today. Past releases go in the dates list below.');
-      updateCountdownOption();
-      return;
+    const upcoming = upcomingReleaseDate();
+    if (!upcoming) datesMode = 'next';
+    const target = datesTarget();
+    const releases = currentRefreshHistory.slice().sort();
+
+    // Which release: the upcoming one, or a new one.
+    const modeEl = document.getElementById('dates-mode');
+    modeEl.hidden = !upcoming;
+    if (upcoming) {
+      document.getElementById('dates-mode-next').textContent = 'The ' + formatAdminDate(upcoming) + ' release';
+      document.querySelector('input[name="dates_mode"][value="' + datesMode + '"]').checked = true;
     }
-    if (currentRefreshHistory.indexOf(value) !== -1) {
-      window.alert('There is already a date on ' + formatAdminDate(value) + '.');
-      updateCountdownOption();
-      return;
+    document.getElementById('dates-box-title').textContent = target
+      ? 'Next release'
+      : releases.length ? 'Add a release' : 'First release';
+    document.getElementById('dates-box-hint').textContent = target
+      ? 'These are the upcoming release’s dates; changing one here changes it in the list above too. An empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it.'
+      : 'Fill in what you know, top to bottom. Each empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it. The release joins the list above once its date is picked.';
+
+    paintDateRow('announced', rowValue('announced', target), target);
+    paintDateRow('preorder', rowValue('preorder', target), target);
+    paintDateRow('discontinued', currentDiscontinuedDate, target);
+
+    // The release: an exact day (with a time), or just a month or year
+    // when Apple has only said roughly when.
+    if (releasePrecisionFor !== target) {
+      releasePrecision = target ? precisionOf(target) : 'day';
+      releasePrecisionFor = target;
     }
-    if (current) {
-      currentRefreshHistory = currentRefreshHistory.map((d) => (d === current ? value : d)).sort();
-      if (currentGenerationDetails[current]) {
-        currentGenerationDetails[value] = currentGenerationDetails[current];
-        delete currentGenerationDetails[current];
-      }
-      if (currentOriginalLaunchDate === current) currentOriginalLaunchDate = value;
-      if (expandedGenerations.delete(current)) expandedGenerations.add(value);
+    document.getElementById('release_precision').value = releasePrecision;
+    const dayIn = document.getElementById('release_date_input');
+    const monthIn = document.getElementById('release_month_input');
+    const yearIn = document.getElementById('release_year_input');
+    dayIn.hidden = releasePrecision !== 'day';
+    monthIn.hidden = releasePrecision !== 'month';
+    yearIn.hidden = releasePrecision !== 'year';
+    ['release_time_clock', 'release_time_zone', 'release_time_clear'].forEach((id) => { document.getElementById(id).hidden = releasePrecision !== 'day'; });
+    if (releasePrecision === 'day') {
+      paintDateRow('release', target && isFullDate(target) ? target : null, target);
     } else {
-      currentRefreshHistory = currentRefreshHistory.concat(value).sort();
-      if (pendingAnnouncedDate) { detailFor(value).announced = pendingAnnouncedDate; pendingAnnouncedDate = null; }
-      if (pendingPreorderDate) { detailFor(value).preorder = pendingPreorderDate; pendingPreorderDate = null; }
+      document.querySelector('[data-date-use="release"]').hidden = true;
+      dayIn.classList.remove('is-suggested');
+      rowNote('release', '');
     }
-    // A pre-order date can't come after the release it belongs to.
-    const info = currentGenerationDetails[value];
-    if (info && isFullDate(info.preorder) && info.preorder > value) info.preorder = null;
+    monthIn.value = target && precisionOf(target) === 'month' ? target : '';
+    yearIn.value = target && precisionOf(target) === 'year' ? target : '';
+
+    // Its name and whether it was the product's launch.
+    const nameIn = document.getElementById('release_name_input');
+    const productName = document.getElementById('name').value.trim();
+    const index = target ? releases.indexOf(target) : -1;
+    nameIn.placeholder = target ? autoGenerationName(productName, index, releases.length) : generationSuggestion();
+    if (document.activeElement !== nameIn) {
+      nameIn.value = target ? ((currentGenerationDetails[target] || {}).name || '') : pendingName;
+    }
+    const launchIn = document.getElementById('release_is_launch');
+    const launchLabel = launchIn.closest('label');
+    const launchTaken = !!currentOriginalLaunchDate && currentOriginalLaunchDate !== target;
+    launchLabel.hidden = launchTaken;
+    launchIn.checked = target
+      ? currentOriginalLaunchDate === target
+      : pendingLaunch === null ? (!currentOriginalLaunchDate && !releases.length) : pendingLaunch;
+
+    // The countdown needs a release date still ahead.
+    const cdBox = document.getElementById('in_countdown');
+    cdBox.disabled = !upcoming;
+    if (!upcoming) cdBox.checked = false;
+    document.getElementById('in-countdown-hint').textContent = upcoming
+      ? 'Counts down to the ' + formatAdminDate(upcoming) + ' release (to pre-orders first while they’re still to open). More than one product can be counted down at once, and each drops off by itself once its date passes.'
+      : 'Pick a release date after today (above) to switch this on.';
+    const preHint = document.getElementById('preorder-date-hint');
+    if (preHint) preHint.hidden = !rowValue('preorder', target);
+    const discRow = document.querySelector('[data-date-row="discontinued"]');
+    if (discRow) discRow.classList.toggle('is-set', !!currentDiscontinuedDate && currentDiscontinuedDate <= today);
+  }
+  // Older name, still called from a few places.
+  const updateCountdownOption = renderDatesBox;
+
+  // Keeping a date (picked, typed or "Same day") in one of the rows.
+  function commitDate(row, value) {
+    const target = datesTarget();
+    const ann = rowValue('announced', target);
+    const pre = rowValue('preorder', target);
+    const refuse = (msg) => { window.alert(msg); renderDatesBox(); };
+    const before = (a, b) => isFullDate(a) && isFullDate(b) && a > b;
+    if (row === 'announced') {
+      if (value && before(value, pre)) return refuse('The announcement comes before pre-orders open (' + formatAdminDate(pre) + '). Change that date first.');
+      if (value && before(value, target)) return refuse('The announcement comes before the release (' + formatAdminDate(target) + ').');
+      if (target) detailFor(target).announced = value; else pendingAnnouncedDate = value;
+    } else if (row === 'preorder') {
+      if (value && before(ann, value)) return refuse('Pre-orders open on or after the announcement (' + formatAdminDate(ann) + ').');
+      if (value && before(value, target)) return refuse('Pre-orders open before the release (' + formatAdminDate(target) + ').');
+      if (target) detailFor(target).preorder = value; else pendingPreorderDate = value;
+    } else if (row === 'discontinued') {
+      currentDiscontinuedDate = value;
+      updateStatusReadout();
+    } else if (row === 'release') {
+      if (!value || value === target) { renderDatesBox(); return; }
+      if (currentRefreshHistory.indexOf(value) !== -1) return refuse('There is already a release on ' + formatAdminDate(value) + '.');
+      if (before(ann, value) || before(pre, value)) return refuse('The release comes after the announcement and pre-orders. Change those dates first.');
+      if (target) {
+        // Move the upcoming release, with its name, announced and pre-order dates.
+        currentRefreshHistory = currentRefreshHistory.map((d) => (d === target ? value : d)).sort();
+        if (currentGenerationDetails[target]) {
+          currentGenerationDetails[value] = currentGenerationDetails[target];
+          delete currentGenerationDetails[target];
+        }
+        if (currentOriginalLaunchDate === target) currentOriginalLaunchDate = value;
+        if (expandedGenerations.delete(target)) expandedGenerations.add(value);
+      } else {
+        // A new release, taking the dates and name waiting for it.
+        const launch = pendingLaunch === null ? (!currentOriginalLaunchDate && !currentRefreshHistory.length) : pendingLaunch;
+        currentRefreshHistory = currentRefreshHistory.concat(value).sort();
+        if (pendingName.trim()) detailFor(value).name = pendingName.trim();
+        if (pendingAnnouncedDate) detailFor(value).announced = pendingAnnouncedDate;
+        if (pendingPreorderDate) detailFor(value).preorder = pendingPreorderDate;
+        if (launch && !currentOriginalLaunchDate) currentOriginalLaunchDate = value;
+        pendingAnnouncedDate = null;
+        pendingPreorderDate = null;
+        pendingName = '';
+        pendingLaunch = null;
+      }
+      // Showing the upcoming release when that's what this is; otherwise
+      // the rows clear, ready for another, starting on this date.
+      datesMode = value === upcomingReleaseDate() ? 'next' : 'add';
+      releasePrecisionFor = undefined;
+      updateStatusReadout();
+      lastPicked = isFullDate(value) ? { row: datesMode === 'add' ? null : 'release', date: value } : null;
+      productFormDirty = true;
+      renderRefreshHistory();
+      return;
+    }
+    if (isFullDate(value)) lastPicked = { row, date: value };
     productFormDirty = true;
     renderRefreshHistory();
-    updateStatusReadout();
+  }
+
+  ['announced', 'preorder', 'release', 'discontinued'].forEach((row) => {
+    const input = document.getElementById(row + '_date_input');
+    if (input) input.addEventListener('change', () => commitDate(row, input.value || null));
+    const useBtn = document.querySelector('[data-date-use="' + row + '"]');
+    if (useBtn) useBtn.addEventListener('click', () => { const v = rowSuggestion(row); if (v) commitDate(row, v); });
+    const clearBtn = document.querySelector('[data-date-clear="' + row + '"]');
+    if (clearBtn) clearBtn.addEventListener('click', () => {
+      if (row === 'preorder') setPreorderTimeFields(null);
+      commitDate(row, null);
+    });
+  });
+  document.getElementById('release_month_input').addEventListener('change', (e) => { if (e.target.value) commitDate('release', e.target.value); });
+  document.getElementById('release_year_input').addEventListener('change', (e) => {
+    const v = e.target.value.trim();
+    if (/^\d{4}$/.test(v)) commitDate('release', v);
+  });
+  document.getElementById('release_precision').addEventListener('change', (e) => {
+    releasePrecision = e.target.value;
+    releasePrecisionFor = datesTarget();
+    renderDatesBox();
+  });
+  document.querySelectorAll('input[name="dates_mode"]').forEach((radio) => radio.addEventListener('change', () => {
+    datesMode = radio.value;
+    lastPicked = null;
+    renderDatesBox();
+  }));
+  document.getElementById('release_name_input').addEventListener('input', (e) => {
+    const target = datesTarget();
+    if (target) detailFor(target).name = e.target.value;
+    else pendingName = e.target.value;
+  });
+  document.getElementById('release_name_input').addEventListener('change', () => renderRefreshHistory());
+  document.getElementById('release_is_launch').addEventListener('change', (e) => {
+    const target = datesTarget();
+    if (target) {
+      if (e.target.checked) currentOriginalLaunchDate = target;
+      else if (currentOriginalLaunchDate === target) currentOriginalLaunchDate = null;
+      renderRefreshHistory();
+    } else {
+      pendingLaunch = e.target.checked;
+    }
   });
 
-  // The pre-order date box: the upcoming release's pre-order date.
-  const preorderDateInput = document.getElementById('preorder_date_input');
-  if (preorderDateInput) preorderDateInput.addEventListener('change', () => {
-    const next = upcomingReleaseDate();
-    if (!next) { updateCountdownOption(); return; }
-    const value = preorderDateInput.value || null;
-    if (value && isFullDate(next) && value > next) {
-      window.alert('Pre-orders open before the release on ' + formatAdminDate(next) + '.');
-      updateCountdownOption();
-      return;
-    }
-    detailFor(next).preorder = value;
-    productFormDirty = true;
-    renderRefreshHistory();
-  });
+  // A fresh box for a product just opened.
+  function resetGenerationPanel() {
+    datesMode = 'next';
+    pendingName = '';
+    pendingLaunch = null;
+    lastPicked = null;
+    releasePrecisionFor = undefined;
+    pendingAnnouncedDate = null;
+    pendingPreorderDate = null;
+    const err = document.getElementById('generation-add-error');
+    if (err) err.textContent = '';
+  }
 
   function renderRefreshHistory() {
     refreshHistoryListEl.innerHTML = '';
@@ -3439,97 +3590,7 @@
       }
       refreshHistoryListEl.appendChild(li);
     });
-    updateGenerationSuggestion();
     document.getElementById('days-basis-wrap').style.display = releaseDates.length > 1 ? '' : 'none';
-    // Nothing to launch twice, and nothing to discontinue twice.
-    setEntryTypeAvailability(releaseDates.length, !!currentDiscontinuedDate);
-  }
-
-  // A product can only be discontinued once, so that option greys out
-  // once a discontinued date exists. Release is always available.
-  // A product launches once and is discontinued once, so those two grey
-  // out when they are already recorded. Announced needs a release to
-  // attach to, so it greys out until there is one.
-  function setEntryTypeAvailability(releaseCount, hasDiscontinued) {
-    const release = document.querySelector('input[name="entry_type"][value="release"]');
-    const launch = document.querySelector('input[name="entry_type"][value="launch"]');
-    const announced = document.querySelector('input[name="entry_type"][value="announced"]');
-    const discontinued = document.querySelector('input[name="entry_type"][value="discontinued"]');
-    const setState = (input, off, why) => {
-      input.disabled = off;
-      const label = input.closest('label');
-      label.classList.toggle('segmented-option--off', off);
-      label.title = off ? why : '';
-      if (off && input.checked) release.checked = true;
-    };
-    setState(launch, !!currentOriginalLaunchDate, 'This product already has a launch date');
-    setState(announced, false, '');
-    setState(discontinued, hasDiscontinued, 'This product already has a discontinued date');
-    if (!currentOriginalLaunchDate && releaseCount === 0) launch.checked = true;
-    updateAddPanelForType();
-  }
-
-  // The add panel only shows the fields the chosen type needs.
-  function updateAddPanelForType() {
-    const type = selectedEntryType();
-    document.getElementById('generation-name-field').style.display = type === 'launch' || type === 'release' ? '' : 'none';
-    const targetField = document.getElementById('announced-target-field');
-    const isAttached = type === 'announced' || type === 'preorder';
-    targetField.style.display = isAttached ? '' : 'none';
-    const targetLabel = document.getElementById('announced-target-label');
-    if (targetLabel) targetLabel.textContent = type === 'preorder'
-      ? 'Which release do these pre-orders belong to?'
-      : 'Which release was this the announcement for?';
-    if (!isAttached) return;
-    const select = document.getElementById('announced_target');
-    const noReleasesYet = currentRefreshHistory.length === 0;
-    targetField.style.display = noReleasesYet ? 'none' : '';
-    const note = document.getElementById('announced-pending-note');
-    if (note) {
-      note.style.display = noReleasesYet ? '' : 'none';
-      note.textContent = 'No release date yet, so this will be held and attached to the first release you add.';
-    }
-    if (noReleasesYet) return;
-    const keep = select.value;
-    select.innerHTML = '';
-    currentRefreshHistory.slice().sort().reverse().forEach((d) => {
-      const opt = document.createElement('option');
-      opt.value = d;
-      const info = currentGenerationDetails[d] || {};
-      const field = type === 'preorder' ? 'preorder' : 'announced';
-      opt.textContent = formatAdminDate(d) + ((info.name || '').trim() ? ' \u2013 ' + info.name.trim() : '') + (info[field] ? ' (already has one)' : '');
-      select.appendChild(opt);
-    });
-    if (targetChosenByHand && keep && Array.from(select.options).some((o) => o.value === keep)) select.value = keep;
-    else pickTargetForDate();
-  }
-
-  // An announcement or pre-order belongs to the first release on or after
-  // its date (they come before the release). Picked automatically as the
-  // date is typed, unless the release has been chosen by hand.
-  let targetChosenByHand = false;
-  function releaseForDate(value) {
-    const releases = currentRefreshHistory.filter((d) => d !== currentDiscontinuedDate).slice().sort();
-    if (!releases.length) return null;
-    if (!value) return releases[releases.length - 1];
-    return releases.find((d) => d >= value) || releases[releases.length - 1];
-  }
-  function pickTargetForDate() {
-    if (targetChosenByHand) return;
-    const select = document.getElementById('announced_target');
-    const best = releaseForDate(getDatePrecisionValue('new_refresh_date'));
-    if (best && Array.from(select.options).some((o) => o.value === best)) select.value = best;
-  }
-  document.getElementById('announced_target').addEventListener('change', () => { targetChosenByHand = true; });
-  ['input', 'change'].forEach((evt) => document.getElementById('new_refresh_date_field').addEventListener(evt, () => setTimeout(pickTargetForDate, 0)));
-
-  document.querySelectorAll('input[name="entry_type"]').forEach((radio) => {
-    radio.addEventListener('change', updateAddPanelForType);
-  });
-
-  function selectedEntryType() {
-    const checked = document.querySelector('input[name="entry_type"]:checked');
-    return checked ? checked.value : 'release';
   }
 
   // "The last iPod: Apple ended the iPod line with this one"
@@ -3649,86 +3710,6 @@
     updateDidYouKnowCount();
   });
 
-  // After adding a date the box keeps it, since the next one (pre-order,
-  // then release) is usually a few days later: just adjust the day.
-  // The date left in the box after adding one, so saving doesn't mistake
-  // it for a new date that still needs adding.
-  let carriedDate = null;
-  function resetGenerationPanel(keepDate) {
-    targetChosenByHand = false;
-    carriedDate = keepDate || null;
-    setDatePrecisionValue('new_refresh_date', keepDate || null);
-    document.getElementById('new_generation_name').value = '';
-    document.getElementById('generation-add-error').textContent = '';
-  }
-
-  function addGenerationFromPanel() {
-    const errorEl = document.getElementById('generation-add-error');
-    errorEl.textContent = '';
-    const value = getDatePrecisionValue('new_refresh_date');
-    if (!value) {
-      errorEl.textContent = 'Pick a date first.';
-      return;
-    }
-    const type = selectedEntryType();
-    if (type === 'discontinued') {
-      currentDiscontinuedDate = value;
-      resetGenerationPanel(value);
-      renderRefreshHistory();
-      updateStatusReadout();
-      return;
-    }
-    if (type === 'announced' || type === 'preorder') {
-      const field = type === 'preorder' ? 'preorder' : 'announced';
-      if (currentRefreshHistory.length === 0) {
-        if (field === 'preorder') pendingPreorderDate = value; else pendingAnnouncedDate = value;
-        resetGenerationPanel(value);
-        renderRefreshHistory();
-        return;
-      }
-      if (!targetChosenByHand) pickTargetForDate();
-      const target = document.getElementById('announced_target').value;
-      if (!target) {
-        errorEl.textContent = 'Pick which release this belongs to.';
-        return;
-      }
-      detailFor(target)[field] = value;
-      resetGenerationPanel(value);
-      renderRefreshHistory();
-      return;
-    }
-    if (currentRefreshHistory.indexOf(value) !== -1) {
-      errorEl.textContent = 'There is already a date on ' + formatAdminDate(value) + '.';
-      return;
-    }
-    const name = document.getElementById('new_generation_name').value.trim();
-    currentRefreshHistory.push(value);
-    currentRefreshHistory.sort();
-    if (name) {
-      detailFor(value).name = name;
-    }
-    // Launch is explicit now. A product's very first date is still
-    // treated as its launch, since there is nothing earlier it could be.
-    // Only a date added as a Launch becomes the first release. Adding a
-    // Release stays a release, so a product whose earlier models are not
-    // logged yet is not wrongly presented as the start of the line.
-    if (type === 'launch') {
-      currentOriginalLaunchDate = value;
-    }
-    if (pendingAnnouncedDate) {
-      detailFor(value).announced = pendingAnnouncedDate;
-      pendingAnnouncedDate = null;
-    }
-    if (pendingPreorderDate) {
-      detailFor(value).preorder = pendingPreorderDate;
-      pendingPreorderDate = null;
-    }
-    resetGenerationPanel(value);
-    renderRefreshHistory();
-    updateStatusReadout();
-  }
-
-  document.getElementById('add-as-refresh-btn').addEventListener('click', addGenerationFromPanel);
 
   // Suggested names and the timeline wording follow the name as it's typed.
   document.getElementById('name').addEventListener('input', () => {
@@ -3855,8 +3836,8 @@
       panel.scrollIntoView({ block: 'center' });
       panel.classList.add('generation-add--highlight');
       setTimeout(() => panel.classList.remove('generation-add--highlight'), 1600);
-      const dateTextInput = document.getElementById('new_refresh_date_text');
-      if (dateTextInput) dateTextInput.focus({ preventScroll: true });
+      const firstEmpty = ['announced', 'preorder', 'release'].map((r) => document.getElementById(r + '_date_input')).find((el) => el && !el.hidden && !el.value);
+      if (firstEmpty) firstEmpty.focus({ preventScroll: true });
     }
   }
 
@@ -4200,16 +4181,10 @@
         document.getElementById('name-error').textContent = 'Give this product line a name.';
         firstError = firstError || document.getElementById('step-line');
       }
-      // A date still sitting in the "Add a date" box only blocks saving if
-      // it's new: not the one carried over from the last add, and not
-      // already recorded as a release, announcement or pre-order.
-      const pendingGenerationDate = getDatePrecisionValue('new_refresh_date');
-      const alreadyRecorded = (d) => currentRefreshHistory.indexOf(d) !== -1 || d === currentDiscontinuedDate ||
-        Object.values(currentGenerationDetails).some((info) => info && (info.announced === d || info.preorder === d)) ||
-        d === pendingAnnouncedDate || d === pendingPreorderDate;
-      if (pendingGenerationDate && pendingGenerationDate !== carriedDate && !alreadyRecorded(pendingGenerationDate)) {
-        document.getElementById('generation-add-error').textContent = 'You picked a date but haven\u2019t added it yet. Tap "+ Add", or clear the date.';
-        firstError = firstError || document.getElementById('step-generations');
+      // Announced or pre-order dates waiting for a release would be lost.
+      if (pendingAnnouncedDate || pendingPreorderDate) {
+        document.getElementById('generation-add-error').textContent = 'Pick the release date for these dates (a month or year is fine if that\u2019s all Apple has said), or clear them.';
+        firstError = firstError || document.getElementById('generation-add-panel');
       }
       // Never drop a video link without saying so.
       if (currentVideoUrl && !window.FactsKit.videoInfo(currentVideoUrl)) {
