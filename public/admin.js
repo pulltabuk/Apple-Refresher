@@ -3121,8 +3121,8 @@
       ? 'Next release'
       : releases.length ? 'Add a release' : 'First release';
     document.getElementById('dates-box-hint').textContent = target
-      ? 'These are the upcoming release’s dates; changing one here changes it in the list above too. An empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it.'
-      : 'Fill in what you know, top to bottom. Each empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it. The release joins the list above once its date is picked.';
+      ? 'These are the upcoming release’s dates; changing one here changes it in the list above too. An empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release.'
+      : 'Fill in what you know, top to bottom. Each empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release. The release joins the list above once its date is picked.';
 
     paintDateRow('announced', rowValue('announced', target), target);
     paintDateRow('preorder', rowValue('preorder', target), target);
@@ -3284,6 +3284,101 @@
       pendingLaunch = e.target.checked;
     }
   });
+
+  // Pasting a date into any date box in the product form, written any
+  // usual way ("19 September 2025", "Sept 19, 2025", "19/09/2025",
+  // "2025-09-19") or inside a sentence from a press release. With no year
+  // ("Friday, September 19") it takes the one nearest today. A sentence
+  // with several dates gives each row its own: the date after "pre-order"
+  // for Pre-orders, after "availability" for the release, and so on.
+  const PASTE_MONTH = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+  function pasteYear(m, d) {
+    const now = Date.now();
+    const y0 = new Date().getUTCFullYear();
+    let best = null;
+    [y0 - 1, y0, y0 + 1].forEach((y) => {
+      const iso = isoFromParts(y, m, d);
+      if (!iso) return;
+      const gap = Math.abs(Date.parse(iso + 'T12:00:00Z') - now);
+      if (!best || gap < best.gap) best = { iso, gap };
+    });
+    return best ? best.iso : null;
+  }
+  function datesInText(text) {
+    const found = [];
+    const add = (index, length, iso) => {
+      if (!iso) return;
+      if (found.some((f) => index < f.index + f.length && f.index < index + length)) return;
+      found.push({ index, length, iso });
+    };
+    const year2 = (y) => (y.length === 2 ? 2000 + +y : +y);
+    let m;
+    const iso = /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g;
+    while ((m = iso.exec(text))) add(m.index, m[0].length, isoFromParts(+m[1], +m[2], +m[3]));
+    const num = /\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4}|\d{2})\b/g;
+    while ((m = num.exec(text))) {
+      const y = year2(m[3]);
+      add(m.index, m[0].length, isoFromParts(y, +m[2], +m[1]) || isoFromParts(y, +m[1], +m[2]));
+    }
+    const dayFirst = new RegExp('\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?' + PASTE_MONTH + '\\b\\.?,?(?:\\s+(\\d{4}))?', 'gi');
+    while ((m = dayFirst.exec(text))) {
+      const mon = typedMonthIndex(m[2]) + 1;
+      add(m.index, m[0].length, m[3] ? isoFromParts(+m[3], mon, +m[1]) : pasteYear(mon, +m[1]));
+    }
+    const monthFirst = new RegExp('\\b' + PASTE_MONTH + '\\b\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(\\d{4})\\b)?', 'gi');
+    while ((m = monthFirst.exec(text))) {
+      const mon = typedMonthIndex(m[1]) + 1;
+      add(m.index, m[0].length, m[3] ? isoFromParts(+m[3], mon, +m[2]) : pasteYear(mon, +m[2]));
+    }
+    return found.sort((a, b) => a.index - b.index);
+  }
+  // A month on its own ("March 2027", "2027-03") for the month box.
+  function monthInText(text) {
+    const m = new RegExp('\\b' + PASTE_MONTH + '\\b\\.?,?\\s+(\\d{4})\\b', 'i').exec(text) || null;
+    if (m) return m[2] + '-' + String(typedMonthIndex(m[1]) + 1).padStart(2, '0');
+    const n = /\b(\d{4})-(\d{1,2})\b/.exec(text);
+    return n && +n[2] >= 1 && +n[2] <= 12 ? n[1] + '-' + String(+n[2]).padStart(2, '0') : null;
+  }
+  const PASTE_WORDS = {
+    announced: /announc|unveil|introduc|today/i,
+    preorder: /pre-?order|order/i,
+    release: /availab|in stores|release|arriv|on sale|ship|launch/i,
+    discontinued: /discontinu|retir|no longer/i,
+  };
+  function pastedDate(text, row) {
+    const dates = datesInText(text);
+    if (!dates.length) return null;
+    const words = PASTE_WORDS[row];
+    if (words && dates.length > 1) {
+      let prevEnd = 0;
+      for (const d of dates) {
+        const before = text.slice(Math.max(prevEnd, d.index - 80), d.index);
+        if (words.test(before)) return d.iso;
+        prevEnd = d.index + d.length;
+      }
+    }
+    return dates[0].iso;
+  }
+  productForm.addEventListener('paste', (e) => {
+    const input = e.target;
+    if (!input || input.tagName !== 'INPUT' || (input.type !== 'date' && input.type !== 'month')) return;
+    const text = ((e.clipboardData || window.clipboardData) && (e.clipboardData || window.clipboardData).getData('text')) || '';
+    if (!text.trim()) return;
+    e.preventDefault();
+    const row = (input.id.match(/^(announced|preorder|release|discontinued)_date_input$/) || [])[1];
+    let value = null;
+    if (input.type === 'month') value = monthInText(text) || ((pastedDate(text, 'release') || '').slice(0, 7) || null);
+    else value = pastedDate(text, row);
+    if (!value) {
+      adminToast('No date found in what you pasted. Try 19 September 2025 or 19/09/2025.', false);
+      return;
+    }
+    input.value = value;
+    input.classList.remove('is-suggested');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
 
   // A fresh box for a product just opened.
   function resetGenerationPanel() {
