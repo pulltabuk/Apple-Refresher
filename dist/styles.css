@@ -3778,3 +3778,10 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
 @media (min-width: 701px) {
   .intro-hero-cards .card--featured :is(.card-name-row, .card-featured-count:not(.card-featured-count--upcoming)) { zoom: var(--feature-fit, 1); }
 }
+
+/* Phones: a product still to come shows its countdown first, then its
+   video (side by side on laptops, as before). */
+@media (max-width: 760px) {
+  .product-top--video:has(.days-hero--upcoming) .product-header { order: -3; }
+  .product-top--video .product-facts .days-hero--upcoming { order: -2; margin: 0 0 14px; }
+}
