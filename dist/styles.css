@@ -1006,14 +1006,22 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .page-jump-select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: pointer; }
 .page-jump:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 640px) {
-  .pagination { justify-content: space-between; margin-top: 1.5rem; }
+  /* Three equal pills across the row. */
+  .pagination { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 1.5rem; }
   .page-numbers { display: none; }
   .page-jump { display: inline-flex; }
-  .page-btn--arrow { height: 44px; padding: 0 16px; font-size: 15px; font-weight: 700; }
+  .page-btn--arrow, .page-jump { box-sizing: border-box; width: 100%; min-width: 0; height: 46px; padding: 0 8px; border: 1px solid var(--accent); font-size: 15px; font-weight: 700; justify-content: center; }
+  .page-jump { border-color: var(--accent-bg); gap: 5px; }
 }
-@media (max-width: 370px) {
+@media (max-width: 400px) {
+  .page-btn--arrow, .page-jump { font-size: 14px; padding: 0 6px; }
+  .page-jump::after { width: 6px; height: 6px; }
+}
+@media (max-width: 350px) {
   .page-btn-word { display: none; }
-  .page-btn--arrow { width: 44px; padding: 0; }
+  .page-btn--arrow { font-size: 17px; }
+  .page-jump { font-size: 13.5px; padding: 0 4px; }
+  .page-jump::after { display: none; }
 }
 
 .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 1.25rem; align-items: center; }
