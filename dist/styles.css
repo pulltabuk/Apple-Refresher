@@ -1363,7 +1363,8 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .days-hero--fresh { background: var(--fresh-bg); color: var(--fresh-text); }
 .days-hero--aging { background: var(--aging-bg); color: var(--aging-text); }
 .days-hero--overdue { background: var(--overdue-bg); color: var(--overdue-text); }
-.days-hero--discontinued { background: var(--discontinued-bg); color: var(--discontinued-text); font-size: 15px; font-weight: 600; padding: 8px 18px; border-radius: 999px; }
+.days-hero--discontinued { background: var(--discontinued-bg); color: var(--discontinued-text); }
+.days-hero--discontinued .days-hero-caption { color: inherit; opacity: 0.85; }
 .spec-row dd .wait-count-value { font-weight: 700; }
 
 .admin-hint { font-size: 13px; color: var(--text-secondary); margin: 4px 0 0; line-height: 1.5; }
@@ -3182,6 +3183,11 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   .product-top--video .days-hero--upcoming .days-hero-soon { font-size: 28px; }
   .product-top--video .days-hero--upcoming .days-hero-clock .countdown-unit { padding: 9px 4px; }
   .product-top--video .days-hero--upcoming .days-hero-clock .countdown-value { font-size: 32px; }
+}
+/* A discontinued product beside its video: the date large, like the others. */
+@media (min-width: 761px) {
+  .product-top--video .days-hero--discontinued .days-hero-soon { font-size: 34px; line-height: 1.1; }
+  .product-top--video .days-hero--discontinued .days-hero-caption { font-size: 14px; margin-top: 4px; }
 }
 
 /* The hero countdown once its moment has come (app.js adds

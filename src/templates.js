@@ -2856,9 +2856,17 @@ function heroCycle(product, status, sortedDates, allProducts) {
 }
 
 function heroStatHtml(product, statusInfo, cycleDays) {
+  // Discontinued: a tile like the others (never a stretched pill): the
+  // date, and how long it was on sale. Keep in step with heroStatHtmlJS().
   if (product.discontinued) {
-    const date = product.discontinued_date ? ` ${formatDate(product.discontinued_date)}` : '';
-    return `<p class="days-hero days-hero--discontinued">Discontinued${date}</p>`;
+    const end = product.discontinued_date || null;
+    const releases = (product.refresh_history || []).filter((d) => !end || d <= end).sort();
+    const first = releases[0] || null;
+    const span = first && end && datePrecision(first) === 'day' && datePrecision(end) === 'day' ? lifespanText(first, end) : null;
+    const caption = span
+      ? `On sale for ${span}${releases.length > 1 ? ` across ${releases.length} releases` : ''}, from ${formatDate(first)}.`
+      : first ? `First released ${formatDate(first)}.` : '';
+    return `<p class="days-hero days-hero--discontinued"><span class="days-hero-label">Discontinued</span>${end ? ` <span class="days-hero-soon">${formatDate(end)}</span>` : ''}${caption ? `<span class="days-hero-caption">${caption}</span>` : ''}</p>`;
   }
   if (!statusInfo) return '';
   const info = badgeDaysInfo(product, statusInfo);

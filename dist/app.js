@@ -1065,8 +1065,18 @@
 
   function heroStatHtmlJS(product, statusInfo, cycleDays) {
     if (product.discontinued) {
-      var date = product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '';
-      return '<p class="days-hero days-hero--discontinued">Discontinued' + date + '</p>';
+      // Must match heroStatHtml() in src/templates.js.
+      var end = product.discontinued_date || null;
+      var releases = (product.refresh_history || []).filter(function (d) { return !end || d <= end; }).sort();
+      var first = releases[0] || null;
+      var isDay = function (d) { return /^\d{4}-\d{2}-\d{2}$/.test(d || ''); };
+      var span = first && end && isDay(first) && isDay(end) ? lifespanTextJS(first, end) : null;
+      var caption = span
+        ? 'On sale for ' + span + (releases.length > 1 ? ' across ' + releases.length + ' releases' : '') + ', from ' + formatDateJS(first) + '.'
+        : first ? 'First released ' + formatDateJS(first) + '.' : '';
+      return '<p class="days-hero days-hero--discontinued"><span class="days-hero-label">Discontinued</span>' +
+        (end ? ' <span class="days-hero-soon">' + formatDateJS(end) + '</span>' : '') +
+        (caption ? '<span class="days-hero-caption">' + caption + '</span>' : '') + '</p>';
     }
     if (!statusInfo) return '';
     var info = badgeDaysInfoJS(product, statusInfo);
