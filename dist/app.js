@@ -3502,6 +3502,118 @@
     document.addEventListener('toggle', fit, true);
   })();
 
+  // The big hero tile beside a taller countdown fills its height instead
+  // of stretching or leaving gaps, however long the countdown gets:
+  //  - an Apple Event: the artwork stops at a square (styles.css), the
+  //    title and clock grow (--event-fit, --event-clock), and any room
+  //    still spare is shared out under the artwork (--event-extra);
+  //  - a featured product: its name and big number grow (--feature-fit).
+  // Never making the hero taller or anything wider than its tile. Re-fitted
+  // on resize, font load, "+ more" and when the live refresh redraws it.
+  (function fitHeroTiles() {
+    var cards = document.getElementById('hero-cards');
+    var row = cards && cards.closest ? cards.closest('.intro-hero-layout') : null;
+    if (!cards || !row) return;
+    var tile = null;
+
+    // The room above the button (its margin-top: auto takes what's spare).
+    function spare() {
+      var cta = tile.querySelector('.event-hero-cta');
+      var prev = cta && cta.previousElementSibling;
+      if (!cta || !prev) return 0;
+      return cta.getBoundingClientRect().top - prev.getBoundingClientRect().bottom - 12;
+    }
+    // Every clock number inside its box.
+    function clockFits() {
+      var units = tile.querySelectorAll('.event-hero-countdown .countdown-unit');
+      for (var i = 0; i < units.length; i++) {
+        var v = units[i].querySelector('.countdown-value');
+        if (v && v.getBoundingClientRect().width > units[i].clientWidth - 8) return false;
+      }
+      return true;
+    }
+    function fitEvent() {
+      ['--event-fit', '--event-clock', '--event-extra'].forEach(function (v) { tile.style.removeProperty(v); });
+      if (!tile.offsetParent || window.innerWidth < 701) return;
+      var base = row.offsetHeight;
+      var title = tile.querySelector('.event-hero-title');
+      // How far the clock can grow before a number outgrows its box.
+      var clockMax = 1;
+      if (tile.querySelector('.event-hero-countdown')) {
+        var lo = 1, hi = 1.8;
+        for (var i = 0; i < 7; i++) {
+          var mid = (lo + hi) / 2;
+          tile.style.setProperty('--event-clock', String(mid));
+          if (clockFits()) lo = mid; else hi = mid;
+        }
+        clockMax = lo;
+        tile.style.removeProperty('--event-clock');
+      }
+      var ok = function (scale) {
+        tile.style.setProperty('--event-fit', String(scale));
+        tile.style.setProperty('--event-clock', String(Math.min(scale, clockMax)));
+        if (row.offsetHeight > base + 1) return false;
+        if (title && title.scrollWidth > title.clientWidth + 1) return false;
+        return spare() >= 2;
+      };
+      if (ok(1.05)) {
+        var a = 1.05, z = 1.8;
+        for (var j = 0; j < 8; j++) {
+          var m = (a + z) / 2;
+          if (ok(m)) a = m; else z = m;
+        }
+        ok(a);
+      } else {
+        tile.style.removeProperty('--event-fit');
+        tile.style.removeProperty('--event-clock');
+      }
+      // Whatever room is still spare is shared out between the parts under
+      // the artwork (the label stays with it), not left as one gap above
+      // the button. The button's own auto margin takes one share.
+      var spaced = tile.querySelectorAll(':scope > .event-hero-art + .event-hero-head, :scope > .event-hero-head ~ :not(.event-hero-cta)').length;
+      var left = spare();
+      if (left > 4) tile.style.setProperty('--event-extra', (left / (spaced + 1)).toFixed(1) + 'px');
+    }
+    function fitFeatured(card) {
+      card.style.removeProperty('--feature-fit');
+      var link = card.querySelector('.card-link');
+      if (!link || !card.offsetParent || window.innerWidth < 701) return;
+      var base = row.offsetHeight;
+      // The room the tile's auto margins are taking up.
+      var spare = function () {
+        return Array.prototype.reduce.call(link.children, function (sum, el) { return sum + (parseFloat(getComputedStyle(el).marginTop) || 0); }, 0);
+      };
+      var wide = function () {
+        return Array.prototype.some.call(link.children, function (el) { return el.scrollWidth > el.clientWidth + 1 || el.getBoundingClientRect().width > link.clientWidth + 1; });
+      };
+      var ok = function (scale) {
+        card.style.setProperty('--feature-fit', String(scale));
+        return row.offsetHeight <= base + 1 && !wide() && spare() >= 48;
+      };
+      if (!ok(1.05)) { card.style.removeProperty('--feature-fit'); return; }
+      var a = 1.05, z = 1.9;
+      for (var j = 0; j < 8; j++) {
+        var m = (a + z) / 2;
+        if (ok(m)) a = m; else z = m;
+      }
+      card.style.setProperty('--feature-fit', a.toFixed(3));
+    }
+    function fit() {
+      tile = cards.querySelector('.event-hero');
+      if (tile) fitEvent();
+      Array.prototype.forEach.call(cards.querySelectorAll('.card--featured'), fitFeatured);
+    }
+    // After the earnings tile has settled (it never changes the row height).
+    setTimeout(fit, 0);
+    var timer = null;
+    var later = function () { clearTimeout(timer); timer = setTimeout(fit, 160); };
+    window.addEventListener('resize', later);
+    window.addEventListener('load', fit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    document.addEventListener('toggle', function () { setTimeout(fit, 0); }, true);
+    if (window.MutationObserver) new MutationObserver(later).observe(cards, { childList: true });
+  })();
+
   (function productCountdown() {
     function unit(value, label, extraClass) {
       return '<span class="countdown-unit' + (extraClass ? ' ' + extraClass : '') + '"><span class="countdown-value">' + value +
