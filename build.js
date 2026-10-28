@@ -366,7 +366,7 @@ async function main() {
       const preorderTime = r.product.preorder_time || '1pm UK';
       const preorderAt = preorder && /^\d{4}-\d{2}-\d{2}$/.test(preorder) ? FactsKit.eventStartMs({ event_date: preorder, event_time: preorderTime }) : NaN;
       if (preorderAt > Date.now()) {
-        countdowns.push({ label: r.product.name, date: preorder, time: preorderTime, href: `/products/${r.product.slug}/`, datePrefix: 'Pre-orders', kicker: 'Counting down to pre-orders', kind: 'preorder', product: r.product });
+        countdowns.push({ label: r.product.name, date: preorder, time: preorderTime, href: `/products/${r.product.slug}/`, datePrefix: 'Pre-orders', kicker: 'Counting down to pre-orders', kind: 'preorder', product: r.product, releaseDate: r.date, releaseTime: r.product.release_time || null });
       } else {
         countdowns.push({ label: r.product.name, date: r.date, time: r.product.release_time || null, href: `/products/${r.product.slug}/`, datePrefix: 'Coming', product: r.product });
       }
