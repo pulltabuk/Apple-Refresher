@@ -3405,10 +3405,10 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
   :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-icon svg { width: 26px; height: 26px; }
   :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) :is(.earnings-next-text, .earnings-next-extra) { grid-column: 1 / -1; }
   :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-text { margin-top: 14px; }
-  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-extra { margin-top: 4px; }
-  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-title { display: block; font-size: 24px; line-height: 1.2; margin-bottom: 4px; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-extra { margin-top: 4px; font-size: calc(14px * (1 + (var(--earn-fit, 1) - 1) * 0.4)); }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-title { display: block; font-size: calc(24px * var(--earn-fit, 1)); line-height: 1.12; margin-bottom: calc(4px * var(--earn-fit, 1)); }
   :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-sep { display: none; }
-  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-when { display: block; font-size: 16px; }
+  :is(.intro-hero-text--calm > .earnings-next--clock, .intro-hero-words > .earnings-next--clock.is-roomy) .earnings-next-when { display: block; font-size: calc(16px * (1 + (var(--earn-fit, 1) - 1) * 0.6)); }
 }
 
 /* Events page tiles: the event's name, big and bold in the events'
