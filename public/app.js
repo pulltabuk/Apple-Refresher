@@ -339,7 +339,7 @@
           (function () {
             // Must stay in step with src/templates.js.
             var tags = '<span class="tl-entry-type tl-entry-type--' + e.type + '">' +
-              (e.type === 'refresh' ? 'Released' : e.label) + '</span>' +
+              (e.type === 'refresh' ? (String(date) > new Date().toISOString().slice(0, 10) ? 'Release' : 'Released') : e.label) + '</span>' +
               (e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '') +
               (e.endOfLine ? '<span class="tl-entry-type tl-entry-type--end">End of the line</span>' : '');
             return tags ? '<span class="tl-entry-tags">' + tags + '</span>' : '';
@@ -1194,12 +1194,15 @@
       (function () {
         var releases = releaseDatesJS(product);
         var newest = releases[releases.length - 1] || latest;
-        return keyFactJS(releases.length > 1 ? 'Latest release' : 'Released', newest ? formatDateJS(newest) : (launch ? formatDateJS(launch) : null));
+        // Must match src/templates.js: a date still ahead isn't "Released" yet.
+        var ahead = newest && newest > new Date().toISOString().slice(0, 10);
+        var label = ahead ? (releases.length > 1 ? 'Next release' : 'Release date') : (releases.length > 1 ? 'Latest release' : 'Released');
+        return keyFactJS(label, newest ? formatDateJS(newest) : (launch ? formatDateJS(launch) : null));
       })(),
       (function () {
         var info = latest ? (generationDetailsJS(product)[latest] || {}) : {};
         return (info.announced ? keyFactJS('Announced', formatDateJS(info.announced)) : '') +
-               (info.preorder ? keyFactJS('Pre-orders opened', formatDateJS(info.preorder)) : '');
+               (info.preorder ? keyFactJS(info.preorder > new Date().toISOString().slice(0, 10) ? 'Pre-orders open' : 'Pre-orders opened', formatDateJS(info.preorder)) : '');
       })(),
       keyFactJS('Launch price from', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null),
       keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null),

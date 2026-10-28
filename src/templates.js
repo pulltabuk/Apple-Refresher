@@ -558,7 +558,8 @@ function verticalTimelineHtml(product, allProducts) {
       const tags = [
         // Every entry carries a label, so the column reads consistently.
         // "Released" rather than "Refresh": it says what happened that day.
-        `<span class="tl-entry-type tl-entry-type--${e.type}">${e.type === 'refresh' ? 'Released' : e.label}</span>`,
+        // A date still ahead is a "Release", not yet "Released".
+        `<span class="tl-entry-type tl-entry-type--${e.type}">${e.type === 'refresh' ? (String(date) > new Date().toISOString().slice(0, 10) ? 'Release' : 'Released') : e.label}</span>`,
         e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '',
         e.endOfLine ? '<span class="tl-entry-type tl-entry-type--end">End of the line</span>' : '',
       ].filter(Boolean).join('');
@@ -3026,7 +3027,10 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     (() => {
       const releases = releaseDates(product);
       const newest = releases[releases.length - 1] || latest;
-      return keyFact(releases.length > 1 ? 'Latest release' : 'Released', newest ? formatDate(newest) : (launch ? formatDate(launch) : null));
+      // A date still ahead isn't "Released" yet.
+      const ahead = newest && newest > new Date().toISOString().slice(0, 10);
+      const label = ahead ? (releases.length > 1 ? 'Next release' : 'Release date') : (releases.length > 1 ? 'Latest release' : 'Released');
+      return keyFact(label, newest ? formatDate(newest) : (launch ? formatDate(launch) : null));
     })(),
     // Announcement and pre-order dates are already recorded against the
     // newest release, so show them rather than leave the grid half empty.
@@ -3034,7 +3038,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
       const info = latest ? (generationDetails(product)[latest] || {}) : {};
       return [
         info.announced ? keyFact('Announced', formatDate(info.announced)) : '',
-        info.preorder ? keyFact('Pre-orders opened', formatDate(info.preorder)) : '',
+        info.preorder ? keyFact(info.preorder > new Date().toISOString().slice(0, 10) ? 'Pre-orders open' : 'Pre-orders opened', formatDate(info.preorder)) : '',
       ].join('');
     })(),
     keyFact('Launch price from', product.price ? escapeHtml(formatPrice(product.price)) : null),
