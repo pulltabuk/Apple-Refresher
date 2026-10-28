@@ -1544,9 +1544,15 @@
   // Same family first, then every other product, as one product can
   // be replaced by another from a different line (iPhone 8 by the iPhone
   // SE 2nd generation, say).
+  // The product's own family only. "Show other families…" at the end of
+  // the list opens it up for the odd cross-family replacement (iPhone 8 by
+  // the iPhone SE 2nd generation, say). A saved choice from another
+  // family is always kept in the list, named with its family.
   function fillProductSelect(selectEl, keepValue) {
     const currentCategory = (document.getElementById('category').value || '').trim().toLowerCase();
-    const value = keepValue !== undefined ? keepValue : selectEl.value;
+    if (keepValue !== undefined) delete selectEl.dataset.allFamilies;
+    const value = keepValue !== undefined ? keepValue : selectEl.value === '__all__' ? (selectEl.dataset.prev || '') : selectEl.value;
+    const showAll = selectEl.dataset.allFamilies === '1';
     selectEl.innerHTML = '';
     const none = document.createElement('option');
     none.value = '';
@@ -1555,28 +1561,55 @@
     const others = cachedProducts.filter((p) => p.id !== editingId).sort((a, b) => a.name.localeCompare(b.name));
     const same = others.filter((p) => (p.category || '').trim().toLowerCase() === currentCategory);
     const rest = others.filter((p) => (p.category || '').trim().toLowerCase() !== currentCategory);
+    const optionFor = (p, withCategory) => {
+      const opt = document.createElement('option');
+      opt.value = p.slug;
+      opt.textContent = p.name + (withCategory && p.category ? ' (' + p.category + ')' : '') + (p.discontinued ? ' (discontinued)' : '');
+      return opt;
+    };
     const addGroup = (label, list, withCategory) => {
       if (!list.length) return;
       const group = document.createElement('optgroup');
       group.label = label;
-      list.forEach((p) => {
-        const opt = document.createElement('option');
-        opt.value = p.slug;
-        opt.textContent = p.name + (withCategory && p.category ? ' (' + p.category + ')' : '') + (p.discontinued ? ' (discontinued)' : '');
-        group.appendChild(opt);
-      });
+      list.forEach((p) => group.appendChild(optionFor(p, withCategory)));
       selectEl.appendChild(group);
     };
-    addGroup(currentCategory ? 'Same family' : 'Products', same, false);
-    addGroup(same.length ? 'All other products' : 'All products', rest, true);
+    if (showAll) {
+      addGroup(currentCategory ? 'Same family' : 'Products', same, false);
+      addGroup(same.length ? 'Other families' : 'All products', rest, true);
+    } else {
+      same.forEach((p) => selectEl.appendChild(optionFor(p, false)));
+      const saved = value && rest.find((p) => p.slug === value);
+      if (saved) selectEl.appendChild(optionFor(saved, true));
+    }
     if (value && !others.some((p) => p.slug === value)) {
       const opt = document.createElement('option');
       opt.value = value;
       opt.textContent = value;
       selectEl.appendChild(opt);
     }
+    if (!showAll && rest.length) {
+      const more = document.createElement('option');
+      more.value = '__all__';
+      more.textContent = 'Show other families\u2026';
+      selectEl.appendChild(more);
+    }
     selectEl.value = value || '';
+    selectEl.dataset.prev = selectEl.value;
   }
+  // Picking "Show other families…" refills that list with every product,
+  // keeping the choice it had; nothing else sees the pick.
+  productForm.addEventListener('change', (e) => {
+    const el = e.target;
+    if (!el || (el.id !== 'replaced_by' && el.id !== 'previous_model')) return;
+    if (el.value === '__all__') {
+      e.stopPropagation();
+      el.dataset.allFamilies = '1';
+      fillProductSelect(el);
+      return;
+    }
+    el.dataset.prev = el.value;
+  }, true);
 
   function updateProductOptionsByCategory() {
     fillProductSelect(document.getElementById('replaced_by'));
@@ -3051,8 +3084,13 @@
   let releasePrecisionFor = undefined;
   const CHAIN = ['announced', 'preorder', 'release'];
 
+  // The release the box shows: the upcoming one, else the newest one
+  // recorded, so the rows always match the dates in the list above.
+  function primaryRelease() {
+    return upcomingReleaseDate() || currentRefreshHistory.slice().sort().pop() || null;
+  }
   function datesTarget() {
-    return datesMode === 'next' ? upcomingReleaseDate() : null;
+    return datesMode === 'next' ? primaryRelease() : null;
   }
   function rowValue(row, target) {
     if (row === 'discontinued') return currentDiscontinuedDate;
@@ -3067,7 +3105,9 @@
     if (!lastPicked || !isFullDate(lastPicked.date)) return null;
     const at = CHAIN.indexOf(row);
     if (at === -1) return null;
-    return lastPicked.row === null || CHAIN.indexOf(lastPicked.row) < at ? lastPicked.date : null;
+    if (lastPicked.row === 'restart') return lastPicked.date;
+    const from = CHAIN.indexOf(lastPicked.row);
+    return from !== -1 && from < at ? lastPicked.date : null;
   }
   const precisionOf = (d) => (/^\d{4}$/.test(d || '') ? 'year' : /^\d{4}-\d{2}$/.test(d || '') ? 'month' : 'day');
 
@@ -3106,22 +3146,23 @@
     if (!box) return;
     const today = new Date().toISOString().slice(0, 10);
     const upcoming = upcomingReleaseDate();
-    if (!upcoming) datesMode = 'next';
+    const primary = primaryRelease();
+    if (!primary) datesMode = 'next';
     const target = datesTarget();
     const releases = currentRefreshHistory.slice().sort();
 
-    // Which release: the upcoming one, or a new one.
+    // Which release: the upcoming (or latest) one, or a new one.
     const modeEl = document.getElementById('dates-mode');
-    modeEl.hidden = !upcoming;
-    if (upcoming) {
-      document.getElementById('dates-mode-next').textContent = 'The ' + formatAdminDate(upcoming) + ' release';
+    modeEl.hidden = !primary;
+    if (primary) {
+      document.getElementById('dates-mode-next').textContent = 'The ' + formatAdminDate(primary) + ' release';
       document.querySelector('input[name="dates_mode"][value="' + datesMode + '"]').checked = true;
     }
     document.getElementById('dates-box-title').textContent = target
-      ? 'Next release'
+      ? (target === upcoming ? 'Next release' : 'Latest release')
       : releases.length ? 'Add a release' : 'First release';
     document.getElementById('dates-box-hint').textContent = target
-      ? 'These are the upcoming release’s dates; changing one here changes it in the list above too. An empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release.'
+      ? 'These are the ' + (target === upcoming ? 'upcoming' : 'latest') + ' release’s dates, as in the list above; changing one here changes it there too. “Add another release” is for a new one. An empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release.'
       : 'Fill in what you know, top to bottom. Each empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release. The release joins the list above once its date is picked.';
 
     paintDateRow('announced', rowValue('announced', target), target);
@@ -3185,6 +3226,20 @@
 
   // Keeping a date (picked, typed or "Same day") in one of the rows.
   function commitDate(row, value) {
+    // The box shows a past release, but this date comes after it (and isn't
+    // a small fix to its release day): it belongs to a new release, so one
+    // is started and the recorded release is left as it is.
+    const shown = datesTarget();
+    const todayIso = new Date().toISOString().slice(0, 10);
+    if (shown && shown <= todayIso && value && value > shown && CHAIN.indexOf(row) !== -1) {
+      const farOff = !isFullDate(value) || !isFullDate(shown) || (Date.parse(value) - Date.parse(shown)) / 86400000 > 90;
+      if (row !== 'release' || value > todayIso || farOff) {
+        datesMode = 'add';
+        lastPicked = null;
+        adminToast('Started a new release with ' + formatAdminDate(value) + '. The ' + formatAdminDate(shown) + ' release is unchanged.', true);
+        return commitDate(row, value);
+      }
+    }
     const target = datesTarget();
     const ann = rowValue('announced', target);
     const pre = rowValue('preorder', target);
@@ -3229,15 +3284,15 @@
       }
       // Showing the upcoming release when that's what this is; otherwise
       // the rows clear, ready for another, starting on this date.
-      datesMode = value === upcomingReleaseDate() ? 'next' : 'add';
+      datesMode = value === primaryRelease() ? 'next' : 'add';
       releasePrecisionFor = undefined;
       updateStatusReadout();
-      lastPicked = isFullDate(value) ? { row: datesMode === 'add' ? null : 'release', date: value } : null;
+      lastPicked = isFullDate(value) ? { row: datesMode === 'add' ? 'restart' : 'release', date: value } : null;
       productFormDirty = true;
       renderRefreshHistory();
       return;
     }
-    if (isFullDate(value)) lastPicked = { row, date: value };
+    if (isFullDate(value) && CHAIN.indexOf(row) !== -1) lastPicked = { row, date: value };
     productFormDirty = true;
     renderRefreshHistory();
   }
