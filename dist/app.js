@@ -817,6 +817,12 @@
     return '<span class="badge badge--' + statusInfo.status + '" title="' + escapeHtmlJS(badgeExplanationJS(statusInfo)) + '">' + pluralJS(info.days, 'day', 'days') + ' ' + info.suffix + '</span>';
   }
 
+  // Must match productGroup() in src/templates.js.
+  function productGroupJS(product, statusInfo) {
+    if (product.discontinued) return 'discontinued';
+    return statusInfo && badgeDaysInfoJS(product, statusInfo).days < 0 ? 'coming' : 'current';
+  }
+
   function cardHtmlJS(product, statusInfo) {
     var status = statusKeyJS(product);
     var launch = launchDateJS(product);
@@ -826,7 +832,7 @@
     var lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetweenJS(launch, product.discontinued_date) : '';
     var decade = product.discontinued && product.discontinued_date ? Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10 + 's' : '';
     return (
-      '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-days="' + days + '" data-wait="' + (days !== '' ? statusInfo.ratio.toFixed(3) : '') + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
+      '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-group="' + productGroupJS(product, statusInfo) + '" data-days="' + days + '" data-wait="' + (days !== '' ? statusInfo.ratio.toFixed(3) : '') + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         productRowInnerJS(product, statusInfo) +
       '</article>'
     );
@@ -1515,28 +1521,44 @@
     applyFilters(true);
   });
 
-  function updateStatusDivider() {
+  // All products: the groups (coming soon, on sale, discontinued) are
+  // labelled wherever they show, so every page says what it holds: a
+  // heading at the top of each page and where the next group starts.
+  // Only while the list is in groups (the default order, or any order
+  // that keeps each group together) and holds more than one of them.
+  var GROUP_LABELS = { coming: 'Coming soon', current: 'On sale now', discontinued: 'Discontinued' };
+  function groupOfCard(c) {
+    return c.getAttribute('data-group') || (c.getAttribute('data-status') === 'discontinued' ? 'discontinued' : 'current');
+  }
+  function groupsInOrder(cards) {
+    var seen = [];
+    for (var i = 0; i < cards.length; i++) {
+      var g = groupOfCard(cards[i]);
+      if (!seen.length || seen[seen.length - 1] !== g) {
+        if (seen.indexOf(g) !== -1) return null; // a group split up: not grouped
+        seen.push(g);
+      }
+    }
+    return seen;
+  }
+  function updateStatusDivider(matching) {
     var grid = document.getElementById('grid');
     if (!grid || grid.getAttribute('data-mode') !== 'all') return;
     grid.querySelectorAll('.products-status-divider').forEach(function (d) { d.remove(); });
-
-    var visibleCards = Array.prototype.slice.call(grid.querySelectorAll('.card')).filter(function (c) { return c.style.display !== 'none'; });
-    var firstDiscontinuedIndex = visibleCards.findIndex(function (c) { return c.getAttribute('data-status') === 'discontinued'; });
-    if (firstDiscontinuedIndex <= 0) return;
-    var isGrouped = visibleCards.slice(0, firstDiscontinuedIndex).every(function (c) { return c.getAttribute('data-status') === 'current'; })
-      && visibleCards.slice(firstDiscontinuedIndex).every(function (c) { return c.getAttribute('data-status') === 'discontinued'; });
-    if (!isGrouped) return;
-
-    var makeDivider = function (label, kind) {
+    var all = matching || Array.prototype.slice.call(grid.querySelectorAll('.card'));
+    var groups = groupsInOrder(all);
+    if (!groups || groups.length < 2) return;
+    var shown = all.filter(function (c) { return c.style.display !== 'none'; });
+    var counts = {};
+    all.forEach(function (c) { var g = groupOfCard(c); counts[g] = (counts[g] || 0) + 1; });
+    shown.forEach(function (c, i) {
+      var g = groupOfCard(c);
+      if (i && groupOfCard(shown[i - 1]) === g) return;
       var d = document.createElement('div');
-      d.className = 'products-status-divider products-status-divider--' + kind;
-      d.innerHTML = '<span class="products-status-divider-label">' + label + '</span>';
-      return d;
-    };
-    // Both groups are labelled, so "Discontinued" no longer looks like the
-    // only heading on the page.
-    grid.insertBefore(makeDivider('Current', 'current'), visibleCards[0]);
-    grid.insertBefore(makeDivider('Discontinued', 'discontinued'), visibleCards[firstDiscontinuedIndex]);
+      d.className = 'products-status-divider products-status-divider--' + g + (i ? '' : ' products-status-divider--first');
+      d.innerHTML = '<span class="products-status-divider-label">' + GROUP_LABELS[g] + '</span><span class="products-status-divider-count">' + counts[g] + '</span>';
+      grid.insertBefore(d, c);
+    });
   }
 
   // The number of tiles per row changes with the window, so pages are
@@ -1563,10 +1585,9 @@
     // a lone tile under the Discontinued heading.
     var cols = (getComputedStyle(grid).gridTemplateColumns || '').split(' ').filter(Boolean).length || 1;
     var capacity = Math.max(cols, Math.floor(PAGE_SIZE / cols) * cols);
-    var statusOf = function (c) { return c.getAttribute('data-status') === 'discontinued' ? 'discontinued' : 'current'; };
-    var switches = 0;
-    matching.forEach(function (c, i) { if (i && statusOf(c) !== statusOf(matching[i - 1])) switches++; });
-    var grouped = switches === 1;
+    var statusOf = groupOfCard;
+    var order = groupsInOrder(matching);
+    var grouped = !!(order && order.length > 1);
     var pageOf = [];
     var page = 1;
     var used = 0;
@@ -1587,15 +1608,18 @@
       card.style.display = pageOf[i] === currentPage ? '' : 'none';
     });
 
-    updateStatusDivider();
+    updateStatusDivider(matching);
 
     if (totalPages <= 1) {
       paginationEl.innerHTML = '';
       return;
     }
 
-    var html = '';
-    html += '<button type="button" class="page-btn page-btn--arrow" data-page="prev"' + (currentPage === 1 ? ' disabled' : '') + '>\u2190 Previous</button>';
+    // Previous and Next at either end; between them, page numbers (on
+    // laptops) or "Page 5 of 7", which opens a list of every page (on
+    // phones). One row either way.
+    var html = '<button type="button" class="page-btn page-btn--arrow page-btn--prev" data-page="prev"' + (currentPage === 1 ? ' disabled' : '') + ' aria-label="Previous page"><span aria-hidden="true">\u2190</span><span class="page-btn-word"> Previous</span></button>';
+    html += '<span class="page-numbers">';
     var start = Math.max(1, currentPage - 2);
     var end = Math.min(totalPages, start + 4);
     start = Math.max(1, end - 4);
@@ -1604,28 +1628,35 @@
       if (start > 2) html += '<span class="page-ellipsis">\u2026</span>';
     }
     for (var p = start; p <= end; p++) {
-      html += '<button type="button" class="page-btn' + (p === currentPage ? ' active' : '') + '" data-page="' + p + '">' + p + '</button>';
+      html += '<button type="button" class="page-btn' + (p === currentPage ? ' active' : '') + '" data-page="' + p + '"' + (p === currentPage ? ' aria-current="page"' : '') + '>' + p + '</button>';
     }
     if (end < totalPages) {
       if (end < totalPages - 1) html += '<span class="page-ellipsis">\u2026</span>';
       html += '<button type="button" class="page-btn" data-page="' + totalPages + '">' + totalPages + '</button>';
     }
-    html += '<button type="button" class="page-btn page-btn--arrow" data-page="next"' + (currentPage === totalPages ? ' disabled' : '') + '>Next \u2192</button>';
+    html += '</span>';
+    var options = '';
+    for (var q = 1; q <= totalPages; q++) options += '<option value="' + q + '"' + (q === currentPage ? ' selected' : '') + '>Page ' + q + ' of ' + totalPages + '</option>';
+    html += '<label class="page-jump"><span class="page-jump-text">Page ' + currentPage + ' of ' + totalPages + '</span><select class="page-jump-select" aria-label="Go to page">' + options + '</select></label>';
+    html += '<button type="button" class="page-btn page-btn--arrow page-btn--next" data-page="next"' + (currentPage === totalPages ? ' disabled' : '') + ' aria-label="Next page"><span class="page-btn-word">Next </span><span aria-hidden="true">\u2192</span></button>';
     paginationEl.innerHTML = html;
+    var goTo = function (n) {
+      currentPage = n;
+      // Up to the top of the list first, so that is where Back returns
+      // to on the page being left; then a history entry for this page.
+      var gridEl = document.getElementById('grid');
+      if (gridEl) window.scrollTo(0, Math.max(0, gridEl.getBoundingClientRect().top + window.scrollY - 100));
+      syncPageUrl(true);
+      applyPagination();
+    };
     paginationEl.querySelectorAll('.page-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var val = btn.getAttribute('data-page');
-        if (val === 'prev') currentPage--;
-        else if (val === 'next') currentPage++;
-        else currentPage = parseInt(val, 10);
-        // Up to the top of the list first, so that is where Back returns
-        // to on the page being left; then a history entry for this page.
-        var gridEl = document.getElementById('grid');
-        if (gridEl) window.scrollTo(0, Math.max(0, gridEl.getBoundingClientRect().top + window.scrollY - 100));
-        syncPageUrl(true);
-        applyPagination();
+        goTo(val === 'prev' ? currentPage - 1 : val === 'next' ? currentPage + 1 : parseInt(val, 10));
       });
     });
+    var jump = paginationEl.querySelector('.page-jump-select');
+    if (jump) jump.addEventListener('change', function () { goTo(parseInt(jump.value, 10)); });
   }
 
   // Whole league-table rows are clickable (not just the product name),
@@ -2657,10 +2688,20 @@
             return a.product.name.localeCompare(b.product.name);
           });
       } else {
+        // Must match productsPageItems in build.js: coming soon (soonest
+        // first), on sale (longest wait first), then discontinued.
+        var GROUP_RANK = { coming: 0, current: 1, discontinued: 2 };
+        var dueOf = function (p) { return (p.refresh_history || []).slice().sort().pop() || ''; };
         items = items.sort(function (a, b) {
-          var aDisc = !!a.product.discontinued;
-          var bDisc = !!b.product.discontinued;
-          if (aDisc !== bDisc) return aDisc ? 1 : -1;
+          var ga = productGroupJS(a.product, a.status);
+          var gb = productGroupJS(b.product, b.status);
+          if (ga !== gb) return GROUP_RANK[ga] - GROUP_RANK[gb];
+          var aDisc = ga === 'discontinued';
+          if (ga === 'coming') {
+            var da = dueOf(a.product), db = dueOf(b.product);
+            if (da !== db) return da < db ? -1 : 1;
+            return a.product.name.localeCompare(b.product.name);
+          }
           if (!aDisc) {
             var daysA = a.status ? a.status.daysSince : -Infinity;
             var daysB = b.status ? b.status.daysSince : -Infinity;

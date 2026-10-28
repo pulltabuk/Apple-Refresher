@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, comingSoonPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos, setLinkProducts, missingProductLinks, setEventTints } = require('./src/templates');
+const { productGroup, appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, comingSoonPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos, setLinkProducts, missingProductLinks, setEventTints } = require('./src/templates');
 const { eventColours } = require('./src/event-colours');
 const photoMirror = require('./src/photo-mirror');
 
@@ -414,15 +414,24 @@ async function main() {
     return a.product.name.localeCompare(b.product.name);
   });
 
-  // The /products/ page gets its own default order: current products
-  // with the longest wait for a refresh first, discontinued products
-  // pushed to the very end (most recently discontinued first within
-  // that group). Category pages keep allItems' own newest-launched
-  // order untouched.
+  // The /products/ page gets its own default order: coming soon first
+  // (soonest first), then products on sale with the longest wait for a
+  // refresh first, then discontinued products at the very end (most
+  // recently discontinued first). Category pages keep allItems' own
+  // newest-launched order untouched. Keep in step with app.js.
+  const GROUP_RANK = { coming: 0, current: 1, discontinued: 2 };
+  const dueOf = (p) => (p.refresh_history || []).slice().sort().pop() || '';
   const productsPageItems = allItems.slice().sort((a, b) => {
-    const aDisc = !!a.product.discontinued;
-    const bDisc = !!b.product.discontinued;
-    if (aDisc !== bDisc) return aDisc ? 1 : -1;
+    const ga = productGroup(a.product, a.status);
+    const gb = productGroup(b.product, b.status);
+    if (ga !== gb) return GROUP_RANK[ga] - GROUP_RANK[gb];
+    const aDisc = ga === 'discontinued';
+    if (ga === 'coming') {
+      const da = dueOf(a.product);
+      const db = dueOf(b.product);
+      if (da !== db) return da < db ? -1 : 1;
+      return a.product.name.localeCompare(b.product.name);
+    }
     if (!aDisc) {
       const daysA = a.status ? a.status.daysSince : -Infinity;
       const daysB = b.status ? b.status.daysSince : -Infinity;

@@ -866,6 +866,14 @@ function productStatusKey(product) {
   return 'current';
 }
 
+// Which group a product sits in on the All products page: coming soon (a
+// release still ahead, as its row says), on sale, or discontinued. Keep
+// in step with productGroupJS() in public/app.js.
+function productGroup(product, statusInfo) {
+  if (product.discontinued) return 'discontinued';
+  return statusInfo && badgeDaysInfo(product, statusInfo).days < 0 ? 'coming' : 'current';
+}
+
 function formatPrice(price) {
   if (!price) return null;
   const trimmed = String(price).trim();
@@ -1158,7 +1166,7 @@ function cardHtml(product, statusInfo) {
   const discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
   const lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetween(launch, product.discontinued_date) : '';
   const decade = product.discontinued && product.discontinued_date ? `${Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10}s` : '';
-  return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-days="${days}" data-wait="${days !== '' ? statusInfo.ratio.toFixed(3) : ''}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
+  return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-group="${productGroup(product, statusInfo)}" data-days="${days}" data-wait="${days !== '' ? statusInfo.ratio.toFixed(3) : ''}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   ${productRowInner(product, statusInfo)}
 </article>`;
 }
@@ -2365,7 +2373,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
   <input type="search" id="search-input" class="search-input" placeholder="Search products…" aria-label="Search products">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
 </div>
-<h2 id="sort-heading" class="sort-heading">Longest wait first, discontinued last</h2>
+<h2 id="sort-heading" class="sort-heading">Coming soon first, then the longest waits, discontinued last</h2>
 <p id="no-results" class="page-intro" style="display:none;">No products match your search.</p>
 <div class="card-grid product-list" id="grid" data-mode="all">
   ${items.map((i) => cardHtml(i.product, i.status)).join('\n')}
@@ -4427,6 +4435,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
 }
 
 module.exports = {
+  productGroup,
   aboutCounts,
   earningsPage,
   nextEarnings,
