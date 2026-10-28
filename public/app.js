@@ -3450,15 +3450,48 @@
   // and details (styles.css, .is-roomy); tried each time the layout
   // settles, and kept only if the hero's row doesn't grow taller for it.
   (function fitHeroEarnings() {
-    var tile = document.querySelector('.intro-hero-words > .earnings-next--words.earnings-next--clock');
-    var row = tile && tile.closest ? tile.closest('.intro-hero-layout') : null;
+    var tile = document.querySelector('.intro-hero-words > .earnings-next--words.earnings-next--clock') ||
+      document.querySelector('.intro-hero-text--calm > .earnings-next--clock');
+    var row = tile && tile.closest ? (tile.closest('.intro-hero-layout') || tile.closest('.intro-hero')) : null;
     if (!tile || !row) return;
+    var isWords = !!tile.closest('.intro-hero-words');
+    // The tall tile's title, date and times grow to fill the room above its
+    // clock (--earn-fit in styles.css), as big as fits: never taller than
+    // the row, never wider than the tile, with a clear gap above the clock.
+    function grow() {
+      var head = tile.querySelector('.earnings-next-head');
+      var clock = tile.querySelector('.earnings-next-clock');
+      var title = tile.querySelector('.earnings-next-title');
+      var when = tile.querySelector('.earnings-next-when');
+      if (!head || !clock || clock.hidden || !title || !clock.offsetHeight) return;
+      var base = row.offsetHeight;
+      var fits = function (scale) {
+        tile.style.setProperty('--earn-fit', String(scale));
+        if (row.offsetHeight > base + 1) return false;
+        if (title.scrollWidth > title.clientWidth + 1) return false;
+        if (when && when.scrollWidth > when.clientWidth + 1) return false;
+        return clock.getBoundingClientRect().top - head.getBoundingClientRect().bottom >= 24;
+      };
+      var lo = 1, hi = 2.4;
+      if (!fits(lo)) { tile.style.removeProperty('--earn-fit'); return; }
+      for (var i = 0; i < 8; i++) {
+        var mid = (lo + hi) / 2;
+        if (fits(mid)) lo = mid; else hi = mid;
+      }
+      tile.style.setProperty('--earn-fit', lo.toFixed(3));
+    }
     function fit() {
-      tile.classList.remove('is-roomy');
-      if (!tile.offsetParent || window.innerWidth < 901) return;
-      var before = row.offsetHeight;
-      tile.classList.add('is-roomy');
-      if (row.offsetHeight > before + 1) tile.classList.remove('is-roomy');
+      tile.style.removeProperty('--earn-fit');
+      if (isWords) {
+        tile.classList.remove('is-roomy');
+        if (!tile.offsetParent || window.innerWidth < 901) return;
+        var before = row.offsetHeight;
+        tile.classList.add('is-roomy');
+        if (row.offsetHeight > before + 1) { tile.classList.remove('is-roomy'); return; }
+      } else if (!tile.offsetParent || window.innerWidth < 701) {
+        return;
+      }
+      grow();
     }
     fit();
     var timer = null;
