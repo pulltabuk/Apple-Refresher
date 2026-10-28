@@ -3785,3 +3785,18 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
   .product-top--video:has(.days-hero--upcoming) .product-header { order: -3; }
   .product-top--video .product-facts .days-hero--upcoming { order: -2; margin: 0 0 14px; }
 }
+
+/* Key fact tiles: an icon in a tinted square beside the label and value.
+   On phones each tile takes the full width. */
+.key-fact { flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; }
+.product-facts .key-fact { flex-direction: row; align-items: center; justify-content: flex-start; }
+.key-fact-icon { display: inline-grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 12px; background: var(--accent-bg); color: var(--accent-dark); }
+.key-fact-icon svg { display: block; }
+.key-fact-text { display: flex; flex-direction: column; min-width: 0; }
+.key-fact--end .key-fact-icon { background: rgba(255, 255, 255, 0.12); color: #fff; }
+@media (max-width: 560px) {
+  .key-facts-row,
+  .key-facts-row[data-facts] { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .key-fact { padding: 14px 16px; }
+  .key-fact-value { margin-top: 4px; font-size: 18px; }
+}

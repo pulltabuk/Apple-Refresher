@@ -2818,8 +2818,26 @@ function jumpPillHtml(href) {
   return `<a class="jump-pill" href="${href}">Release history <span aria-hidden="true">&darr;</span></a>`;
 }
 
-function keyFact(label, value) {
-  return value ? `<div class="key-fact"><p class="key-fact-label">${label}</p><p class="key-fact-value">${value}</p></div>` : '';
+// Each key fact tile has a small icon: what kind of fact it is at a
+// glance. Keep in step with KEY_FACT_ICONS_JS in public/app.js.
+const KEY_FACT_ICONS = {
+  announced: '<path d="M3.5 10v4h3l9 5V5l-9 5h-3z"/><path d="M18.5 9.2a3.2 3.2 0 0 1 0 5.6"/><path d="M7.5 14.5 9 19.5h2.6l-1.3-4.3"/>',
+  preorder: '<circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/><path d="M3 4.5h2.2l2.3 10.6a1.5 1.5 0 0 0 1.5 1.2h7.7a1.5 1.5 0 0 0 1.5-1.1L20 8.5H6"/>',
+  release: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/>',
+  price: '<path d="M20.4 13.4 13.4 20.4a2 2 0 0 1-2.8 0L3.5 13.3V3.5h9.8l7.1 7.1a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.5"/>',
+  first: '<path d="M12 3.5l2 5.5 5.5 2-5.5 2-2 5.5-2-5.5-5.5-2 5.5-2z"/><path d="M19 16.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',
+  cycle: '<path d="M19.5 12a7.5 7.5 0 0 1-13.4 4.6"/><path d="M4.5 12a7.5 7.5 0 0 1 13.4-4.6"/><path d="M18.2 3.5v4.2H14"/><path d="M5.8 20.5v-4.2H10"/>',
+  expected: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  discontinued: '<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9"/><path d="M10 13h4"/>',
+  lifespan: '<path d="M6.5 3.5h11M6.5 20.5h11"/><path d="M7.5 3.5c0 5 4.5 6 4.5 8.5s-4.5 3.5-4.5 8.5"/><path d="M16.5 3.5c0 5-4.5 6-4.5 8.5s4.5 3.5 4.5 8.5"/>',
+  count: '<path d="M12 3.5 3.5 8l8.5 4.5L20.5 8 12 3.5z"/><path d="m3.5 12 8.5 4.5 8.5-4.5"/><path d="m3.5 16 8.5 4.5 8.5-4.5"/>',
+  end: '<path d="M5.5 21V4"/><path d="M5.5 4.5h11l-2.2 4 2.2 4h-11"/>'
+};
+function keyFactIcon(icon) {
+  return KEY_FACT_ICONS[icon] ? `<span class="key-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${KEY_FACT_ICONS[icon]}</svg></span>` : '';
+}
+function keyFact(label, value, icon) {
+  return value ? `<div class="key-fact">${keyFactIcon(icon)}<div class="key-fact-text"><p class="key-fact-label">${label}</p><p class="key-fact-value">${value}</p></div></div>` : '';
 }
 
 function specRow(label, valueHtml) {
@@ -3023,41 +3041,40 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   // The six facts people come for, as a card grid, then everything else
   // in a smaller list underneath. Nothing is hidden, but the page no
   // longer gives "Days counted from" the same weight as the price.
+  // In the order things happened: announced, pre-orders, released (then
+  // discontinued and how long it lasted), followed by the rest.
+  const today = new Date().toISOString().slice(0, 10);
+  const newestInfo = latest ? (generationDetails(product)[latest] || {}) : {};
   const keyFacts = [
+    // Announcement and pre-order dates are recorded against the newest
+    // release, so they lead into it.
+    newestInfo.announced ? keyFact('Announced', formatDate(newestInfo.announced), 'announced') : '',
+    newestInfo.preorder ? keyFact(newestInfo.preorder > today ? 'Pre-orders open' : 'Pre-orders opened', formatDate(newestInfo.preorder), 'preorder') : '',
     (() => {
       const releases = releaseDates(product);
       const newest = releases[releases.length - 1] || latest;
       // A date still ahead isn't "Released" yet.
-      const ahead = newest && newest > new Date().toISOString().slice(0, 10);
+      const ahead = newest && newest > today;
       const label = ahead ? (releases.length > 1 ? 'Next release' : 'Release date') : (releases.length > 1 ? 'Latest release' : 'Released');
-      return keyFact(label, newest ? formatDate(newest) : (launch ? formatDate(launch) : null));
+      return keyFact(label, newest ? formatDate(newest) : (launch ? formatDate(launch) : null), 'release');
     })(),
-    // Announcement and pre-order dates are already recorded against the
-    // newest release, so show them rather than leave the grid half empty.
-    (() => {
-      const info = latest ? (generationDetails(product)[latest] || {}) : {};
-      return [
-        info.announced ? keyFact('Announced', formatDate(info.announced)) : '',
-        info.preorder ? keyFact(info.preorder > new Date().toISOString().slice(0, 10) ? 'Pre-orders open' : 'Pre-orders opened', formatDate(info.preorder)) : '',
-      ].join('');
-    })(),
-    keyFact('Launch price from', product.price ? escapeHtml(formatPrice(product.price)) : null),
-    keyFact('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDate(product.original_launch_date) : null),
+    keyFact('Discontinued', product.discontinued && product.discontinued_date ? formatDate(product.discontinued_date) : null, 'discontinued'),
+    keyFact('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanText(launch, product.discontinued_date) : null, 'lifespan'),
+    keyFact('Launch price from', product.price ? escapeHtml(formatPrice(product.price)) : null, 'price'),
+    keyFact('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDate(product.original_launch_date) : null, 'first'),
     keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}`
       // One release: the family's cycle, said to be the family's.
-      : !product.discontinued && cycle && cycle.single ? `About every ${plural(cycle.days, 'day', 'days')}<span class="key-fact-note">across ${escapeHtml(cycle.family || 'the family')}</span>` : null),
+      : !product.discontinued && cycle && cycle.single ? `About every ${plural(cycle.days, 'day', 'days')}<span class="key-fact-note">across ${escapeHtml(cycle.family || 'the family')}</span>` : null, 'cycle'),
     (() => {
       if (!status || sortedDates.length <= 1 || product.discontinued) return '';
       const due = new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000);
       const label = due.getTime() < Date.now() ? 'Was expected' : 'Next expected';
-      return keyFact(label, due.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }));
+      return keyFact(label, due.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }), 'expected');
     })(),
-    keyFact('Discontinued', product.discontinued && product.discontinued_date ? formatDate(product.discontinued_date) : null),
-    keyFact('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanText(launch, product.discontinued_date) : null),
-    keyFact('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null),
+    keyFact('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null, 'count'),
   ].filter(Boolean).slice(0, isEndOfLine(product, allProducts) ? 5 : 6)
     // The last of its line always gets a tile, in the grid's last place.
-    .concat(isEndOfLine(product, allProducts) ? [`<div class="key-fact key-fact--end"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ${escapeHtml(product.category || 'of its line')}</p></div>`] : [])
+    .concat(isEndOfLine(product, allProducts) ? [`<div class="key-fact key-fact--end">${keyFactIcon('end')}<div class="key-fact-text"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ${escapeHtml(product.category || 'of its line')}</p></div></div>`] : [])
     .join('\n');
 
   const specs = [
