@@ -1885,6 +1885,9 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .countdown-value { font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .countdown-unit-label { font-size: 12px; font-weight: 600; opacity: 0.8; }
 .countdown-date { font-size: 13px; font-weight: 600; opacity: 0.85; }
+/* Under a pre-order countdown: when it reaches shops, and how soon. */
+.countdown-release { flex: 0 0 100%; margin-top: -2px; font-size: 14px; font-weight: 700; }
+.countdown-release [data-days-until] { font-weight: 600; opacity: 0.8; }
 /* A product's countdown: its icon on a white tile beside the name */
 .countdown-name-row { display: flex; align-items: center; gap: 10px; flex: 0 0 100%; }
 .countdown-icon { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; background: #fff; border: 1px solid #f0d9c4; }
