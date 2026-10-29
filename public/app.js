@@ -925,7 +925,7 @@
     return KEY_FACT_ICONS_JS[icon] ? '<span class="key-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + KEY_FACT_ICONS_JS[icon] + '</svg></span>' : '';
   }
   function keyFactJS(label, value, icon) {
-    return value ? '<div class="key-fact">' + keyFactIconJS(icon) + '<div class="key-fact-text"><p class="key-fact-label">' + label + '</p><p class="key-fact-value">' + value + '</p></div></div>' : '';
+    return value ? '<div class="key-fact"><div class="key-fact-body">' + keyFactIconJS(icon) + '<div class="key-fact-text"><p class="key-fact-label">' + label + '</p><p class="key-fact-value">' + value + '</p></div></div></div>' : '';
   }
 
   // Must stay in step with FactsKit.videoInfo() in public/facts-kit.js.
@@ -1094,8 +1094,9 @@
       var first = releases[0] || null;
       var isDay = function (d) { return /^\d{4}-\d{2}-\d{2}$/.test(d || ''); };
       var span = first && end && isDay(first) && isDay(end) ? lifespanTextJS(first, end) : null;
+      var lived = span ? daysBetweenJS(first, end) : null;
       var caption = span
-        ? 'On sale for ' + span + (releases.length > 1 ? ' across ' + releases.length + ' releases' : '') + ', from ' + formatDateJS(first) + '.'
+        ? 'On sale for ' + lived.toLocaleString('en-GB') + (lived === 1 ? ' day' : ' days') + ' (' + span + ')' + (releases.length > 1 ? ' across ' + releases.length + ' releases' : '') + ', from ' + formatDateJS(first) + '.'
         : first ? 'First released ' + formatDateJS(first) + '.' : '';
       return '<p class="days-hero days-hero--discontinued"><span class="days-hero-label">Discontinued</span>' +
         (end ? ' <span class="days-hero-soon">' + formatDateJS(end) + '</span>' : '') +
@@ -1221,7 +1222,11 @@
         return keyFactJS(label, newest ? formatDateJS(newest) : (launch ? formatDateJS(launch) : null), 'release');
       })(),
       keyFactJS('Discontinued', product.discontinued && product.discontinued_date ? formatDateJS(product.discontinued_date) : null, 'discontinued'),
-      keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanTextJS(launch, product.discontinued_date) : null, 'lifespan'),
+      keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date
+        ? (/^\d{4}-\d{2}-\d{2}$/.test(launch) && /^\d{4}-\d{2}-\d{2}$/.test(product.discontinued_date)
+          ? daysBetweenJS(launch, product.discontinued_date).toLocaleString('en-GB') + ' days<span class="key-fact-note">' + lifespanTextJS(launch, product.discontinued_date) + '</span>'
+          : lifespanTextJS(launch, product.discontinued_date))
+        : null, 'lifespan'),
       keyFactJS('Launch price from', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null, 'price'),
       keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null, 'first'),
       keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days')
@@ -1237,7 +1242,7 @@
     var familyAll = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
     var endOfLine = isEndOfLineJS(product, familyAll);
     keyFacts = keyFacts.slice(0, endOfLine ? 5 : 6).concat(endOfLine
-      ? ['<div class="key-fact key-fact--end">' + keyFactIconJS('end') + '<div class="key-fact-text"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ' + escapeHtmlJS(product.category || 'of its line') + '</p></div></div>'] : []).join('');
+      ? ['<div class="key-fact key-fact--end"><div class="key-fact-body">' + keyFactIconJS('end') + '<div class="key-fact-text"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ' + escapeHtmlJS(product.category || 'of its line') + '</p></div></div></div>'] : []).join('');
 
     var specs = [
       specRowJS('Category', pillJS(product.category)),
