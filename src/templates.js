@@ -2837,7 +2837,7 @@ function keyFactIcon(icon) {
   return KEY_FACT_ICONS[icon] ? `<span class="key-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${KEY_FACT_ICONS[icon]}</svg></span>` : '';
 }
 function keyFact(label, value, icon) {
-  return value ? `<div class="key-fact">${keyFactIcon(icon)}<div class="key-fact-text"><p class="key-fact-label">${label}</p><p class="key-fact-value">${value}</p></div></div>` : '';
+  return value ? `<div class="key-fact"><div class="key-fact-body">${keyFactIcon(icon)}<div class="key-fact-text"><p class="key-fact-label">${label}</p><p class="key-fact-value">${value}</p></div></div></div>` : '';
 }
 
 function specRow(label, valueHtml) {
@@ -2901,8 +2901,9 @@ function heroStatHtml(product, statusInfo, cycleDays) {
     const releases = (product.refresh_history || []).filter((d) => !end || d <= end).sort();
     const first = releases[0] || null;
     const span = first && end && datePrecision(first) === 'day' && datePrecision(end) === 'day' ? lifespanText(first, end) : null;
+    const days = span ? daysBetween(first, end) : null;
     const caption = span
-      ? `On sale for ${span}${releases.length > 1 ? ` across ${releases.length} releases` : ''}, from ${formatDate(first)}.`
+      ? `On sale for ${days.toLocaleString('en-GB')} ${days === 1 ? 'day' : 'days'} (${span})${releases.length > 1 ? ` across ${releases.length} releases` : ''}, from ${formatDate(first)}.`
       : first ? `First released ${formatDate(first)}.` : '';
     return `<p class="days-hero days-hero--discontinued"><span class="days-hero-label">Discontinued</span>${end ? ` <span class="days-hero-soon">${formatDate(end)}</span>` : ''}${caption ? `<span class="days-hero-caption">${caption}</span>` : ''}</p>`;
   }
@@ -3059,7 +3060,13 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
       return keyFact(label, newest ? formatDate(newest) : (launch ? formatDate(launch) : null), 'release');
     })(),
     keyFact('Discontinued', product.discontinued && product.discontinued_date ? formatDate(product.discontinued_date) : null, 'discontinued'),
-    keyFact('Lifespan', launch && product.discontinued && product.discontinued_date ? lifespanText(launch, product.discontinued_date) : null, 'lifespan'),
+    // How long it was on sale: in days (the site's measure), with the
+    // years and months under it.
+    keyFact('Lifespan', launch && product.discontinued && product.discontinued_date
+      ? (datePrecision(launch) === 'day' && datePrecision(product.discontinued_date) === 'day'
+        ? `${daysBetween(launch, product.discontinued_date).toLocaleString('en-GB')} days<span class="key-fact-note">${lifespanText(launch, product.discontinued_date)}</span>`
+        : lifespanText(launch, product.discontinued_date))
+      : null, 'lifespan'),
     keyFact('Launch price from', product.price ? escapeHtml(formatPrice(product.price)) : null, 'price'),
     keyFact('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDate(product.original_launch_date) : null, 'first'),
     keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}`
@@ -3074,7 +3081,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     keyFact('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null, 'count'),
   ].filter(Boolean).slice(0, isEndOfLine(product, allProducts) ? 5 : 6)
     // The last of its line always gets a tile, in the grid's last place.
-    .concat(isEndOfLine(product, allProducts) ? [`<div class="key-fact key-fact--end">${keyFactIcon('end')}<div class="key-fact-text"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ${escapeHtml(product.category || 'of its line')}</p></div></div>`] : [])
+    .concat(isEndOfLine(product, allProducts) ? [`<div class="key-fact key-fact--end"><div class="key-fact-body">${keyFactIcon('end')}<div class="key-fact-text"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ${escapeHtml(product.category || 'of its line')}</p></div></div></div>`] : [])
     .join('\n');
 
   const specs = [
