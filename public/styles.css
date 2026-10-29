@@ -3195,10 +3195,12 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .filter-row .filter-bar { margin: 0; }
 /* Neutral, so it reads as "go to", not as a fourth filter: a warm grey
    fill and an orange arrow. Purple stays for events, green for status. */
-.jump-pill { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding: 5px 12px; border-radius: 999px; border: 1px solid #e4dfd5; background: #f3f0ea; color: var(--text); font-size: 12px; line-height: 14px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; white-space: nowrap; transition: background-color 0.15s ease, border-color 0.15s ease; }
-.jump-pill span { color: var(--accent); font-weight: 800; transition: transform 0.15s ease; }
-.jump-pill:hover { background: #ebe6dc; border-color: #d6cfc2; color: var(--text); }
+/* "Release history ↓": solid burnt orange so it reads as a button. */
+.jump-pill { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 8px 15px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font-size: 12px; line-height: 14px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; white-space: nowrap; box-shadow: 0 4px 12px rgba(194, 84, 12, 0.25); transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+.jump-pill span { color: #fff; font-weight: 800; transition: transform 0.15s ease; }
+.jump-pill:hover { background: var(--accent-dark); border-color: var(--accent-dark); color: #fff; box-shadow: 0 6px 16px rgba(194, 84, 12, 0.32); }
 .jump-pill:hover span { transform: translateY(2px); }
+.jump-pill:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .jump-pill:hover span { transform: none; } }
 .category-timeline-section { margin-top: 2rem; scroll-margin-top: 16px; }
 @media (max-width: 600px) {
