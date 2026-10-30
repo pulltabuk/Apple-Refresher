@@ -2026,7 +2026,14 @@ function countdownHtml(countdown, opts) {
 // escaped. Keep in step with timeWithUkJS() in public/app.js.
 function timeWithUk(date, time) {
   if (!time) return '';
-  const uk = date && datePrecision(date) === 'day' ? FactsKit.eventUkTime({ event_date: date, event_time: time }) : '';
+  const exact = date && datePrecision(date) === 'day';
+  // A time set in GMT (or UTC, BST) reads as UK time, "8am UK", like
+  // every other UK time on the site.
+  if (exact && /(GMT|UTC|BST)\s*$/i.test(time)) {
+    const ukOnly = FactsKit.ukClockText({ event_date: date, event_time: time });
+    if (ukOnly) return escapeHtml(ukOnly);
+  }
+  const uk = exact ? FactsKit.eventUkTime({ event_date: date, event_time: time }) : '';
   return escapeHtml(time) + (uk ? ` (${escapeHtml(uk)})` : '');
 }
 
@@ -3576,7 +3583,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
                 <input type="time" id="preorder_time_clock" aria-label="Pre-order time">
                 <select id="preorder_time_zone" aria-label="Pre-order time zone">
                   <option value="UK">UK (GMT/BST)</option>
-                  <option value="GMT">GMT</option>
                   <option value="ET">ET (New York)</option>
                   <option value="CT">CT (Chicago)</option>
                   <option value="PT">PT (California)</option>
@@ -3603,7 +3609,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
                 <input type="time" id="release_time_clock" aria-label="Release time">
                 <select id="release_time_zone" aria-label="Time zone">
                   <option value="UK">UK (GMT/BST)</option>
-                  <option value="GMT">GMT</option>
                   <option value="ET">ET (New York)</option>
                   <option value="CT">CT (Chicago)</option>
                   <option value="PT">PT (California)</option>

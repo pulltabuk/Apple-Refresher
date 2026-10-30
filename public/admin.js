@@ -1266,6 +1266,78 @@
     toastTimer = setTimeout(() => el.classList.remove('is-shown'), ok ? 7000 : 14000);
   }
 
+  // A newer admin goes live while this page is open: a banner says so,
+  // and this older copy can't save (its out-of-date code could undo a
+  // fix). Checked when the tab comes back into view, every few minutes,
+  // and before each save.
+  const VERSIONED = ['admin.js', 'facts-kit.js'];
+  const versionIn = (text, name) => {
+    const m = new RegExp('/' + name.replace('.', '\\.') + '\\?v=([\\w-]+)').exec(text || '');
+    return m ? m[1] : '';
+  };
+  const pageScripts = Array.from(document.scripts).map((el) => el.getAttribute('src') || '').join(' ');
+  const loadedVersions = VERSIONED.map((name) => versionIn(pageScripts, name));
+  let adminOutdated = false;
+  let versionCheckedAt = 0;
+  function showOutdatedBanner() {
+    if (document.getElementById('admin-outdated')) return;
+    const bar = document.createElement('div');
+    bar.id = 'admin-outdated';
+    bar.className = 'admin-outdated';
+    bar.setAttribute('role', 'alert');
+    bar.innerHTML = '<span><strong>New version, please reload.</strong> The admin was updated while this page was open. Reload before saving.</span>';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'admin-btn admin-btn--small';
+    btn.textContent = 'Reload';
+    btn.addEventListener('click', () => window.location.reload());
+    bar.appendChild(btn);
+    document.body.prepend(bar);
+  }
+  // True if a newer admin is live. A failed check (offline) lets saves on.
+  async function adminIsOutdated() {
+    if (adminOutdated) return true;
+    if (loadedVersions.some((v) => !v || v === 'dev')) return false;
+    try {
+      const res = await fetch('/admin/?check=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) return false;
+      const html = await res.text();
+      versionCheckedAt = Date.now();
+      adminOutdated = VERSIONED.some((name, i) => {
+        const live = versionIn(html, name);
+        return !!live && live !== loadedVersions[i];
+      });
+    } catch (err) {
+      return false;
+    }
+    if (adminOutdated) showOutdatedBanner();
+    return adminOutdated;
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') adminIsOutdated(); });
+  window.addEventListener('focus', () => { adminIsOutdated(); });
+  setInterval(() => { if (document.visibilityState === 'visible') adminIsOutdated(); }, 5 * 60 * 1000);
+  // Every save waits for the check (skipped if one ran in the last 30
+  // seconds), then goes ahead, or stops if this page is out of date.
+  let submitCleared = null;
+  document.addEventListener('submit', (e) => {
+    const form = e.target;
+    if (form === loginForm) return;
+    if (submitCleared === form) { submitCleared = null; return; }
+    if (!adminOutdated && Date.now() - versionCheckedAt < 30000) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const submitter = e.submitter && e.submitter.form === form ? e.submitter : null;
+    adminIsOutdated().then((outdated) => {
+      if (outdated) {
+        adminToast('Not saved: this admin page is out of date. Reload it, then save again.', false);
+        return;
+      }
+      submitCleared = form;
+      if (form.requestSubmit) form.requestSubmit(submitter || undefined);
+      else form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    });
+  }, true);
+
   async function rebuildSite() {
     try {
       const { data } = await client.auth.getSession();

@@ -2321,6 +2321,11 @@
   function eventUkTime(event) {
     const t = eventTimeParts(event && event.event_time);
     if (!t || !t.zone || t.zone === 'Europe/London' || t.zone === 'UTC') return '';
+    return ukClockText(event);
+  }
+  // The moment as a UK clock, "8am UK" (with the day when it falls on
+  // another one, "7am Sat UK"), whatever zone it was set in.
+  function ukClockText(event) {
     const start = eventStartMs(event);
     if (isNaN(start)) return '';
     const local = new Date(start + tzOffsetMs('Europe/London', start));
@@ -2624,6 +2629,7 @@
     eventPostIdeas,
     applyIdeaCard,
     eventUkTime,
+    ukClockText,
     insertFact,
     appleName,
     CATEGORY_ICONS,

@@ -3379,12 +3379,14 @@
     return asUtc - utcMs;
   }
   // Must match timeWithUk() in src/templates.js: a time set in another
-  // zone gets the UK time after it, "9am ET (2pm UK)". Escaped.
+  // zone gets the UK time after it, "9am ET (2pm UK)"; a GMT one becomes
+  // "8am UK". Escaped.
   function timeWithUkJS(dateStr, timeText) {
     var safe = escapeHtmlJS(timeText || '');
     var z = /([A-Za-z]{2,4})\s*$/.exec(String(timeText || ''));
     var zone = z ? z[1].toUpperCase() : '';
-    if (!timeText || !ZONES || !ZONES[zone] || zone === 'UK' || zone === 'GMT' || zone === 'BST' || zone === 'UTC' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr || '')) return safe;
+    var ukZone = zone === 'GMT' || zone === 'BST' || zone === 'UTC';
+    if (!timeText || !ZONES || !ZONES[zone] || zone === 'UK' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr || '')) return safe;
     var ms = countdownTarget(dateStr, timeText);
     if (isNaN(ms)) return safe;
     try {
@@ -3394,7 +3396,9 @@
       var h = +parts.hour % 24, min = +parts.minute;
       var clock = (h % 12 || 12) + (min ? ':' + String(min).padStart(2, '0') : '') + (h < 12 ? 'am' : 'pm');
       var sameDay = parts.year + '-' + parts.month + '-' + parts.day === dateStr;
-      return safe + ' (' + clock + (sameDay ? '' : ' ' + parts.weekday) + ' UK)';
+      var uk = clock + (sameDay ? '' : ' ' + parts.weekday) + ' UK';
+      // A GMT (or UTC, BST) time reads as UK time, "8am UK".
+      return ukZone ? escapeHtmlJS(uk) : safe + ' (' + uk + ')';
     } catch (e) { return safe; }
   }
 
