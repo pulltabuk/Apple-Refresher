@@ -3151,7 +3151,7 @@
   // opens on it to pick a day nearby. A suggestion is never saved by itself.
   let datesMode = 'next';
   let pendingName = '';
-  let pendingLaunch = null; // null: launch only when nothing is recorded yet
+  let pendingLaunch = null; // the launch tick for a new release: off until ticked
   let lastPicked = null; // { row, date }: the last date picked in the box
   let releasePrecision = 'day';
   let releasePrecisionFor = undefined;
@@ -3280,7 +3280,7 @@
     launchLabel.hidden = launchTaken;
     launchIn.checked = target
       ? currentOriginalLaunchDate === target
-      : pendingLaunch === null ? (!currentOriginalLaunchDate && !releases.length) : pendingLaunch;
+      : !!pendingLaunch;
 
     // The countdown needs a release date still ahead.
     const cdBox = document.getElementById('in_countdown');
@@ -3344,7 +3344,7 @@
         if (expandedGenerations.delete(target)) expandedGenerations.add(value);
       } else {
         // A new release, taking the dates and name waiting for it.
-        const launch = pendingLaunch === null ? (!currentOriginalLaunchDate && !currentRefreshHistory.length) : pendingLaunch;
+        const launch = !!pendingLaunch;
         currentRefreshHistory = currentRefreshHistory.concat(value).sort();
         if (pendingName.trim()) detailFor(value).name = pendingName.trim();
         if (pendingAnnouncedDate) detailFor(value).announced = pendingAnnouncedDate;
@@ -3633,7 +3633,7 @@
           currentRefreshHistory = currentRefreshHistory.filter((d) => d !== date);
           delete currentGenerationDetails[date];
           expandedGenerations.delete(date);
-          currentOriginalLaunchDate = currentRefreshHistory.slice().sort()[0] || null;
+          if (currentOriginalLaunchDate === date) currentOriginalLaunchDate = null;
         }
         renderRefreshHistory();
         updateStatusReadout();
