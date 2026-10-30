@@ -3521,7 +3521,13 @@
           }
           var dateEl = el.querySelector('.countdown-date');
           if (dateEl && el.getAttribute('data-done-date')) dateEl.textContent = el.getAttribute('data-done-date');
-          clock.innerHTML = '<span class="countdown-done-badge">' + escapeHtmlJS(el.getAttribute('data-done-text') || 'Today') + '</span>';
+          // A tile that isn't a link itself gets a badge that is one
+          // (doneBadgeHtml() in src/templates.js).
+          var doneText = escapeHtmlJS(el.getAttribute('data-done-text') || 'Today');
+          var doneHref = el.tagName !== 'A' && el.getAttribute('data-done-href');
+          clock.innerHTML = doneHref
+            ? '<a class="countdown-done-badge countdown-done-badge--link" href="' + escapeHtmlJS(doneHref) + '">' + doneText + '<span class="countdown-done-go" aria-hidden="true">\u2192</span></a>'
+            : '<span class="countdown-done-badge">' + doneText + '</span>';
         }
         return;
       }

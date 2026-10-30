@@ -2059,6 +2059,15 @@ function countdownStopsHtml(items) {
 
 // tail: the later launches' lines, inside the same box (opts.stack). The
 // box then holds several links, so it isn't one itself: its name is.
+// The badge a countdown becomes when its moment comes ("🎉 Available
+// now"): a link to the product (or event) when the tile around it isn't
+// already one. app.js builds the same (countdown(), data-done-href).
+function doneBadgeHtml(text, href) {
+  return href
+    ? `<a class="countdown-done-badge countdown-done-badge--link" href="${href}">${escapeHtml(text)}<span class="countdown-done-go" aria-hidden="true">&rarr;</span></a>`
+    : `<span class="countdown-done-badge">${escapeHtml(text)}</span>`;
+}
+
 function oneCountdownHtml(item, tail) {
   // Whole days to go, as the ticking clock shows them: to the time
   // given (e.g. "1:30pm PT"), else 8am UK on the day.
@@ -2080,6 +2089,8 @@ function oneCountdownHtml(item, tail) {
   const members = item.group && item.group.length > 1 ? item.group : null;
   const linkedNames = !!(members || tail);
   const tag = linkedNames ? 'div' : 'a';
+  // The tile isn't a link (its names are): the badge links instead.
+  const doneHref = linkedNames ? (members ? members[0].href : item.href) : '';
   // A product counts down with its icon, as on the featured tile.
   const nameHtml = (m, linked) => (m.product
     ? `<${linked ? `a href="${m.href}"` : 'span'} class="countdown-name-row"><span class="countdown-icon">${productIcon(m.product, 32)}</span><span class="countdown-name">${escapeHtml(m.label)}</span></${linked ? 'a' : 'span'}>`
@@ -2087,7 +2098,7 @@ function oneCountdownHtml(item, tail) {
   const namesHtml = (members || [item]).map((m) => nameHtml(m, linkedNames)).join('');
   const clockHtml = `<span class="countdown-clock" data-countdown-clock>
     ${over
-      ? `<span class="countdown-done-badge">${escapeHtml(done.text)}</span>`
+      ? doneBadgeHtml(done.text, doneHref)
       : `<span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>`}
   </span>`;
   // A product's tile is titled with its date, the time under it ("6
@@ -2107,7 +2118,7 @@ function oneCountdownHtml(item, tail) {
     ? `<span class="countdown-release">${releaseDays[releaseDays.length - 1] !== rel ? 'In stores from' : 'In stores'} ${escapeHtml(formatDate(rel))}${relTimes.length === 1 && relTimes[0] ? ` &middot; ${timeWithUk(rel, relTimes[0])}` : ''}${relAway ? ` &middot; <span data-days-until="${escapeHtml(rel)}">${escapeHtml(relAway)}</span>` : ''}</span>`
     : '';
   // Built after the moment (a rebuild on release day): already finished.
-  return `<${tag} class="countdown${isEvent ? ' countdown--event' : ''}${item.product ? ' countdown--product' : ''}${linkedNames ? ' countdown--group' : ''}${tail ? ' countdown--stack' : ''}${over ? ' countdown--done' : ''}"${linkedNames ? '' : ` href="${item.href}"`} data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
+  return `<${tag} class="countdown${isEvent ? ' countdown--event' : ''}${item.product ? ' countdown--product' : ''}${linkedNames ? ' countdown--group' : ''}${tail ? ' countdown--stack' : ''}${over ? ' countdown--done' : ''}"${linkedNames ? '' : ` href="${item.href}"`} data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}${doneHref ? ` data-done-href="${doneHref}"` : ''}>
   <span class="countdown-label${titleDate ? ' countdown-label--date' : ''}">${titleDate || escapeHtml(over ? done.kicker : (item.kicker || 'Counting down to'))}</span>
   ${namesHtml}
   ${clockHtml}
@@ -2491,11 +2502,11 @@ function comingDateText(date) {
 
 // The clock: ticks in app.js (data-countdown, to 8am UK on the day, as
 // the homepage countdown does); whole days until then.
-function comingClockHtml(date, time) {
+function comingClockHtml(date, time, href) {
   const target = comingTargetMs(date, time);
   const days = Math.max(0, Math.floor((target - Date.now()) / 86400000));
   return target <= Date.now()
-    ? '<span class="countdown-done-badge">🎉 Available now</span>'
+    ? doneBadgeHtml('🎉 Available now', href)
     : `<span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>`;
 }
 
@@ -2566,7 +2577,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     const nameHtml = (p, linked) => `<${linked ? `a href="/products/${p.slug}/"` : 'span'} class="coming-next-product"><span class="coming-next-icon">${productIcon(p, 56)}</span><span class="coming-next-text"><span class="coming-next-name">${escapeHtml(p.name)}</span><span class="coming-next-family">${escapeHtml(p.category || '')}</span></span></${linked ? 'a' : 'span'}>`;
     const tag = single ? 'a' : 'div';
     const nextHtml = `<section class="coming-next-wrap" aria-label="Next to launch" data-coming-lead data-families="${escapeHtml(next.products.map((p) => p.category || '').join('|'))}">
-  <${tag} class="coming-next${exact(next) ? '' : ' coming-next--expected'}"${single ? ` href="/products/${single.slug}/"` : ''}${exact(next) ? ` data-countdown="${escapeHtml(next.date)}"${next.time ? ` data-countdown-time="${escapeHtml(next.time)}"` : ''} ${comingDoneAttrs(next.date)}` : ''}>
+  <${tag} class="coming-next${exact(next) ? '' : ' coming-next--expected'}"${single ? ` href="/products/${single.slug}/"` : ''}${exact(next) ? ` data-countdown="${escapeHtml(next.date)}"${next.time ? ` data-countdown-time="${escapeHtml(next.time)}"` : ''} ${comingDoneAttrs(next.date)}${single ? '' : ` data-done-href="/products/${next.products[0].slug}/"`}` : ''}>
     <span class="coming-next-main">
       <span class="coming-next-kicker countdown-label">Next to launch</span>
       <span class="coming-next-names">${next.products.map((p) => nameHtml(p, !single)).join('')}</span>
@@ -2574,7 +2585,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
       ${facts.length ? `<span class="coming-next-facts">${facts.map((f) => `<span>${f}</span>`).join(' &middot; ')}</span>` : ''}
       ${single ? '<span class="coming-next-cta">See the product &rarr;</span>' : ''}
     </span>
-    ${exact(next) ? `<span class="coming-clock" data-countdown-clock role="timer">${comingClockHtml(next.date, next.time)}</span>` : ''}
+    ${exact(next) ? `<span class="coming-clock" data-countdown-clock role="timer">${comingClockHtml(next.date, next.time, single ? '' : `/products/${next.products[0].slug}/`)}</span>` : ''}
   </${tag}>
 </section>`;
     // Then everything after it, soonest first: one card each. The next
