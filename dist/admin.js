@@ -2323,7 +2323,7 @@
     // While a release date is still ahead: in or out of the homepage
     // countdown in one tap, lit up green while it counts down.
     const today = new Date().toISOString().slice(0, 10);
-    if (!p.discontinued && (p.refresh_history || []).some((d) => d > today)) {
+    if (!p.discontinued && (p.refresh_history || []).some((d) => d >= today)) {
       const cdBtn = document.createElement('button');
       cdBtn.type = 'button';
       cdBtn.setAttribute('aria-pressed', p.in_countdown ? 'true' : 'false');
@@ -2337,7 +2337,7 @@
         cdBtn.textContent = '\u23f1 Countdown';
         cdBtn.title = 'Add to the homepage countdown (up to ' + COUNTDOWN_MAX + ')';
         cdBtn.addEventListener('click', () => {
-          const counting = cachedProducts.filter((x) => x.in_countdown && !x.discontinued && (x.refresh_history || []).some((d) => d > today)).length;
+          const counting = cachedProducts.filter((x) => x.in_countdown && !x.discontinued && (x.refresh_history || []).some((d) => d >= today)).length;
           if (counting >= COUNTDOWN_MAX) {
             window.alert('The countdown already has ' + COUNTDOWN_MAX + ' products. Take one out first.');
             return;
@@ -2484,7 +2484,7 @@
   // Adding to the countdown: products with a release date still to come
   // that aren't counting down yet, soonest first.
   function countdownPicker(today, count) {
-    const due = (p) => (p.refresh_history || []).filter((d) => d > today).sort()[0] || '';
+    const due = (p) => (p.refresh_history || []).filter((d) => d >= today).sort()[0] || '';
     return stripPicker({
       title: 'Add a coming product to the countdown (' + count + ' of ' + COUNTDOWN_MAX + ')',
       placeholder: 'Search coming products\u2026',
@@ -2549,7 +2549,7 @@
     const today = new Date().toISOString().slice(0, 10);
     const byId = (id) => cachedProducts.find((p) => String(p.id) === String(id));
     const counting = cachedProducts
-      .map((p) => ({ p, due: (p.refresh_history || []).filter((d) => d > today).sort()[0] }))
+      .map((p) => ({ p, due: (p.refresh_history || []).filter((d) => d >= today).sort()[0] }))
       .filter((x) => x.p.in_countdown && x.due)
       .sort((a, b) => (a.due < b.due ? -1 : 1));
     strip.innerHTML = '';
@@ -2815,7 +2815,7 @@
   // Products with a release date still ahead, soonest first.
   function comingProducts() {
     const today = new Date().toISOString().slice(0, 10);
-    const due = (p) => (p.refresh_history || []).filter((d) => d > today).sort()[0] || '';
+    const due = (p) => (p.refresh_history || []).filter((d) => d >= today).sort()[0] || '';
     return cachedProducts
       .filter((p) => !p.discontinued && due(p))
       .sort((a, b) => due(a).localeCompare(due(b)) || a.name.localeCompare(b.name));
@@ -3059,10 +3059,11 @@
     zoneEl.value = Array.from(zoneEl.options).some((o) => o.value === parts.zone) ? parts.zone : 'UK';
   }
 
-  // The upcoming release: the soonest date still ahead (null if none).
+  // The upcoming release: the soonest date still ahead, today included
+  // (a release today is still to come until its moment; null if none).
   function upcomingReleaseDate() {
     const today = new Date().toISOString().slice(0, 10);
-    return currentRefreshHistory.filter((d) => d > today).sort()[0] || null;
+    return currentRefreshHistory.filter((d) => d >= today).sort()[0] || null;
   }
   const isFullDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
 
@@ -3215,7 +3216,7 @@
     if (!upcoming) cdBox.checked = false;
     document.getElementById('in-countdown-hint').textContent = upcoming
       ? 'Counts down to the ' + formatAdminDate(upcoming) + ' release (to pre-orders first while they’re still to open). More than one product can be counted down at once, and each drops off by itself once its date passes.'
-      : 'Pick a release date after today (above) to switch this on.';
+      : 'Pick a release date from today on (above) to switch this on.';
     const preHint = document.getElementById('preorder-date-hint');
     if (preHint) preHint.hidden = !rowValue('preorder', target);
     const discRow = document.querySelector('[data-date-row="discontinued"]');
@@ -3231,7 +3232,7 @@
     // is started and the recorded release is left as it is.
     const shown = datesTarget();
     const todayIso = new Date().toISOString().slice(0, 10);
-    if (shown && shown <= todayIso && value && value > shown && CHAIN.indexOf(row) !== -1) {
+    if (shown && shown < todayIso && value && value > shown && CHAIN.indexOf(row) !== -1) {
       const farOff = !isFullDate(value) || !isFullDate(shown) || (Date.parse(value) - Date.parse(shown)) / 86400000 > 90;
       if (row !== 'release' || value > todayIso || farOff) {
         datesMode = 'add';

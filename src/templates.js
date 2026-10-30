@@ -2044,7 +2044,7 @@ function countdownStopsHtml(items) {
     const times = Array.from(new Set(stop.items.map((item) => item.time || '')));
     const shared = times.length === 1 ? times[0] : '';
     return `<div class="countdown-stop">
-      <span class="countdown-stop-when"><span class="countdown-stop-date">${escapeHtml(date)}</span>${shared ? `<span class="countdown-stop-time">${timeWithUk(stop.date, shared)}</span>` : ''}${away ? `<span class="countdown-stop-in" data-days-until="${escapeHtml(stop.date)}">${escapeHtml(away)}</span>` : ''}</span>
+      <span class="countdown-stop-when"><span class="countdown-stop-date">${escapeHtml(date)}</span>${away ? `<span class="countdown-stop-in" data-days-until="${escapeHtml(stop.date)}">${escapeHtml(away)}</span>` : ''}${shared ? `<span class="countdown-stop-time">${timeWithUk(stop.date, shared)}</span>` : ''}</span>
       <span class="countdown-stop-items">${stop.items.map((item) => `<a class="countdown-stop-item" href="${item.href}">${item.product ? `<span class="countdown-stop-icon">${productIcon(item.product, 18)}</span>` : ''}<span class="countdown-stop-name">${escapeHtml(item.label)}${item.kind === 'preorder' ? ' <span class="countdown-stop-tag">Pre-orders</span>' : ''}${!shared && item.time ? ` <span class="countdown-stop-item-time">${timeWithUk(item.date, item.time)}</span>` : ''}</span></a>`).join('')}</span>
     </div>`;
   }).join('\n    ');
