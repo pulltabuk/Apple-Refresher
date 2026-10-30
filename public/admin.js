@@ -1620,6 +1620,13 @@
   // the list opens it up for the odd cross-family replacement (iPhone 8 by
   // the iPhone SE 2nd generation, say). A saved choice from another
   // family is always kept in the list, named with its family.
+  // "This product replaces": the product picked, or null (also for "Not
+  // set" and "Nothing: it's an all-new product").
+  const NEW_LINE = '__new__';
+  function previousModelSlug() {
+    const v = document.getElementById('previous_model').value;
+    return v && v !== NEW_LINE && v !== '__all__' ? v : null;
+  }
   function fillProductSelect(selectEl, keepValue) {
     const currentCategory = (document.getElementById('category').value || '').trim().toLowerCase();
     if (keepValue !== undefined) delete selectEl.dataset.allFamilies;
@@ -1628,8 +1635,16 @@
     selectEl.innerHTML = '';
     const none = document.createElement('option');
     none.value = '';
-    none.textContent = 'None';
+    none.textContent = selectEl.id === 'previous_model' ? 'Not set' : 'None';
     selectEl.appendChild(none);
+    // What a product replaces can be nothing at all: an all-new product
+    // (saved as is_new_launch, shown as "Release type" on its page).
+    if (selectEl.id === 'previous_model') {
+      const fresh = document.createElement('option');
+      fresh.value = NEW_LINE;
+      fresh.textContent = 'Nothing: it\u2019s an all-new product';
+      selectEl.appendChild(fresh);
+    }
     const others = cachedProducts.filter((p) => p.id !== editingId).sort((a, b) => a.name.localeCompare(b.name));
     const same = others.filter((p) => (p.category || '').trim().toLowerCase() === currentCategory);
     const rest = others.filter((p) => (p.category || '').trim().toLowerCase() !== currentCategory);
@@ -1654,7 +1669,7 @@
       const saved = value && rest.find((p) => p.slug === value);
       if (saved) selectEl.appendChild(optionFor(saved, true));
     }
-    if (value && !others.some((p) => p.slug === value)) {
+    if (value && value !== NEW_LINE && !others.some((p) => p.slug === value)) {
       const opt = document.createElement('option');
       opt.value = value;
       opt.textContent = value;
@@ -4029,7 +4044,6 @@
     document.getElementById('did_you_know_date').value = p.did_you_know_date || '';
     document.getElementById('did-you-know-date-note').hidden = factDateColumnExists();
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
-    document.getElementById('is_new_launch').checked = !!p.is_new_launch;
     currentRefreshHistory = (p.refresh_history || []).slice().sort();
     const details = p.generation_details && typeof p.generation_details === 'object' && !Array.isArray(p.generation_details) ? p.generation_details : {};
     currentGenerationDetails = JSON.parse(JSON.stringify(details));
@@ -4039,7 +4053,7 @@
     onFamilyChanged();
     setTimelineName(p.timeline_name || null);
     fillProductSelect(document.getElementById('replaced_by'), p.replaced_by || '');
-    fillProductSelect(document.getElementById('previous_model'), p.previous_model || '');
+    fillProductSelect(document.getElementById('previous_model'), p.previous_model || (p.is_new_launch ? NEW_LINE : ''));
     document.querySelector('input[name="previous_model_action"][value="keep"]').checked = true;
     const rk = document.querySelector('input[name="replaced_by_action"][value="keep"]');
     if (rk) rk.checked = true;
@@ -4433,7 +4447,7 @@
         }
       }
       const prevAction = document.querySelector('input[name="previous_model_action"]:checked');
-      const prevSlug = document.getElementById('previous_model').value;
+      const prevSlug = previousModelSlug();
       if (prevSlug && prevAction && prevAction.value === 'discontinue') {
         const prev = cachedProducts.find((p) => p.slug === prevSlug);
         const firstRelease = currentOriginalLaunchDate || currentRefreshHistory.slice().sort()[0] || null;
@@ -4506,8 +4520,8 @@
         in_countdown: document.getElementById('in_countdown').checked,
         did_you_know: (() => { const h = document.getElementById('did_you_know_editor').innerHTML.trim(); return h && h !== '<br>' ? h : null; })(),
         days_basis: document.querySelector('input[name="days_basis"]:checked').value,
-        is_new_launch: document.getElementById('is_new_launch').checked,
-        previous_model: document.getElementById('previous_model').value || null,
+        is_new_launch: document.getElementById('previous_model').value === NEW_LINE,
+        previous_model: previousModelSlug(),
         discontinued: isDiscontinued,
         discontinued_date: isDiscontinued ? discontinuedDate : null,
         // Was only saved for discontinued products, so setting a successor
@@ -5917,7 +5931,7 @@
       discontinued: !!currentDiscontinuedDate,
       discontinued_date: currentDiscontinuedDate,
       generation_details: currentGenerationDetails,
-      previous_model: document.getElementById('previous_model').value || null,
+      previous_model: previousModelSlug(),
       price: priceRaw ? symbol + priceRaw : null,
     };
   }
