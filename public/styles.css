@@ -3226,6 +3226,13 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .intro-hero-text > .countdown.countdown--done .countdown-clock { display: flex; width: auto; }
 .countdown-done-badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 22px; font-weight: 800; line-height: 1.1; box-shadow: 0 4px 14px rgba(194, 84, 12, 0.3); }
 .countdown--event.countdown--done { border-color: var(--event); box-shadow: 0 10px 26px rgba(109, 40, 217, 0.18); }
+/* The badge as a link (the tile around it isn't one): an arrow, and a
+   lift on hover. */
+a.countdown-done-badge { text-decoration: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, filter 0.15s; }
+a.countdown-done-badge:hover { transform: translateY(-1px); filter: brightness(1.08); }
+a.countdown-done-badge:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.countdown-done-go { font-size: 0.85em; margin-left: 2px; transition: transform 0.15s; }
+a.countdown-done-badge:hover .countdown-done-go { transform: translateX(3px); }
 .countdown--event .countdown-done-badge { background: #c4271b; box-shadow: 0 4px 14px rgba(196, 39, 27, 0.3); }
 .countdown.countdown--done .countdown-date { font-weight: 700; }
 @media (min-width: 701px) {
