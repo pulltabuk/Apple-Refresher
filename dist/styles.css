@@ -3553,7 +3553,10 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 .countdown-stop-when { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px; margin-bottom: 8px; }
 .countdown-stop-date { font-size: 14px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
 .countdown-stop-time, .countdown-stop-in { font-size: 12px; font-weight: 600; line-height: 1.2; opacity: 0.75; white-space: nowrap; }
-.countdown-stop-time::before, .countdown-stop-in::before { content: "\00b7"; margin-right: 7px; }
+.countdown-stop-in::before { content: "\00b7"; margin-right: 7px; }
+/* A day's shared time: on a line of its own under the date, so the
+   "in 7 days" never wraps away from it. */
+.countdown-stop-time { flex-basis: 100%; }
 .countdown-stop-items { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .countdown-stop-item { display: flex; align-items: center; gap: 8px; min-width: 0; color: inherit; text-decoration: none; }
 .countdown-stop-icon { display: inline-grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 7px; background: #fff; border: 1px solid #d3e4bf; }
