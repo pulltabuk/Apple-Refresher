@@ -1593,6 +1593,11 @@
     if (!grid || !isPaginatedGrid()) return;
     var cols = (getComputedStyle(grid).gridTemplateColumns || '').split(' ').filter(Boolean).length;
     if (cols !== lastPaginationCols) { lastPaginationCols = cols; applyPagination(); }
+    else {
+      // Same pages, a different width: as many numbers as now fit.
+      var pager = document.getElementById('pagination');
+      if (pager && pager.clientWidth !== pagerWidth) renderPager();
+    }
   });
 
   function applyPagination() {
@@ -1639,48 +1644,83 @@
       return;
     }
 
-    // Previous and Next at either end; between them, page numbers (on
-    // laptops) or "Page 5 of 7", which opens a list of every page (on
-    // phones). One row either way.
-    var html = '<button type="button" class="page-btn page-btn--arrow page-btn--prev" data-page="prev"' + (currentPage === 1 ? ' disabled' : '') + ' aria-label="Previous page"><span aria-hidden="true">\u2190</span><span class="page-btn-word"> Previous</span></button>';
-    html += '<span class="page-numbers">';
-    var start = Math.max(1, currentPage - 2);
-    var end = Math.min(totalPages, start + 4);
-    start = Math.max(1, end - 4);
-    if (start > 1) {
-      html += '<button type="button" class="page-btn" data-page="1">1</button>';
-      if (start > 2) html += '<span class="page-ellipsis">\u2026</span>';
+    pagerTotal = totalPages;
+    renderPager();
+  }
+
+  // The page numbers to show in `slots` places: always the first and
+  // last, the current page with its neighbours, and "…" for any gap,
+  // e.g. 1 2 3 4 5 … 74, or 1 … 9 10 11 … 74.
+  function pagerItems(current, total, slots) {
+    var list = [];
+    var i;
+    if (total <= slots) {
+      for (i = 1; i <= total; i++) list.push(i);
+      return list;
     }
-    for (var p = start; p <= end; p++) {
-      html += '<button type="button" class="page-btn' + (p === currentPage ? ' active' : '') + '" data-page="' + p + '"' + (p === currentPage ? ' aria-current="page"' : '') + '>' + p + '</button>';
+    if (current <= slots - 3) {
+      for (i = 1; i <= slots - 2; i++) list.push(i);
+      return list.concat(['gap', total]);
     }
-    if (end < totalPages) {
-      if (end < totalPages - 1) html += '<span class="page-ellipsis">\u2026</span>';
-      html += '<button type="button" class="page-btn" data-page="' + totalPages + '">' + totalPages + '</button>';
+    if (current >= total - (slots - 4)) {
+      list = [1, 'gap'];
+      for (i = total - (slots - 3); i <= total; i++) list.push(i);
+      return list;
     }
-    html += '</span>';
-    var options = '';
-    for (var q = 1; q <= totalPages; q++) options += '<option value="' + q + '"' + (q === currentPage ? ' selected' : '') + '>Page ' + q + ' of ' + totalPages + '</option>';
-    html += '<label class="page-jump"><span class="page-jump-text">Page ' + currentPage + ' of ' + totalPages + '</span><select class="page-jump-select" aria-label="Go to page">' + options + '</select></label>';
-    html += '<button type="button" class="page-btn page-btn--arrow page-btn--next" data-page="next"' + (currentPage === totalPages ? ' disabled' : '') + ' aria-label="Next page"><span class="page-btn-word">Next </span><span aria-hidden="true">\u2192</span></button>';
-    paginationEl.innerHTML = html;
-    var goTo = function (n) {
-      currentPage = n;
-      // Up to the top of the list first, so that is where Back returns
-      // to on the page being left; then a history entry for this page.
-      var gridEl = document.getElementById('grid');
-      if (gridEl) window.scrollTo(0, Math.max(0, gridEl.getBoundingClientRect().top + window.scrollY - 100));
-      syncPageUrl(true);
-      applyPagination();
+    var side = slots - 5;
+    var from = current - Math.floor(side / 2);
+    list = [1, 'gap'];
+    for (i = from; i <= from + side; i++) list.push(i);
+    return list.concat(['gap', total]);
+  }
+
+  // Previous and Next at either end, the page numbers between: as many as
+  // fit on one row (seven places on laptops, fewer on a narrow phone).
+  var pagerTotal = 1;
+  var pagerWidth = 0;
+  var CHEVRON_LEFT = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var CHEVRON_RIGHT = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function renderPager() {
+    var paginationEl = document.getElementById('pagination');
+    if (!paginationEl) return;
+    var totalPages = pagerTotal;
+    if (totalPages <= 1) {
+      paginationEl.innerHTML = '';
+      return;
+    }
+    var build = function (slots) {
+      var html = '<button type="button" class="page-btn page-btn--arrow" data-page="prev"' + (currentPage === 1 ? ' disabled' : '') + ' aria-label="Previous page">' + CHEVRON_LEFT + '</button>';
+      pagerItems(currentPage, totalPages, slots).forEach(function (p) {
+        html += p === 'gap'
+          ? '<span class="page-ellipsis" aria-hidden="true">…</span>'
+          : '<button type="button" class="page-btn' + (p === currentPage ? ' active' : '') + '" data-page="' + p + '" aria-label="Page ' + p + '"' + (p === currentPage ? ' aria-current="page"' : '') + '>' + p + '</button>';
+      });
+      return html + '<button type="button" class="page-btn page-btn--arrow" data-page="next"' + (currentPage === totalPages ? ' disabled' : '') + ' aria-label="Next page">' + CHEVRON_RIGHT + '</button>';
     };
+    // Seven places, fewer if the row would overflow (five at the least:
+    // first, …, current, …, last).
+    var slots = 7;
+    paginationEl.innerHTML = build(slots);
+    while (slots > 5 && paginationEl.scrollWidth > paginationEl.clientWidth + 1) {
+      slots--;
+      paginationEl.innerHTML = build(slots);
+    }
+    pagerWidth = paginationEl.clientWidth;
     paginationEl.querySelectorAll('.page-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var val = btn.getAttribute('data-page');
-        goTo(val === 'prev' ? currentPage - 1 : val === 'next' ? currentPage + 1 : parseInt(val, 10));
+        goToPage(val === 'prev' ? currentPage - 1 : val === 'next' ? currentPage + 1 : parseInt(val, 10));
       });
     });
-    var jump = paginationEl.querySelector('.page-jump-select');
-    if (jump) jump.addEventListener('change', function () { goTo(parseInt(jump.value, 10)); });
+  }
+  function goToPage(n) {
+    currentPage = n;
+    // Up to the top of the list first, so that is where Back returns
+    // to on the page being left; then a history entry for this page.
+    var gridEl = document.getElementById('grid');
+    if (gridEl) window.scrollTo(0, Math.max(0, gridEl.getBoundingClientRect().top + window.scrollY - 100));
+    syncPageUrl(true);
+    applyPagination();
   }
 
   // Whole league-table rows are clickable (not just the product name),
