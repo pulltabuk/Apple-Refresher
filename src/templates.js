@@ -2083,7 +2083,12 @@ function oneCountdownHtml(item, tail) {
       ? `<span class="countdown-done-badge">${escapeHtml(done.text)}</span>`
       : `<span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>`}
   </span>`;
-  const dateHtml = `<span class="countdown-date">${over && done.date ? escapeHtml(done.date) : `${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${timeWithUk(item.date, item.time)}` : ''}`}</span>`;
+  // A product's tile is titled with its date, the time under it ("6
+  // November 2026" / "9am ET (2pm UK)"), so no date line under the clock.
+  const titleDate = item.product && !over && datePrecision(item.date) === 'day'
+    ? `${item.kind === 'preorder' ? 'Pre-orders &middot; ' : ''}${escapeHtml(longDayText(item.date))}${item.time ? ` <span class="countdown-label-time">${timeWithUk(item.date, item.time)}</span>` : ''}`
+    : '';
+  const dateHtml = item.product ? '' : `<span class="countdown-date">${over && done.date ? escapeHtml(done.date) : `${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${timeWithUk(item.date, item.time)}` : ''}`}</span>`;
   // Counting down to pre-orders: the release day under it, how far off it
   // is kept current by app.js (data-days-until). It stays once pre-orders
   // open, under "Pre-order now", until the next build counts to the release.
@@ -2096,7 +2101,7 @@ function oneCountdownHtml(item, tail) {
     : '';
   // Built after the moment (a rebuild on release day): already finished.
   return `<${tag} class="countdown${isEvent ? ' countdown--event' : ''}${item.product ? ' countdown--product' : ''}${linkedNames ? ' countdown--group' : ''}${tail ? ' countdown--stack' : ''}${over ? ' countdown--done' : ''}"${linkedNames ? '' : ` href="${item.href}"`} data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
-  <span class="countdown-label">${escapeHtml(over ? done.kicker : (item.kicker || 'Counting down to'))}</span>
+  <span class="countdown-label${titleDate ? ' countdown-label--date' : ''}">${titleDate || escapeHtml(over ? done.kicker : (item.kicker || 'Counting down to'))}</span>
   ${namesHtml}
   ${clockHtml}
   ${dateHtml}
@@ -2465,6 +2470,11 @@ function comingTargetMs(date, time) {
 
 // The day in full ("Friday 30 October 2026"); a month or year alone
 // (an expected date) as the site writes it elsewhere.
+// "6 November 2026"
+function longDayText(date) {
+  return new Date(date + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
 function comingDateText(date) {
   if (datePrecision(date) !== 'day') return formatDate(date);
   const d = new Date(date + 'T12:00:00Z');

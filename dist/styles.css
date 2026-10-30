@@ -1905,6 +1905,9 @@ label.admin-btn { cursor: pointer; color: #fff; }
 }
 .countdown:hover { border-color: var(--accent); }
 .countdown-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.85; flex: 0 0 100%; }
+/* A product's tile: its date as the title, in place of a kicker. */
+.countdown-label.countdown-label--date { font-size: 15px; font-weight: 800; text-transform: none; letter-spacing: 0; opacity: 1; line-height: 1.3; }
+.countdown-label-time { display: block; margin-top: 2px; font-size: 0.82em; font-weight: 600; opacity: 0.8; }
 .countdown-name { font-size: 17px; font-weight: 800; }
 .countdown-clock { display: inline-flex; gap: 12px; }
 .countdown-unit { display: inline-flex; align-items: baseline; gap: 4px; }
@@ -2762,6 +2765,7 @@ main:has(> .intro-hero) { padding-bottom: 1.75rem; }
 @media (min-width: 701px) {
   .intro-hero-text > .countdown { margin: 1.25rem 0 1.25rem; width: 100%; box-sizing: border-box; padding: 20px 24px; gap: 10px 18px; }
   .intro-hero-text > .countdown .countdown-label { font-size: 12px; }
+  .intro-hero-text > .countdown .countdown-label.countdown-label--date { font-size: 17px; }
   .intro-hero-text > .countdown .countdown-name { font-size: 22px; }
   .intro-hero-text > .countdown .countdown-clock { gap: 18px; }
   .intro-hero-text > .countdown .countdown-value { font-size: 34px; }

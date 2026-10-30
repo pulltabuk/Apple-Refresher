@@ -3471,7 +3471,10 @@
         if (!el.classList.contains('countdown--done')) {
           el.classList.add('countdown--done');
           var kicker = el.querySelector('.countdown-label');
-          if (kicker && el.getAttribute('data-done-kicker')) kicker.textContent = el.getAttribute('data-done-kicker');
+          if (kicker && el.getAttribute('data-done-kicker')) {
+            kicker.textContent = el.getAttribute('data-done-kicker');
+            kicker.classList.remove('countdown-label--date');
+          }
           var dateEl = el.querySelector('.countdown-date');
           if (dateEl && el.getAttribute('data-done-date')) dateEl.textContent = el.getAttribute('data-done-date');
           clock.innerHTML = '<span class="countdown-done-badge">' + escapeHtmlJS(el.getAttribute('data-done-text') || 'Today') + '</span>';
