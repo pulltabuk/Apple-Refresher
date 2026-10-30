@@ -1109,7 +1109,7 @@
       // below fills in and ticks the clock.
       var due = (product.refresh_history || []).slice().sort().pop();
       var at = product.release_time ? escapeHtmlJS(product.release_time) : '';
-      return '<p class="days-hero days-hero--upcoming"' + (due ? ' data-product-countdown="' + due + '"' + (at ? ' data-product-countdown-time="' + at + '"' : '') : '') + '><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">' + (due ? formatDateJS(due) + (at ? ' \u00b7 ' + at : '') : 'soon') + '</span>' +
+      return '<p class="days-hero days-hero--upcoming"' + (due ? ' data-product-countdown="' + due + '"' + (at ? ' data-product-countdown-time="' + at + '"' : '') : '') + '><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">' + (due ? formatDateJS(due) + (at ? ' \u00b7 ' + timeWithUkJS(due, product.release_time) : '') : 'soon') + '</span>' +
         (due ? '<span class="product-countdown-clock days-hero-clock" data-product-countdown-clock></span>' : '') + '</p>';
     }
     var bar = '';
@@ -2283,7 +2283,7 @@
               var due = (product.refresh_history || []).slice().sort().pop();
               var at = product.release_time ? escapeHtmlJS(product.release_time) : '';
               return '<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="' + due + '"' + (at ? ' data-product-countdown-time="' + at + '"' : '') + '>' +
-                '<span class="card-featured-count-due">Coming ' + formatDateJS(due) + (at ? ' \u00b7 ' + at : '') + '</span>' +
+                '<span class="card-featured-count-due">Coming ' + formatDateJS(due) + (at ? ' \u00b7 ' + timeWithUkJS(due, product.release_time) : '') + '</span>' +
                 '<span class="product-countdown-clock" data-product-countdown-clock></span></div>';
             })()
           : '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span> <span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>')
@@ -3378,6 +3378,26 @@
     var asUtc = Date.UTC(+v.year, +v.month - 1, +v.day, +v.hour % 24, +v.minute, +v.second);
     return asUtc - utcMs;
   }
+  // Must match timeWithUk() in src/templates.js: a time set in another
+  // zone gets the UK time after it, "9am ET (2pm UK)". Escaped.
+  function timeWithUkJS(dateStr, timeText) {
+    var safe = escapeHtmlJS(timeText || '');
+    var z = /([A-Za-z]{2,4})\s*$/.exec(String(timeText || ''));
+    var zone = z ? z[1].toUpperCase() : '';
+    if (!timeText || !ZONES || !ZONES[zone] || zone === 'UK' || zone === 'GMT' || zone === 'BST' || zone === 'UTC' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr || '')) return safe;
+    var ms = countdownTarget(dateStr, timeText);
+    if (isNaN(ms)) return safe;
+    try {
+      var parts = {};
+      new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'short' })
+        .formatToParts(new Date(ms)).forEach(function (p) { parts[p.type] = p.value; });
+      var h = +parts.hour % 24, min = +parts.minute;
+      var clock = (h % 12 || 12) + (min ? ':' + String(min).padStart(2, '0') : '') + (h < 12 ? 'am' : 'pm');
+      var sameDay = parts.year + '-' + parts.month + '-' + parts.day === dateStr;
+      return safe + ' (' + clock + (sameDay ? '' : ' ' + parts.weekday) + ' UK)';
+    } catch (e) { return safe; }
+  }
+
   function countdownTarget(dateStr, timeText) {
     if (!dateStr) return NaN;
     var bits = dateStr.split('-').map(Number);

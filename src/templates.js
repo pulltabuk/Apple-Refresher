@@ -1607,7 +1607,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
             const fallback = away !== null && away > 0
               ? `<span class="countdown-unit countdown-unit--wide"><span class="countdown-value">${away}</span> <span class="countdown-unit-label">${away === 1 ? 'day' : 'days'}</span></span>`
               : '<span class="countdown-unit countdown-unit--wide"><span class="countdown-value">Today</span></span>';
-            return `<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="${due}"${product.release_time ? ` data-product-countdown-time="${escapeHtml(product.release_time)}"` : ''}><span class="card-featured-count-due">Coming ${formatDate(due)}${product.release_time ? ` &middot; ${escapeHtml(product.release_time)}` : ''}</span><span class="product-countdown-clock" data-product-countdown-clock>${fallback}</span></div>`;
+            return `<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="${due}"${product.release_time ? ` data-product-countdown-time="${escapeHtml(product.release_time)}"` : ''}><span class="card-featured-count-due">Coming ${formatDate(due)}${product.release_time ? ` &middot; ${timeWithUk(due, product.release_time)}` : ''}</span><span class="product-countdown-clock" data-product-countdown-clock>${fallback}</span></div>`;
           })()
         : `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span> <span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`)
     : productBadge(product, statusInfo);
@@ -1644,7 +1644,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
   const detailRows = [
     product.price ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch price from</span> ${escapeHtml(formatPrice(product.price))}</div>` : '',
     extras.announced ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Announced</span> ${formatDate(extras.announced)}</div>` : '',
-    extras.preorder ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Pre-orders open</span> ${formatDate(extras.preorder)}${product.preorder_time ? ` &middot; ${escapeHtml(product.preorder_time)}` : ''}</div>` : '',
+    extras.preorder ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Pre-orders open</span> ${formatDate(extras.preorder)}${product.preorder_time ? ` &middot; ${timeWithUk(extras.preorder, product.preorder_time)}` : ''}</div>` : '',
     launch && !isUpcoming ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ${formatDate(launch)}</div>` : '',
     product.discontinued && product.discontinued_date
       ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ${formatDate(product.discontinued_date)}</div>`
@@ -2021,6 +2021,15 @@ function countdownHtml(countdown, opts) {
 // current by app.js) beside every product launching then, each linking
 // to its page. A time the whole day shares goes by the date; otherwise
 // each product carries its own. Pre-orders are tagged as such.
+// A release or pre-order time, with the UK time after it when it was set
+// in another zone: "9am ET (2pm UK)", "11pm PT (7am Sat UK)". Already
+// escaped. Keep in step with timeWithUkJS() in public/app.js.
+function timeWithUk(date, time) {
+  if (!time) return '';
+  const uk = date && datePrecision(date) === 'day' ? FactsKit.eventUkTime({ event_date: date, event_time: time }) : '';
+  return escapeHtml(time) + (uk ? ` (${escapeHtml(uk)})` : '');
+}
+
 function countdownStopsHtml(items) {
   const year = String(new Date().getUTCFullYear());
   const stops = [];
@@ -2035,8 +2044,8 @@ function countdownStopsHtml(items) {
     const times = Array.from(new Set(stop.items.map((item) => item.time || '')));
     const shared = times.length === 1 ? times[0] : '';
     return `<div class="countdown-stop">
-      <span class="countdown-stop-when"><span class="countdown-stop-date">${escapeHtml(date)}</span>${shared ? `<span class="countdown-stop-time">${escapeHtml(shared)}</span>` : ''}${away ? `<span class="countdown-stop-in" data-days-until="${escapeHtml(stop.date)}">${escapeHtml(away)}</span>` : ''}</span>
-      <span class="countdown-stop-items">${stop.items.map((item) => `<a class="countdown-stop-item" href="${item.href}">${item.product ? `<span class="countdown-stop-icon">${productIcon(item.product, 18)}</span>` : ''}<span class="countdown-stop-name">${escapeHtml(item.label)}${item.kind === 'preorder' ? ' <span class="countdown-stop-tag">Pre-orders</span>' : ''}${!shared && item.time ? ` <span class="countdown-stop-item-time">${escapeHtml(item.time)}</span>` : ''}</span></a>`).join('')}</span>
+      <span class="countdown-stop-when"><span class="countdown-stop-date">${escapeHtml(date)}</span>${shared ? `<span class="countdown-stop-time">${timeWithUk(stop.date, shared)}</span>` : ''}${away ? `<span class="countdown-stop-in" data-days-until="${escapeHtml(stop.date)}">${escapeHtml(away)}</span>` : ''}</span>
+      <span class="countdown-stop-items">${stop.items.map((item) => `<a class="countdown-stop-item" href="${item.href}">${item.product ? `<span class="countdown-stop-icon">${productIcon(item.product, 18)}</span>` : ''}<span class="countdown-stop-name">${escapeHtml(item.label)}${item.kind === 'preorder' ? ' <span class="countdown-stop-tag">Pre-orders</span>' : ''}${!shared && item.time ? ` <span class="countdown-stop-item-time">${timeWithUk(item.date, item.time)}</span>` : ''}</span></a>`).join('')}</span>
     </div>`;
   }).join('\n    ');
 }
@@ -2074,7 +2083,7 @@ function oneCountdownHtml(item, tail) {
       ? `<span class="countdown-done-badge">${escapeHtml(done.text)}</span>`
       : `<span class="countdown-unit"><span class="countdown-value">${days}</span> <span class="countdown-unit-label">${days === 1 ? 'day' : 'days'}</span></span>`}
   </span>`;
-  const dateHtml = `<span class="countdown-date">${over && done.date ? escapeHtml(done.date) : `${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${escapeHtml(item.time)}` : ''}`}</span>`;
+  const dateHtml = `<span class="countdown-date">${over && done.date ? escapeHtml(done.date) : `${item.datePrefix ? `${item.datePrefix} ` : ''}${formatDate(item.date)}${item.time ? ` &middot; ${timeWithUk(item.date, item.time)}` : ''}`}</span>`;
   // Counting down to pre-orders: the release day under it, how far off it
   // is kept current by app.js (data-days-until). It stays once pre-orders
   // open, under "Pre-order now", until the next build counts to the release.
@@ -2083,7 +2092,7 @@ function oneCountdownHtml(item, tail) {
   const relAway = rel && datePrecision(rel) === 'day' ? FactsKit.daysUntilText(rel) : '';
   const relTimes = Array.from(new Set((members || [item]).map((m) => m.releaseTime || '')));
   const releaseHtml = rel
-    ? `<span class="countdown-release">${releaseDays[releaseDays.length - 1] !== rel ? 'In stores from' : 'In stores'} ${escapeHtml(formatDate(rel))}${relTimes.length === 1 && relTimes[0] ? ` &middot; ${escapeHtml(relTimes[0])}` : ''}${relAway ? ` &middot; <span data-days-until="${escapeHtml(rel)}">${escapeHtml(relAway)}</span>` : ''}</span>`
+    ? `<span class="countdown-release">${releaseDays[releaseDays.length - 1] !== rel ? 'In stores from' : 'In stores'} ${escapeHtml(formatDate(rel))}${relTimes.length === 1 && relTimes[0] ? ` &middot; ${timeWithUk(rel, relTimes[0])}` : ''}${relAway ? ` &middot; <span data-days-until="${escapeHtml(rel)}">${escapeHtml(relAway)}</span>` : ''}</span>`
     : '';
   // Built after the moment (a rebuild on release day): already finished.
   return `<${tag} class="countdown${isEvent ? ' countdown--event' : ''}${item.product ? ' countdown--product' : ''}${linkedNames ? ' countdown--group' : ''}${tail ? ' countdown--stack' : ''}${over ? ' countdown--done' : ''}"${linkedNames ? '' : ` href="${item.href}"`} data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}"${done.date ? ` data-done-date="${escapeHtml(done.date)}"` : ''}>
@@ -2486,7 +2495,7 @@ function comingPreorderHtml(product, date) {
   const info = (product.generation_details && product.generation_details[date]) || {};
   const today = new Date().toISOString().slice(0, 10);
   if (!info.preorder || info.preorder < today) return '';
-  return `<span class="coming-card-preorder">Pre-orders ${escapeHtml(formatDate(info.preorder))}${product.preorder_time ? ` &middot; ${escapeHtml(product.preorder_time)}` : ''}</span>`;
+  return `<span class="coming-card-preorder">Pre-orders ${escapeHtml(formatDate(info.preorder))}${product.preorder_time ? ` &middot; ${timeWithUk(info.preorder, product.preorder_time)}` : ''}</span>`;
 }
 
 // What the clock turns into on the day (app.js, data-done-*).
@@ -2534,7 +2543,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     const extras = single ? upcomingExtras(single) : {};
     const facts = single ? [
       extras.announced ? `Announced ${formatDate(extras.announced)}` : '',
-      extras.preorder ? `Pre-orders ${formatDate(extras.preorder)}${single.preorder_time ? ` &middot; ${escapeHtml(single.preorder_time)}` : ''}` : '',
+      extras.preorder ? `Pre-orders ${formatDate(extras.preorder)}${single.preorder_time ? ` &middot; ${timeWithUk(extras.preorder, single.preorder_time)}` : ''}` : '',
       single.price ? `From ${escapeHtml(formatPrice(single.price))}` : '',
     ].filter(Boolean) : [];
     const nameHtml = (p, linked) => `<${linked ? `a href="/products/${p.slug}/"` : 'span'} class="coming-next-product"><span class="coming-next-icon">${productIcon(p, 56)}</span><span class="coming-next-text"><span class="coming-next-name">${escapeHtml(p.name)}</span><span class="coming-next-family">${escapeHtml(p.category || '')}</span></span></${linked ? 'a' : 'span'}>`;
@@ -2544,7 +2553,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     <span class="coming-next-main">
       <span class="coming-next-kicker countdown-label">Next to launch</span>
       <span class="coming-next-names">${next.products.map((p) => nameHtml(p, !single)).join('')}</span>
-      <span class="coming-next-date countdown-date">${exact(next) ? 'Coming ' : 'Expected '}${escapeHtml(comingDateText(next.date))}${exact(next) && next.time ? ` &middot; ${escapeHtml(next.time)}` : ''}${comingAwayHtml(next.date)}</span>
+      <span class="coming-next-date countdown-date">${exact(next) ? 'Coming ' : 'Expected '}${escapeHtml(comingDateText(next.date))}${exact(next) && next.time ? ` &middot; ${timeWithUk(next.date, next.time)}` : ''}${comingAwayHtml(next.date)}</span>
       ${facts.length ? `<span class="coming-next-facts">${facts.map((f) => `<span>${f}</span>`).join(' &middot; ')}</span>` : ''}
       ${single ? '<span class="coming-next-cta">See the product &rarr;</span>' : ''}
     </span>
@@ -2558,7 +2567,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     const cards = groups.flatMap((g, gi) => g.products.map((p) => `<a class="coming-card${gi === 0 ? ' coming-card--lead' : ''}" href="/products/${p.slug}/" data-order="${order++}" data-name="${escapeHtml(p.name.toLowerCase())}" data-family="${escapeHtml(p.category || '')}"${gi === 0 ? ' hidden' : ''}${exact(g) ? ` data-countdown="${escapeHtml(g.date)}"${g.time ? ` data-countdown-time="${escapeHtml(g.time)}"` : ''} ${comingDoneAttrs(g.date)}` : ''}>
     <span class="coming-card-head"><span class="coming-card-icon">${productIcon(p, 34)}</span><span class="coming-card-text"><span class="coming-card-name">${escapeHtml(p.name)}</span><span class="coming-card-family">${escapeHtml(p.category || '')}</span></span></span>
     ${exact(g) ? `<span class="coming-clock coming-clock--small" data-countdown-clock role="timer">${comingClockHtml(g.date, g.time)}</span>` : ''}
-    <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${exact(g) && g.time ? ` &middot; ${escapeHtml(g.time)}` : ''}${comingAwayHtml(g.date)}</span>
+    <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${exact(g) && g.time ? ` &middot; ${timeWithUk(g.date, g.time)}` : ''}${comingAwayHtml(g.date)}</span>
     ${comingPreorderHtml(p, g.date)}
   </a>`));
     body = `
@@ -2918,7 +2927,7 @@ function heroStatHtml(product, statusInfo, cycleDays) {
     const fallback = away !== null && away > 0
       ? `<span class="countdown-unit countdown-unit--wide"><span class="countdown-value">${away}</span> <span class="countdown-unit-label">${away === 1 ? 'day' : 'days'}</span></span>`
       : '';
-    return `<p class="days-hero days-hero--upcoming"${due ? ` data-product-countdown="${due}"${product.release_time ? ` data-product-countdown-time="${escapeHtml(product.release_time)}"` : ''}` : ''}><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">${due ? formatDate(due) + (product.release_time ? ` &middot; ${escapeHtml(product.release_time)}` : '') : 'soon'}</span>${due ? `<span class="product-countdown-clock days-hero-clock" data-product-countdown-clock>${fallback}</span>` : ''}</p>`;
+    return `<p class="days-hero days-hero--upcoming"${due ? ` data-product-countdown="${due}"${product.release_time ? ` data-product-countdown-time="${escapeHtml(product.release_time)}"` : ''}` : ''}><span class="days-hero-label">Coming soon</span> <span class="days-hero-soon">${due ? formatDate(due) + (product.release_time ? ` &middot; ${timeWithUk(due, product.release_time)}` : '') : 'soon'}</span>${due ? `<span class="product-countdown-clock days-hero-clock" data-product-countdown-clock>${fallback}</span>` : ''}</p>`;
   }
   // A bar showing how far through the family's usual gap this product is
   // gives the big number something to be measured against, and uses the
