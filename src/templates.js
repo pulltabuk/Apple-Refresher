@@ -3718,7 +3718,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           <label>Or link to a video<input type="url" id="video_link" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off"></label>
           <p class="admin-hint">YouTube and Vimeo play right on the product page. A link anywhere else shows as &ldquo;Watch on &hellip;&rdquo; in the details.</p>
           <p id="video-error" class="form-error"></p>
-          <label class="checkbox-label"><input type="checkbox" id="is_new_launch"> This is a brand new product, not a refresh of an existing line</label>
         </section>
 
         <div class="admin-save-bar">
