@@ -148,11 +148,13 @@
       .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; })
       .slice(0, 5);
   }
+  var UPDATE_KIND_LABELS_JS = { release: ['Released', 'Release'], update: ['Updated', 'Update'], colour: ['New colour', 'New colour'], price: ['Price change', 'Price change'], dropped: ['Dropped', 'Dropped'] };
   function timelineUpdatesHtmlJS(updates) {
     if (!updates || !updates.length) return '';
     var today = new Date().toISOString().slice(0, 10);
     return '<ul class="tl-updates">' + updates.map(function (u) {
-      return '<li class="tl-update"><span class="tl-entry-type tl-entry-type--update">' + (u.date > today ? 'Update' : 'Updated') + '</span>' +
+      var label = (UPDATE_KIND_LABELS_JS[u.kind] || UPDATE_KIND_LABELS_JS.update)[u.date > today ? 1 : 0];
+      return '<li class="tl-update"><span class="tl-entry-type tl-entry-type--update' + (u.kind === 'dropped' ? ' tl-entry-type--update-dropped' : '') + '">' + label + '</span>' +
         '<span class="tl-update-date">' + escapeHtmlJS(formatDateJS(u.date)) + '</span>' +
         (u.note ? '<span class="tl-update-note">' + escapeHtmlJS(u.note) + '</span>' : '') + '</li>';
     }).join('') + '</ul>';

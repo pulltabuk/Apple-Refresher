@@ -22,6 +22,8 @@
   // The Coming soon list (every product with a release date still ahead)
   // in place of the family tiles.
   let comingView = false;
+  // Every product, all families together, in one list (/admin/?all=1).
+  let allView = false;
   // An announcement added before any release date exists. It attaches
   // itself to the first release added, so dates can be entered in any order.
   let pendingAnnouncedDate = null;
@@ -1463,10 +1465,11 @@
     } else {
       // A family's list or the Coming soon list, as the address says.
       if (params.get('coming')) comingView = true;
+      else if (params.get('all')) allView = true;
       else if (params.get('family')) selectedFamily = params.get('family');
       productsUrlReady = true;
       showProductList();
-      if (comingView || selectedFamily) renderProductList();
+      if (comingView || allView || selectedFamily) renderProductList();
       // Back to the tab in the address, e.g. /admin/#facts after a refresh.
       const hashTab = window.location.hash.slice(1);
       const hashBtn = hashTab && document.querySelector('.admin-tab-btn[data-tab="' + hashTab.replace(/[^a-z]/g, '') + '"]');
@@ -2337,12 +2340,21 @@
       btn.addEventListener('click', () => {
         selectedFamily = familyValue;
         comingView = false;
+        allView = false;
         if (productSearchInputEl) productSearchInputEl.value = '';
         renderProductList();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
       tilesEl.appendChild(btn);
     };
+    // Every product, as one list.
+    const allTile = document.createElement('button');
+    allTile.type = 'button';
+    allTile.className = 'family-tile family-tile--all';
+    allTile.innerHTML = '<span class="family-tile-plus" aria-hidden="true">\u2630</span><span class="family-tile-name">All products</span><span class="family-tile-count">' + cachedProducts.length + '</span>';
+    allTile.title = 'Every product, all families together';
+    allTile.addEventListener('click', openAllList);
+    tilesEl.appendChild(allTile);
     // Every product with a release date still ahead, as one list.
     const comingCount = comingProducts().length;
     if (comingCount) {
@@ -2926,10 +2938,22 @@
       .filter((p) => !p.discontinued && due(p))
       .sort((a, b) => due(a).localeCompare(due(b)) || a.name.localeCompare(b.name));
   }
+  function openAllList() {
+    if (productFormView.style.display !== 'none' && productFormDirty &&
+        !window.confirm('Leave this product without saving your changes?')) return;
+    allView = true;
+    comingView = false;
+    selectedFamily = null;
+    if (productSearchInputEl) productSearchInputEl.value = '';
+    showProductList();
+    renderProductList();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
   function openComingList() {
     if (productFormView.style.display !== 'none' && productFormDirty &&
         !window.confirm('Leave this product without saving your changes?')) return;
     comingView = true;
+    allView = false;
     selectedFamily = null;
     if (productSearchInputEl) productSearchInputEl.value = '';
     showProductList();
@@ -2942,7 +2966,7 @@
   // goes in the address, so a refresh comes back to it rather than to the
   // family tiles. An open product keeps its own address (?edit=).
   function productsListSearch() {
-    return comingView ? '?coming=1' : selectedFamily ? '?family=' + encodeURIComponent(selectedFamily) : '';
+    return comingView ? '?coming=1' : allView ? '?all=1' : selectedFamily ? '?family=' + encodeURIComponent(selectedFamily) : '';
   }
   let productsUrlReady = false; // not until the page has read the address it opened on
   function syncProductsUrl() {
@@ -3007,18 +3031,21 @@
       return;
     }
 
-    if (!selectedFamily) {
+    if (!selectedFamily && !allView) {
       showFamilyScreen();
       return;
     }
 
-    // A family is open, so show its products on their own screen.
+    // A family is open (or All products), so show its products on their
+    // own screen.
     document.getElementById('family-screen').style.display = 'none';
     document.getElementById('products-screen').style.display = '';
     const familyLabel = document.getElementById('products-screen-family');
-    familyLabel.innerHTML = iconHtml(selectedFamily, null, 22) + '<span>' + escapeAttr(selectedFamily) + '</span>';
+    familyLabel.innerHTML = allView
+      ? '<span>All products (' + cachedProducts.length + ')</span>'
+      : iconHtml(selectedFamily, null, 22) + '<span>' + escapeAttr(selectedFamily) + '</span>';
     productListEl.innerHTML = '';
-    const inFamily = sortFamilyProducts(cachedProducts
+    const inFamily = sortFamilyProducts(allView ? cachedProducts : cachedProducts
       .filter((p) => (p.category || '').trim().toLowerCase() === selectedFamily.toLowerCase()), productSort);
     document.querySelectorAll('[data-product-sort]').forEach((btn) => {
       const on = btn.getAttribute('data-product-sort') === productSort;
@@ -3027,18 +3054,18 @@
     });
     // A family whose last product is marked: said once, above the tiles.
     const endedNote = document.getElementById('line-ended-note');
-    const last = inFamily.every((p) => p.discontinued) && inFamily.find((p) => p.last_in_line);
+    const last = !allView && inFamily.every((p) => p.discontinued) && inFamily.find((p) => p.last_in_line);
     if (endedNote) {
       endedNote.hidden = !last;
       endedNote.textContent = last ? 'Line ended' + (last.discontinued_date ? ' ' + formatAdminDate(last.discontinued_date) : '') + ': the ' + last.name + ' was the last ' + selectedFamily + '.' : '';
     }
-    inFamily.forEach((p) => productListEl.appendChild(productCard(p, false, productSort === 'added')));
+    inFamily.forEach((p) => productListEl.appendChild(productCard(p, allView, productSort === 'added')));
 
     const newCard = document.createElement('button');
     newCard.type = 'button';
     newCard.className = 'line-card line-card--new';
-    newCard.innerHTML = '<span class="family-tile-plus">+</span><span>Add a product to ' + escapeAttr(selectedFamily) + '</span>';
-    newCard.addEventListener('click', () => startNewProduct({ category: selectedFamily }));
+    newCard.innerHTML = '<span class="family-tile-plus">+</span><span>' + (allView ? 'Add a product' : 'Add a product to ' + escapeAttr(selectedFamily)) + '</span>';
+    newCard.addEventListener('click', () => startNewProduct(allView ? undefined : { category: selectedFamily }));
     productListEl.appendChild(newCard);
   }
 
@@ -3103,6 +3130,7 @@
     if (!okToLeaveForm()) return;
     selectedFamily = null;
     comingView = false;
+    allView = false;
     editingId = null;
     editingSlug = null;
     if (productSearchInputEl) productSearchInputEl.value = '';
@@ -3209,7 +3237,9 @@
   let lastPicked = null; // { row, date }: the last date picked in the box
   let releasePrecision = 'day';
   let releasePrecisionFor = undefined;
-  const CHAIN = ['announced', 'preorder', 'release'];
+  const CHAIN = ['launch', 'announced', 'preorder', 'release'];
+  // What a suggested date was copied from, for its button: "✓ Same as launch".
+  const SAME_AS = { launch: 'launch', announced: 'announced', preorder: 'pre-orders', release: 'release', restart: 'last release' };
 
   // The release the box shows: the upcoming one, else the newest one
   // recorded, so the rows always match the dates in the list above.
@@ -3262,6 +3292,7 @@
     }
     if (useBtn) {
       useBtn.hidden = !suggestion;
+      useBtn.textContent = '\u2713 Same as ' + ((lastPicked && SAME_AS[lastPicked.row]) || 'above');
       useBtn.title = suggestion ? 'Use ' + formatAdminDate(suggestion) : '';
     }
     if (clearBtn) clearBtn.hidden = !value;
@@ -3289,8 +3320,8 @@
       ? (target === upcoming ? 'Next release' : 'Latest release')
       : releases.length ? 'Add a release' : 'First release';
     document.getElementById('dates-box-hint').textContent = target
-      ? 'These are the ' + (target === upcoming ? 'upcoming' : 'latest') + ' release’s dates, as in the list above; changing one here changes it there too. “Add another release” is for a new one. An empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release.'
-      : 'Fill in what you know, top to bottom. Each empty date starts on the one you picked above it: tap “Same day”, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release. The release joins the list above once its date is picked.';
+      ? 'These are the ' + (target === upcoming ? 'upcoming' : 'latest') + ' release’s dates, as in the list above; changing one here changes it there too. “Add another release” is for a new one. An empty date starts on the one you picked above it: tap its “✓ Same as…” button, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release.'
+      : 'Fill in what you know, top to bottom. Each empty date starts on the one you picked above it: tap its “✓ Same as…” button, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release. The release joins the list above once its date is picked.';
 
     paintDateRow('announced', rowValue('announced', target), target);
     paintDateRow('preorder', rowValue('preorder', target), target);
@@ -3330,7 +3361,8 @@
     }
     // The product's launch, and this release's updates.
     paintLaunchRow(target);
-    renderUpdatesEditor(document.getElementById('release-updates-list'), document.getElementById('release-update-add'), target);
+    renderUpdatesEditor(document.getElementById('release-updates-list'), target);
+    paintEndOfLine();
 
     // The countdown needs a release date still ahead.
     const cdBox = document.getElementById('in_countdown');
@@ -3494,6 +3526,10 @@
         }
       }
       currentOriginalLaunchDate = value;
+      // The empty rows below start on it ("✓ Same as launch"), when the
+      // box is filling in that same first release.
+      const shown = datesTarget();
+      if (isFullDate(value) && (!shown || shown === value)) lastPicked = { row: 'launch', date: value };
     }
     productFormDirty = true;
     renderRefreshHistory();
@@ -3506,34 +3542,55 @@
   });
   document.querySelector('[data-date-clear="launch"]').addEventListener('click', () => commitLaunch(null));
 
-  // --- Updates to a release since it came out (more memory, a new
-  // colour): up to five, each a date and what changed. Stored with the
-  // release (generation_details[date].updates); the site lists them
-  // under it. Before the release date is picked they wait, like the
-  // announced and pre-order dates, and join the release when it's added.
+  // --- Updates to a release since it came out (a new model such as the
+  // 4GB one, more memory, a new colour): five lines, always shown, each a
+  // date, a kind and what. Stored with the release
+  // (generation_details[date].updates); the site lists them under it.
+  // Before the release date is picked they wait, like the announced and
+  // pre-order dates, and join the release when it's added. Blank lines
+  // are dropped on save.
+  const UPDATE_KINDS = [
+    { value: 'release', label: 'Release' },
+    { value: 'update', label: 'Update' },
+    { value: 'colour', label: 'New colour' },
+    { value: 'price', label: 'Price change' },
+    { value: 'dropped', label: 'Dropped' },
+  ];
+  const blankUpdate = () => ({ date: null, kind: 'release', note: '' });
+  const updateIsBlank = (u) => !u || (!u.date && !(u.note || '').trim());
+  // The release's lines, padded to five.
   function updatesList(date) {
-    if (!date) return pendingUpdates;
-    const info = detailFor(date);
-    if (!Array.isArray(info.updates)) info.updates = [];
-    return info.updates;
+    let list;
+    if (!date) {
+      list = pendingUpdates;
+    } else {
+      const info = detailFor(date);
+      if (!Array.isArray(info.updates)) info.updates = [];
+      list = info.updates;
+    }
+    while (list.length < MAX_UPDATES) list.push(blankUpdate());
+    return list;
   }
-  function renderUpdatesEditor(listEl, addBtn, date) {
+  function renderUpdatesEditor(listEl, date) {
     if (!listEl) return;
-    const list = date ? ((currentGenerationDetails[date] || {}).updates || []) : pendingUpdates;
+    const list = updatesList(date);
     // Keep the cursor where it was across a redraw.
     const active = listEl.contains(document.activeElement) ? document.activeElement : null;
     const keep = active ? { i: active.dataset.i, field: active.dataset.field, pos: active.selectionStart } : null;
     listEl.innerHTML = '';
-    listEl.dataset.updatesFor = date || '';
-    list.forEach((u, i) => {
+    list.slice(0, MAX_UPDATES).forEach((u, i) => {
       const row = document.createElement('div');
-      row.className = 'admin-update-row';
+      row.className = 'admin-update-row' + (updateIsBlank(u) ? ' is-blank' : '');
+      const num = document.createElement('span');
+      num.className = 'admin-update-num';
+      num.textContent = String(i + 1);
+      num.setAttribute('aria-hidden', 'true');
       const dateIn = document.createElement('input');
       dateIn.type = 'date';
       dateIn.value = isFullDate(u.date) ? u.date : '';
       dateIn.dataset.i = i;
       dateIn.dataset.field = 'date';
-      dateIn.setAttribute('aria-label', 'Date of update ' + (i + 1));
+      dateIn.setAttribute('aria-label', 'Update ' + (i + 1) + ': date');
       dateIn.addEventListener('change', () => {
         const v = dateIn.value || null;
         if (v && date && isFullDate(date) && v < date) {
@@ -3542,7 +3599,24 @@
           return;
         }
         u.date = v;
-        list.sort((a, b) => (!a.date ? 1 : !b.date ? -1 : a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+        // Oldest first, blank lines last.
+        list.sort((a, b) => (!a.date && !b.date ? 0 : !a.date ? 1 : !b.date ? -1 : a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+        productFormDirty = true;
+        renderRefreshHistory();
+      });
+      const kindIn = document.createElement('select');
+      kindIn.dataset.i = i;
+      kindIn.dataset.field = 'kind';
+      kindIn.setAttribute('aria-label', 'Update ' + (i + 1) + ': kind');
+      UPDATE_KINDS.forEach((k) => {
+        const opt = document.createElement('option');
+        opt.value = k.value;
+        opt.textContent = k.label;
+        kindIn.appendChild(opt);
+      });
+      kindIn.value = UPDATE_KINDS.some((k) => k.value === u.kind) ? u.kind : 'update';
+      kindIn.addEventListener('change', () => {
+        u.kind = kindIn.value;
         productFormDirty = true;
         renderRefreshHistory();
       });
@@ -3550,51 +3624,69 @@
       noteIn.type = 'text';
       noteIn.value = u.note || '';
       noteIn.maxLength = 120;
-      noteIn.placeholder = 'What changed, e.g. Now with 32GB memory';
+      noteIn.placeholder = 'What, e.g. 4GB model';
       noteIn.dataset.i = i;
       noteIn.dataset.field = 'note';
-      noteIn.setAttribute('aria-label', 'What changed in update ' + (i + 1));
+      noteIn.setAttribute('aria-label', 'Update ' + (i + 1) + ': what');
       noteIn.addEventListener('input', () => { u.note = noteIn.value; productFormDirty = true; });
       noteIn.addEventListener('change', () => renderRefreshHistory());
-      const remove = document.createElement('button');
-      remove.type = 'button';
-      remove.className = 'admin-btn admin-btn--small admin-btn--ghost';
-      remove.textContent = 'Remove';
-      remove.dataset.i = i;
-      remove.dataset.field = 'remove';
-      remove.addEventListener('click', () => {
+      const clear = document.createElement('button');
+      clear.type = 'button';
+      clear.className = 'admin-update-clear';
+      clear.textContent = '×';
+      clear.title = 'Clear this line';
+      clear.setAttribute('aria-label', 'Clear update ' + (i + 1));
+      clear.dataset.i = i;
+      clear.dataset.field = 'clear';
+      clear.hidden = updateIsBlank(u);
+      clear.addEventListener('click', () => {
         list.splice(i, 1);
+        list.push(blankUpdate());
         productFormDirty = true;
         renderRefreshHistory();
       });
+      row.appendChild(num);
       row.appendChild(dateIn);
+      row.appendChild(kindIn);
       row.appendChild(noteIn);
-      row.appendChild(remove);
+      row.appendChild(clear);
       listEl.appendChild(row);
     });
-    if (addBtn) addBtn.hidden = list.length >= MAX_UPDATES;
     if (keep) {
       const el = listEl.querySelector('[data-i="' + keep.i + '"][data-field="' + keep.field + '"]');
-      if (el) {
+      if (el && !el.hidden) {
         el.focus();
         if (keep.field === 'note' && keep.pos != null) { try { el.setSelectionRange(keep.pos, keep.pos); } catch (err) { /* not a text box */ } }
       }
     }
   }
-  // A new, empty update row, with the cursor in its date.
-  function addUpdate(date, inList) {
-    const list = updatesList(date);
-    if (list.length >= MAX_UPDATES) return;
-    list.push({ date: null, note: '' });
-    productFormDirty = true;
-    renderRefreshHistory();
-    const listEl = inList
-      ? Array.from(refreshHistoryListEl.querySelectorAll('.admin-updates-list')).find((el) => el.dataset.updatesFor === date)
-      : document.getElementById('release-updates-list');
-    const rows = listEl ? listEl.querySelectorAll('.admin-update-row') : [];
-    if (rows.length) rows[rows.length - 1].querySelector('input').focus();
+
+  // --- End of the line: on the Discontinued row, for the last product of
+  // its family (the family's page then says the line has ended).
+  function paintEndOfLine() {
+    const btn = document.getElementById('end_of_line_btn');
+    const box = document.getElementById('last_in_line');
+    const hint = document.getElementById('last-in-line-text');
+    if (!btn || !box) return;
+    const show = !!currentDiscontinuedDate;
+    btn.hidden = !show;
+    btn.setAttribute('aria-pressed', box.checked ? 'true' : 'false');
+    btn.classList.toggle('is-on', box.checked);
+    btn.textContent = box.checked ? '✓ End of the line' : 'End of the line';
+    if (hint) {
+      hint.hidden = !show;
+      const family = canonicalFamily(document.getElementById('category').value);
+      hint.textContent = box.checked
+        ? 'The last ' + (family || 'of its family') + ': Apple ended the ' + (family ? family + ' ' : '') + 'line with this one, and the family’s page says so. Only one product per family can be the last.'
+        : 'Tap “End of the line” if Apple ended the ' + (family ? family + ' ' : '') + 'line with this one.';
+    }
   }
-  document.getElementById('release-update-add').addEventListener('click', () => addUpdate(datesTarget()));
+  document.getElementById('end_of_line_btn').addEventListener('click', () => {
+    const box = document.getElementById('last_in_line');
+    box.checked = !box.checked;
+    productFormDirty = true;
+    paintEndOfLine();
+  });
 
   // Pasting a date into any date box in the product form, written any
   // usual way ("19 September 2025", "Sept 19, 2025", "19/09/2025",
@@ -3876,12 +3968,12 @@
 
       // Updates since it came out, under the release they changed.
       if (type !== 'discontinued') {
-        (Array.isArray(info.updates) ? info.updates : []).filter((u) => u && (u.date || (u.note || '').trim())).forEach((u) => {
+        (Array.isArray(info.updates) ? info.updates : []).filter((u) => !updateIsBlank(u)).forEach((u) => {
           const row = document.createElement('p');
           row.className = 'generation-announced generation-update';
           const pill = document.createElement('span');
           pill.className = 'entry-pill entry-pill--update';
-          pill.textContent = 'Update';
+          pill.textContent = (UPDATE_KINDS.find((k) => k.value === u.kind) || { label: 'Update' }).label;
           row.appendChild(pill);
           const when = document.createElement('span');
           when.textContent = ' ' + (u.date ? formatAdminDate(u.date) : 'No date yet') + ((u.note || '').trim() ? ': ' + u.note.trim() : '');
@@ -4016,16 +4108,10 @@
           upLabel.textContent = 'Updates to this release (up to ' + MAX_UPDATES + ')';
           const upList = document.createElement('div');
           upList.className = 'admin-updates-list';
-          const upAdd = document.createElement('button');
-          upAdd.type = 'button';
-          upAdd.className = 'admin-btn admin-btn--small admin-btn--ghost';
-          upAdd.textContent = '+ Add an update';
-          upAdd.addEventListener('click', () => addUpdate(date, true));
           upWrap.appendChild(upLabel);
           upWrap.appendChild(upList);
-          upWrap.appendChild(upAdd);
           fields.appendChild(upWrap);
-          renderUpdatesEditor(upList, upAdd, date);
+          renderUpdatesEditor(upList, date);
         }
         li.appendChild(fields);
       }
@@ -4034,14 +4120,9 @@
     document.getElementById('days-basis-wrap').style.display = releaseDates.length > 1 ? '' : 'none';
   }
 
-  // "The last iPod: Apple ended the iPod line with this one"
+  // "Apple ended the iPod line with this one", by the End of the line button.
   function updateLastInLineText() {
-    const el = document.getElementById('last-in-line-text');
-    if (!el) return;
-    const family = canonicalFamily(document.getElementById('category').value);
-    el.textContent = family
-      ? 'The last ' + family + ': Apple ended the ' + family + ' line with this one'
-      : 'The last of its family: Apple ended the line with this one';
+    paintEndOfLine();
   }
   document.getElementById('category').addEventListener('input', updateLastInLineText);
 
@@ -4216,7 +4297,7 @@
     }
     // Opened straight from its address (a refresh) or the search: back
     // goes to its family's list.
-    if (!comingView && !selectedFamily && p.category) selectedFamily = canonicalFamily(p.category);
+    if (!comingView && !allView && !selectedFamily && p.category) selectedFamily = canonicalFamily(p.category);
     document.getElementById('form-title').textContent = 'Edit ' + (p.name || 'product');
     document.getElementById('name').value = p.name || '';
     document.getElementById('category').value = canonicalFamily(p.category || '');
@@ -4354,6 +4435,7 @@
   });
   document.getElementById('back-to-families-btn').addEventListener('click', () => {
     selectedFamily = null;
+    allView = false;
     if (productSearchInputEl) productSearchInputEl.value = '';
     renderProductList();
   });
@@ -4588,7 +4670,7 @@
       const stillOnSale = !!info.still_on_sale;
       const updates = (Array.isArray(info.updates) ? info.updates : [])
         .filter((u) => u && isFullDate(u.date))
-        .map((u) => ({ date: u.date, note: (u.note || '').trim() || null }))
+        .map((u) => ({ date: u.date, kind: UPDATE_KINDS.some((k) => k.value === u.kind) ? u.kind : 'update', note: (u.note || '').trim() || null }))
         .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
         .slice(0, MAX_UPDATES);
       // preorder was missing here, so every pre-order date typed in was

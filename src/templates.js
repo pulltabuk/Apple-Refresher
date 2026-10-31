@@ -321,10 +321,13 @@ function releaseUpdates(product, date) {
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
     .slice(0, 5);
 }
+// Its pill: [past, still to come], by kind ("Released", "New colour").
+const UPDATE_KIND_LABELS = { release: ['Released', 'Release'], update: ['Updated', 'Update'], colour: ['New colour', 'New colour'], price: ['Price change', 'Price change'], dropped: ['Dropped', 'Dropped'] };
 function timelineUpdatesHtml(updates) {
   if (!updates || !updates.length) return '';
   const today = new Date().toISOString().slice(0, 10);
-  return `<ul class="tl-updates">${updates.map((u) => `<li class="tl-update"><span class="tl-entry-type tl-entry-type--update">${u.date > today ? 'Update' : 'Updated'}</span><span class="tl-update-date">${escapeHtml(formatDate(u.date))}</span>${u.note ? `<span class="tl-update-note">${escapeHtml(u.note)}</span>` : ''}</li>`).join('')}</ul>`;
+  const label = (u) => (UPDATE_KIND_LABELS[u.kind] || UPDATE_KIND_LABELS.update)[u.date > today ? 1 : 0];
+  return `<ul class="tl-updates">${updates.map((u) => `<li class="tl-update"><span class="tl-entry-type tl-entry-type--update${u.kind === 'dropped' ? ' tl-entry-type--update-dropped' : ''}">${label(u)}</span><span class="tl-update-date">${escapeHtml(formatDate(u.date))}</span>${u.note ? `<span class="tl-update-note">${escapeHtml(u.note)}</span>` : ''}</li>`).join('')}</ul>`;
 }
 
 // Used for any generation without a name typed in admin. A line with a
@@ -3600,13 +3603,13 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
                 <label><input type="radio" name="dates_mode" value="add"><span>Add another release</span></label>
               </div>
             </div>
-            <p class="admin-hint" id="dates-box-hint">Fill in what you know, top to bottom. An empty date starts on the one above it: tap &ldquo;Same day&rdquo; to keep it, or open the calendar and pick a day near it.</p>
+            <p class="admin-hint" id="dates-box-hint">Fill in what you know, top to bottom. An empty date starts on the one above it: tap its &ldquo;&#10003; Same as&hellip;&rdquo; button to keep it, or open the calendar and pick a day near it.</p>
 
             <div class="admin-date-row admin-date-row--launch" data-date-row="launch">
               <span class="admin-release-time-label">Launched <span class="admin-optional">Optional: the product&rsquo;s first ever release</span></span>
               <div class="admin-release-time-row">
                 <input type="date" id="launch_date_input" aria-label="Launch date">
-                <button type="button" class="admin-btn admin-btn--small admin-date-use" id="launch_same_btn" hidden>&#10003; Same as the release</button>
+                <button type="button" class="admin-btn admin-btn--small admin-date-use" id="launch_same_btn" hidden>&#10003; Same as release</button>
                 <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="launch">Clear</button>
               </div>
               <p class="admin-hint" id="launch-date-hint">The day this product first went on sale. It joins the list above as its launch. Leave it blank if earlier models aren&rsquo;t listed yet.</p>
@@ -3666,9 +3669,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <label class="admin-date-name"><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="release_name_input" autocomplete="off"></label>
               <div class="admin-date-updates" id="release-updates">
                 <span class="admin-release-time-label">Updates to this release <span class="admin-optional">Optional, up to 5</span></span>
+                <p class="admin-hint" id="release-updates-hint">Changes after it came out, one per line: the date, what kind, and what (e.g. Release &middot; 4GB model). Each shows under this release in the product&rsquo;s release history; none restarts the days-since count. Blank lines are ignored.</p>
                 <div class="admin-updates-list" id="release-updates-list"></div>
-                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" id="release-update-add">+ Add an update</button>
-                <p class="admin-hint" id="release-updates-hint">A change to this model after it came out, such as more memory or a new colour. Each shows under this release in the product&rsquo;s release history, and none restarts the days-since count.</p>
               </div>
             </div>
 
@@ -3683,7 +3685,9 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
                 <input type="date" id="discontinued_date_input" aria-label="Discontinued date">
                 <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="discontinued" hidden>&#10003; Same day</button>
                 <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="discontinued">Clear</button>
+                <button type="button" class="admin-btn admin-btn--small admin-end-line-btn" id="end_of_line_btn" aria-pressed="false" hidden>End of the line</button>
               </div>
+              <p class="admin-hint" id="last-in-line-text" hidden>Tap &ldquo;End of the line&rdquo; if Apple ended the line with this one.</p>
             </div>
             <p id="generation-add-error" class="form-error"></p>
           </div>
@@ -3722,8 +3726,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
           <div id="discontinued-fields" class="admin-discontinued-fields" style="display:none;">
             <label><span class="admin-label-row">Why it went <span class="admin-optional">Optional</span></span><textarea id="discontinued_reason" rows="2"></textarea></label>
-            <label class="checkbox-label"><input type="checkbox" id="last_in_line"> <span id="last-in-line-text">The last of its family: Apple ended the line with this one</span></label>
-            <p class="admin-hint">The family&rsquo;s page then says the line has ended, rather than counting down to a next model. Only one product per family can be the last, so ticking this unticks any other.</p>
+            <input type="checkbox" id="last_in_line" hidden>
           </div>
         </section>
 

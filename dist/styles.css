@@ -336,14 +336,29 @@ a { color: inherit; text-decoration: none; }
 #launch_same_btn[hidden] { display: none; }
 /* Updates to the release (more memory, a new colour): up to five rows of
    a date and what changed. */
-.admin-date-updates { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.admin-date-updates { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.admin-date-updates > .admin-hint { margin: 0 0 4px; }
 .admin-updates-list { display: flex; flex-direction: column; gap: 8px; }
-.admin-updates-list:empty { display: none; }
-.admin-update-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.admin-update-row :is(input[type="date"], input[type="text"]) { font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid #b9d39c; border-radius: 8px; background: #fff; color: var(--text); }
-.admin-update-row input[type="text"] { flex: 1 1 14em; min-width: 0; }
-.admin-date-updates > .admin-btn { align-self: flex-start; }
-.admin-date-updates > .admin-btn[hidden] { display: none; }
+.admin-update-row { display: grid; grid-template-columns: 22px auto auto minmax(0, 1fr) 32px; align-items: center; gap: 8px; }
+.admin-update-num { font-size: 13px; font-weight: 800; text-align: center; opacity: 0.6; }
+.admin-update-row :is(input[type="date"], input[type="text"], select) { box-sizing: border-box; width: 100%; min-width: 0; margin: 0; font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid #b9d39c; border-radius: 8px; background: #fff; color: var(--text); }
+.admin-update-row.is-blank :is(input, select) { background: #f7fbf2; }
+.admin-update-clear { width: 32px; height: 32px; padding: 0; border: 1px solid #b9d39c; border-radius: 8px; background: #fff; color: var(--fresh-text); font-size: 18px; line-height: 1; cursor: pointer; }
+.admin-update-clear:hover { background: #fff3ef; border-color: #d9a08e; color: #8a1f11; }
+.admin-update-clear[hidden] { visibility: hidden; display: block; }
+/* Phones: the date on its own line, the kind and what under it. */
+@media (max-width: 560px) {
+  .admin-update-row { grid-template-columns: 18px minmax(0, 7.5em) minmax(0, 1fr) 32px; padding-bottom: 8px; border-bottom: 1px dashed #cfe0b8; }
+  .admin-update-row input[type="date"] { grid-column: 2 / 4; grid-row: 1; }
+  .admin-update-row select { grid-column: 2; grid-row: 2; }
+  .admin-update-row input[type="text"] { grid-column: 3 / 5; grid-row: 2; }
+  .admin-update-num { grid-row: 1; }
+  .admin-update-clear { grid-column: 4; grid-row: 1; }
+}
+/* End of the line: the last product of its family. */
+.admin-end-line-btn { background: #fff; border: 1.5px solid #1d1b19; color: #1d1b19; font-weight: 700; }
+.admin-end-line-btn.is-on { background: #1d1b19; color: #fff; }
+.admin-end-line-btn[hidden] { display: none; }
 .admin-date-name { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; font-size: 14px; font-weight: 700; }
 .admin-date-name input { font: inherit; font-size: 15px; font-weight: 400; padding: 8px 10px; border: 1px solid #b9d39c; border-radius: 8px; background: #fff; color: var(--text); }
 .admin-release-time-label { font-size: 14px; font-weight: 700; }
@@ -366,6 +381,8 @@ a { color: inherit; text-decoration: none; }
 /* The family tiles' Coming soon tile: green, as the countdown is. */
 .family-tile.family-tile--coming { background: var(--fresh-bg); border-color: #b9d39c; color: var(--fresh-text); }
 .family-tile.family-tile--coming .family-tile-plus { font-size: 26px; }
+.family-tile.family-tile--all { background: var(--accent-bg); border-color: #f0d9c4; color: var(--accent-dark); }
+.family-tile.family-tile--all .family-tile-plus { font-size: 24px; }
 .homepage-chip--link:hover { background: var(--fresh-bg); }
 .admin-search-input {
   display: block;
@@ -1651,6 +1668,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .tl-updates { list-style: none; margin: 4px 0 2px; padding: 0 0 0 12px; border-left: 2px solid var(--accent-bg); }
 .tl-update { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 4px 0; font-size: 13.5px; color: var(--text-secondary); line-height: 1.4; }
 .tl-entry-type--update { background: #eef2fb; color: #2f4a8a; }
+.tl-entry-type--update-dropped { background: var(--discontinued-bg); color: var(--discontinued-text); }
 .tl-update-date { font-weight: 600; color: var(--text); }
 .tl-update-note { flex: 1 1 12em; min-width: 0; }
 .tl-year { position: relative; padding: 14px 0 6px 40px; }
