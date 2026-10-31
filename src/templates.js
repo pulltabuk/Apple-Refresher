@@ -752,7 +752,7 @@ function notFoundPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   </p>
 </div>`;
   return shell({
-    title: 'Page not found | Apple Sunset',
+    title: 'Apple Sunset: Page Not Found',
     description: 'That page could not be found on Apple Sunset.',
     siteUrl,
     path: '/404.html',
@@ -1031,7 +1031,7 @@ function contactPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   </form>`;
 
   return shell({
-    title: 'Contact us — Apple Sunset',
+    title: 'Apple Sunset: Contact Us',
     description: 'Get in touch with Apple Sunset to report a correction, suggest a product or ask a question.',
     siteUrl,
     path: '/contact/',
@@ -1046,7 +1046,7 @@ function contactThanksPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <p class="page-intro">We read everything that comes in. If your note needs a reply, we will get back to you by email.</p>
   <p><a class="intro-cta" href="/products/">Back to all products</a></p>`;
   return shell({
-    title: 'Thanks — Apple Sunset',
+    title: 'Apple Sunset: Thanks',
     description: 'Your message has been sent.',
     siteUrl,
     path: '/contact/thanks/',
@@ -1068,7 +1068,7 @@ function photoLicencePage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <p><a class="intro-cta" href="${mailto}">Request to use a photo</a></p>
   <p>Please include a link to the photo and say where and how you would like to use it. You can also get in touch through the <a href="/contact/">contact page</a>.</p>`;
   return shell({
-    title: 'Photo licence — Apple Sunset',
+    title: 'Apple Sunset: Photo Licence',
     description: 'How the photos in the Apple Sunset gallery may be used, and how to ask permission.',
     siteUrl,
     path: '/photo-licence/',
@@ -1520,7 +1520,7 @@ function galleryPhotoPage({ photo, prevPhoto, nextPhoto, siteUrl, supabaseUrl, s
   </div>
 </article>`;
   return shell({
-    title: `${displayName} — Apple Sunset Gallery`,
+    title: `Apple Sunset Gallery: ${displayName}`,
     description,
     siteUrl,
     path: `/gallery/${galleryPhotoSlug(photo)}/`,
@@ -1590,7 +1590,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 </div>
 <p class="page-intro">No photos yet.</p>`;
   return shell({
-    title: 'Gallery — Apple Sunset',
+    title: 'Apple Sunset: Apple Product Photo Gallery',
     description: 'Photos taken along the way, in Apple Stores and elsewhere.',
     siteUrl,
     path: '/gallery/',
@@ -1853,7 +1853,7 @@ function eventDetailPage({ event, productsBySlug, siteUrl, supabaseUrl, supabase
   <p><a href="/events/" class="gallery-nav-link">&larr; All Apple Events</a></p>
 </article>`;
   return shell({
-    title: `${event.heading} — Apple Sunset`,
+    title: `Apple Sunset: ${event.heading}`,
     description: `${event.heading}${dateText ? `, ${dateText}` : ''}. ${summary ? summary : sortedProducts.length ? 'Announced: ' + sortedProducts.join(', ') + '.' : 'The date, time and what Apple announced, tracked by Apple Sunset.'}`,
     siteUrl,
     path: `/events/${eventSlug(event)}/`,
@@ -1876,7 +1876,7 @@ ${events.length ? '' : '<p id="no-events" class="page-intro">No events yet.</p>'
   ${events.map((event) => eventArchiveCardHtml(event, productsBySlug)).join('\n')}
 </div>`;
   return shell({
-    title: 'Apple Events — Apple Sunset',
+    title: 'Apple Sunset: Apple Events, Dates & Announcements',
     description: 'A running archive of every Apple Event announced, and what was revealed at each one.',
     siteUrl,
     path: '/events/',
@@ -1907,7 +1907,7 @@ ${inner ? '' : '<p id="no-facts" class="page-intro">Nothing here yet.</p>'}
 <p id="facts-no-results" class="page-intro" hidden>No facts match your search.</p>
 <div id="facts-list" class="facts-list" data-mode="facts" data-today-key="${escapeHtml(todayKey || '')}" data-history="${escapeHtml(JSON.stringify(history || []))}">${inner}</div>`;
   return shell({
-    title: 'Facts — Apple Sunset',
+    title: 'Apple Sunset: Apple Facts & Trivia',
     description: 'Every "Did you know?" fact from the Apple Sunset homepage, newest first.',
     siteUrl,
     path: '/facts/',
@@ -1933,7 +1933,7 @@ function factPage({ fact: savedFact, products, cardUrl, related, siteUrl, supaba
   <a href="/facts/" class="fact-more-link">More facts &rarr;</a>
 </article>`;
   return shell({
-    title: `Did you know? ${fact.text.length > 44 ? fact.text.slice(0, 42).trim() + '…' : fact.text} — Apple Sunset`,
+    title: `Apple Sunset: Did you know? ${fact.text.length > 44 ? fact.text.slice(0, 42).trim() + '…' : fact.text}`,
     description: fact.text,
     siteUrl,
     path,
@@ -2231,7 +2231,7 @@ ${nextHtml}
 <div id="archive">${archive || '<p class="page-intro">No past results yet.</p>'}</div>
 <p class="earnings-footnote">Apple&rsquo;s fiscal year ends in late September, so Q1 is the October to December holiday quarter. Figures are as Apple reported them.</p>`;
   return shell({
-    title: 'Apple earnings dates and results archive | Apple Sunset',
+    title: 'Apple Sunset: Apple Earnings Dates & Results Archive',
     description: next
       ? `Apple reports ${earningsQuarter(next)} results on ${formatDate(next.report_date)}. Every past quarter's results date, headline figure and press release.`
       : 'Every Apple quarterly results date, headline figure and press release, newest first.',
@@ -2441,7 +2441,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <h1>${pageHeading(pageContent, 'All products')}</h1>
 ${emptyState('products')}`;
   return shell({
-    title: 'All products — Apple Sunset',
+    title: 'Apple Sunset: All Apple Products',
     description: 'Every Apple product on the site, current and discontinued, searchable and sortable.',
     siteUrl,
     path: '/products/',
@@ -2473,7 +2473,7 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
 <h1>${pageHeading(pageContent, 'Discontinued products')}</h1>
 <p class="page-intro">No discontinued products yet.</p>`;
   return shell({
-    title: 'Discontinued Apple products — Apple Sunset',
+    title: 'Apple Sunset: Discontinued Apple Products',
     description: 'An archive of the Apple products that have been discontinued: when they launched, when they went, how long they lasted, and what replaced them.',
     siteUrl,
     path: '/discontinued/',
@@ -2637,7 +2637,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   }
   const names = groups.flatMap((g) => g.products.map((p) => p.name));
   return shell({
-    title: 'Coming soon: Apple products with a release date | Apple Sunset',
+    title: 'Apple Sunset: Upcoming Apple Products & Release Dates',
     description: names.length
       ? `Countdowns to Apple's next releases: ${names.slice(0, 4).join(', ')}${names.length > 4 ? ' and more' : ''}.`
       : 'Countdowns to Apple products with a release date still to come.',
@@ -2735,7 +2735,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <div class="category-list" id="category-list">${rows}</div>
 <p class="category-list-note">&ldquo;Next expected&rdquo; is the latest release plus the family&rsquo;s average gap between releases.</p>`;
   return shell({
-    title: 'Categories — Apple Sunset',
+    title: 'Apple Sunset: Apple Product Categories',
     description: 'Browse Apple products by category: iPhone, Mac, iPad, Apple Watch, AirPods, Vision Pro and more.',
     siteUrl,
     path: '/categories/',
@@ -2828,7 +2828,7 @@ ${leagueTableHtml(items, category)}
 </div>
 ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   return shell({
-    title: `${category} release history and update tracker | Apple Sunset`,
+    title: `Apple Sunset: ${category} Release History & Update Tracker`,
     description: `How long since each ${category} product was last updated, with release dates, typical refresh cycles and every discontinued model.`,
     siteUrl,
     path: `/categories/${slug}/`,
@@ -3240,12 +3240,12 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
 
   return shell({
     title: product.discontinued
-      ? `${product.name}: discontinued${product.discontinued_date ? ' ' + formatDate(product.discontinued_date) : ''} | Apple Sunset`
+      ? `Apple Sunset: ${product.name} – discontinued${product.discontinued_date ? ' ' + formatDate(product.discontinued_date) : ''}`
       : comingOn
-      ? `${product.name}: coming ${formatDate(comingOn)} | Apple Sunset`
+      ? `Apple Sunset: ${product.name} – coming ${formatDate(comingOn)}`
       : status
-      ? `${product.name}: ${plural(daysInfo ? daysInfo.days : status.daysSince, 'day', 'days')} since the last update | Apple Sunset`
-      : `${product.name} | Apple Sunset`,
+      ? `Apple Sunset: ${product.name} – ${plural(daysInfo ? daysInfo.days : status.daysSince, 'day', 'days')} since the last update`
+      : `Apple Sunset: ${product.name}`,
     description,
     ogImage,
     siteUrl,
@@ -3348,7 +3348,7 @@ function aboutPage({ content, counts, siteUrl, supabaseUrl, supabaseAnonKey }) {
 </article>`;
 
   return shell({
-    title: 'About — Apple Sunset',
+    title: 'Apple Sunset: About Us',
     description: c.families && c.releases
       ? `About Apple Sunset: ${c.families} Apple product families and ${c.releases} releases${c.since ? ` since ${c.since}` : ''}, and how to read its numbers: days since refresh, the usual wait and the colours.`
       : 'About Apple Sunset, and how to read its numbers: days since refresh, the usual wait and the colours.',
@@ -4115,7 +4115,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 </section>`;
 
   return shell({
-    title: 'Admin — Apple Sunset',
+    title: 'Apple Sunset: Admin',
     description: 'Manage products and site content.',
     siteUrl,
     path: '/admin/',
@@ -4141,7 +4141,7 @@ function uploadPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Upload — Apple Sunset</title>
+<title>Apple Sunset: Upload</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#c2540c">
 <meta name="apple-mobile-web-app-capable" content="yes">
