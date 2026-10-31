@@ -1865,6 +1865,13 @@ label.admin-btn { cursor: pointer; color: #fff; }
 /* Menu links read as a list, so they align left even with the touch
    sizing rules above. */
 @media (max-width: 860px) { .site-nav a { justify-content: flex-start; } }
+/* Home: first in the phone menu, with a house icon. On laptops the logo
+   is the way home, so it isn't in the row of links. */
+.site-nav a.site-nav-home { display: none; }
+@media (max-width: 860px) {
+  .site-nav a.site-nav-home { display: flex; align-items: center; gap: 10px; }
+  .site-nav-home svg { flex: none; }
+}
 
 /* ---------- Accessibility pass ---------- */
 

@@ -1141,6 +1141,7 @@ ${extraJsonLd ? `<script type="application/ld+json">${JSON.stringify(extraJsonLd
     </button>
     <nav class="site-nav" id="site-nav">
       <div class="site-nav-links">
+        <a href="/" class="site-nav-home"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M10 20v-6h4v6"/></svg>Home</a>
         <a href="/products/">All products</a>
         <a href="/coming-soon/">Coming soon</a>
         <a href="/categories/">Categories</a>
