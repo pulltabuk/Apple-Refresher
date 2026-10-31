@@ -3259,7 +3259,7 @@
             window.GalleryViewer.goTo(galleryPhotoPageEl, Math.min(keptIndex, images.length - 1));
           }
         }
-        document.title = displayName + ' \u2014 Apple Sunset Gallery';
+        document.title = 'Apple Sunset Gallery: ' + displayName;
         revealAdminEditLinks(galleryPhotoPageEl.querySelectorAll('.admin-edit-link'));
       })
       .catch(function () {});
@@ -3296,12 +3296,12 @@
         // this script too, so a different title here would replace it.
         var titleDays = status ? badgeDaysInfoJS(product, status) : null;
         document.title = product.discontinued
-          ? product.name + ': discontinued' + (product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '') + ' | Apple Sunset'
+          ? 'Apple Sunset: ' + product.name + ' \u2013 discontinued' + (product.discontinued_date ? ' ' + formatDateJS(product.discontinued_date) : '')
           : status && status.daysSince < 0
-          ? product.name + ': coming ' + formatDateJS((product.refresh_history || []).slice().sort().pop()) + ' | Apple Sunset'
+          ? 'Apple Sunset: ' + product.name + ' \u2013 coming ' + formatDateJS((product.refresh_history || []).slice().sort().pop())
           : status
-          ? product.name + ': ' + pluralJS(titleDays ? titleDays.days : status.daysSince, 'day', 'days') + ' since the last update | Apple Sunset'
-          : product.name + ' | Apple Sunset';
+          ? 'Apple Sunset: ' + product.name + ' \u2013 ' + pluralJS(titleDays ? titleDays.days : status.daysSince, 'day', 'days') + ' since the last update'
+          : 'Apple Sunset: ' + product.name;
       })
       .catch(function () {});
   }
