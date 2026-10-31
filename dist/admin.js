@@ -1366,6 +1366,10 @@
         let search = '';
         if (tab === 'products' && formView && formView.style.display !== 'none') {
           search = editingId ? '?edit=' + encodeURIComponent(editingId) : (params.get('new') ? '?new=1' : '');
+        } else if (tab === 'products') {
+          search = productsListSearch();
+        } else if (tab === 'event' && eventFormView.style.display !== 'none' && (params.get('editEvent') || params.get('newEvent'))) {
+          search = params.get('editEvent') ? '?editEvent=' + encodeURIComponent(params.get('editEvent')) : '?newEvent=1';
         } else if (tab === 'gallery' && params.get('editPhoto')) {
           search = '?editPhoto=' + encodeURIComponent(params.get('editPhoto'));
         }
@@ -1447,13 +1451,28 @@
       galleryLoaded = true;
       await loadGalleryPhotos();
       editGalleryPhoto(editPhotoId);
-    } else {
+    } else if (params.get('editEvent') || params.get('newEvent')) {
+      // An event's form, open when the page was refreshed.
       showProductList();
+      const eventId = params.get('editEvent');
+      eventLoaded = true;
+      document.querySelector('.admin-tab-btn[data-tab="event"]').click();
+      await loadEvents();
+      if (eventId && cachedEvents.some((ev) => String(ev.id) === eventId)) editEvent(cachedEvents.find((ev) => String(ev.id) === eventId).id);
+      else if (!eventId) startNewEvent();
+    } else {
+      // A family's list or the Coming soon list, as the address says.
+      if (params.get('coming')) comingView = true;
+      else if (params.get('family')) selectedFamily = params.get('family');
+      productsUrlReady = true;
+      showProductList();
+      if (comingView || selectedFamily) renderProductList();
       // Back to the tab in the address, e.g. /admin/#facts after a refresh.
       const hashTab = window.location.hash.slice(1);
       const hashBtn = hashTab && document.querySelector('.admin-tab-btn[data-tab="' + hashTab.replace(/[^a-z]/g, '') + '"]');
       if (hashBtn) hashBtn.click();
     }
+    productsUrlReady = true;
   }
 
   function showLogin() {
@@ -2919,10 +2938,29 @@
     if (screen) screen.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // Where the Products tab is (a family's list, or the Coming soon list)
+  // goes in the address, so a refresh comes back to it rather than to the
+  // family tiles. An open product keeps its own address (?edit=).
+  function productsListSearch() {
+    return comingView ? '?coming=1' : selectedFamily ? '?family=' + encodeURIComponent(selectedFamily) : '';
+  }
+  let productsUrlReady = false; // not until the page has read the address it opened on
+  function syncProductsUrl() {
+    if (!productsUrlReady || !window.history || !window.history.replaceState) return;
+    if (productFormView.style.display !== 'none') return;
+    const activeTab = document.querySelector('.admin-tab-btn.active');
+    if (activeTab && activeTab.getAttribute('data-tab') !== 'products') return;
+    const next = window.location.pathname + productsListSearch();
+    if (window.location.pathname + window.location.search + window.location.hash !== next) {
+      window.history.replaceState(window.history.state, '', next);
+    }
+  }
+
   function renderProductList() {
     renderRetireCheck();
     renderHomepageStrip();
     renderFamilyTiles();
+    syncProductsUrl();
     const query = productSearchInputEl ? productSearchInputEl.value.trim().toLowerCase() : '';
 
     // Searching jumps straight to matching products, from either list
@@ -4176,6 +4214,9 @@
     if (window.history && window.history.pushState) {
       window.history.pushState({}, '', '/admin/?edit=' + id);
     }
+    // Opened straight from its address (a refresh) or the search: back
+    // goes to its family's list.
+    if (!comingView && !selectedFamily && p.category) selectedFamily = canonicalFamily(p.category);
     document.getElementById('form-title').textContent = 'Edit ' + (p.name || 'product');
     document.getElementById('name').value = p.name || '';
     document.getElementById('category').value = canonicalFamily(p.category || '');
@@ -4300,7 +4341,7 @@
 
   function backToList() {
     if (window.history && window.history.pushState) {
-      window.history.pushState({}, '', '/admin/');
+      window.history.pushState({}, '', '/admin/' + productsListSearch());
     }
     showProductList();
   }
@@ -5281,9 +5322,15 @@
   const eventForm = document.getElementById('event-form');
   const eventProductsListEl = document.getElementById('event-products-list');
 
+  // The open event goes in the address (?editEvent=), so a refresh
+  // reopens it; back on the list it comes out again.
+  function setEventUrl(search) {
+    if (window.history && window.history.replaceState) window.history.replaceState(window.history.state, '', window.location.pathname + search + '#event');
+  }
   function showEventList() {
     eventListView.style.display = 'block';
     eventFormView.style.display = 'none';
+    setEventUrl('');
   }
 
   function showEventForm() {
@@ -5474,6 +5521,7 @@
     renderEventImageThumb();
     renderEventProducts();
     showEventForm();
+    setEventUrl('?editEvent=' + encodeURIComponent(id));
   }
 
   function startNewEvent() {
@@ -5487,6 +5535,7 @@
     updateEventSummaryCount();
     document.getElementById('event-form-title').textContent = 'Add event';
     showEventForm();
+    setEventUrl('?newEvent=1');
   }
 
   // A running count, since a summary reads best at a line or two.

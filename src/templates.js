@@ -2387,8 +2387,8 @@ ${factSection}
 ${gallerySection}
 ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   return shell({
-    title: 'How long since Apple last updated each product | Apple Sunset',
-    description: `Days since the last refresh for ${totalCount} Apple products, with release histories, typical refresh cycles and an archive of everything Apple has discontinued.`,
+    title: 'Apple Sunset: Apple Release Dates & Product Refresh Tracker',
+    description: `Release dates, countdowns and days since the last update for ${totalCount} Apple products, with refresh cycles, release histories and every discontinued model.`,
     siteUrl,
     path: '/',
     bodyHtml: body,
