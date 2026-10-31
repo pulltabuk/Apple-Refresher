@@ -3166,7 +3166,8 @@
   // opens on it to pick a day nearby. A suggestion is never saved by itself.
   let datesMode = 'next';
   let pendingName = '';
-  let pendingLaunch = null; // the launch tick for a new release: off until ticked
+  let pendingUpdates = []; // updates for a release whose date isn't picked yet
+  const MAX_UPDATES = 5;
   let lastPicked = null; // { row, date }: the last date picked in the box
   let releasePrecision = 'day';
   let releasePrecisionFor = undefined;
@@ -3289,13 +3290,9 @@
     if (document.activeElement !== nameIn) {
       nameIn.value = target ? ((currentGenerationDetails[target] || {}).name || '') : pendingName;
     }
-    const launchIn = document.getElementById('release_is_launch');
-    const launchLabel = launchIn.closest('label');
-    const launchTaken = !!currentOriginalLaunchDate && currentOriginalLaunchDate !== target;
-    launchLabel.hidden = launchTaken;
-    launchIn.checked = target
-      ? currentOriginalLaunchDate === target
-      : !!pendingLaunch;
+    // The product's launch, and this release's updates.
+    paintLaunchRow(target);
+    renderUpdatesEditor(document.getElementById('release-updates-list'), document.getElementById('release-update-add'), target);
 
     // The countdown needs a release date still ahead.
     const cdBox = document.getElementById('in_countdown');
@@ -3358,17 +3355,16 @@
         if (currentOriginalLaunchDate === target) currentOriginalLaunchDate = value;
         if (expandedGenerations.delete(target)) expandedGenerations.add(value);
       } else {
-        // A new release, taking the dates and name waiting for it.
-        const launch = !!pendingLaunch;
+        // A new release, taking the dates, name and updates waiting for it.
         currentRefreshHistory = currentRefreshHistory.concat(value).sort();
         if (pendingName.trim()) detailFor(value).name = pendingName.trim();
         if (pendingAnnouncedDate) detailFor(value).announced = pendingAnnouncedDate;
         if (pendingPreorderDate) detailFor(value).preorder = pendingPreorderDate;
-        if (launch && !currentOriginalLaunchDate) currentOriginalLaunchDate = value;
+        if (pendingUpdates.length) detailFor(value).updates = pendingUpdates;
         pendingAnnouncedDate = null;
         pendingPreorderDate = null;
         pendingName = '';
-        pendingLaunch = null;
+        pendingUpdates = [];
       }
       // Showing the upcoming release when that's what this is; otherwise
       // the rows clear, ready for another, starting on this date.
@@ -3417,16 +3413,150 @@
     else pendingName = e.target.value;
   });
   document.getElementById('release_name_input').addEventListener('change', () => renderRefreshHistory());
-  document.getElementById('release_is_launch').addEventListener('change', (e) => {
-    const target = datesTarget();
-    if (target) {
-      if (e.target.checked) currentOriginalLaunchDate = target;
-      else if (currentOriginalLaunchDate === target) currentOriginalLaunchDate = null;
-      renderRefreshHistory();
-    } else {
-      pendingLaunch = e.target.checked;
+
+  // --- Launched: the product's first ever release. It is one of the
+  // releases in the list above: picking a date marks that release as the
+  // launch, or adds it. Changing it moves the launch release, unless
+  // that's the release the box is showing (then the new date is added,
+  // and the shown release stays as it is).
+  function paintLaunchRow(target) {
+    const input = document.getElementById('launch_date_input');
+    const same = document.getElementById('launch_same_btn');
+    const clear = document.querySelector('[data-date-clear="launch"]');
+    const launch = currentOriginalLaunchDate;
+    input.value = isFullDate(launch) ? launch : '';
+    clear.hidden = !launch;
+    const earliest = currentRefreshHistory.slice().sort()[0];
+    const offer = !launch && !!target && target === earliest;
+    same.hidden = !offer;
+    same.title = offer ? 'Launched ' + formatAdminDate(target) : '';
+    rowNote('launch', launch && !isFullDate(launch) ? 'Recorded as ' + formatAdminDate(launch) + '. Pick a day to replace it.' : '');
+  }
+  function commitLaunch(value) {
+    const old = currentOriginalLaunchDate;
+    if (!value) {
+      currentOriginalLaunchDate = null;
+    } else if (value !== old) {
+      const earlier = currentRefreshHistory.filter((d) => d !== old && d < value).sort()[0];
+      if (earlier) {
+        window.alert('There is an earlier release, on ' + formatAdminDate(earlier) + '. The launch is the first ever one: pick a date on or before it, or use \u201cMark as first release\u201d on that release in the list above.');
+        renderDatesBox();
+        return;
+      }
+      if (currentRefreshHistory.indexOf(value) === -1) {
+        if (old && old !== datesTarget() && currentRefreshHistory.indexOf(old) !== -1) {
+          currentRefreshHistory = currentRefreshHistory.map((d) => (d === old ? value : d)).sort();
+          if (currentGenerationDetails[old]) {
+            currentGenerationDetails[value] = currentGenerationDetails[old];
+            delete currentGenerationDetails[old];
+          }
+          if (expandedGenerations.delete(old)) expandedGenerations.add(value);
+        } else {
+          currentRefreshHistory = currentRefreshHistory.concat(value).sort();
+        }
+      }
+      currentOriginalLaunchDate = value;
     }
+    productFormDirty = true;
+    renderRefreshHistory();
+    updateStatusReadout();
+  }
+  document.getElementById('launch_date_input').addEventListener('change', (e) => commitLaunch(e.target.value || null));
+  document.getElementById('launch_same_btn').addEventListener('click', () => {
+    const target = datesTarget();
+    if (target) commitLaunch(target);
   });
+  document.querySelector('[data-date-clear="launch"]').addEventListener('click', () => commitLaunch(null));
+
+  // --- Updates to a release since it came out (more memory, a new
+  // colour): up to five, each a date and what changed. Stored with the
+  // release (generation_details[date].updates); the site lists them
+  // under it. Before the release date is picked they wait, like the
+  // announced and pre-order dates, and join the release when it's added.
+  function updatesList(date) {
+    if (!date) return pendingUpdates;
+    const info = detailFor(date);
+    if (!Array.isArray(info.updates)) info.updates = [];
+    return info.updates;
+  }
+  function renderUpdatesEditor(listEl, addBtn, date) {
+    if (!listEl) return;
+    const list = date ? ((currentGenerationDetails[date] || {}).updates || []) : pendingUpdates;
+    // Keep the cursor where it was across a redraw.
+    const active = listEl.contains(document.activeElement) ? document.activeElement : null;
+    const keep = active ? { i: active.dataset.i, field: active.dataset.field, pos: active.selectionStart } : null;
+    listEl.innerHTML = '';
+    listEl.dataset.updatesFor = date || '';
+    list.forEach((u, i) => {
+      const row = document.createElement('div');
+      row.className = 'admin-update-row';
+      const dateIn = document.createElement('input');
+      dateIn.type = 'date';
+      dateIn.value = isFullDate(u.date) ? u.date : '';
+      dateIn.dataset.i = i;
+      dateIn.dataset.field = 'date';
+      dateIn.setAttribute('aria-label', 'Date of update ' + (i + 1));
+      dateIn.addEventListener('change', () => {
+        const v = dateIn.value || null;
+        if (v && date && isFullDate(date) && v < date) {
+          window.alert('An update comes after the release it changes (' + formatAdminDate(date) + ').');
+          dateIn.value = isFullDate(u.date) ? u.date : '';
+          return;
+        }
+        u.date = v;
+        list.sort((a, b) => (!a.date ? 1 : !b.date ? -1 : a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+        productFormDirty = true;
+        renderRefreshHistory();
+      });
+      const noteIn = document.createElement('input');
+      noteIn.type = 'text';
+      noteIn.value = u.note || '';
+      noteIn.maxLength = 120;
+      noteIn.placeholder = 'What changed, e.g. Now with 32GB memory';
+      noteIn.dataset.i = i;
+      noteIn.dataset.field = 'note';
+      noteIn.setAttribute('aria-label', 'What changed in update ' + (i + 1));
+      noteIn.addEventListener('input', () => { u.note = noteIn.value; productFormDirty = true; });
+      noteIn.addEventListener('change', () => renderRefreshHistory());
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'admin-btn admin-btn--small admin-btn--ghost';
+      remove.textContent = 'Remove';
+      remove.dataset.i = i;
+      remove.dataset.field = 'remove';
+      remove.addEventListener('click', () => {
+        list.splice(i, 1);
+        productFormDirty = true;
+        renderRefreshHistory();
+      });
+      row.appendChild(dateIn);
+      row.appendChild(noteIn);
+      row.appendChild(remove);
+      listEl.appendChild(row);
+    });
+    if (addBtn) addBtn.hidden = list.length >= MAX_UPDATES;
+    if (keep) {
+      const el = listEl.querySelector('[data-i="' + keep.i + '"][data-field="' + keep.field + '"]');
+      if (el) {
+        el.focus();
+        if (keep.field === 'note' && keep.pos != null) { try { el.setSelectionRange(keep.pos, keep.pos); } catch (err) { /* not a text box */ } }
+      }
+    }
+  }
+  // A new, empty update row, with the cursor in its date.
+  function addUpdate(date, inList) {
+    const list = updatesList(date);
+    if (list.length >= MAX_UPDATES) return;
+    list.push({ date: null, note: '' });
+    productFormDirty = true;
+    renderRefreshHistory();
+    const listEl = inList
+      ? Array.from(refreshHistoryListEl.querySelectorAll('.admin-updates-list')).find((el) => el.dataset.updatesFor === date)
+      : document.getElementById('release-updates-list');
+    const rows = listEl ? listEl.querySelectorAll('.admin-update-row') : [];
+    if (rows.length) rows[rows.length - 1].querySelector('input').focus();
+  }
+  document.getElementById('release-update-add').addEventListener('click', () => addUpdate(datesTarget()));
 
   // Pasting a date into any date box in the product form, written any
   // usual way ("19 September 2025", "Sept 19, 2025", "19/09/2025",
@@ -3483,6 +3613,7 @@
     return n && +n[2] >= 1 && +n[2] <= 12 ? n[1] + '-' + String(+n[2]).padStart(2, '0') : null;
   }
   const PASTE_WORDS = {
+    launch: /launch|introduc|first|debut/i,
     announced: /announc|unveil|introduc|today/i,
     preorder: /pre-?order|order/i,
     release: /availab|in stores|release|arriv|on sale|ship|launch/i,
@@ -3508,7 +3639,7 @@
     const text = ((e.clipboardData || window.clipboardData) && (e.clipboardData || window.clipboardData).getData('text')) || '';
     if (!text.trim()) return;
     e.preventDefault();
-    const row = (input.id.match(/^(announced|preorder|release|discontinued)_date_input$/) || [])[1];
+    const row = (input.id.match(/^(launch|announced|preorder|release|discontinued)_date_input$/) || [])[1];
     let value = null;
     if (input.type === 'month') value = monthInText(text) || ((pastedDate(text, 'release') || '').slice(0, 7) || null);
     else value = pastedDate(text, row);
@@ -3527,7 +3658,7 @@
   function resetGenerationPanel() {
     datesMode = 'next';
     pendingName = '';
-    pendingLaunch = null;
+    pendingUpdates = [];
     lastPicked = null;
     releasePrecisionFor = undefined;
     pendingAnnouncedDate = null;
@@ -3705,6 +3836,22 @@
       }
       li.appendChild(top);
 
+      // Updates since it came out, under the release they changed.
+      if (type !== 'discontinued') {
+        (Array.isArray(info.updates) ? info.updates : []).filter((u) => u && (u.date || (u.note || '').trim())).forEach((u) => {
+          const row = document.createElement('p');
+          row.className = 'generation-announced generation-update';
+          const pill = document.createElement('span');
+          pill.className = 'entry-pill entry-pill--update';
+          pill.textContent = 'Update';
+          row.appendChild(pill);
+          const when = document.createElement('span');
+          when.textContent = ' ' + (u.date ? formatAdminDate(u.date) : 'No date yet') + ((u.note || '').trim() ? ': ' + u.note.trim() : '');
+          row.appendChild(when);
+          li.appendChild(row);
+        });
+      }
+
       if (isOpen) {
         const fields = document.createElement('div');
         fields.className = 'generation-item-fields';
@@ -3823,6 +3970,24 @@
           makeLaunch.appendChild(launchBox);
           makeLaunch.appendChild(document.createTextNode(' This was the first ever launch of this product'));
           fields.appendChild(makeLaunch);
+
+          const upWrap = document.createElement('div');
+          upWrap.className = 'admin-date-updates';
+          const upLabel = document.createElement('span');
+          upLabel.className = 'admin-release-time-label';
+          upLabel.textContent = 'Updates to this release (up to ' + MAX_UPDATES + ')';
+          const upList = document.createElement('div');
+          upList.className = 'admin-updates-list';
+          const upAdd = document.createElement('button');
+          upAdd.type = 'button';
+          upAdd.className = 'admin-btn admin-btn--small admin-btn--ghost';
+          upAdd.textContent = '+ Add an update';
+          upAdd.addEventListener('click', () => addUpdate(date, true));
+          upWrap.appendChild(upLabel);
+          upWrap.appendChild(upList);
+          upWrap.appendChild(upAdd);
+          fields.appendChild(upWrap);
+          renderUpdatesEditor(upList, upAdd, date);
         }
         li.appendChild(fields);
       }
@@ -4380,11 +4545,17 @@
       const announced = info.announced || null;
       const preorder = info.preorder || null;
       const stillOnSale = !!info.still_on_sale;
+      const updates = (Array.isArray(info.updates) ? info.updates : [])
+        .filter((u) => u && isFullDate(u.date))
+        .map((u) => ({ date: u.date, note: (u.note || '').trim() || null }))
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+        .slice(0, MAX_UPDATES);
       // preorder was missing here, so every pre-order date typed in was
       // thrown away on save without a word.
-      if (name || announced || preorder || stillOnSale) {
+      if (name || announced || preorder || stillOnSale || updates.length) {
         out[date] = { name: name || null, announced, preorder };
         if (stillOnSale) out[date].still_on_sale = true;
+        if (updates.length) out[date].updates = updates;
       }
     });
     return out;
@@ -4419,8 +4590,16 @@
         firstError = firstError || document.getElementById('step-line');
       }
       // Announced or pre-order dates waiting for a release would be lost.
-      if (pendingAnnouncedDate || pendingPreorderDate) {
+      const pendingUpdate = pendingUpdates.some((u) => u.date || (u.note || '').trim());
+      if (pendingAnnouncedDate || pendingPreorderDate || pendingUpdate) {
         document.getElementById('generation-add-error').textContent = 'Pick the release date for these dates (a month or year is fine if that\u2019s all Apple has said), or clear them.';
+        firstError = firstError || document.getElementById('generation-add-panel');
+      }
+      // An update with what changed but no date would be lost.
+      const undated = Object.keys(currentGenerationDetails).some((d) => currentRefreshHistory.indexOf(d) !== -1 &&
+        (currentGenerationDetails[d].updates || []).some((u) => u && !u.date && (u.note || '').trim()));
+      if (undated) {
+        document.getElementById('generation-add-error').textContent = 'Give each update a date, or remove it.';
         firstError = firstError || document.getElementById('generation-add-panel');
       }
       // Never drop a video link without saying so.

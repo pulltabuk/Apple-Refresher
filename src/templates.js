@@ -309,6 +309,24 @@ function generationDetails(product) {
   return d && typeof d === 'object' && !Array.isArray(d) ? d : {};
 }
 
+// A release's updates since it came out (more memory, a new colour),
+// oldest first: { date, note }, at most five. They're listed under the
+// release and don't restart the days-since count. Must match
+// releaseUpdatesJS() and timelineUpdatesHtmlJS() in public/app.js.
+function releaseUpdates(product, date) {
+  const info = generationDetails(product)[date];
+  const list = info && Array.isArray(info.updates) ? info.updates : [];
+  return list
+    .filter((u) => u && /^\d{4}-\d{2}(-\d{2})?$/.test(u.date || ''))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .slice(0, 5);
+}
+function timelineUpdatesHtml(updates) {
+  if (!updates || !updates.length) return '';
+  const today = new Date().toISOString().slice(0, 10);
+  return `<ul class="tl-updates">${updates.map((u) => `<li class="tl-update"><span class="tl-entry-type tl-entry-type--update">${u.date > today ? 'Update' : 'Updated'}</span><span class="tl-update-date">${escapeHtml(formatDate(u.date))}</span>${u.note ? `<span class="tl-update-note">${escapeHtml(u.note)}</span>` : ''}</li>`).join('')}</ul>`;
+}
+
 // Used for any generation without a name typed in admin. A line with a
 // single generation just uses the product name; once there are more,
 // each gets its place in the sequence, so the names stay right as new
@@ -475,6 +493,13 @@ function categoryTimelinePoints(product, allProducts) {
     mine.forEach((pt) => { if (details[pt.date] && details[pt.date].still_on_sale) pt.isCurrent = true; });
   });
 
+  // Each release carries its updates, listed under it.
+  points.forEach((pt) => {
+    if (pt.type === 'discontinued') return;
+    const owner = sameCategory.find((p) => p.name === pt.productName);
+    if (owner) pt.updates = releaseUpdates(owner, pt.date);
+  });
+
   const typePriority = { discontinued: 0, launch: 1, refresh: 1 };
   points.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]));
   return points;
@@ -566,7 +591,7 @@ function verticalTimelineHtml(product, allProducts) {
       return `<p class="tl-entry">
         <span class="tl-entry-name">${escapeHtml(e.displayName || e.productName)}</span>
         ${tags ? `<span class="tl-entry-tags">${tags}</span>` : ''}
-      </p>`;
+      </p>${timelineUpdatesHtml(e.updates)}`;
     }).join('');
 
     return `${yearRow}
@@ -3577,6 +3602,16 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             </div>
             <p class="admin-hint" id="dates-box-hint">Fill in what you know, top to bottom. An empty date starts on the one above it: tap &ldquo;Same day&rdquo; to keep it, or open the calendar and pick a day near it.</p>
 
+            <div class="admin-date-row admin-date-row--launch" data-date-row="launch">
+              <span class="admin-release-time-label">Launched <span class="admin-optional">Optional: the product&rsquo;s first ever release</span></span>
+              <div class="admin-release-time-row">
+                <input type="date" id="launch_date_input" aria-label="Launch date">
+                <button type="button" class="admin-btn admin-btn--small admin-date-use" id="launch_same_btn" hidden>&#10003; Same as the release</button>
+                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="launch">Clear</button>
+              </div>
+              <p class="admin-hint" id="launch-date-hint">The day this product first went on sale. It joins the list above as its launch. Leave it blank if earlier models aren&rsquo;t listed yet.</p>
+            </div>
+
             <div class="admin-date-row" data-date-row="announced">
               <span class="admin-release-time-label">Announced <span class="admin-optional">Optional</span></span>
               <div class="admin-release-time-row">
@@ -3629,7 +3664,12 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               </div>
               <p id="release-date-hint" class="admin-hint">Leave the time blank for 8am on the day, when Apple Stores open.</p>
               <label class="admin-date-name"><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="release_name_input" autocomplete="off"></label>
-              <label class="checkbox-label admin-date-launch"><input type="checkbox" id="release_is_launch"> The first ever release of this product (its launch)</label>
+              <div class="admin-date-updates" id="release-updates">
+                <span class="admin-release-time-label">Updates to this release <span class="admin-optional">Optional, up to 5</span></span>
+                <div class="admin-updates-list" id="release-updates-list"></div>
+                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" id="release-update-add">+ Add an update</button>
+                <p class="admin-hint" id="release-updates-hint">A change to this model after it came out, such as more memory or a new colour. Each shows under this release in the product&rsquo;s release history, and none restarts the days-since count.</p>
+              </div>
             </div>
 
             <div id="in-countdown-wrap" class="admin-date-countdown">

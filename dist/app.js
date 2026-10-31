@@ -139,6 +139,25 @@
     return d && typeof d === 'object' && !Array.isArray(d) ? d : {};
   }
 
+  // Must match releaseUpdates() and timelineUpdatesHtml() in src/templates.js.
+  function releaseUpdatesJS(product, date) {
+    var info = generationDetailsJS(product)[date];
+    var list = info && Array.isArray(info.updates) ? info.updates : [];
+    return list
+      .filter(function (u) { return u && /^\d{4}-\d{2}(-\d{2})?$/.test(u.date || ''); })
+      .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; })
+      .slice(0, 5);
+  }
+  function timelineUpdatesHtmlJS(updates) {
+    if (!updates || !updates.length) return '';
+    var today = new Date().toISOString().slice(0, 10);
+    return '<ul class="tl-updates">' + updates.map(function (u) {
+      return '<li class="tl-update"><span class="tl-entry-type tl-entry-type--update">' + (u.date > today ? 'Update' : 'Updated') + '</span>' +
+        '<span class="tl-update-date">' + escapeHtmlJS(formatDateJS(u.date)) + '</span>' +
+        (u.note ? '<span class="tl-update-note">' + escapeHtmlJS(u.note) + '</span>' : '') + '</li>';
+    }).join('') + '</ul>';
+  }
+
   function autoGenerationNameJS(product, index, total) {
     if (total <= 1) return product.name;
     return product.name + ' (' + ordinalJS(index + 1) + ' generation)';
@@ -270,6 +289,13 @@
       mine.forEach(function (pt) { if (details[pt.date] && details[pt.date].still_on_sale) pt.isCurrent = true; });
     });
 
+    // Each release carries its updates, listed under it.
+    points.forEach(function (pt) {
+      if (pt.type === 'discontinued') return;
+      var owner = sameCategory.filter(function (p) { return p.name === pt.productName; })[0];
+      if (owner) pt.updates = releaseUpdatesJS(owner, pt.date);
+    });
+
     var typePriority = { discontinued: 0, launch: 1, refresh: 1 };
     points.sort(function (a, b) { return a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]; });
     return points;
@@ -343,7 +369,7 @@
               (e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '') +
               (e.endOfLine ? '<span class="tl-entry-type tl-entry-type--end">End of the line</span>' : '');
             return tags ? '<span class="tl-entry-tags">' + tags + '</span>' : '';
-          })() + '</p>';
+          })() + '</p>' + timelineUpdatesHtmlJS(e.updates);
       }).join('');
       return yearRow + '<li class="tl-item tl-item--' + type + '">' +
         '<span class="tl-marker tl-marker--' + type + '">' + (TIMELINE_ICONS_JS[type] || TIMELINE_ICONS_JS.refresh) + '</span>' +
