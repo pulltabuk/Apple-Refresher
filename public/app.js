@@ -546,12 +546,68 @@
   }
   fetchCustomCategoryIconsJS();
 
+  // Everyday words for Apple's names: "laptop" finds MacBook.
+  var SEARCH_SYNONYMS_JS = {
+    laptop: 'macbook', notebook: 'macbook', tablet: 'ipad', phone: 'iphone', smartphone: 'iphone', mobile: 'iphone',
+    headphones: 'airpods', headphone: 'airpods', earbuds: 'airpods', earphones: 'airpods', buds: 'airpods',
+    speaker: 'homepod', smartwatch: 'watch', desktop: 'mac', computer: 'mac', television: 'tv',
+    mp3: 'ipod', headset: 'vision', glasses: 'vision', stylus: 'pencil', tracker: 'airtag',
+  };
+  // A typed word and the forms it may appear in: "ipods" as "ipod",
+  // "watches" as "watch", "batteries" as "battery", plus any everyday word.
+  function searchWordFormsJS(word) {
+    var forms = [word];
+    if (/'s$/.test(word)) forms.push(word.slice(0, -2));
+    if (word.length > 4 && /ies$/.test(word)) forms.push(word.slice(0, -3) + 'y');
+    if (word.length > 4 && /(ches|shes|xes|sses)$/.test(word)) forms.push(word.slice(0, -2));
+    if (word.length > 3 && /s$/.test(word) && !/ss$/.test(word)) forms.push(word.slice(0, -1));
+    forms.slice().forEach(function (f) { if (SEARCH_SYNONYMS_JS[f]) forms.push(SEARCH_SYNONYMS_JS[f]); });
+    return forms;
+  }
+  // Letters apart (a swap counts as one), stopping once past the limit.
+  function editDistanceJS(a, b, limit) {
+    if (Math.abs(a.length - b.length) > limit) return limit + 1;
+    var prev2 = null;
+    var prev = [];
+    for (var j = 0; j <= b.length; j++) prev[j] = j;
+    for (var i = 1; i <= a.length; i++) {
+      var cur = [i];
+      var best = i;
+      for (var k = 1; k <= b.length; k++) {
+        var cost = a[i - 1] === b[k - 1] ? 0 : 1;
+        var v = Math.min(prev[k] + 1, cur[k - 1] + 1, prev[k - 1] + cost);
+        if (prev2 && i > 1 && k > 1 && a[i - 1] === b[k - 2] && a[i - 2] === b[k - 1]) v = Math.min(v, prev2[k - 2] + 1);
+        cur[k] = v;
+        if (v < best) best = v;
+      }
+      if (best > limit) return limit + 1;
+      prev2 = prev;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
   // Every word must appear somewhere, in any order, so "Watch 12" finds
-  // "Apple Watch Series 12". Used by the header dropdown and the filters.
-  function matchesSearchJS(haystack, query) {
+  // "Apple Watch Series 12". A word may be plural ("ipods"), spaced
+  // differently ("air pods"), or an everyday word ("laptop"). With
+  // `fuzzy`, a word may also be a letter out ("iphnoe"), for when nothing
+  // matches exactly. Used by the header dropdown and the filters.
+  function matchesSearchJS(haystack, query, fuzzy) {
     var words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
     var text = String(haystack || '').toLowerCase();
-    return words.every(function (word) { return text.indexOf(word) !== -1; });
+    var squashed = text.replace(/[^a-z0-9]+/g, '');
+    var textWords = fuzzy ? text.split(/[^a-z0-9]+/).filter(Boolean) : null;
+    var squashedQuery = words.join('');
+    // "air pods" typed as two words, "AirPods" in the name.
+    if (words.length > 1 && squashedQuery.length > 4 && squashed.indexOf(squashedQuery) !== -1) return true;
+    return words.every(function (word) {
+      var forms = searchWordFormsJS(word);
+      if (forms.some(function (f) { return text.indexOf(f) !== -1 || (f.length > 3 && squashed.indexOf(f.replace(/[^a-z0-9]+/g, '')) !== -1); })) return true;
+      if (!fuzzy || word.length < 4) return false;
+      var limit = word.length >= 8 ? 2 : 1;
+      return forms.some(function (f) {
+        return textWords.some(function (tw) { return tw.length >= 3 && editDistanceJS(tw, f, limit) <= limit; });
+      });
+    });
   }
 
   // How closely a name fits what was typed, best first: 0 the name
@@ -564,7 +620,12 @@
     var q = String(query || '').toLowerCase().trim();
     if (n === q) return 0;
     var nameWords = n.split(/[^a-z0-9]+/).filter(Boolean);
-    var typed = q.split(/\s+/).filter(Boolean);
+    // Each typed word as the form that's in the name ("ipods" as "ipod").
+    var typed = q.split(/\s+/).filter(Boolean).map(function (w) {
+      return searchWordFormsJS(w).filter(function (f) { return n.indexOf(f) !== -1; })[0] || w;
+    });
+    q = typed.join(' ');
+    if (n === q) return 0;
     if (typed.every(function (w) { return nameWords.indexOf(w) !== -1; })) return 1;
     if (n.indexOf(q) === 0) return 2;
     if (typed.every(function (w) { return nameWords.some(function (nw) { return nw.indexOf(w) === 0; }); })) return 3;
@@ -615,10 +676,16 @@
       activeDropdownIndex = -1;
     }
 
-    function renderSearchDropdown(matches, query) {
+    function renderSearchDropdown(matches, query, closest) {
       closeSearchDropdown();
       var dropdown = document.createElement('div');
       dropdown.className = 'site-search-dropdown';
+      if (closest) {
+        var near = document.createElement('div');
+        near.className = 'site-search-dropdown-near';
+        near.textContent = 'Nothing exactly matches "' + query + '". Closest:';
+        dropdown.appendChild(near);
+      }
       if (!matches.length) {
         var empty = document.createElement('div');
         empty.className = 'site-search-dropdown-empty';
@@ -693,6 +760,20 @@
       fetchSearchProducts().then(function (data) {
         // Typing on while the data loads: answer only the latest query.
         if (siteSearchInput.value.trim().toLowerCase() !== query) return;
+        // Exact matches; if there are none, the closest (a letter out).
+        var matches = searchMatchesJS(data, query, false);
+        var closest = false;
+        if (!matches.length) {
+          matches = searchMatchesJS(data, query, true);
+          closest = matches.length > 0;
+        }
+        renderSearchDropdown(matches, query, closest);
+      });
+    });
+
+    function searchMatchesJS(data, query, fuzzy) {
+      var matchesSearch = function (text, q) { return matchesSearchJS(text, q, fuzzy); };
+      {
         var products = data.products || [];
         var events = data.events || [];
         var albums = data.albums || [];
@@ -704,7 +785,7 @@
           var name = (p.category || '').trim();
           if (name) families[name.toLowerCase()] = name;
         });
-        Object.keys(families).filter(function (key) { return matchesSearchJS(families[key], query); })
+        Object.keys(families).filter(function (key) { return matchesSearch(families[key], query); })
           .sort(function (a, b) { return searchRankJS(a, query) - searchRankJS(b, query) || a.localeCompare(b); })
           .forEach(function (key) {
           var name = families[key];
@@ -716,7 +797,7 @@
         // Current products first, then the most recently released.
         var today = new Date().toISOString().slice(0, 10);
         var lastOut = function (p) { return (p.refresh_history || []).filter(function (d) { return d <= today; }).sort().pop() || ''; };
-        products.filter(function (p) { return matchesSearchJS(p.name + ' ' + (p.category || ''), query); })
+        products.filter(function (p) { return matchesSearch(p.name + ' ' + (p.category || ''), query); })
           .sort(function (a, b) {
             if (!!a.discontinued !== !!b.discontinued) return a.discontinued ? 1 : -1;
             // The exact name first, loose mid-word matches last; otherwise
@@ -733,7 +814,7 @@
         events.slice().sort(function (a, b) { return String(b.event_date || '').localeCompare(String(a.event_date || '')); }).forEach(function (ev) {
           var announced = (ev.announced_products || []).map(function (a) { return typeof a === 'string' ? a : a.name; });
           var when = ev.event_date ? formatDateJS(ev.event_date) + ' ' + String(ev.event_date).slice(0, 4) : '';
-          if (!matchesSearchJS((ev.heading || '') + ' ' + announced.join(' ') + ' ' + when + ' ' + String(ev.summary || '').replace(/<[^>]+>/g, ' '), query)) return;
+          if (!matchesSearch((ev.heading || '') + ' ' + announced.join(' ') + ' ' + when + ' ' + String(ev.summary || '').replace(/<[^>]+>/g, ' '), query)) return;
           matches.push({ kind: 'event', label: ev.heading || 'Apple Event', href: '/events/' + eventSlugJS(ev) + '/',
             iconHtml: ev.image_url ? searchThumbHtmlJS(ev.image_url) : '<span class="site-search-event-dot" aria-hidden="true"></span>',
             note: ev.event_date ? formatDateJS(ev.event_date) : '' });
@@ -743,7 +824,7 @@
         // id address redirects to the album's own page.
         albums.slice().sort(function (a, b) { return String(b.date_taken || '').localeCompare(String(a.date_taken || '')); }).forEach(function (al) {
           var text = [al.caption, al.location, al.country, String(al.date_taken || '').slice(0, 4)].concat(al.tags || []).filter(Boolean).join(' ');
-          if (!matchesSearchJS(text, query)) return;
+          if (!matchesSearch(text, query)) return;
           var cover = (al.image_urls && al.image_urls[0]) || al.image_url;
           matches.push({ kind: 'album', label: al.caption || (al.tags && al.tags[0]) || 'Photo album', href: '/gallery/' + al.id + '/',
             iconHtml: cover ? searchThumbHtmlJS(cover) : SEARCH_PHOTO_ICON_JS,
@@ -751,7 +832,7 @@
         });
 
         SEARCH_PAGES_JS.forEach(function (pg) {
-          if (!matchesSearchJS(pg.label + ' ' + pg.words, query)) return;
+          if (!matchesSearch(pg.label + ' ' + pg.words, query)) return;
           matches.push({ kind: 'page', label: pg.label, href: pg.href,
             iconHtml: '<span class="site-search-page-dot" aria-hidden="true">&rarr;</span>', note: '' });
         });
@@ -761,9 +842,9 @@
           perKind[m.kind] = (perKind[m.kind] || 0) + 1;
           return perKind[m.kind] <= SEARCH_GROUP_CAPS_JS[m.kind];
         });
-        renderSearchDropdown(matches, query);
-      });
-    });
+        return matches;
+      }
+    }
 
     siteSearchInput.addEventListener('focus', function () {
       if (siteSearchInput.value.trim()) siteSearchInput.dispatchEvent(new Event('input'));
