@@ -476,7 +476,9 @@ async function main() {
   // fill the hero tiles in that order (slot 1 is the big tile, unless an
   // Apple Event has it); any tile left over is a random pick.
   const featuredOrder = await loadFeaturedOrder();
-  const featuredItems = orderedFeatured(rankable, featuredOrder);
+  // Discontinued products can be featured too (their tile shows how long
+  // they were on sale).
+  const featuredItems = orderedFeatured(rankable.concat(discontinuedItems), featuredOrder);
   let heroFeatured;
   let heroRest;
   if (activeEvent) {

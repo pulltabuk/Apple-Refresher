@@ -745,6 +745,7 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card-featured-count--fresh .card-featured-count-number { color: var(--fresh-text); }
 .card-featured-count--aging .card-featured-count-number { color: var(--aging-text); }
 .card-featured-count--overdue .card-featured-count-number { color: var(--overdue-text); }
+.card-featured-count--discontinued .card-featured-count-number { color: var(--discontinued-text); }
 
 .card--event { justify-content: flex-start; border-color: var(--fresh-text); box-shadow: 0 0 0 1px var(--fresh-text); }
 .card-event-image { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #f6f5f1; border-radius: 10px; display: block; }
