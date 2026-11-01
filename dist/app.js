@@ -2476,7 +2476,9 @@
           : '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span> <span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>')
       : product.discontinued && launchDateJS(product) && product.discontinued_date
       // Must match featuredCardHtml(): how long a discontinued one was on sale.
-      ? '<div class="card-featured-count card-featured-count--discontinued"><span class="card-featured-count-number">' + daysBetweenJS(launchDateJS(product), product.discontinued_date).toLocaleString('en-GB') + '</span> <span class="card-featured-count-suffix">days on sale</span></div>'
+      ? '<div class="card-featured-count card-featured-count--discontinued"><span class="card-featured-gone">Discontinued ' + formatDateJS(product.discontinued_date) + '</span>' +
+        '<span class="card-featured-count-number">' + daysBetweenJS(launchDateJS(product), product.discontinued_date).toLocaleString('en-GB') + '</span> ' +
+        '<span class="card-featured-count-suffix">days on sale, ' + formatDateJS(String(launchDateJS(product)).slice(0, 7)) + ' \u2013 ' + formatDateJS(String(product.discontinued_date).slice(0, 7)) + '</span></div>'
       : badgeHtmlJS(product, statusInfo);
     var launch = launchDateJS(product);
     var predecessor = product.previous_model && allProducts ? allProducts.filter(function (p) { return p.slug === product.previous_model; })[0] : null;
@@ -2495,7 +2497,8 @@
     if (extras.preorder) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Pre-orders open</span> ' + formatDateJS(extras.preorder) + '</div>');
     if (launch && !isUpcoming) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Launch date</span> ' + formatDateJS(launch) + '</div>');
     if (product.discontinued && product.discontinued_date) {
-      detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ' + formatDateJS(product.discontinued_date) + '</div>');
+      // Said in the label above the count when that shows it.
+      if (!launch) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Discontinued</span> ' + formatDateJS(product.discontinued_date) + '</div>');
     } else if (nextExpected && !isUpcoming) {
       detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">' + (expectedPassed ? 'Refresh was expected' : 'Next refresh expected') + '</span> ' + nextExpected + '</div>');
     }

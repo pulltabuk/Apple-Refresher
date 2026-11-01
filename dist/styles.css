@@ -746,6 +746,9 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .card-featured-count--aging .card-featured-count-number { color: var(--aging-text); }
 .card-featured-count--overdue .card-featured-count-number { color: var(--overdue-text); }
 .card-featured-count--discontinued .card-featured-count-number { color: var(--discontinued-text); }
+/* A discontinued product featured as a look back: said plainly above the
+   count, so "days on sale" can't read as still on sale. */
+.card-featured-gone { display: inline-flex; align-self: flex-start; margin: 0 0 10px; padding: 5px 12px; border-radius: 999px; background: var(--discontinued-bg); color: var(--discontinued-text); font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
 
 .card--event { justify-content: flex-start; border-color: var(--fresh-text); box-shadow: 0 0 0 1px var(--fresh-text); }
 .card-event-image { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #f6f5f1; border-radius: 10px; display: block; }
