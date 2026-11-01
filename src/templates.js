@@ -1664,6 +1664,10 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
             return `<div class="card-featured-count card-featured-count--upcoming" data-product-countdown="${due}"${product.release_time ? ` data-product-countdown-time="${escapeHtml(product.release_time)}"` : ''}><span class="card-featured-count-due">Coming ${formatDate(due)}${product.release_time ? ` &middot; ${timeWithUk(due, product.release_time)}` : ''}</span><span class="product-countdown-clock" data-product-countdown-clock>${fallback}</span></div>`;
           })()
         : `<div class="card-featured-count card-featured-count--${statusInfo.status}"><span class="card-featured-count-number">${daysInfo.days}</span> <span class="card-featured-count-suffix">days ${daysInfo.suffix}</span></div>`)
+    : product.discontinued && launchDate(product) && product.discontinued_date
+    // A discontinued product (featured as a look back): how long it was on
+    // sale. Must match featuredCardHtmlJS() in public/app.js.
+    ? `<div class="card-featured-count card-featured-count--discontinued"><span class="card-featured-count-number">${daysBetween(launchDate(product), product.discontinued_date).toLocaleString('en-GB')}</span> <span class="card-featured-count-suffix">days on sale</span></div>`
     : productBadge(product, statusInfo);
   const launch = launchDate(product);
   const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;

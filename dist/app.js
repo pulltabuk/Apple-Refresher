@@ -2474,6 +2474,9 @@
                 '<span class="product-countdown-clock" data-product-countdown-clock></span></div>';
             })()
           : '<div class="card-featured-count card-featured-count--' + statusInfo.status + '"><span class="card-featured-count-number">' + daysInfo.days + '</span> <span class="card-featured-count-suffix">days ' + daysInfo.suffix + '</span></div>')
+      : product.discontinued && launchDateJS(product) && product.discontinued_date
+      // Must match featuredCardHtml(): how long a discontinued one was on sale.
+      ? '<div class="card-featured-count card-featured-count--discontinued"><span class="card-featured-count-number">' + daysBetweenJS(launchDateJS(product), product.discontinued_date).toLocaleString('en-GB') + '</span> <span class="card-featured-count-suffix">days on sale</span></div>'
       : badgeHtmlJS(product, statusInfo);
     var launch = launchDateJS(product);
     var predecessor = product.previous_model && allProducts ? allProducts.filter(function (p) { return p.slug === product.previous_model; })[0] : null;
@@ -2637,7 +2640,9 @@
         .filter(function (i) { return i.status; });
       if (!withStatus.length && !activeEvent) return;
 
-      var featuredItems = orderedFeaturedJS(withStatus, featuredOrder);
+      // Must match build.js: discontinued products can be featured too.
+      var featuredItems = orderedFeaturedJS(withStatus.concat(products.filter(function (p) { return p.discontinued; })
+        .map(function (p) { return { product: p, status: null }; })), featuredOrder);
       // Must match build.js: an unreleased product stays out of the hero
       // unless it has been deliberately featured.
       var todayStr = new Date().toISOString().slice(0, 10);

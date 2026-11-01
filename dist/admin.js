@@ -2420,8 +2420,8 @@
     actions.appendChild(addDateBtn);
     actions.appendChild(editBtn);
     // Lit up while the product is on the homepage; tapping it again
-    // takes it off.
-    if (!p.discontinued) {
+    // takes it off. Discontinued products can be featured too.
+    {
       const featureBtn = document.createElement('button');
       featureBtn.type = 'button';
       featureBtn.setAttribute('aria-pressed', p.featured ? 'true' : 'false');
@@ -2570,24 +2570,28 @@
     return box;
   }
 
-  // Filling a featured slot: products on sale and not featured, newest
-  // release first. Picking one puts it in the slot.
+  // Filling a featured slot: any product not featured yet, those on sale
+  // first (newest release first), then discontinued ones (most recently
+  // gone first). Picking one puts it in the slot.
   function slotPicker(slot, today) {
     const newest = (p) => (p.refresh_history || []).slice().sort().pop() || '';
     return stripPicker({
       title: 'Fill slot ' + slot + (slot === 1 ? ' (the big tile)' : ''),
-      placeholder: 'Search products on sale\u2026',
+      placeholder: 'Search products\u2026',
       ariaLabel: 'Search products to feature',
       query: slotPickerQuery,
       onQuery: (q) => { slotPickerQuery = q; },
       candidates: cachedProducts
-        .filter((p) => !p.discontinued && !p.featured)
-        .sort((a, b) => newest(b).localeCompare(newest(a)) || a.name.localeCompare(b.name)),
+        .filter((p) => !p.featured)
+        .sort((a, b) => (!!a.discontinued !== !!b.discontinued ? (a.discontinued ? 1 : -1)
+          : a.discontinued ? String(b.discontinued_date || '').localeCompare(String(a.discontinued_date || ''))
+          : newest(b).localeCompare(newest(a))) || a.name.localeCompare(b.name)),
       meta: (p) => {
+        if (p.discontinued) return [p.category, 'Discontinued' + (p.discontinued_date ? ' ' + formatAdminDate(p.discontinued_date) : '')].filter(Boolean).join(' \u00b7 ');
         const last = newest(p);
         return [p.category, last ? (last > today ? 'Coming ' : 'Released ') + formatAdminDate(last) : ''].filter(Boolean).join(' \u00b7 ');
       },
-      empty: () => 'No products on sale match.',
+      empty: () => 'No products match.',
       onClose: () => { slotPickerFor = null; renderHomepageStrip(); },
       onPick: (p, item) => fillFeaturedSlot(p, slot, item),
     });
@@ -4624,7 +4628,7 @@
 
   // Which product id is in each of the 3 slots (null when empty).
   function featuredSlots() {
-    const featured = cachedProducts.filter((p) => p.featured && !p.discontinued);
+    const featured = cachedProducts.filter((p) => p.featured);
     const isFeatured = (id) => featured.some((p) => String(p.id) === String(id));
     const slots = [0, 1, 2].map((i) => (featuredOrder[i] != null && isFeatured(featuredOrder[i]) ? String(featuredOrder[i]) : null));
     featured
@@ -5997,8 +6001,8 @@
     const published = factsRes.data || [];
     const events = eventsRes.data || [];
     // The products in the big homepage tile, as the build picks them:
-    // featured, on sale and with a release date, slot order first, at most 3.
-    const featured = cachedProducts.filter((p) => p.featured && !p.discontinued && (p.refresh_history || []).length);
+    // featured and with a release date, slot order first, at most 3.
+    const featured = cachedProducts.filter((p) => p.featured && (p.refresh_history || []).length);
     const order = featuredOrder.map(String);
     featured.sort((a, b) => {
       const ia = order.indexOf(String(a.id)); const ib = order.indexOf(String(b.id));
