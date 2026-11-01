@@ -3238,6 +3238,9 @@
   // current on that date, as updates of kind 'dropped'.
   let currentDropped = [];
   const MAX_DROPPED = 3;
+  // A product opened with model lines but no whole-product date: it takes
+  // the last model's date (set once its dates have loaded).
+  let pendingModelsDiscontinued = null;
   const MAX_UPDATES = 5;
   let lastPicked = null; // { row, date }: the last date picked in the box
   let releasePrecision = 'day';
@@ -3740,6 +3743,17 @@
     return list.filter((d) => d <= date).pop() || list[0];
   }
   const droppedIsBlank = (u) => !u || (!u.date && !(u.note || '').trim());
+  // The whole product's discontinued date: the last model line's, kept in
+  // step as lines change, unless a different date was typed above.
+  const lastDroppedDate = () => currentDropped.filter((u) => u && isFullDate(u.date)).map((u) => u.date).sort().pop() || null;
+  function syncDiscontinuedFromModels(before) {
+    const after = lastDroppedDate();
+    if (after === before) return;
+    if (!currentDiscontinuedDate || currentDiscontinuedDate === before) {
+      currentDiscontinuedDate = after;
+      updateStatusReadout();
+    }
+  }
   function renderDroppedEditor() {
     const listEl = document.getElementById('dropped-list');
     if (!listEl) return;
@@ -3761,7 +3775,9 @@
       dateIn.dataset.field = 'date';
       dateIn.setAttribute('aria-label', 'Model discontinued ' + (i + 1) + ': date');
       dateIn.addEventListener('change', () => {
+        const before = lastDroppedDate();
         u.date = dateIn.value || null;
+        syncDiscontinuedFromModels(before);
         currentDropped.sort((a, b) => (!a.date && !b.date ? 0 : !a.date ? 1 : !b.date ? -1 : a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
         productFormDirty = true;
         renderRefreshHistory();
@@ -3786,8 +3802,10 @@
       clear.dataset.field = 'clear';
       clear.hidden = droppedIsBlank(u);
       clear.addEventListener('click', () => {
+        const before = lastDroppedDate();
         currentDropped.splice(i, 1);
         currentDropped.push({ date: null, note: '' });
+        syncDiscontinuedFromModels(before);
         productFormDirty = true;
         renderRefreshHistory();
       });
@@ -4457,6 +4475,7 @@
     const details = p.generation_details && typeof p.generation_details === 'object' && !Array.isArray(p.generation_details) ? p.generation_details : {};
     currentGenerationDetails = JSON.parse(JSON.stringify(details));
     currentDropped = takeDroppedFromDetails(currentGenerationDetails);
+    pendingModelsDiscontinued = !p.discontinued_date && lastDroppedDate() ? lastDroppedDate() : null;
     currentOriginalLaunchDate = p.original_launch_date || null;
     currentIconUrl = p.icon_url || null;
     currentVideoUrl = p.video_url || null;
@@ -4471,6 +4490,11 @@
     document.getElementById('discontinued_reason').value = p.discontinued_reason || '';
     document.getElementById('last_in_line').checked = !!p.last_in_line;
     currentDiscontinuedDate = p.discontinued ? (p.discontinued_date || null) : null;
+    // Models discontinued one by one, but no date for the whole product
+    // saved yet: it takes the last model's date.
+    const fromModels = !currentDiscontinuedDate ? pendingModelsDiscontinued : null;
+    if (fromModels) currentDiscontinuedDate = fromModels;
+    pendingModelsDiscontinued = null;
     expandedGenerations.clear();
     resetGenerationPanel();
     renderRefreshHistory();
@@ -4478,6 +4502,10 @@
     renderVideoStatus();
     document.getElementById('delete-product-btn').style.display = '';
     showProductForm();
+    if (fromModels) {
+      productFormDirty = true;
+      adminToast('Discontinued ' + formatAdminDate(fromModels) + ', the date of its last model. Save to keep it.', true);
+    }
     if (options && options.focusGeneration) {
       const panel = document.getElementById('generation-add-panel');
       panel.scrollIntoView({ block: 'center' });

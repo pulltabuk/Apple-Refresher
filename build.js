@@ -315,8 +315,25 @@ function pickRandom(arr, n) {
   return picked;
 }
 
+// A product whose models were discontinued one by one (the 32GB on one
+// date, the 64GB on another) with no date for the whole product is
+// discontinued on the last of them. Must match modelsDiscontinuedJS() in
+// public/app.js and the admin's Discontinued row.
+function withModelsDiscontinued(p) {
+  if (!p || p.discontinued_date) return p;
+  const details = p.generation_details && typeof p.generation_details === 'object' && !Array.isArray(p.generation_details) ? p.generation_details : {};
+  let last = null;
+  Object.keys(details).forEach((d) => {
+    ((details[d] && details[d].updates) || []).forEach((u) => {
+      if (u && u.kind === 'dropped' && /^\d{4}-\d{2}-\d{2}$/.test(u.date || '') && (!last || u.date > last)) last = u.date;
+    });
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  return last && last <= today ? { ...p, discontinued: true, discontinued_date: last } : p;
+}
+
 async function main() {
-  const products = await loadProducts();
+  const products = (await loadProducts()).map(withModelsDiscontinued);
   // Links typed into notes and descriptions are checked against these.
   setLinkProducts(products);
   const aboutContent = await loadSiteContent();
