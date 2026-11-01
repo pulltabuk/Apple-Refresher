@@ -3245,7 +3245,7 @@
   let lastPicked = null; // { row, date }: the last date picked in the box
   let releasePrecision = 'day';
   let releasePrecisionFor = undefined;
-  const CHAIN = ['launch', 'announced', 'preorder', 'release'];
+  const CHAIN = ['announced', 'launch', 'preorder', 'release'];
   // What a suggested date was copied from, for its button: "✓ Same as launch".
   const SAME_AS = { launch: 'launch', announced: 'announced', preorder: 'pre-orders', release: 'release', restart: 'last release', lastmodel: 'last model' };
 
@@ -3528,15 +3528,25 @@
     const launch = currentOriginalLaunchDate;
     input.value = isFullDate(launch) ? launch : '';
     clear.hidden = !launch;
-    const earliest = currentRefreshHistory.slice().sort()[0];
-    const offer = !launch && !!target && target === earliest;
+    // Empty: it offers the release when that's the first one, otherwise
+    // the announced date above it, shown pale until its button is pressed.
+    const offer = launch ? null : launchSuggestion(target);
+    if (offer) input.value = offer.date;
+    input.classList.toggle('is-suggested', !!offer);
     same.hidden = !offer;
-    same.title = offer ? 'Launched ' + formatAdminDate(target) : '';
+    same.textContent = offer ? '\u2713 Same as ' + SAME_AS[offer.from] : '';
+    same.title = offer ? 'Launched ' + formatAdminDate(offer.date) : '';
     rowNote('launch', launch && !isFullDate(launch)
       ? 'Recorded as ' + formatAdminDate(launch) + '. Pick a day to replace it.'
       : launch && currentRefreshHistory.indexOf(launch) === -1
       ? 'Tap \u201c\u2713 Same as launch\u201d by the release date below to make it the first release. (Saving adds it either way.)'
       : '');
+  }
+  function launchSuggestion(target) {
+    const earliest = currentRefreshHistory.slice().sort()[0];
+    if (target && target === earliest && isFullDate(target)) return { date: target, from: 'release' };
+    const ann = rowValue('announced', target);
+    return isFullDate(ann) ? { date: ann, from: 'announced' } : null;
   }
   function commitLaunch(value) {
     const old = currentOriginalLaunchDate;
@@ -3572,8 +3582,8 @@
   }
   document.getElementById('launch_date_input').addEventListener('change', (e) => commitLaunch(e.target.value || null));
   document.getElementById('launch_same_btn').addEventListener('click', () => {
-    const target = datesTarget();
-    if (target) commitLaunch(target);
+    const offer = launchSuggestion(datesTarget());
+    if (offer) commitLaunch(offer.date);
   });
   document.querySelector('[data-date-clear="launch"]').addEventListener('click', () => commitLaunch(null));
 

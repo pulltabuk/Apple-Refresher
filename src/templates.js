@@ -3631,6 +3631,15 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             </div>
             <p class="admin-hint" id="dates-box-hint">Fill in what you know, top to bottom. An empty date starts on the one above it: tap its &ldquo;&#10003; Same as&hellip;&rdquo; button to keep it, or open the calendar and pick a day near it.</p>
 
+            <div class="admin-date-row admin-date-row--first" data-date-row="announced">
+              <span class="admin-release-time-label">Announced <span class="admin-optional">Optional</span></span>
+              <div class="admin-release-time-row">
+                <input type="date" id="announced_date_input" aria-label="Announced date">
+                <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="announced" hidden>&#10003; Same day</button>
+                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="announced">Clear</button>
+              </div>
+            </div>
+
             <div class="admin-date-row admin-date-row--launch" data-date-row="launch">
               <span class="admin-release-time-label">Launched <span class="admin-optional">Optional: the product&rsquo;s first ever release</span></span>
               <div class="admin-release-time-row">
@@ -3639,15 +3648,6 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
                 <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="launch">Clear</button>
               </div>
               <p class="admin-hint" id="launch-date-hint">The day this product first went on sale. It joins the list above as its launch. Leave it blank if earlier models aren&rsquo;t listed yet.</p>
-            </div>
-
-            <div class="admin-date-row" data-date-row="announced">
-              <span class="admin-release-time-label">Announced <span class="admin-optional">Optional</span></span>
-              <div class="admin-release-time-row">
-                <input type="date" id="announced_date_input" aria-label="Announced date">
-                <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="announced" hidden>&#10003; Same day</button>
-                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="announced">Clear</button>
-              </div>
             </div>
 
             <div class="admin-date-row" data-date-row="preorder">
