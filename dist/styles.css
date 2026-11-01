@@ -1652,6 +1652,12 @@ label.admin-btn { cursor: pointer; color: #fff; }
 .tl-marker--refresh { border-color: var(--accent); color: var(--accent); }
 .tl-marker--launch { border-color: var(--fresh-text); color: var(--fresh-text); }
 .tl-marker--discontinued { border-color: #bdb7ae; color: var(--discontinued-text); }
+/* An update to a release (a new model, a model discontinued): a smaller
+   marker on its own date. */
+.tl-marker--update { border-color: #9fb3dc; color: #2f4a8a; transform: scale(0.85); }
+.tl-marker--update.tl-marker--dropped { border-color: #bdb7ae; color: var(--discontinued-text); }
+.tl-item--update .tl-entry-name { font-size: 14px; }
+.tl-update-note { margin: 2px 0 0; font-size: 14px; color: var(--text-secondary); }
 .tl-marker--now { border-color: var(--accent); color: var(--accent); font-size: 11px; background: var(--accent-bg); }
 .tl-body { padding-top: 2px; min-width: 0; }
 .tl-date { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.01em; }
