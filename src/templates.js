@@ -1667,7 +1667,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
     : product.discontinued && launchDate(product) && product.discontinued_date
     // A discontinued product (featured as a look back): how long it was on
     // sale. Must match featuredCardHtmlJS() in public/app.js.
-    ? `<div class="card-featured-count card-featured-count--discontinued"><span class="card-featured-gone">Discontinued ${formatDate(product.discontinued_date)}</span><span class="card-featured-count-number">${daysBetween(launchDate(product), product.discontinued_date).toLocaleString('en-GB')}</span> <span class="card-featured-count-suffix">days on sale, ${formatDate(String(launchDate(product)).slice(0, 7))} &ndash; ${formatDate(String(product.discontinued_date).slice(0, 7))}</span></div>`
+    ? `<div class="card-featured-count card-featured-count--discontinued"><span class="card-featured-gone"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.16"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Discontinued ${formatDate(product.discontinued_date)}</span></span><span class="card-featured-count-number">${daysBetween(launchDate(product), product.discontinued_date).toLocaleString('en-GB')}</span> <span class="card-featured-count-suffix">days on sale, ${formatDate(String(launchDate(product)).slice(0, 7))} &ndash; ${formatDate(String(product.discontinued_date).slice(0, 7))}</span></div>`
     : productBadge(product, statusInfo);
   const launch = launchDate(product);
   const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
