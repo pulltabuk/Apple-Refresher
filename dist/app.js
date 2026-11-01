@@ -575,7 +575,7 @@
       var headers = { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY };
       searchProductsPromise = window.SUPABASE_URL && window.SUPABASE_ANON_KEY
         ? Promise.all([
-            fetch(window.SUPABASE_URL + '/rest/v1/products?select=id,name,slug,category,icon_url,discontinued,refresh_history', { headers })
+            fetch(window.SUPABASE_URL + '/rest/v1/products?select=id,name,slug,category,icon_url,discontinued,discontinued_date,generation_details,refresh_history', { headers })
               .then(function (res) { return res.json(); }).then(appleNamesJS).catch(function () { return []; }),
             fetch(window.SUPABASE_URL + '/rest/v1/apple_events?select=*', { headers })
               .then(function (res) { return res.json(); }).catch(function () { return []; }),
@@ -1368,12 +1368,30 @@
     if (name == null) return name;
     return APPLE_WORDS_JS.reduce(function (s, rule) { return s.replace(rule[0], rule[1]); }, String(name));
   }
+  // Must match withModelsDiscontinued() in build.js: models discontinued
+  // one by one, and no date for the whole product, means discontinued on
+  // the last of them.
+  function modelsDiscontinuedJS(copy) {
+    if (copy.discontinued_date) return;
+    var details = copy.generation_details && typeof copy.generation_details === 'object' && !Array.isArray(copy.generation_details) ? copy.generation_details : {};
+    var last = null;
+    Object.keys(details).forEach(function (d) {
+      ((details[d] && details[d].updates) || []).forEach(function (u) {
+        if (u && u.kind === 'dropped' && /^\d{4}-\d{2}-\d{2}$/.test(u.date || '') && (!last || u.date > last)) last = u.date;
+      });
+    });
+    if (last && last <= new Date().toISOString().slice(0, 10)) {
+      copy.discontinued = true;
+      copy.discontinued_date = last;
+    }
+  }
   function appleNamesJS(rows) {
     return Array.isArray(rows) ? rows.map(function (p) {
       var copy = {};
       for (var k in p) copy[k] = p[k];
       copy.name = appleNameJS(p.name);
       copy.category = appleNameJS(p.category);
+      modelsDiscontinuedJS(copy);
       return copy;
     }) : rows;
   }

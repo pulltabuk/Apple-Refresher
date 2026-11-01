@@ -3702,7 +3702,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <p class="admin-hint" id="last-in-line-text" hidden>Tap &ldquo;End of the line&rdquo; if Apple ended the line with this one.</p>
               <div class="admin-date-updates" id="dropped-models">
                 <span class="admin-release-time-label">Models discontinued separately <span class="admin-optional">Optional, up to 3</span></span>
-                <p class="admin-hint">When one model goes before the rest: the 32GB on one date, the 64GB on another. Each shows in the release history; the date above is for the whole product.</p>
+                <p class="admin-hint">When models go on different dates: the 32GB on one, the 64GB on another. Each shows in the release history, and the whole product is discontinued on the latest of them (filled in above for you).</p>
                 <div class="admin-updates-list" id="dropped-list"></div>
               </div>
             </div>
