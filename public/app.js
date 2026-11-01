@@ -296,6 +296,19 @@
       });
     });
 
+    // Must match src/templates.js: no product Discontinued entry on a day a
+    // model line already covers.
+    var dropDays = {};
+    points.forEach(function (pt) { if (pt.type === 'update' && pt.kind === 'dropped') dropDays[pt.productName + '|' + pt.date] = pt; });
+    for (var di = points.length - 1; di >= 0; di--) {
+      var dpt = points[di];
+      var line = dpt.type === 'discontinued' && dropDays[dpt.productName + '|' + dpt.date];
+      if (line) {
+        if (dpt.endOfLine) line.endOfLine = true;
+        points.splice(di, 1);
+      }
+    }
+
     var typePriority = { discontinued: 0, launch: 1, refresh: 1, update: 2 };
     points.sort(function (a, b) { return a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]; });
     return points;
@@ -366,7 +379,8 @@
       var lines = ordered.map(function (e) {
         if (e.type === 'update') {
           return '<p class="tl-entry tl-entry--update"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
-            '<span class="tl-entry-tags"><span class="tl-entry-type tl-entry-type--update' + (e.kind === 'dropped' ? ' tl-entry-type--update-dropped' : '') + '">' + updateKindLabelJS(e) + '</span></span></p>' +
+            '<span class="tl-entry-tags"><span class="tl-entry-type tl-entry-type--update' + (e.kind === 'dropped' ? ' tl-entry-type--update-dropped' : '') + '">' + updateKindLabelJS(e) + '</span>' +
+            (e.endOfLine ? '<span class="tl-entry-type tl-entry-type--end">End of the line</span>' : '') + '</span></p>' +
             (e.note ? '<p class="tl-update-note">' + escapeHtmlJS(e.note) + '</p>' : '');
         }
         return '<p class="tl-entry"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
