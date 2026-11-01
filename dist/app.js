@@ -146,9 +146,9 @@
     return list
       .filter(function (u) { return u && /^\d{4}-\d{2}(-\d{2})?$/.test(u.date || ''); })
       .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; })
-      .slice(0, 5);
+      .slice(0, 10);
   }
-  var UPDATE_KIND_LABELS_JS = { release: ['Released', 'Release'], update: ['Updated', 'Update'], colour: ['New colour', 'New colour'], price: ['Price change', 'Price change'], dropped: ['Dropped', 'Dropped'] };
+  var UPDATE_KIND_LABELS_JS = { release: ['Released', 'Release'], update: ['Updated', 'Update'], colour: ['New colour', 'New colour'], price: ['Price change', 'Price change'], dropped: ['Discontinued', 'Discontinued'] };
   function timelineUpdatesHtmlJS(updates) {
     if (!updates || !updates.length) return '';
     var today = new Date().toISOString().slice(0, 10);
