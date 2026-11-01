@@ -3244,7 +3244,7 @@
   let releasePrecisionFor = undefined;
   const CHAIN = ['launch', 'announced', 'preorder', 'release'];
   // What a suggested date was copied from, for its button: "✓ Same as launch".
-  const SAME_AS = { launch: 'launch', announced: 'announced', preorder: 'pre-orders', release: 'release', restart: 'last release' };
+  const SAME_AS = { launch: 'launch', announced: 'announced', preorder: 'pre-orders', release: 'release', restart: 'last release', lastmodel: 'last model' };
 
   // The release the box shows: the upcoming one, else the newest one
   // recorded, so the rows always match the dates in the list above.
@@ -3269,6 +3269,16 @@
   // date picked above it. Never saved until its "✓ Same as…" button is
   // pressed.
   function rowSuggestion(row) {
+    // The first release, when a launch date is waiting for it.
+    if (row === 'release' && isFullDate(currentOriginalLaunchDate) && currentRefreshHistory.indexOf(currentOriginalLaunchDate) === -1) {
+      return { date: currentOriginalLaunchDate, from: 'launch' };
+    }
+    // The whole product, when models were discontinued one by one: the
+    // last of them.
+    if (row === 'discontinued') {
+      const last = currentDropped.filter((u) => u && isFullDate(u.date)).map((u) => u.date).sort().pop();
+      return last ? { date: last, from: 'lastmodel' } : null;
+    }
     if (row === 'preorder' || row === 'release') {
       const target = datesTarget();
       const ann = rowValue('announced', target);
@@ -3519,7 +3529,11 @@
     const offer = !launch && !!target && target === earliest;
     same.hidden = !offer;
     same.title = offer ? 'Launched ' + formatAdminDate(target) : '';
-    rowNote('launch', launch && !isFullDate(launch) ? 'Recorded as ' + formatAdminDate(launch) + '. Pick a day to replace it.' : '');
+    rowNote('launch', launch && !isFullDate(launch)
+      ? 'Recorded as ' + formatAdminDate(launch) + '. Pick a day to replace it.'
+      : launch && currentRefreshHistory.indexOf(launch) === -1
+      ? 'Tap \u201c\u2713 Same as launch\u201d by the release date below to make it the first release. (Saving adds it either way.)'
+      : '');
   }
   function commitLaunch(value) {
     const old = currentOriginalLaunchDate;
@@ -3532,17 +3546,16 @@
         renderDatesBox();
         return;
       }
-      if (currentRefreshHistory.indexOf(value) === -1) {
-        if (old && old !== datesTarget() && currentRefreshHistory.indexOf(old) !== -1) {
-          currentRefreshHistory = currentRefreshHistory.map((d) => (d === old ? value : d)).sort();
-          if (currentGenerationDetails[old]) {
-            currentGenerationDetails[value] = currentGenerationDetails[old];
-            delete currentGenerationDetails[old];
-          }
-          if (expandedGenerations.delete(old)) expandedGenerations.add(value);
-        } else {
-          currentRefreshHistory = currentRefreshHistory.concat(value).sort();
+      // Not a release yet: it stays a launch date only, and the Release
+      // row offers it ("✓ Same as launch"). Saving adds it as the first
+      // release either way. A launch release already in the list moves.
+      if (currentRefreshHistory.indexOf(value) === -1 && old && old !== datesTarget() && currentRefreshHistory.indexOf(old) !== -1) {
+        currentRefreshHistory = currentRefreshHistory.map((d) => (d === old ? value : d)).sort();
+        if (currentGenerationDetails[old]) {
+          currentGenerationDetails[value] = currentGenerationDetails[old];
+          delete currentGenerationDetails[old];
         }
+        if (expandedGenerations.delete(old)) expandedGenerations.add(value);
       }
       currentOriginalLaunchDate = value;
       // The empty rows below start on it ("✓ Same as launch"), when the

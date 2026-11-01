@@ -149,15 +149,9 @@
       .slice(0, 10);
   }
   var UPDATE_KIND_LABELS_JS = { release: ['Released', 'Release'], update: ['Updated', 'Update'], colour: ['New colour', 'New colour'], price: ['Price change', 'Price change'], dropped: ['Discontinued', 'Discontinued'] };
-  function timelineUpdatesHtmlJS(updates) {
-    if (!updates || !updates.length) return '';
+  function updateKindLabelJS(u) {
     var today = new Date().toISOString().slice(0, 10);
-    return '<ul class="tl-updates">' + updates.map(function (u) {
-      var label = (UPDATE_KIND_LABELS_JS[u.kind] || UPDATE_KIND_LABELS_JS.update)[u.date > today ? 1 : 0];
-      return '<li class="tl-update"><span class="tl-entry-type tl-entry-type--update' + (u.kind === 'dropped' ? ' tl-entry-type--update-dropped' : '') + '">' + label + '</span>' +
-        '<span class="tl-update-date">' + escapeHtmlJS(formatDateJS(u.date)) + '</span>' +
-        (u.note ? '<span class="tl-update-note">' + escapeHtmlJS(u.note) + '</span>' : '') + '</li>';
-    }).join('') + '</ul>';
+    return (UPDATE_KIND_LABELS_JS[u.kind] || UPDATE_KIND_LABELS_JS.update)[u.date > today ? 1 : 0];
   }
 
   function autoGenerationNameJS(product, index, total) {
@@ -291,14 +285,18 @@
       mine.forEach(function (pt) { if (details[pt.date] && details[pt.date].still_on_sale) pt.isCurrent = true; });
     });
 
-    // Each release carries its updates, listed under it.
-    points.forEach(function (pt) {
-      if (pt.type === 'discontinued') return;
-      var owner = sameCategory.filter(function (p) { return p.name === pt.productName; })[0];
-      if (owner) pt.updates = releaseUpdatesJS(owner, pt.date);
+    // Updates to a release are entries of their own, on their own dates,
+    // named after the release they changed. Must match src/templates.js.
+    sameCategory.forEach(function (p) {
+      var history = p.refresh_history || [];
+      Object.keys(generationDetailsJS(p)).filter(function (d) { return history.indexOf(d) !== -1; }).forEach(function (rd) {
+        releaseUpdatesJS(p, rd).forEach(function (u) {
+          points.push({ date: u.date, type: 'update', kind: u.kind || 'update', note: u.note || '', productName: p.name, displayName: pointNameJS(p, rd) });
+        });
+      });
     });
 
-    var typePriority = { discontinued: 0, launch: 1, refresh: 1 };
+    var typePriority = { discontinued: 0, launch: 1, refresh: 1, update: 2 };
     points.sort(function (a, b) { return a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]; });
     return points;
   }
@@ -306,6 +304,7 @@
   var TIMELINE_ICONS_JS = {
     launch: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2.5 14 13H2z" fill="currentColor"/></svg>',
     refresh: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg>',
+    update: '<svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M8 2.5 13.5 8 8 13.5 2.5 8z" fill="currentColor"/></svg>',
     discontinued: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>'
   };
 
@@ -337,8 +336,9 @@
     });
     dates.sort().reverse();
     var today = new Date().toISOString().slice(0, 10);
+    var isRelease = function (pt) { return pt.type === 'launch' || pt.type === 'refresh'; };
     var newestRelease = dates.filter(function (d) {
-      return byDate[d].some(function (pt) { return pt.type !== 'discontinued'; });
+      return byDate[d].some(isRelease);
     })[0];
     var sinceDays = newestRelease ? daysBetweenJS(newestRelease, today) : null;
     var nowNode = !product.discontinued && sinceDays !== null && sinceDays >= 0
@@ -348,9 +348,10 @@
     var lastYear = null;
     var rows = dates.map(function (date, i) {
       var entries = byDate[date];
-      var type = entries.some(function (e) { return e.type !== 'discontinued'; })
+      var type = entries.some(isRelease)
         ? (entries.some(function (e) { return e.type === 'launch'; }) ? 'launch' : 'refresh')
-        : 'discontinued';
+        : entries.some(function (e) { return e.type === 'discontinued'; }) ? 'discontinued' : 'update';
+      var allDropped = type === 'update' && entries.every(function (e) { return e.kind === 'dropped'; });
       var year = String(date).slice(0, 4);
       var yearRow = year !== lastYear ? '<li class="tl-year"><span>' + year + '</span></li>' : '';
       lastYear = year;
@@ -359,10 +360,15 @@
       var gapRow = gap ? '<li class="tl-gap"><span class="tl-gap-text">&#8593; ' + gap + '</span></li>' : '';
       // Must match verticalTimelineHtml(): releases first, then A to Z.
       var ordered = entries.slice().sort(function (a, b) {
-        var rank = function (e) { return e.type === 'discontinued' ? 1 : 0; };
+        var rank = function (e) { return e.type === 'discontinued' ? 2 : e.type === 'update' ? 1 : 0; };
         return rank(a) - rank(b) || String(a.displayName || a.productName).localeCompare(String(b.displayName || b.productName), 'en', { numeric: true, sensitivity: 'base' });
       });
       var lines = ordered.map(function (e) {
+        if (e.type === 'update') {
+          return '<p class="tl-entry tl-entry--update"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
+            '<span class="tl-entry-tags"><span class="tl-entry-type tl-entry-type--update' + (e.kind === 'dropped' ? ' tl-entry-type--update-dropped' : '') + '">' + updateKindLabelJS(e) + '</span></span></p>' +
+            (e.note ? '<p class="tl-update-note">' + escapeHtmlJS(e.note) + '</p>' : '');
+        }
         return '<p class="tl-entry"><span class="tl-entry-name">' + escapeHtmlJS(e.displayName || e.productName) + '</span>' +
           (function () {
             // Must stay in step with src/templates.js.
@@ -371,10 +377,10 @@
               (e.isCurrent ? '<span class="tl-entry-type tl-entry-type--current">Current</span>' : '') +
               (e.endOfLine ? '<span class="tl-entry-type tl-entry-type--end">End of the line</span>' : '');
             return tags ? '<span class="tl-entry-tags">' + tags + '</span>' : '';
-          })() + '</p>' + timelineUpdatesHtmlJS(e.updates);
+          })() + '</p>';
       }).join('');
       return yearRow + '<li class="tl-item tl-item--' + type + '">' +
-        '<span class="tl-marker tl-marker--' + type + '">' + (TIMELINE_ICONS_JS[type] || TIMELINE_ICONS_JS.refresh) + '</span>' +
+        '<span class="tl-marker tl-marker--' + type + (allDropped ? ' tl-marker--dropped' : '') + '">' + (allDropped ? TIMELINE_ICONS_JS.discontinued : TIMELINE_ICONS_JS[type] || TIMELINE_ICONS_JS.refresh) + '</span>' +
         '<div class="tl-body"><p class="tl-date">' + formatDateJS(date) +
           (date > new Date().toISOString().slice(0, 10) ? ' <span class="tl-upcoming">Upcoming</span>' : '') +
         '</p>' + lines + '</div></li>' + gapRow;
@@ -383,7 +389,7 @@
   }
 
   function horizontalTimelineHtmlJS(product, allProducts) {
-    var points = categoryTimelinePointsJS(product, allProducts);
+    var points = categoryTimelinePointsJS(product, allProducts).filter(function (pt) { return pt.type !== 'update'; });
     if (!points.length) return '';
 
     var groups = [];

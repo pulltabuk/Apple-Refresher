@@ -312,7 +312,7 @@ function generationDetails(product) {
 // A release's updates since it came out (more memory, a new colour),
 // oldest first: { date, note }, at most five. They're listed under the
 // release and don't restart the days-since count. Must match
-// releaseUpdatesJS() and timelineUpdatesHtmlJS() in public/app.js.
+// releaseUpdatesJS() and updateKindLabelJS() in public/app.js.
 function releaseUpdates(product, date) {
   const info = generationDetails(product)[date];
   const list = info && Array.isArray(info.updates) ? info.updates : [];
@@ -323,11 +323,9 @@ function releaseUpdates(product, date) {
 }
 // Its pill: [past, still to come], by kind ("Released", "New colour").
 const UPDATE_KIND_LABELS = { release: ['Released', 'Release'], update: ['Updated', 'Update'], colour: ['New colour', 'New colour'], price: ['Price change', 'Price change'], dropped: ['Discontinued', 'Discontinued'] };
-function timelineUpdatesHtml(updates) {
-  if (!updates || !updates.length) return '';
+function updateKindLabel(u) {
   const today = new Date().toISOString().slice(0, 10);
-  const label = (u) => (UPDATE_KIND_LABELS[u.kind] || UPDATE_KIND_LABELS.update)[u.date > today ? 1 : 0];
-  return `<ul class="tl-updates">${updates.map((u) => `<li class="tl-update"><span class="tl-entry-type tl-entry-type--update${u.kind === 'dropped' ? ' tl-entry-type--update-dropped' : ''}">${label(u)}</span><span class="tl-update-date">${escapeHtml(formatDate(u.date))}</span>${u.note ? `<span class="tl-update-note">${escapeHtml(u.note)}</span>` : ''}</li>`).join('')}</ul>`;
+  return (UPDATE_KIND_LABELS[u.kind] || UPDATE_KIND_LABELS.update)[u.date > today ? 1 : 0];
 }
 
 // Used for any generation without a name typed in admin. A line with a
@@ -496,14 +494,18 @@ function categoryTimelinePoints(product, allProducts) {
     mine.forEach((pt) => { if (details[pt.date] && details[pt.date].still_on_sale) pt.isCurrent = true; });
   });
 
-  // Each release carries its updates, listed under it.
-  points.forEach((pt) => {
-    if (pt.type === 'discontinued') return;
-    const owner = sameCategory.find((p) => p.name === pt.productName);
-    if (owner) pt.updates = releaseUpdates(owner, pt.date);
+  // Updates to a release (a new model, a model discontinued) are entries
+  // of their own, on their own dates, named after the release they changed.
+  sameCategory.forEach((p) => {
+    const history = p.refresh_history || [];
+    Object.keys(generationDetails(p)).filter((d) => history.includes(d)).forEach((rd) => {
+      releaseUpdates(p, rd).forEach((u) => {
+        points.push({ date: u.date, type: 'update', kind: u.kind || 'update', note: u.note || '', productName: p.name, displayName: pointName(p, rd) });
+      });
+    });
   });
 
-  const typePriority = { discontinued: 0, launch: 1, refresh: 1 };
+  const typePriority = { discontinued: 0, launch: 1, refresh: 1, update: 2 };
   points.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]));
   return points;
 }
@@ -517,6 +519,7 @@ function categoryTimelinePoints(product, allProducts) {
 const TIMELINE_ICONS = {
   launch: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2.5 14 13H2z" fill="currentColor"/></svg>',
   refresh: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="currentColor"/></svg>',
+  update: '<svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M8 2.5 13.5 8 8 13.5 2.5 8z" fill="currentColor"/></svg>',
   discontinued: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>',
 };
 
@@ -546,7 +549,8 @@ function verticalTimelineHtml(product, allProducts) {
   const dates = [...byDate.keys()].sort().reverse();
 
   const today = new Date().toISOString().slice(0, 10);
-  const newestRelease = dates.find((d) => byDate.get(d).some((pt) => pt.type !== 'discontinued'));
+  const isRelease = (pt) => pt.type === 'launch' || pt.type === 'refresh';
+  const newestRelease = dates.find((d) => byDate.get(d).some(isRelease));
   const sinceDays = newestRelease ? daysBetween(newestRelease, today) : null;
   const nowNode = !product.discontinued && sinceDays !== null && sinceDays >= 0
     ? `<li class="tl-now">
@@ -558,9 +562,9 @@ function verticalTimelineHtml(product, allProducts) {
   let lastYear = null;
   const rows = dates.map((date, i) => {
     const entries = byDate.get(date);
-    const type = entries.some((e) => e.type !== 'discontinued')
+    const type = entries.some(isRelease)
       ? (entries.some((e) => e.type === 'launch') ? 'launch' : 'refresh')
-      : 'discontinued';
+      : entries.some((e) => e.type === 'discontinued') ? 'discontinued' : 'update';
     const year = String(date).slice(0, 4);
     const yearRow = year !== lastYear ? `<li class="tl-year"><span>${year}</span></li>` : '';
     lastYear = year;
@@ -575,7 +579,7 @@ function verticalTimelineHtml(product, allProducts) {
     // in order, so iPhone 13, iPhone 13 mini, iPhone 13 Pro, iPhone 13 Pro Max).
     // Must match verticalTimelineHtmlJS() in public/app.js.
     const ordered = entries.slice().sort((a, b) => {
-      const rank = (e) => (e.type === 'discontinued' ? 1 : 0);
+      const rank = (e) => (e.type === 'discontinued' ? 2 : e.type === 'update' ? 1 : 0);
       return rank(a) - rank(b) || String(a.displayName || a.productName).localeCompare(String(b.displayName || b.productName), 'en', { numeric: true, sensitivity: 'base' });
     });
     // Every entry here is a release, so a "Refresh" pill only repeats what
@@ -583,6 +587,13 @@ function verticalTimelineHtml(product, allProducts) {
     // tell you something the date alone does not, so they stay. Tags are
     // grouped so they wrap together instead of splitting across lines.
     const lines = ordered.map((e) => {
+      // An update: the release it changed, what kind, and what.
+      if (e.type === 'update') {
+        return `<p class="tl-entry tl-entry--update">
+        <span class="tl-entry-name">${escapeHtml(e.displayName || e.productName)}</span>
+        <span class="tl-entry-tags"><span class="tl-entry-type tl-entry-type--update${e.kind === 'dropped' ? ' tl-entry-type--update-dropped' : ''}">${updateKindLabel(e)}</span></span>
+      </p>${e.note ? `<p class="tl-update-note">${escapeHtml(e.note)}</p>` : ''}`;
+      }
       const tags = [
         // Every entry carries a label, so the column reads consistently.
         // "Released" rather than "Refresh": it says what happened that day.
@@ -594,12 +605,12 @@ function verticalTimelineHtml(product, allProducts) {
       return `<p class="tl-entry">
         <span class="tl-entry-name">${escapeHtml(e.displayName || e.productName)}</span>
         ${tags ? `<span class="tl-entry-tags">${tags}</span>` : ''}
-      </p>${timelineUpdatesHtml(e.updates)}`;
+      </p>`;
     }).join('');
 
     return `${yearRow}
     <li class="tl-item tl-item--${type}">
-      <span class="tl-marker tl-marker--${type}">${TIMELINE_ICONS[type] || TIMELINE_ICONS.refresh}</span>
+      <span class="tl-marker tl-marker--${type}${type === 'update' && entries.every((e) => e.kind === 'dropped') ? ' tl-marker--dropped' : ''}">${type === 'update' && entries.every((e) => e.kind === 'dropped') ? TIMELINE_ICONS.discontinued : TIMELINE_ICONS[type] || TIMELINE_ICONS.refresh}</span>
       <div class="tl-body">
         <p class="tl-date">${formatDate(date)}${date > new Date().toISOString().slice(0, 10) ? ' <span class="tl-upcoming">Upcoming</span>' : ''}</p>
         ${lines}
@@ -614,7 +625,7 @@ function verticalTimelineHtml(product, allProducts) {
 }
 
 function horizontalTimelineHtml(product, allProducts) {
-  const points = categoryTimelinePoints(product, allProducts);
+  const points = categoryTimelinePoints(product, allProducts).filter((pt) => pt.type !== 'update');
   if (!points.length) return '';
 
   // Merge ALL consecutive same-date points into one shared position,
