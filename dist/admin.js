@@ -3233,6 +3233,11 @@
   let datesMode = 'next';
   let pendingName = '';
   let pendingUpdates = []; // updates for a release whose date isn't picked yet
+  // Models discontinued before the rest (the 32GB on one date, the 64GB on
+  // another): up to three, { date, note }. Saved with the release that was
+  // current on that date, as updates of kind 'dropped'.
+  let currentDropped = [];
+  const MAX_DROPPED = 3;
   const MAX_UPDATES = 5;
   let lastPicked = null; // { row, date }: the last date picked in the box
   let releasePrecision = 'day';
@@ -3257,14 +3262,26 @@
     if (row === 'preorder') return target ? info.preorder || null : pendingPreorderDate;
     return null;
   }
-  // An empty row after the last date picked starts on that date.
+  // What an empty row starts on: { date, from }. Pre-orders and the
+  // release start on the announced date (saved earlier or just picked),
+  // or the release on the pre-order date when that's later, as it can't
+  // come before pre-orders. Otherwise an empty row starts on the last
+  // date picked above it. Never saved until its "✓ Same as…" button is
+  // pressed.
   function rowSuggestion(row) {
+    if (row === 'preorder' || row === 'release') {
+      const target = datesTarget();
+      const ann = rowValue('announced', target);
+      const pre = row === 'release' ? rowValue('preorder', target) : null;
+      if (isFullDate(pre) && (!isFullDate(ann) || pre > ann)) return { date: pre, from: 'preorder' };
+      if (isFullDate(ann)) return { date: ann, from: 'announced' };
+    }
     if (!lastPicked || !isFullDate(lastPicked.date)) return null;
     const at = CHAIN.indexOf(row);
     if (at === -1) return null;
-    if (lastPicked.row === 'restart') return lastPicked.date;
+    if (lastPicked.row === 'restart') return { date: lastPicked.date, from: 'restart' };
     const from = CHAIN.indexOf(lastPicked.row);
-    return from !== -1 && from < at ? lastPicked.date : null;
+    return from !== -1 && from < at ? { date: lastPicked.date, from: lastPicked.row } : null;
   }
   const precisionOf = (d) => (/^\d{4}$/.test(d || '') ? 'year' : /^\d{4}-\d{2}$/.test(d || '') ? 'month' : 'day');
 
@@ -3285,14 +3302,15 @@
     const input = document.getElementById(row + '_date_input');
     const useBtn = document.querySelector('[data-date-use="' + row + '"]');
     const clearBtn = document.querySelector('[data-date-clear="' + row + '"]');
-    const suggestion = value ? null : rowSuggestion(row);
+    const suggested = value ? null : rowSuggestion(row);
+    const suggestion = suggested ? suggested.date : null;
     if (input) {
       input.value = isFullDate(value) ? value : (suggestion || '');
       input.classList.toggle('is-suggested', !!suggestion);
     }
     if (useBtn) {
       useBtn.hidden = !suggestion;
-      useBtn.textContent = '\u2713 Same as ' + ((lastPicked && SAME_AS[lastPicked.row]) || 'above');
+      useBtn.textContent = '\u2713 Same as ' + ((suggested && SAME_AS[suggested.from]) || 'above');
       useBtn.title = suggestion ? 'Use ' + formatAdminDate(suggestion) : '';
     }
     if (clearBtn) clearBtn.hidden = !value;
@@ -3363,6 +3381,7 @@
     paintLaunchRow(target);
     renderUpdatesEditor(document.getElementById('release-updates-list'), target);
     paintEndOfLine();
+    renderDroppedEditor();
 
     // The countdown needs a release date still ahead.
     const cdBox = document.getElementById('in_countdown');
@@ -3455,7 +3474,7 @@
     const input = document.getElementById(row + '_date_input');
     if (input) input.addEventListener('change', () => commitDate(row, input.value || null));
     const useBtn = document.querySelector('[data-date-use="' + row + '"]');
-    if (useBtn) useBtn.addEventListener('click', () => { const v = rowSuggestion(row); if (v) commitDate(row, v); });
+    if (useBtn) useBtn.addEventListener('click', () => { const v = rowSuggestion(row); if (v) commitDate(row, v.date); });
     const clearBtn = document.querySelector('[data-date-clear="' + row + '"]');
     if (clearBtn) clearBtn.addEventListener('click', () => {
       if (row === 'preorder') setPreorderTimeFields(null);
@@ -3554,7 +3573,6 @@
     { value: 'update', label: 'Update' },
     { value: 'colour', label: 'New colour' },
     { value: 'price', label: 'Price change' },
-    { value: 'dropped', label: 'Dropped' },
   ];
   const blankUpdate = () => ({ date: null, kind: 'release', note: '' });
   const updateIsBlank = (u) => !u || (!u.date && !(u.note || '').trim());
@@ -3687,6 +3705,93 @@
     productFormDirty = true;
     paintEndOfLine();
   });
+
+  // --- Models discontinued separately: three lines on the Discontinued
+  // row, each a date and which model. Kept apart from the release updates
+  // while editing; on save each joins the release current on its date.
+  function takeDroppedFromDetails(details) {
+    const out = [];
+    Object.keys(details || {}).forEach((d) => {
+      const info = details[d];
+      if (!info || !Array.isArray(info.updates)) return;
+      info.updates.forEach((u) => { if (u && u.kind === 'dropped') out.push({ date: u.date || null, note: u.note || '' }); });
+      info.updates = info.updates.filter((u) => !(u && u.kind === 'dropped'));
+    });
+    return out.sort((a, b) => ((a.date || '') < (b.date || '') ? -1 : 1)).slice(0, MAX_DROPPED);
+  }
+  // The release a model's discontinuation belongs to: the newest one out by
+  // then (the first release, if it's earlier than all of them).
+  function releaseForDate(date, history) {
+    const list = (history || []).slice().sort();
+    if (!list.length) return null;
+    return list.filter((d) => d <= date).pop() || list[0];
+  }
+  const droppedIsBlank = (u) => !u || (!u.date && !(u.note || '').trim());
+  function renderDroppedEditor() {
+    const listEl = document.getElementById('dropped-list');
+    if (!listEl) return;
+    while (currentDropped.length < MAX_DROPPED) currentDropped.push({ date: null, note: '' });
+    const active = listEl.contains(document.activeElement) ? document.activeElement : null;
+    const keep = active ? { i: active.dataset.i, field: active.dataset.field, pos: active.selectionStart } : null;
+    listEl.innerHTML = '';
+    currentDropped.slice(0, MAX_DROPPED).forEach((u, i) => {
+      const row = document.createElement('div');
+      row.className = 'admin-update-row admin-update-row--dropped' + (droppedIsBlank(u) ? ' is-blank' : '');
+      const num = document.createElement('span');
+      num.className = 'admin-update-num';
+      num.textContent = String(i + 1);
+      num.setAttribute('aria-hidden', 'true');
+      const dateIn = document.createElement('input');
+      dateIn.type = 'date';
+      dateIn.value = isFullDate(u.date) ? u.date : '';
+      dateIn.dataset.i = i;
+      dateIn.dataset.field = 'date';
+      dateIn.setAttribute('aria-label', 'Model discontinued ' + (i + 1) + ': date');
+      dateIn.addEventListener('change', () => {
+        u.date = dateIn.value || null;
+        currentDropped.sort((a, b) => (!a.date && !b.date ? 0 : !a.date ? 1 : !b.date ? -1 : a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+        productFormDirty = true;
+        renderRefreshHistory();
+      });
+      const noteIn = document.createElement('input');
+      noteIn.type = 'text';
+      noteIn.value = u.note || '';
+      noteIn.maxLength = 120;
+      noteIn.placeholder = 'Which, e.g. 32GB model';
+      noteIn.dataset.i = i;
+      noteIn.dataset.field = 'note';
+      noteIn.setAttribute('aria-label', 'Model discontinued ' + (i + 1) + ': which');
+      noteIn.addEventListener('input', () => { u.note = noteIn.value; productFormDirty = true; });
+      noteIn.addEventListener('change', () => renderRefreshHistory());
+      const clear = document.createElement('button');
+      clear.type = 'button';
+      clear.className = 'admin-update-clear';
+      clear.textContent = '\u00d7';
+      clear.title = 'Clear this line';
+      clear.setAttribute('aria-label', 'Clear model discontinued ' + (i + 1));
+      clear.dataset.i = i;
+      clear.dataset.field = 'clear';
+      clear.hidden = droppedIsBlank(u);
+      clear.addEventListener('click', () => {
+        currentDropped.splice(i, 1);
+        currentDropped.push({ date: null, note: '' });
+        productFormDirty = true;
+        renderRefreshHistory();
+      });
+      row.appendChild(num);
+      row.appendChild(dateIn);
+      row.appendChild(noteIn);
+      row.appendChild(clear);
+      listEl.appendChild(row);
+    });
+    if (keep) {
+      const el = listEl.querySelector('[data-i="' + keep.i + '"][data-field="' + keep.field + '"]');
+      if (el && !el.hidden) {
+        el.focus();
+        if (keep.field === 'note' && keep.pos != null) { try { el.setSelectionRange(keep.pos, keep.pos); } catch (err) { /* not a text box */ } }
+      }
+    }
+  }
 
   // Pasting a date into any date box in the product form, written any
   // usual way ("19 September 2025", "Sept 19, 2025", "19/09/2025",
@@ -3966,14 +4071,18 @@
       }
       li.appendChild(top);
 
-      // Updates since it came out, under the release they changed.
+      // Updates since it came out, under the release they changed, and
+      // any model discontinued while it was the newest.
       if (type !== 'discontinued') {
-        (Array.isArray(info.updates) ? info.updates : []).filter((u) => !updateIsBlank(u)).forEach((u) => {
+        const dropped = currentDropped.filter((u) => isFullDate(u.date) && releaseForDate(u.date, releaseDates) === date)
+          .map((u) => ({ date: u.date, kind: 'dropped', note: u.note }));
+        (Array.isArray(info.updates) ? info.updates : []).filter((u) => !updateIsBlank(u)).concat(dropped).forEach((u) => {
           const row = document.createElement('p');
           row.className = 'generation-announced generation-update';
           const pill = document.createElement('span');
           pill.className = 'entry-pill entry-pill--update';
-          pill.textContent = (UPDATE_KINDS.find((k) => k.value === u.kind) || { label: 'Update' }).label;
+          pill.className = 'entry-pill entry-pill--' + (u.kind === 'dropped' ? 'dropped' : 'update');
+          pill.textContent = u.kind === 'dropped' ? 'Discontinued' : (UPDATE_KINDS.find((k) => k.value === u.kind) || { label: 'Update' }).label;
           row.appendChild(pill);
           const when = document.createElement('span');
           when.textContent = ' ' + (u.date ? formatAdminDate(u.date) : 'No date yet') + ((u.note || '').trim() ? ': ' + u.note.trim() : '');
@@ -4334,6 +4443,7 @@
     currentRefreshHistory = (p.refresh_history || []).slice().sort();
     const details = p.generation_details && typeof p.generation_details === 'object' && !Array.isArray(p.generation_details) ? p.generation_details : {};
     currentGenerationDetails = JSON.parse(JSON.stringify(details));
+    currentDropped = takeDroppedFromDetails(currentGenerationDetails);
     currentOriginalLaunchDate = p.original_launch_date || null;
     currentIconUrl = p.icon_url || null;
     currentVideoUrl = p.video_url || null;
@@ -4395,6 +4505,7 @@
     currentOriginalLaunchDate = null;
     currentRefreshHistory = [];
     currentGenerationDetails = {};
+    currentDropped = [];
     currentIconUrl = null;
     currentVideoUrl = null;
     onFamilyChanged();
@@ -4681,6 +4792,17 @@
         if (updates.length) out[date].updates = updates;
       }
     });
+    // Models discontinued separately, each with the release current then.
+    currentDropped.filter((u) => u && isFullDate(u.date)).forEach((u) => {
+      const release = releaseForDate(u.date, history);
+      if (!release) return;
+      if (!out[release]) {
+        const info = currentGenerationDetails[release] || {};
+        out[release] = { name: (info.name || '').trim() || null, announced: info.announced || null, preorder: info.preorder || null };
+      }
+      out[release].updates = (out[release].updates || []).concat({ date: u.date, kind: 'dropped', note: (u.note || '').trim() || null })
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    });
     return out;
   }
 
@@ -4723,6 +4845,14 @@
         (currentGenerationDetails[d].updates || []).some((u) => u && !u.date && (u.note || '').trim()));
       if (undated) {
         document.getElementById('generation-add-error').textContent = 'Give each update a date, or remove it.';
+        firstError = firstError || document.getElementById('generation-add-panel');
+      }
+      // A model discontinued needs a date, and a release to sit under.
+      if (currentDropped.some((u) => !u.date && (u.note || '').trim())) {
+        document.getElementById('generation-add-error').textContent = 'Give each discontinued model a date, or clear it.';
+        firstError = firstError || document.getElementById('generation-add-panel');
+      } else if (currentDropped.some((u) => isFullDate(u.date)) && !currentRefreshHistory.length) {
+        document.getElementById('generation-add-error').textContent = 'Add a release date before the discontinued models.';
         firstError = firstError || document.getElementById('generation-add-panel');
       }
       // Never drop a video link without saying so.

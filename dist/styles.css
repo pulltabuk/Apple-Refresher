@@ -343,6 +343,7 @@ a { color: inherit; text-decoration: none; }
 .admin-update-num { font-size: 13px; font-weight: 800; text-align: center; opacity: 0.6; }
 .admin-update-row :is(input[type="date"], input[type="text"], select) { box-sizing: border-box; width: 100%; min-width: 0; margin: 0; font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid #b9d39c; border-radius: 8px; background: #fff; color: var(--text); }
 .admin-update-row.is-blank :is(input, select) { background: #f7fbf2; }
+.admin-update-row--dropped { grid-template-columns: 22px auto minmax(0, 1fr) 32px; }
 .admin-update-clear { width: 32px; height: 32px; padding: 0; border: 1px solid #b9d39c; border-radius: 8px; background: #fff; color: var(--fresh-text); font-size: 18px; line-height: 1; cursor: pointer; }
 .admin-update-clear:hover { background: #fff3ef; border-color: #d9a08e; color: #8a1f11; }
 .admin-update-clear[hidden] { visibility: hidden; display: block; }
@@ -354,6 +355,7 @@ a { color: inherit; text-decoration: none; }
   .admin-update-row input[type="text"] { grid-column: 3 / 5; grid-row: 2; }
   .admin-update-num { grid-row: 1; }
   .admin-update-clear { grid-column: 4; grid-row: 1; }
+  .admin-update-row--dropped input[type="text"] { grid-column: 2 / 4; grid-row: 2; }
 }
 /* End of the line: the last product of its family. */
 .admin-end-line-btn { background: #fff; border: 1.5px solid #1d1b19; color: #1d1b19; font-weight: 700; }
@@ -2053,6 +2055,7 @@ body.is-admin .site-search { display: none; }
 .entry-pill--announced { background: #e8eef7; color: #2d4f7c; }
 .entry-pill--preorder { background: #f5ecda; color: #7a5a1e; }
 .entry-pill--update { background: #eef2fb; color: #2f4a8a; }
+.entry-pill--dropped { background: var(--discontinued-bg); color: var(--discontinued-text); }
 
 /* Live countdown on the featured tile for an unreleased product: a
    green panel, the date on top, then four boxed units like the hero

@@ -319,10 +319,10 @@ function releaseUpdates(product, date) {
   return list
     .filter((u) => u && /^\d{4}-\d{2}(-\d{2})?$/.test(u.date || ''))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
-    .slice(0, 5);
+    .slice(0, 10);
 }
 // Its pill: [past, still to come], by kind ("Released", "New colour").
-const UPDATE_KIND_LABELS = { release: ['Released', 'Release'], update: ['Updated', 'Update'], colour: ['New colour', 'New colour'], price: ['Price change', 'Price change'], dropped: ['Dropped', 'Dropped'] };
+const UPDATE_KIND_LABELS = { release: ['Released', 'Release'], update: ['Updated', 'Update'], colour: ['New colour', 'New colour'], price: ['Price change', 'Price change'], dropped: ['Discontinued', 'Discontinued'] };
 function timelineUpdatesHtml(updates) {
   if (!updates || !updates.length) return '';
   const today = new Date().toISOString().slice(0, 10);
@@ -3689,6 +3689,11 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
                 <button type="button" class="admin-btn admin-btn--small admin-end-line-btn" id="end_of_line_btn" aria-pressed="false" hidden>End of the line</button>
               </div>
               <p class="admin-hint" id="last-in-line-text" hidden>Tap &ldquo;End of the line&rdquo; if Apple ended the line with this one.</p>
+              <div class="admin-date-updates" id="dropped-models">
+                <span class="admin-release-time-label">Models discontinued separately <span class="admin-optional">Optional, up to 3</span></span>
+                <p class="admin-hint">When one model goes before the rest: the 32GB on one date, the 64GB on another. Each shows in the release history; the date above is for the whole product.</p>
+                <div class="admin-updates-list" id="dropped-list"></div>
+              </div>
             </div>
             <p id="generation-add-error" class="form-error"></p>
           </div>
