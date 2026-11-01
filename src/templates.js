@@ -505,6 +505,20 @@ function categoryTimelinePoints(product, allProducts) {
     });
   });
 
+  // The product's own Discontinued entry adds nothing when a model line
+  // says the same day (its last model going); that line stands for it,
+  // keeping any "End of the line" tag.
+  const dropDays = new Map();
+  points.forEach((pt) => { if (pt.type === 'update' && pt.kind === 'dropped') dropDays.set(pt.productName + '|' + pt.date, pt); });
+  for (let i = points.length - 1; i >= 0; i--) {
+    const pt = points[i];
+    const line = pt.type === 'discontinued' && dropDays.get(pt.productName + '|' + pt.date);
+    if (line) {
+      if (pt.endOfLine) line.endOfLine = true;
+      points.splice(i, 1);
+    }
+  }
+
   const typePriority = { discontinued: 0, launch: 1, refresh: 1, update: 2 };
   points.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : typePriority[a.type] - typePriority[b.type]));
   return points;
@@ -591,7 +605,7 @@ function verticalTimelineHtml(product, allProducts) {
       if (e.type === 'update') {
         return `<p class="tl-entry tl-entry--update">
         <span class="tl-entry-name">${escapeHtml(e.displayName || e.productName)}</span>
-        <span class="tl-entry-tags"><span class="tl-entry-type tl-entry-type--update${e.kind === 'dropped' ? ' tl-entry-type--update-dropped' : ''}">${updateKindLabel(e)}</span></span>
+        <span class="tl-entry-tags"><span class="tl-entry-type tl-entry-type--update${e.kind === 'dropped' ? ' tl-entry-type--update-dropped' : ''}">${updateKindLabel(e)}</span>${e.endOfLine ? '<span class="tl-entry-type tl-entry-type--end">End of the line</span>' : ''}</span>
       </p>${e.note ? `<p class="tl-update-note">${escapeHtml(e.note)}</p>` : ''}`;
       }
       const tags = [
