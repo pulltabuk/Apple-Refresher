@@ -755,7 +755,13 @@ label.admin-btn { cursor: pointer; color: #fff; }
   font-size: 13px; font-weight: 700; line-height: 1.3; letter-spacing: 0; text-transform: none; white-space: nowrap;
 }
 .card-featured-gone svg { flex: none; }
-.card-featured-gone span { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 340px) { .card-featured-gone { white-space: normal; } }
+/* Side by side, the tag sits just above the count, which grows to fill
+   the tile; the tag keeps its own size (it's outside the zoomed block). */
+@media (min-width: 701px) {
+  .intro-hero-cards .card--featured .card-featured-gone { margin: auto 0 -2px; zoom: min(var(--feature-fit, 1), 1.15); }
+  .intro-hero-cards .card--featured .card-featured-gone + .card-featured-count { margin-top: 0; }
+}
 
 .card--event { justify-content: flex-start; border-color: var(--fresh-text); box-shadow: 0 0 0 1px var(--fresh-text); }
 .card-event-image { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #f6f5f1; border-radius: 10px; display: block; }
