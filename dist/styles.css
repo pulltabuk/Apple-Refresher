@@ -2690,8 +2690,8 @@ button.generation-name-text:hover { background: var(--accent-bg); }
 .live-bar {
   display: flex; flex-wrap: wrap; justify-content: center; align-items: center; row-gap: 6px;
   width: fit-content; max-width: 100%; box-sizing: border-box;
-  margin: -0.75rem auto 1.5rem; padding: 9px 20px; border: 1px solid var(--border); border-radius: 20px;
-  background: #fff; font-size: 14px; line-height: 1.35; text-align: center;
+  margin: -0.75rem auto 1.5rem; padding: 9px 20px; border: 1.5px solid #e2a77d; border-radius: 20px;
+  background: #fff; box-shadow: 0 3px 12px rgba(194, 84, 12, 0.1); font-size: 14px; line-height: 1.35; text-align: center;
 }
 .live-bar-live { display: inline-flex; align-items: center; gap: 6px; flex: none; margin-right: 14px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fresh-text); }
 .live-bar a { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; color: var(--text-secondary); text-decoration: none; }
@@ -4090,6 +4090,9 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
   /* Phones: nothing to swipe. The days to come and the featured products
      stack as compact rows, everything in view as you scroll down. */
   .hx-head { margin-bottom: 10px; }
+  /* A rule between "Coming up" and "Featured products", so the two
+     lists of rows don't run together. */
+  .hx-rail + .hx-featured { padding-top: 22px; border-top: 1px solid var(--border); }
   .hx-stops, .hx-stops[style] { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .hx-stop { gap: 12px; padding: 10px 12px; border-radius: 16px; }
   .hx-leaf { width: 44px; padding: 5px 0 6px; border-radius: 11px; }
