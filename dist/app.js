@@ -2614,7 +2614,8 @@
     // An event tile changes with the clock (counting down, live, just
     // announced, then gone), so it is redrawn when its stage ends.
     setInterval(function () {
-      var tile = heroCardsSection.querySelector('[data-event-hero]');
+      var eventBox = document.getElementById('hero-event');
+      var tile = eventBox && eventBox.querySelector('[data-event-hero]');
       var until = tile ? Number(tile.getAttribute('data-phase-until')) : 0;
       if (heroData && until && Date.now() >= until) renderHeroCards();
     }, 1000);
@@ -2682,9 +2683,9 @@
           })
         : '';
       var cardsHtml = heroItems.map(function (i) { return featuredCardHtmlJS(i.product, i.status, products); }).join('');
-      var heroHtml = boxes > 1
-        ? '<h2 class="hero-stack-title">Featured products</h2><div class="hero-stack-cards">' + cardsHtml + '</div>'
-        : cardsHtml;
+      // Must match heroFeaturedInnerHtml() in src/templates.js.
+      var heroHtml = '<div class="hx-head"><h2 class="hx-title">Featured products</h2><a class="hx-head-link" href="/products/">All products <span aria-hidden="true">&rarr;</span></a></div>' +
+        '<div class="hero-stack-cards">' + cardsHtml + '</div>';
       // The event banner, refreshed on its own.
       if (heroEventSection && !sameContentJS(heroEventSection.innerHTML, eventHtml)) {
         keepPlaceJS(function () { heroEventSection.innerHTML = eventHtml; });
@@ -2695,7 +2696,6 @@
       if (sameContentJS(heroCardsSection.innerHTML, heroHtml)) return;
       keepPlaceJS(function () {
         heroCardsSection.innerHTML = heroHtml;
-        heroCardsSection.classList.toggle('intro-hero-cards--stack', boxes > 1);
         heroCardsSection.setAttribute('data-count', String(boxes));
       });
     }
