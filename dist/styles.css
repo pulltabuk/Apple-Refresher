@@ -3963,3 +3963,26 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
   .intro-hero-event .event-hero-title { font-size: 26px; }
   .intro-hero-event .event-hero-countdown .countdown-value { font-size: 30px; }
 }
+/* Nothing counting down, and either nothing else to sit beside the
+   featured products or an Apple Event across the top: the three featured
+   products in a row across the hero (no empty column), and the next
+   earnings in its slim bar underneath. */
+@media (min-width: 701px) {
+  .intro-hero-layout:not(:has(> .intro-hero-side)) { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-template-areas: "words words" "cards cards"; }
+  .intro-hero-layout:has(> .intro-hero-event > .event-hero):not(:has(> .intro-hero-side--countdown)) { grid-template-areas: "words words" "event event" "cards cards"; }
+  .intro-hero-layout:has(> .intro-hero-event > .event-hero):not(:has(> .intro-hero-side--countdown)):has(> .earnings-next--stacked) { grid-template-areas: "words words" "event event" "cards cards" "earn earn"; }
+  .intro-hero-layout:has(> .intro-hero-event > .event-hero):not(:has(> .intro-hero-side--countdown)) > .intro-hero-side { display: none; }
+  .intro-hero-layout:has(> .intro-hero-event > .event-hero):not(:has(> .intro-hero-side--countdown)) > .earnings-next--stacked { display: flex; grid-area: earn; margin: 0; }
+  :is(.intro-hero-layout:not(:has(> .intro-hero-side)), .intro-hero-layout:has(> .intro-hero-event > .event-hero):not(:has(> .intro-hero-side--countdown))) .hero-stack-cards { flex-direction: row; }
+  :is(.intro-hero-layout:not(:has(> .intro-hero-side)), .intro-hero-layout:has(> .intro-hero-event > .event-hero):not(:has(> .intro-hero-side--countdown))) .hero-stack-cards > * { flex: 1 1 0; min-width: 0; }
+}
+/* Tablets: the words already run across the top, so with nothing counting
+   down the featured row and the slim earnings bar always take over (an
+   earnings box beside three stacked tiles would stretch to their height). */
+@media (min-width: 701px) and (max-width: 900px) {
+  .intro-hero-layout:not(:has(> .intro-hero-side--countdown)):has(> .earnings-next--stacked) { grid-template-areas: "words words" "cards cards" "earn earn"; }
+  .intro-hero-layout:not(:has(> .intro-hero-side--countdown)) > .intro-hero-side { display: none; }
+  .intro-hero-layout:not(:has(> .intro-hero-side--countdown)) > .earnings-next--stacked { display: flex; grid-area: earn; margin: 0; }
+  .intro-hero-layout:not(:has(> .intro-hero-side--countdown)) .hero-stack-cards { flex-direction: row; }
+  .intro-hero-layout:not(:has(> .intro-hero-side--countdown)) .hero-stack-cards > * { flex: 1 1 0; min-width: 0; }
+}
