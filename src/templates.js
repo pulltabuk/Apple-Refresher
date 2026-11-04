@@ -1754,6 +1754,7 @@ function galleryStripItemHtml(photo) {
 // app.js also uses, so the two always match.
 function eventHeroTileHtml(event, productsBySlug) {
   return FactsKit.eventHeroHtml(event, {
+    artSpace: true,
     href: `/events/${eventSlug(event)}/`,
     // The artwork's colour, as on the Events page (src/event-colours.js).
     tint: (event.image_url && eventTints[event.image_url]) || '',
@@ -2324,22 +2325,19 @@ function siteStatsHtml(s) {
 }
 
 function homePage({ heroItems, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, dailyFact, pageContent, countdown, earningsNext, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  // The right-hand column: an Apple Event (when one is on) above the
-  // featured products, three boxes at most (build.js picks them). One box
-  // is the big tile; two or three stack, each a compact tile, sharing the
-  // column's height (a swipe row on phones). Must match renderHeroCards()
-  // in public/app.js.
+  // The right-hand column: "Featured products", three compact tiles
+  // (build.js picks them) sharing the column's height, a swipe row on
+  // phones. An Apple Event has its own banner across the hero, with room
+  // for its artwork. Must match renderHeroCards() in public/app.js.
   const stackItems = heroItems || [];
-  const heroBoxes = (activeEvent ? 1 : 0) + stackItems.length;
-  // Stacked, the featured products sit under a "Featured products"
-  // heading, below the event if there is one.
+  const heroBoxes = stackItems.length;
   const eventBoxHtml = activeEvent ? eventHeroTileHtml(activeEvent, productsBySlug) : '';
   const featuredCardsHtml = stackItems.map((i) => featuredCardHtml(i.product, i.status, productsBySlug)).join('\n');
   const heroCardsHtml = !heroBoxes
     ? emptyState('products')
     : heroBoxes > 1
-    ? `${eventBoxHtml}${stackItems.length ? `<h2 class="hero-stack-title">Featured products</h2><div class="hero-stack-cards">${featuredCardsHtml}</div>` : ''}`
-    : eventBoxHtml || featuredCardsHtml;
+    ? `<h2 class="hero-stack-title">Featured products</h2><div class="hero-stack-cards">${featuredCardsHtml}</div>`
+    : featuredCardsHtml;
   // What's coming up: product countdowns and the next earnings. Beside
   // the words when something counts down (three columns), else under them.
   // One box: the soonest has the clock, every other launch ticked in the
@@ -2400,6 +2398,7 @@ function homePage({ heroItems, overdueItems, categoryLinks, totalCount, galleryP
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
       ${countdowns.length && earningsNext ? earningsLineHtml(earningsNext, 'words') : ''}
     </div>
+    <div class="intro-hero-event" id="hero-event">${eventBoxHtml}</div>
     ${sideHtml.trim() ? `<div class="intro-hero-text intro-hero-side${countdowns.length ? ' intro-hero-side--countdown' : ' intro-hero-text--calm'}">
       ${sideHtml}
     </div>` : ''}

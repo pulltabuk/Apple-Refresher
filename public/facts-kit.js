@@ -2559,8 +2559,13 @@
     // The artwork fills its frame, trimmed from the middle where Apple puts
     // the emblem (as on the X card). No blurred backdrop: iPhone Safari
     // can't reliably blur a large image and flickers.
+    // With o.artSpace (the homepage banner), an event with no artwork yet
+    // still gets its frame, a soft tint with a keynote mark, so the layout
+    // holds until the image is added.
     const art = event.image_url
       ? '<span class="event-hero-art">' + cdnImgHtml(event.image_url, 900, ' class="event-hero-art-img" alt=""') + '</span>'
+      : o.artSpace
+      ? '<span class="event-hero-art event-hero-art--empty" aria-hidden="true"><svg viewBox="0 0 48 48" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="9" width="36" height="24" rx="3"/><path d="M24 33v6M16 41h16"/><path d="M19 17l9 4-9 4z" fill="currentColor"/></svg></span>'
       : '';
     const whenLine = phase === 'recap'
       ? 'Held ' + escapeHtml(day)

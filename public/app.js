@@ -2655,30 +2655,27 @@
       // Must match build.js (heroItems): an Apple Event and the featured
       // products, three boxes at most; with nothing featured, one random
       // pick (the one the page was built with, while it still qualifies).
-      var heroItems;
-      if (activeEvent) {
-        heroItems = featuredItems.slice(0, 2);
-      } else if (featuredItems.length) {
-        heroItems = featuredItems.slice(0, 3);
-      } else {
-        var builtLink = heroCardsSection.querySelector('.card--featured .card-link');
-        var builtSlug = builtLink ? (builtLink.getAttribute('href') || '').replace(/^\/products\/|\/$/g, '') : '';
-        var kept = releasedOnly.filter(function (i) { return i.product.slug === builtSlug; })[0];
-        var heroPicks = pickRandomJS(releasedOnly, 3);
-        var pick = kept || heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0];
-        heroItems = pick ? [pick] : [];
-      }
+      // Must match build.js: the featured products in slot order, topped
+      // up to three with the most recent releases (nothing still to come).
+      var shownFeatured = featuredItems.slice(0, 3);
+      var lastOutJS = function (p) { return (p.refresh_history || []).filter(function (d) { return d <= todayIso; }).sort().pop() || ''; };
+      var heroItems = shownFeatured.concat(releasedOnly
+        .filter(function (i) { return !comingSoon(i.product) && shownFeatured.indexOf(i) === -1; })
+        .sort(function (a, b) { return lastOutJS(b.product).localeCompare(lastOutJS(a.product)) || a.product.name.localeCompare(b.product.name); }))
+        .slice(0, 3);
 
       // Must match eventHeroTileHtml() in src/templates.js. The artwork's
       // colour comes from the built tile when it shows the same event (a
       // newly added one keeps the standard violet until the next build).
-      var builtTile = heroCardsSection.querySelector('[data-event-hero][data-tint]');
+      var heroEventSection = document.getElementById('hero-event');
+      var builtTile = heroEventSection && heroEventSection.querySelector('[data-event-hero][data-tint]');
       var heroTint = activeEvent && builtTile && builtTile.getAttribute('data-tint-for') === String(activeEvent.id || '') ? builtTile.getAttribute('data-tint') : '';
-      var boxes = (activeEvent ? 1 : 0) + heroItems.length;
+      var boxes = heroItems.length;
       // Must match homePage(): the event box first, then each featured
       // product; two or more boxes stack (intro-hero-cards--stack).
       var eventHtml = activeEvent
         ? window.FactsKit.eventHeroHtml(activeEvent, {
+            artSpace: true,
             href: '/events/' + eventSlugJS(activeEvent) + '/',
             tint: heroTint,
             products: products.map(function (p) { return { name: p.name, slug: p.slug }; }),
@@ -2686,8 +2683,12 @@
         : '';
       var cardsHtml = heroItems.map(function (i) { return featuredCardHtmlJS(i.product, i.status, products); }).join('');
       var heroHtml = boxes > 1
-        ? eventHtml + (heroItems.length ? '<h2 class="hero-stack-title">Featured products</h2><div class="hero-stack-cards">' + cardsHtml + '</div>' : '')
-        : eventHtml + cardsHtml;
+        ? '<h2 class="hero-stack-title">Featured products</h2><div class="hero-stack-cards">' + cardsHtml + '</div>'
+        : cardsHtml;
+      // The event banner, refreshed on its own.
+      if (heroEventSection && !sameContentJS(heroEventSection.innerHTML, eventHtml)) {
+        keepPlaceJS(function () { heroEventSection.innerHTML = eventHtml; });
+      }
       if (!boxes) return;
       // Usually the live tiles say exactly what the built ones do; then
       // nothing is touched, so nothing on the page can move.

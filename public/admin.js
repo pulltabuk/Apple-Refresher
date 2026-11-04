@@ -6016,10 +6016,7 @@
     if (!pool.length) { listEl.textContent = 'No facts yet.'; return; }
     for (let i = 0; i < 7; i++) {
       const day = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
-      // With an Apple Event in the hero, only the first two featured
-      // products show beside it (as build.js picks them).
-      const eventInTile = events.some((e) => e.featured) || events.some((e) => e.event_date >= day);
-      const item = window.FactsKit.pickDailyFact(pool, day, eventInTile ? tileSlugs.slice(0, 2) : tileSlugs, locked);
+      const item = window.FactsKit.pickDailyFact(pool, day, tileSlugs, locked);
       if (!item) continue;
       const row = document.createElement('div');
       row.className = 'admin-fact-row fact-rotation-row' + (i === 0 ? ' is-today' : '');

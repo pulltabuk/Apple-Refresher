@@ -3474,16 +3474,6 @@ a.countdown-done-badge:hover .countdown-done-go { transform: translateX(3px); }
   /* Stacked, the tiles don't need lining up with the heading beside them. */
   .intro-hero-cards { margin-top: 0; }
 }
-@media (max-width: 700px) {
-  .intro-hero-layout:has(.event-hero) .intro-hero-text > .earnings-next { display: none; }
-  .intro-hero-layout:has(.event-hero) > .earnings-next--stacked { display: flex; margin-top: 0; }
-}
-@media (max-width: 700px) {
-  .intro-hero-layout:has(.event-hero) > .intro-hero-cards { display: contents; }
-  .intro-hero-layout:has(.event-hero) .event-hero { order: 1; }
-  .intro-hero-layout:has(.event-hero) > .earnings-next--stacked { order: 2; }
-  .intro-hero-layout:has(.event-hero) .site-stats { order: 3; }
-}
 
 /* Side by side: the heading's top lines up with the tiles' top (they used
    to be dropped to meet a countdown that now sits lower down), and with
@@ -3622,9 +3612,6 @@ a.countdown-done-badge:hover .countdown-done-go { transform: translateX(3px); }
   .intro-hero-layout:has(> .intro-hero-side--countdown) .intro-hero-words { max-width: 860px; }
 }
 @media (max-width: 700px) {
-  /* With an event and nothing counting down, the earnings moves under the
-     event tile, which would leave this column empty. */
-  .intro-hero-layout:has(.event-hero) > .intro-hero-side:not(:has(.countdown)) { display: none; }
   /* The hero's own gap spaces the boxes evenly. */
   .intro-hero-side > .countdown { margin-top: 0; margin-bottom: 0; }
 }
@@ -3917,18 +3904,17 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
 }
 
 /* ---------- Hero: the featured products, stacked ----------
-   The right-hand column: an Apple Event (when one is on), then a
-   "Featured products" heading over the featured products, three boxes
-   at most. Products still to come count down on the left instead. The
+   The right-hand column: a "Featured products" heading over three
+   boxes (the featured products, topped up with the latest releases).
+   Products still to come count down on the left instead; an Apple Event
+   has its own banner above. The
    boxes share the column's height, each a compact tile: icon and name,
    the big number with its words beside it, and one line (the usual-wait
    note, or the Discontinued tag). The price, dates and category stay on
    the product's own page. Phones: a row to swipe through, the next tile
    peeking in. */
 .intro-hero-cards.intro-hero-cards--stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.intro-hero-cards--stack > .event-hero { flex: 1 1 auto; }
 .hero-stack-title { flex: none; margin: 0; font-size: 18px; font-weight: 700; line-height: 1.2; }
-.intro-hero-cards--stack > .event-hero + .hero-stack-title { margin-top: 8px; }
 .hero-stack-cards { display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; min-width: 0; }
 .hero-stack-cards > * { flex: 1 1 0; }
 .intro-hero-cards--stack .card--featured { display: flex; flex-direction: column; padding: 14px 16px; }
@@ -3950,10 +3936,30 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
   .hero-stack-cards::-webkit-scrollbar { display: none; }
   .hero-stack-cards > * { flex: 0 0 84%; min-width: 0; scroll-snap-align: start; }
 }
-/* Phones with an Apple Event: the hero's boxes are laid out as part of
-   the hero itself (event first, then the earnings line), so the featured
-   heading and row follow the event, before the earnings. */
-@media (max-width: 700px) {
-  .intro-hero-layout:has(.event-hero) .intro-hero-cards--stack > :not(.event-hero) { order: 2; }
-  .intro-hero-layout:has(.event-hero) > .earnings-next--stacked { order: 3; }
+/* ---------- Hero: an Apple Event's banner ----------
+   Across the hero, under the words: the artwork (or, before it's added,
+   a tinted frame for it) on the left, the event's name, date, clock and
+   button on the right. The countdown and the featured products follow
+   underneath as usual. Phones: one column, the artwork on top. */
+.intro-hero-event:empty { display: none; }
+.event-hero-art--empty { display: grid; place-items: center; background: linear-gradient(135deg, var(--event-bg, #f1ebfd), #fff); color: var(--event, #6d28d9); border: 1px dashed var(--event-border, #d8c8f6); }
+.event-hero-art--empty svg { opacity: 0.55; }
+.intro-hero-event .event-hero { display: flex; flex-direction: column; padding: 16px; }
+@media (min-width: 701px) {
+  .intro-hero-event { grid-area: event; }
+  .intro-hero-layout:has(> .intro-hero-event > .event-hero) { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-template-areas: "words words" "event event" "side cards"; }
+  .intro-hero-layout:has(> .intro-hero-event > .event-hero):has(> .intro-hero-side--countdown):has(> .earnings-next--stacked) { grid-template-areas: "words words" "event event" "side cards" "earn earn"; }
+  .intro-hero-layout:has(> .intro-hero-event > .event-hero):not(:has(> .intro-hero-side)) { grid-template-areas: "words words" "event event" "cards cards"; }
+  .intro-hero-event .event-hero {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: auto;
+    grid-template-areas: "art kicker" "art head" "art middle" "art cta"; align-content: center;
+    column-gap: 24px; row-gap: 10px; padding: 18px;
+  }
+  .intro-hero-event .event-hero > .event-hero-art { grid-area: art; aspect-ratio: 16 / 9; align-self: center; min-height: 0; }
+  .intro-hero-event .event-hero > .event-hero-kicker { grid-area: kicker; align-self: end; justify-self: start; }
+  .intro-hero-event .event-hero > .event-hero-head { grid-area: head; }
+  .intro-hero-event .event-hero > :not(.event-hero-art):not(.event-hero-kicker):not(.event-hero-head):not(.event-hero-cta) { grid-area: middle; }
+  .intro-hero-event .event-hero > .event-hero-cta { grid-area: cta; align-self: start; }
+  .intro-hero-event .event-hero-title { font-size: 26px; }
+  .intro-hero-event .event-hero-countdown .countdown-value { font-size: 30px; }
 }
