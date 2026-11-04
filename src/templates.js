@@ -2231,6 +2231,142 @@ function earningsLineHtml(e, where) {
   return `<a class="earnings-next${where ? ` earnings-next--${where}` : ''}${hasClock ? ' earnings-next--clock' : ''}" href="/earnings/"><span class="earnings-next-head">${icon}<span class="earnings-next-body"><span class="earnings-next-label">Next earnings<span class="earnings-next-in"> &middot; <span data-days-until="${escapeHtml(e.report_date)}">${when}</span></span></span><span class="earnings-next-text"><span class="earnings-next-title">Apple ${earningsQuarter(e)} results</span><span class="earnings-next-sep">, </span><span class="earnings-next-when">${formatDate(e.report_date).replace(' ' + today.slice(0, 4), '')}${e.report_time ? ` at ${escapeHtml(e.report_time)}` : ''}&nbsp;<span aria-hidden="true">&rarr;</span></span></span>${hasClock && extra ? `<span class="earnings-next-extra">${extra}</span>` : ''}</span></span>${clock}</a>`;
 }
 
+// ---------- Homepage hero: "Up next" ----------
+// One dark spotlight for whatever's next: an Apple Event (drawn live by
+// FactsKit.eventHeroHtml into #hero-event), else the next launch, else
+// the next earnings. Then a "Coming up" strip of date cards for
+// everything after it, then the featured products in a row. Each part
+// shows only when it has something in it, and each runs the full width,
+// so nothing is ever stretched to match a neighbour or left with a gap.
+
+// "Friday 6 November" (the year too when it isn't this year).
+function weekdayDateText(date) {
+  if (datePrecision(date) !== 'day') return formatDate(date);
+  const d = new Date(date + 'T12:00:00Z');
+  const text = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  return date.slice(0, 4) === new Date().toISOString().slice(0, 4) ? text : `${text} ${date.slice(0, 4)}`;
+}
+
+const HX_DOT = '<span class="hx-dot" aria-hidden="true"></span>';
+
+// The next launch (or pre-orders, or a non-featured Apple Event): one
+// product by name with its icon, several as chips under their day. The
+// clock ticks in app.js (data-countdown), which also swaps in "Out
+// today" and the "Available now" badge when the moment comes.
+function heroLaunchSpotHtml(item) {
+  const members = item.group && item.group.length > 1 ? item.group : [item];
+  const isPreorder = item.kind === 'preorder';
+  const isEvent = !item.product;
+  const exactDay = datePrecision(item.date) === 'day';
+  const target = item.time ? FactsKit.eventStartMs({ event_date: item.date, event_time: item.time }) : Date.parse(item.date + 'T07:00:00Z');
+  const over = exactDay && target <= Date.now();
+  const done = isPreorder ? { kicker: 'Pre-orders open', text: '🛒 Pre-order now' }
+    : isEvent ? { kicker: 'Happening now', text: 'Live now' }
+    : { kicker: 'Out today', text: '🎉 Available now' };
+  const label = over ? done.kicker
+    : isEvent ? 'Apple Event'
+    : isPreorder ? (members.length > 1 ? 'Pre-orders open for' : 'Pre-orders open')
+    : members.length > 1 ? 'Next launches' : 'Next launch';
+  const away = exactDay && !over ? FactsKit.daysUntilText(item.date) : '';
+  const when = weekdayDateText(item.date);
+  const time = item.time ? timeWithUk(item.date, item.time) : '';
+  const single = members.length === 1;
+  const title = single
+    ? `<h2 class="hx-spot-title"><a href="${item.href}">${escapeHtml(item.label)}</a></h2>`
+    : `<h2 class="hx-spot-title">${escapeHtml(when)}</h2>`;
+  // Counting down to pre-orders: when it's in stores, too.
+  const rel = isPreorder ? members.map((m) => m.releaseDate).filter(Boolean).sort()[0] : '';
+  const sub = [single ? escapeHtml(when) : '', time,
+    rel ? `In stores ${escapeHtml(formatDate(rel))}` : ''].filter(Boolean).join(' &middot; ');
+  const icon = single && item.product ? `<span class="hx-spot-icon">${productIcon(item.product, 34)}</span>` : '';
+  const chips = single ? '' : `<ul class="hx-chips">${members.map((m) => `<li><a class="hx-chip" href="${m.href}">${m.product ? `<span class="hx-chip-icon">${productIcon(m.product, 20)}</span>` : ''}<span class="hx-chip-name">${escapeHtml(m.label)}</span></a></li>`).join('')}</ul>`;
+  const clock = exactDay
+    ? `<div class="hx-clock" data-countdown-clock role="timer" aria-label="Time to go">${over ? doneBadgeHtml(done.text, members[0].href) : FactsKit.eventClockUnits(target - Date.now())}</div>`
+    : '';
+  return `<div class="hx-spot hx-spot--${isEvent ? 'event' : 'launch'}${over ? ' countdown--done' : ''}${single ? ' hx-spot--single' : ''}"${exactDay ? ` data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}" data-done-href="${members[0].href}"` : ''}>
+    <div class="hx-spot-main">
+      <p class="hx-eyebrow">${HX_DOT}<span class="countdown-label">${escapeHtml(label)}</span>${away ? `<span class="hx-eyebrow-in" data-days-until="${escapeHtml(item.date)}">${escapeHtml(away)}</span>` : ''}</p>
+      <div class="hx-spot-head">${icon}<div>${title}${sub ? `<p class="hx-spot-sub">${sub}</p>` : ''}</div></div>
+    </div>
+    ${clock}
+    ${chips}
+  </div>`;
+}
+
+// The next earnings, when nothing else is coming: the whole tile opens
+// the earnings page. The clock hides itself once the results are out.
+function heroEarningsSpotHtml(e) {
+  const at = e.report_time ? FactsKit.eventStartMs({ event_date: e.report_date, event_time: e.report_time }) : NaN;
+  const hasClock = !isNaN(at) && at > Date.now();
+  const away = FactsKit.daysUntilText(e.report_date);
+  const sub = [escapeHtml(weekdayDateText(e.report_date)), e.report_time ? timeWithUk(e.report_date, e.report_time) : '',
+    e.call_time ? `call at ${escapeHtml(e.call_time)}` : ''].filter(Boolean).join(' &middot; ');
+  return `<a class="hx-spot hx-spot--earnings" href="/earnings/">
+    <div class="hx-spot-main">
+      <p class="hx-eyebrow">${HX_DOT}<span>Next earnings</span>${away ? `<span class="hx-eyebrow-in" data-days-until="${escapeHtml(e.report_date)}">${escapeHtml(away)}</span>` : ''}</p>
+      <div class="hx-spot-head"><div><h2 class="hx-spot-title">Apple ${earningsQuarter(e)} results</h2><p class="hx-spot-sub">${sub}</p></div></div>
+    </div>
+    ${hasClock ? `<div class="hx-clock" data-countdown-at="${at}" data-countdown-box role="timer" aria-label="Time until Apple's results">${FactsKit.eventClockUnits(at - Date.now())}</div>` : ''}
+  </a>`;
+}
+
+// Everything after the spotlight, a card per day: a calendar leaf (the
+// month in the colour of what's happening), what it is, and how far off
+// ("in 9 days", kept current by app.js). Four cards at most: past three,
+// the last says how many more and opens Coming soon.
+function heroRailHtml(items, earnings) {
+  const year = String(new Date().getUTCFullYear());
+  const stops = [];
+  items.forEach((item) => {
+    const kind = !item.product ? 'event' : item.kind === 'preorder' ? 'preorder' : 'launch';
+    const last = stops[stops.length - 1];
+    if (last && last.date === item.date && last.kind !== 'event' && kind !== 'event' && last.kind !== 'earnings') {
+      last.items.push(item);
+      if (kind !== last.kind) last.kind = 'launch';
+    } else {
+      stops.push({ date: item.date, kind, items: [item] });
+    }
+  });
+  if (earnings) {
+    stops.push({ date: earnings.report_date, kind: 'earnings', items: [{ label: `Apple ${earningsQuarter(earnings)} results`, href: '/earnings/', time: earnings.report_time || null, date: earnings.report_date }] });
+    stops.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  }
+  if (!stops.length) return '';
+  const KIND_LABEL = { launch: 'Launch', preorder: 'Pre-orders', event: 'Apple Event', earnings: 'Earnings' };
+  const shown = stops.length > 4 ? stops.slice(0, 3) : stops;
+  const rest = stops.slice(shown.length);
+  const stopHtml = (stop) => {
+    const exact = datePrecision(stop.date) === 'day';
+    const d = new Date(String(stop.date).slice(0, 7) + (exact ? stop.date.slice(7) : '-01') + 'T12:00:00Z');
+    const month = d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
+    const day = exact ? String(d.getUTCDate()) : (stop.date.slice(0, 4) === year ? '–' : `’${stop.date.slice(2, 4)}`);
+    const away = exact ? FactsKit.daysUntilText(stop.date) : '';
+    const times = Array.from(new Set(stop.items.map((i) => i.time || '')));
+    const time = times.length === 1 && times[0] ? escapeHtml(times[0]) : '';
+    const names = stop.items.slice(0, 2).map((i) => `<a href="${i.href}">${escapeHtml(i.label)}</a>`).join(', ');
+    const more = stop.items.length > 2 ? ` <span class="hx-stop-extra">+${stop.items.length - 2} more</span>` : '';
+    const meta = [away ? `<span data-days-until="${escapeHtml(stop.date)}">${escapeHtml(away)}</span>` : escapeHtml(formatDate(stop.date)), time].filter(Boolean).join(' &middot; ');
+    return `<li class="hx-stop hx-stop--${stop.kind}">
+      <span class="hx-leaf" aria-hidden="true"><span class="hx-leaf-month">${escapeHtml(month)}</span><span class="hx-leaf-day">${escapeHtml(day)}</span></span>
+      <span class="hx-stop-body"><span class="hx-stop-kind">${KIND_LABEL[stop.kind]}<span class="sr-only">, ${escapeHtml(formatDate(stop.date))}</span></span><span class="hx-stop-names">${names}${more}</span><span class="hx-stop-meta">${meta}</span></span>
+    </li>`;
+  };
+  const restCount = rest.reduce((n, s) => n + s.items.length, 0);
+  const moreHtml = rest.length
+    ? `<li class="hx-stop hx-stop--more"><a href="/coming-soon/"><span class="hx-stop-more-count">+${restCount}</span><span class="hx-stop-more-text">more coming</span></a></li>`
+    : '';
+  return `<section class="hx-rail" aria-labelledby="hx-rail-title">
+    <div class="hx-head"><h2 class="hx-title" id="hx-rail-title">Coming up</h2><a class="hx-head-link" href="/coming-soon/">Everything coming soon <span aria-hidden="true">&rarr;</span></a></div>
+    <ol class="hx-stops" style="--stops:${shown.length + (rest.length ? 1 : 0)}">${shown.map(stopHtml).join('')}${moreHtml}</ol>
+  </section>`;
+}
+
+// The featured products' heading and row. app.js redraws the inside of
+// #hero-cards with the same markup (renderHeroCards), so keep in step.
+function heroFeaturedInnerHtml(cardsHtml) {
+  return `<div class="hx-head"><h2 class="hx-title">Featured products</h2><a class="hx-head-link" href="/products/">All products <span aria-hidden="true">&rarr;</span></a></div><div class="hero-stack-cards">${cardsHtml}</div>`;
+}
+
 function earningsPage({ earnings, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const today = new Date().toISOString().slice(0, 10);
   const next = nextEarnings(earnings, today);
@@ -2325,25 +2461,23 @@ function siteStatsHtml(s) {
 }
 
 function homePage({ heroItems, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, dailyFact, pageContent, countdown, earningsNext, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  // The right-hand column: "Featured products", three compact tiles
-  // (build.js picks them) sharing the column's height, a swipe row on
-  // phones. An Apple Event has its own banner across the hero, with room
-  // for its artwork. Must match renderHeroCards() in public/app.js.
+  // The hero, "Up next" (see heroLaunchSpotHtml above): the spotlight is
+  // the Apple Event when there is one (#hero-event, redrawn live by
+  // app.js), else the next launch, else the next earnings; everything
+  // after it goes in the "Coming up" strip; then the three featured
+  // products (build.js picks them; app.js redraws #hero-cards).
   const stackItems = heroItems || [];
   const heroBoxes = stackItems.length;
   const eventBoxHtml = activeEvent ? eventHeroTileHtml(activeEvent, productsBySlug) : '';
   const featuredCardsHtml = stackItems.map((i) => featuredCardHtml(i.product, i.status, productsBySlug)).join('\n');
-  const heroCardsHtml = !heroBoxes
-    ? emptyState('products')
-    : heroBoxes > 1
-    ? `<h2 class="hero-stack-title">Featured products</h2><div class="hero-stack-cards">${featuredCardsHtml}</div>`
-    : featuredCardsHtml;
-  // What's coming up: product countdowns and the next earnings. Beside
-  // the words when something counts down (three columns), else under them.
-  // One box: the soonest has the clock, every other launch ticked in the
-  // admin (up to ten in all) on an "Up next" timeline under it.
   const countdowns = groupCountdowns(countdown);
-  const sideHtml = `${countdownHtml(countdowns, { stack: true, max: 10 })}${earningsLineHtml(earningsNext)}`;
+  const spotItem = !activeEvent && countdowns.length ? countdowns[0] : null;
+  const spotHtml = spotItem ? heroLaunchSpotHtml(spotItem)
+    : !activeEvent && earningsNext ? heroEarningsSpotHtml(earningsNext)
+    : '';
+  const railItems = (spotItem ? countdowns.slice(1) : countdowns)
+    .flatMap((item) => (item.group && item.group.length > 1 ? item.group : [item]));
+  const railHtml = heroRailHtml(railItems, activeEvent || spotItem ? earningsNext : null);
 
   // Pills on desktop, a native picker on mobile: thirteen families wrap
   // into five rows on a phone, and a scrolling row would hide most of
@@ -2391,21 +2525,16 @@ function homePage({ heroItems, overdueItems, categoryLinks, totalCount, galleryP
   const body = `
 <section class="intro-hero">
   ${siteStatsHtml(stats)}
-  <div class="intro-hero-layout">
-    <div class="intro-hero-text intro-hero-words">
+  <div class="hx">
+    <div class="hx-words">
       <h1 class="intro-heading">${pageHeading(pageContent, 'Apple Sunset')}</h1>
       ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
-      ${countdowns.length && earningsNext ? earningsLineHtml(earningsNext, 'words') : ''}
     </div>
-    <div class="intro-hero-event" id="hero-event">${eventBoxHtml}</div>
-    ${sideHtml.trim() ? `<div class="intro-hero-text intro-hero-side${countdowns.length ? ' intro-hero-side--countdown' : ' intro-hero-text--calm'}">
-      ${sideHtml}
-    </div>` : ''}
-    <div class="intro-hero-cards${heroBoxes > 1 ? ' intro-hero-cards--stack' : ''}" id="hero-cards" data-count="${heroBoxes}">
-      ${heroCardsHtml}
-    </div>
-    ${earningsNext ? earningsLineHtml(earningsNext, 'stacked') : ''}
+    <div class="hx-event" id="hero-event">${eventBoxHtml}</div>
+    ${spotHtml}
+    ${railHtml}
+    <section class="hx-featured" id="hero-cards" data-count="${heroBoxes}">${heroBoxes ? heroFeaturedInnerHtml(featuredCardsHtml) : emptyState('products')}</section>
   </div>
 </section>
 ${overdueSection}
