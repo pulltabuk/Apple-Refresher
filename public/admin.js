@@ -6000,9 +6000,10 @@
     try { locked = JSON.parse((lockRes.data && lockRes.data.body) || 'null'); } catch (err) { locked = null; }
     const published = factsRes.data || [];
     const events = eventsRes.data || [];
-    // The products in the homepage hero, as the build picks them: featured
-    // and with a release date, slot order first, at most 3.
-    const featured = cachedProducts.filter((p) => p.featured && (p.refresh_history || []).length);
+    // The products in the homepage hero, as the build picks them: featured,
+    // with a release date and none still to come, slot order first, at most 3.
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const featured = cachedProducts.filter((p) => p.featured && (p.refresh_history || []).length && !(p.refresh_history || []).some((d) => d >= todayIso));
     const order = featuredOrder.map(String);
     featured.sort((a, b) => {
       const ia = order.indexOf(String(a.id)); const ib = order.indexOf(String(b.id));

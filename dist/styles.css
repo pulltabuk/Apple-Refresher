@@ -3916,19 +3916,25 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
   .key-fact-value { margin-top: 4px; font-size: 18px; }
 }
 
-/* ---------- Hero: two or three boxes in the right-hand column ----------
-   An Apple Event (when one is on) above the featured products, three
-   boxes at most. They share the column's height, each a compact tile:
-   icon and name, the big number with its words beside it, and one line
-   (the usual-wait note, or the countdown for one still to come). The
-   price, dates and category stay on the product's own page. Phones: a
-   row to swipe through, the next tile peeking in. */
-.intro-hero-cards.intro-hero-cards--stack { display: flex; flex-direction: column; gap: 14px; }
-.intro-hero-cards--stack > * { flex: 1 1 0; }
+/* ---------- Hero: the featured products, stacked ----------
+   The right-hand column: an Apple Event (when one is on), then a
+   "Featured products" heading over the featured products, three boxes
+   at most. Products still to come count down on the left instead. The
+   boxes share the column's height, each a compact tile: icon and name,
+   the big number with its words beside it, and one line (the usual-wait
+   note, or the Discontinued tag). The price, dates and category stay on
+   the product's own page. Phones: a row to swipe through, the next tile
+   peeking in. */
+.intro-hero-cards.intro-hero-cards--stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.intro-hero-cards--stack > .event-hero { flex: 1 1 auto; }
+.hero-stack-title { flex: none; margin: 0; font-size: 18px; font-weight: 700; line-height: 1.2; }
+.intro-hero-cards--stack > .event-hero + .hero-stack-title { margin-top: 8px; }
+.hero-stack-cards { display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; min-width: 0; }
+.hero-stack-cards > * { flex: 1 1 0; }
 .intro-hero-cards--stack .card--featured { display: flex; flex-direction: column; padding: 14px 16px; }
 .intro-hero-cards--stack .card--featured .card-link { flex: 1; gap: 8px; }
-.intro-hero-cards--stack .card--featured .card-featured-label { top: 12px; right: 12px; }
-.intro-hero-cards.intro-hero-cards--stack .card--featured .card-name-row { flex-direction: row; align-items: center; gap: 10px; padding-right: 86px; }
+.intro-hero-cards--stack .card--featured .card-featured-label { display: none; }
+.intro-hero-cards.intro-hero-cards--stack .card--featured .card-name-row { flex-direction: row; align-items: center; gap: 10px; padding-right: 0; }
 .intro-hero-cards.intro-hero-cards--stack .card--featured .card-name-row :is(svg, img) { width: 34px; height: 34px; }
 .intro-hero-cards.intro-hero-cards--stack .card--featured .card-name { font-size: 18px; line-height: 1.2; }
 .intro-hero-cards.intro-hero-cards--stack .card--featured .card-featured-count:not(.card-featured-count--upcoming) { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: auto 0 0; }
@@ -3939,19 +3945,15 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
 .intro-hero-cards--stack .card--featured > .pill { display: none; }
 .intro-hero-cards.intro-hero-cards--stack .card--featured .card-featured-gone { margin: auto 0 0; zoom: 1; }
 .intro-hero-cards--stack .card--featured .card-featured-gone + .card-featured-count { margin-top: 0; }
-.intro-hero-cards.intro-hero-cards--stack .card--featured .card-featured-count--upcoming { margin: auto 0 0; padding: 10px; gap: 8px; }
-.intro-hero-cards.intro-hero-cards--stack .card--featured .product-countdown-clock { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.intro-hero-cards.intro-hero-cards--stack .card--featured .product-countdown-clock .countdown-unit { padding: 8px 2px; }
-.intro-hero-cards.intro-hero-cards--stack .card--featured .product-countdown-clock .countdown-value { font-size: 22px; }
 @media (max-width: 700px) {
-  .intro-hero-cards.intro-hero-cards--stack { flex-direction: row; align-items: stretch; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; scroll-padding: 0 16px; }
-  .intro-hero-cards--stack::-webkit-scrollbar { display: none; }
-  .intro-hero-cards--stack > * { flex: 0 0 84%; min-width: 0; scroll-snap-align: start; }
+  .hero-stack-cards { flex-direction: row; align-items: stretch; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; scroll-padding: 0 16px; }
+  .hero-stack-cards::-webkit-scrollbar { display: none; }
+  .hero-stack-cards > * { flex: 0 0 84%; min-width: 0; scroll-snap-align: start; }
 }
 /* Phones with an Apple Event: the hero's boxes are laid out as part of
    the hero itself (event first, then the earnings line), so the featured
-   tiles follow the event, one under the other, before the earnings. */
+   heading and row follow the event, before the earnings. */
 @media (max-width: 700px) {
-  .intro-hero-layout:has(.event-hero) .intro-hero-cards--stack > .card--featured:not(.event-hero) { order: 2; }
+  .intro-hero-layout:has(.event-hero) .intro-hero-cards--stack > :not(.event-hero) { order: 2; }
   .intro-hero-layout:has(.event-hero) > .earnings-next--stacked { order: 3; }
 }
