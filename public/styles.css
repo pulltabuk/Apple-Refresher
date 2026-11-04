@@ -2683,6 +2683,36 @@ button.generation-name-text:hover { background: var(--accent-bg); }
 .site-stats-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fresh-text); animation: site-stats-pulse 2s ease-in-out infinite; }
 @keyframes site-stats-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.8); } }
 @media (prefers-reduced-motion: reduce) { .site-stats-dot { animation: none; } }
+/* The slim Live bar at the top of the homepage: one line of counts,
+   each a link, with a pulsing Live dot. On a narrow screen the line
+   scrolls sideways rather than wrapping. */
+.live-bar {
+  display: flex; align-items: center; gap: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+  margin: -0.75rem 0 1.5rem; padding: 9px 16px; border: 1px solid var(--border); border-radius: 999px;
+  background: #fff; font-size: 14px; line-height: 1.3; white-space: nowrap;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+.live-bar::-webkit-scrollbar { display: none; }
+.live-bar-live { display: inline-flex; align-items: center; gap: 6px; flex: none; margin-right: 14px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fresh-text); }
+.live-bar a { flex: none; display: inline-flex; align-items: baseline; gap: 5px; color: var(--text-secondary); text-decoration: none; }
+.live-bar a + a::before { content: ""; align-self: center; width: 4px; height: 4px; margin: 0 14px; border-radius: 50%; background: var(--border); }
+.live-bar a:hover { color: var(--text); }
+.live-bar a:hover strong { text-decoration: underline; }
+.live-bar strong { font-size: 15px; font-weight: 800; color: var(--accent-dark); font-variant-numeric: tabular-nums; }
+.live-bar-name { font-weight: 600; color: var(--text); }
+.live-bar-more { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+/* Wide enough for the whole line: no fade at the end. */
+@media (min-width: 900px) { .live-bar { -webkit-mask-image: none; mask-image: none; width: fit-content; max-width: 100%; } }
+/* Phones: the counts on one line, Apple's last release on the next. */
+@media (max-width: 700px) {
+  .live-bar { flex-wrap: wrap; row-gap: 5px; overflow: visible; white-space: normal; margin: -1rem 0 1.25rem; padding: 9px 14px; border-radius: 14px; font-size: 13px; -webkit-mask-image: none; mask-image: none; }
+  .live-bar strong { font-size: 14px; }
+  .live-bar a { white-space: nowrap; }
+  .live-bar a + a::before { margin: 0 9px; }
+  .live-bar-live { margin-right: 10px; }
+  .live-bar a.live-bar-latest { flex-basis: 100%; white-space: normal; padding-top: 5px; border-top: 1px solid var(--border); }
+  .live-bar a.live-bar-latest::before { display: none; }
+}
 .site-stats-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .site-stat { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: var(--accent-bg); color: var(--text); text-decoration: none; min-width: 0; }
 .site-stat:hover { background: #f6dcc6; }
