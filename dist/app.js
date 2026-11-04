@@ -2555,15 +2555,15 @@
     var others = latest.others || [];
     var name = escapeHtmlJS(latest.name) + (others.length ? ' <span class="live-bar-more" title="' + escapeHtmlJS('Also: ' + others.join(', ')) + '">+' + others.length + '</span>' : '');
     return days === 0
-      ? '<a class="live-bar-latest" href="/products/' + escapeHtmlJS(latest.slug) + '/"><strong>New today</strong> <span class="live-bar-name">' + name + '</span></a>'
-      : '<a class="live-bar-latest" href="/products/' + escapeHtmlJS(latest.slug) + '/"><strong>' + days + ' ' + (days === 1 ? 'day' : 'days') + '</strong> since Apple\u2019s last release <span class="live-bar-name">' + name + '</span></a>';
+      ? '<a class="live-bar-latest" href="/products/' + escapeHtmlJS(latest.slug) + '/"><strong>New today</strong> from Apple: <span class="live-bar-name">' + name + '</span></a>'
+      : '<a class="live-bar-latest" href="/products/' + escapeHtmlJS(latest.slug) + '/"><strong>' + days + ' ' + (days === 1 ? 'day' : 'days') + '</strong> since Apple\u2019s last release: <span class="live-bar-name">' + name + '</span></a>';
   }
   function siteStatsHtmlJS(s) {
     if (!s || !s.total) return '';
     return '<nav class="live-bar" id="site-stats" aria-label="Apple Sunset at a glance">' +
       '<span class="live-bar-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span>' +
-      '<a href="/products/"><strong>' + s.total + '</strong> tracked</a>' +
-      '<a href="/products/?show=current"><strong>' + s.onSale + '</strong> on sale</a>' +
+      '<a class="live-bar-sep" href="/products/">Tracking <strong>' + s.total + '</strong> Apple products</a>' +
+      '<a class="live-bar-sep" href="/products/?show=current"><strong>' + s.onSale + '</strong> on sale now</a>' +
       '<a href="/discontinued/"><strong>' + s.discontinued + '</strong> discontinued</a>' +
       (s.latest ? liveBarLatestHtmlJS(s.latest, s.latestDays) : '') +
       '</nav>';
