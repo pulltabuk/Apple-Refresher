@@ -520,7 +520,13 @@ async function main() {
   // products in the big tile are left out, so one product doesn't
   // appear twice on screen. FACT_DATE (YYYY-MM-DD) overrides the date
   // for testing.
-  const heroSlugs = activeEvent ? [] : (featuredItems.length ? featuredItems.slice(0, 3) : (heroFeatured ? [heroFeatured] : [])).map((i) => i.product.slug);
+  // The hero's right-hand column: an Apple Event (when one is on) and the
+  // featured products, three boxes at most; with nothing featured, one
+  // random pick. Must match renderHeroCards() in public/app.js.
+  const heroItems = activeEvent ? featuredItems.slice(0, 2)
+    : featuredItems.length ? featuredItems.slice(0, 3)
+    : (heroFeatured ? [heroFeatured] : []);
+  const heroSlugs = heroItems.map((i) => i.product.slug);
   // Today's pick is saved (site_content row 'daily_fact'), so a rebuild
   // later the same day, after publishing a change, keeps the same fact.
   const factDate = process.env.FACT_DATE || today;
@@ -540,9 +546,7 @@ async function main() {
   if (!process.env.FACT_DATE && JSON.stringify(factHistory) !== diaryBefore) await saveDailyFactHistory(factHistory);
 
   write('index.html', homePage({
-    heroFeatured,
-    heroRotation: activeEvent ? null : featuredItems.slice(0, 3),
-    heroRest,
+    heroItems,
     overdueItems,
     categoryLinks,
     totalCount: products.length,
