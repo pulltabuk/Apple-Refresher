@@ -2303,32 +2303,24 @@ function siteStats(products) {
   };
 }
 
-// The at-a-glance tile for Apple's newest release: "New today" on the
-// day, otherwise "35 days since Apple's last release", with the product
-// (and how many others came out with it) and the date.
-// Must match latestReleaseStatHtmlJS() in public/app.js.
-function latestReleaseStatHtml(latest, days) {
+// The slim Live bar at the top of the homepage: one line of counts, each
+// a link. Must match siteStatsHtmlJS() in public/app.js.
+function liveBarLatestHtml(latest, days) {
   const others = latest.others || [];
-  const more = others.length ? `<span class="site-stat-more" title="${escapeHtml('Also: ' + others.join(', '))}">+${others.length}</span>` : '';
-  const num = days === 0
-    ? '<span class="site-stat-num site-stat-num--word">New today</span>'
-    : `<span class="site-stat-num">${days}<small> ${days === 1 ? 'day' : 'days'}</small></span>`;
-  const label = days === 0 ? 'Apple\u2019s latest release' : 'since Apple\u2019s last release';
-  return `<a class="site-stat site-stat--latest" href="/products/${escapeHtml(latest.slug)}/">${num} <span class="site-stat-label">${label}</span><span class="site-stat-sub"><span class="site-stat-sub-name">${escapeHtml(latest.name)}</span>${more}</span><span class="site-stat-date">Released ${formatDate(latest.date)}</span></a>`;
+  const name = `${escapeHtml(latest.name)}${others.length ? ` <span class="live-bar-more" title="${escapeHtml('Also: ' + others.join(', '))}">+${others.length}</span>` : ''}`;
+  return days === 0
+    ? `<a class="live-bar-latest" href="/products/${escapeHtml(latest.slug)}/"><strong>New today</strong> <span class="live-bar-name">${name}</span></a>`
+    : `<a class="live-bar-latest" href="/products/${escapeHtml(latest.slug)}/"><strong>${days} ${days === 1 ? 'day' : 'days'}</strong> since Apple&rsquo;s last release <span class="live-bar-name">${name}</span></a>`;
 }
-
 function siteStatsHtml(s) {
   if (!s || !s.total) return '';
-  const stat = (href, num, label, extra) => `<a class="site-stat" href="${href}"><span class="site-stat-num">${num}</span> <span class="site-stat-label">${label}</span>${extra || ''}</a>`;
-  return `<div class="site-stats" id="site-stats">
-    <div class="site-stats-head"><h2 class="site-stats-title">Apple Sunset at a glance</h2><span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span></div>
-    <div class="site-stats-row">
-      ${stat('/products/', s.total, 'products tracked')}
-      ${stat('/products/?show=current', s.onSale, 'products on sale now')}
-      ${stat('/discontinued/', s.discontinued, 'products discontinued')}
-      ${s.latest ? latestReleaseStatHtml(s.latest, s.latestDays) : ''}
-    </div>
-  </div>`;
+  return `<nav class="live-bar" id="site-stats" aria-label="Apple Sunset at a glance">
+    <span class="live-bar-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span>
+    <a href="/products/"><strong>${s.total}</strong> tracked</a>
+    <a href="/products/?show=current"><strong>${s.onSale}</strong> on sale</a>
+    <a href="/discontinued/"><strong>${s.discontinued}</strong> discontinued</a>
+    ${s.latest ? liveBarLatestHtml(s.latest, s.latestDays) : ''}
+  </nav>`;
 }
 
 function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, dailyFact, pageContent, countdown, earningsNext, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -2397,6 +2389,7 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
 
   const body = `
 <section class="intro-hero">
+  ${siteStatsHtml(stats)}
   <div class="intro-hero-layout">
     <div class="intro-hero-text intro-hero-words">
       <h1 class="intro-heading">${pageHeading(pageContent, 'Apple Sunset')}</h1>
@@ -2413,7 +2406,6 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
     ${earningsNext ? earningsLineHtml(earningsNext, 'stacked') : ''}
     <script>(function(){var c=document.querySelectorAll('#hero-cards [data-hero-slug]');if(c.length<2)return;var k=Math.floor(Math.random()*c.length);for(var i=0;i<c.length;i++)c[i].hidden=i!==k;window.__heroPick=c[k].getAttribute('data-hero-slug');})();</script>
   </div>
-  ${siteStatsHtml(stats)}
 </section>
 ${overdueSection}
 ${categoryLinksHtml}

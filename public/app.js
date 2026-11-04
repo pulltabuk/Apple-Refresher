@@ -2549,29 +2549,24 @@
       latestDays: latest ? Math.round((new Date(today) - new Date(latest.date)) / 86400000) : null,
     };
   }
-  // Must match latestReleaseStatHtml() in src/templates.js.
-  function latestReleaseStatHtmlJS(latest, days) {
+  // Must match siteStatsHtml() / liveBarLatestHtml() in src/templates.js:
+  // the slim Live bar at the top of the homepage.
+  function liveBarLatestHtmlJS(latest, days) {
     var others = latest.others || [];
-    var more = others.length ? '<span class="site-stat-more" title="' + escapeHtmlJS('Also: ' + others.join(', ')) + '">+' + others.length + '</span>' : '';
-    var num = days === 0
-      ? '<span class="site-stat-num site-stat-num--word">New today</span>'
-      : '<span class="site-stat-num">' + days + '<small> ' + (days === 1 ? 'day' : 'days') + '</small></span>';
-    var label = days === 0 ? 'Apple\u2019s latest release' : 'since Apple\u2019s last release';
-    return '<a class="site-stat site-stat--latest" href="/products/' + escapeHtmlJS(latest.slug) + '/">' + num + ' <span class="site-stat-label">' + label + '</span>' +
-      '<span class="site-stat-sub"><span class="site-stat-sub-name">' + escapeHtmlJS(latest.name) + '</span>' + more + '</span>' +
-      '<span class="site-stat-date">Released ' + formatDateJS(latest.date) + '</span></a>';
+    var name = escapeHtmlJS(latest.name) + (others.length ? ' <span class="live-bar-more" title="' + escapeHtmlJS('Also: ' + others.join(', ')) + '">+' + others.length + '</span>' : '');
+    return days === 0
+      ? '<a class="live-bar-latest" href="/products/' + escapeHtmlJS(latest.slug) + '/"><strong>New today</strong> <span class="live-bar-name">' + name + '</span></a>'
+      : '<a class="live-bar-latest" href="/products/' + escapeHtmlJS(latest.slug) + '/"><strong>' + days + ' ' + (days === 1 ? 'day' : 'days') + '</strong> since Apple\u2019s last release <span class="live-bar-name">' + name + '</span></a>';
   }
   function siteStatsHtmlJS(s) {
     if (!s || !s.total) return '';
-    var stat = function (href, num, label, extra) { return '<a class="site-stat" href="' + href + '"><span class="site-stat-num">' + num + '</span> <span class="site-stat-label">' + label + '</span>' + (extra || '') + '</a>'; };
-    return '<div class="site-stats" id="site-stats">' +
-      '<div class="site-stats-head"><h2 class="site-stats-title">Apple Sunset at a glance</h2><span class="site-stats-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span></div>' +
-      '<div class="site-stats-row">' +
-      stat('/products/', s.total, 'products tracked') +
-      stat('/products/?show=current', s.onSale, 'products on sale now') +
-      stat('/discontinued/', s.discontinued, 'products discontinued') +
-      (s.latest ? latestReleaseStatHtmlJS(s.latest, s.latestDays) : '') +
-      '</div></div>';
+    return '<nav class="live-bar" id="site-stats" aria-label="Apple Sunset at a glance">' +
+      '<span class="live-bar-live"><span class="site-stats-dot" aria-hidden="true"></span>Live</span>' +
+      '<a href="/products/"><strong>' + s.total + '</strong> tracked</a>' +
+      '<a href="/products/?show=current"><strong>' + s.onSale + '</strong> on sale</a>' +
+      '<a href="/discontinued/"><strong>' + s.discontinued + '</strong> discontinued</a>' +
+      (s.latest ? liveBarLatestHtmlJS(s.latest, s.latestDays) : '') +
+      '</nav>';
   }
 
   // Must stay in step with orderedFeatured() in build.js.
