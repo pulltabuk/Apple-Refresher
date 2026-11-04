@@ -2331,11 +2331,15 @@ function homePage({ heroItems, overdueItems, categoryLinks, totalCount, galleryP
   // in public/app.js.
   const stackItems = heroItems || [];
   const heroBoxes = (activeEvent ? 1 : 0) + stackItems.length;
-  const heroCardsHtml = heroBoxes
-    ? [activeEvent ? eventHeroTileHtml(activeEvent, productsBySlug) : '']
-      .concat(stackItems.map((i) => featuredCardHtml(i.product, i.status, productsBySlug)))
-      .filter(Boolean).join('\n')
-    : emptyState('products');
+  // Stacked, the featured products sit under a "Featured products"
+  // heading, below the event if there is one.
+  const eventBoxHtml = activeEvent ? eventHeroTileHtml(activeEvent, productsBySlug) : '';
+  const featuredCardsHtml = stackItems.map((i) => featuredCardHtml(i.product, i.status, productsBySlug)).join('\n');
+  const heroCardsHtml = !heroBoxes
+    ? emptyState('products')
+    : heroBoxes > 1
+    ? `${eventBoxHtml}${stackItems.length ? `<h2 class="hero-stack-title">Featured products</h2><div class="hero-stack-cards">${featuredCardsHtml}</div>` : ''}`
+    : eventBoxHtml || featuredCardsHtml;
   // What's coming up: product countdowns and the next earnings. Beside
   // the words when something counts down (three columns), else under them.
   // One box: the soonest has the clock, every other launch ticked in the

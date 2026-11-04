@@ -2639,8 +2639,12 @@
       if (!withStatus.length && !activeEvent) return;
 
       // Must match build.js: discontinued products can be featured too.
+      // Must match build.js: one still to come counts down on the left
+      // instead (a release date from today on).
+      var todayIso = new Date().toISOString().slice(0, 10);
+      var comingSoon = function (p) { return (p.refresh_history || []).some(function (d) { return d >= todayIso; }); };
       var featuredItems = orderedFeaturedJS(withStatus.concat(products.filter(function (p) { return p.discontinued; })
-        .map(function (p) { return { product: p, status: null }; })), featuredOrder);
+        .map(function (p) { return { product: p, status: null }; })).filter(function (i) { return !comingSoon(i.product); }), featuredOrder);
       // Must match build.js: an unreleased product stays out of the hero
       // unless it has been deliberately featured.
       var todayStr = new Date().toISOString().slice(0, 10);
@@ -2673,13 +2677,17 @@
       var boxes = (activeEvent ? 1 : 0) + heroItems.length;
       // Must match homePage(): the event box first, then each featured
       // product; two or more boxes stack (intro-hero-cards--stack).
-      var heroHtml = (activeEvent
+      var eventHtml = activeEvent
         ? window.FactsKit.eventHeroHtml(activeEvent, {
             href: '/events/' + eventSlugJS(activeEvent) + '/',
             tint: heroTint,
             products: products.map(function (p) { return { name: p.name, slug: p.slug }; }),
           })
-        : '') + heroItems.map(function (i) { return featuredCardHtmlJS(i.product, i.status, products); }).join('');
+        : '';
+      var cardsHtml = heroItems.map(function (i) { return featuredCardHtmlJS(i.product, i.status, products); }).join('');
+      var heroHtml = boxes > 1
+        ? eventHtml + (heroItems.length ? '<h2 class="hero-stack-title">Featured products</h2><div class="hero-stack-cards">' + cardsHtml + '</div>' : '')
+        : eventHtml + cardsHtml;
       if (!boxes) return;
       // Usually the live tiles say exactly what the built ones do; then
       // nothing is touched, so nothing on the page can move.

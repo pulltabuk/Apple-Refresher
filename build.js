@@ -376,7 +376,9 @@ async function main() {
   // usually open), then, from the next build after they open, to the
   // release itself.
   futureReleases
-    .filter((r) => r.product.in_countdown)
+    // Ticked for the countdown, or featured: a featured product still to
+    // come counts down here rather than sitting among the featured ones.
+    .filter((r) => r.product.in_countdown || r.product.featured)
     .forEach((r) => {
       const details = r.product.generation_details && typeof r.product.generation_details === 'object' ? r.product.generation_details : {};
       const preorder = details[r.date] && details[r.date].preorder;
@@ -478,7 +480,11 @@ async function main() {
   const featuredOrder = await loadFeaturedOrder();
   // Discontinued products can be featured too (their tile shows how long
   // they were on sale).
-  const featuredItems = orderedFeatured(rankable.concat(discontinuedItems), featuredOrder);
+  // A featured product still to come (a release date from today on) counts
+  // down on the left with the other launches, not among the featured ones.
+  // Must match renderHeroCards() in public/app.js.
+  const comingSoon = (p) => (p.refresh_history || []).some((d) => d >= today);
+  const featuredItems = orderedFeatured(rankable.concat(discontinuedItems).filter((i) => !comingSoon(i.product)), featuredOrder);
   let heroFeatured;
   let heroRest;
   if (activeEvent) {
