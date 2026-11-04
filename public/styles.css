@@ -4065,11 +4065,9 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
   .hx-leaf { width: 48px; }
   .hx-stop-names { font-size: 14px; }
 }
-/* Tablets and phones: more than two days to come swipe sideways. */
-@media (max-width: 900px) {
-  .hx-stops:is([style*="--stops:3"], [style*="--stops:4"]) { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; scroll-padding: 0 16px; }
-  .hx-stops:is([style*="--stops:3"], [style*="--stops:4"])::-webkit-scrollbar { display: none; }
-  .hx-stops:is([style*="--stops:3"], [style*="--stops:4"]) > .hx-stop { flex: 0 0 min(76%, 290px); scroll-snap-align: start; }
+/* Tablets: three days to come side by side, four as two pairs. */
+@media (min-width: 701px) and (max-width: 900px) {
+  .hx-stops[style*="--stops:4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 700px) {
   .hx { gap: 22px; }
@@ -4089,12 +4087,35 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
   .hx-event .event-hero { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "kicker" "art" "head" "middle" "cta"; row-gap: 14px; padding: 20px 18px; border-radius: 22px; }
   .hx-event .event-hero-art { width: 100%; }
   .hx-event .event-hero-cta { justify-self: stretch; text-align: center; }
-  .hx-stops { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; scroll-padding: 0 16px; }
-  .hx-stops::-webkit-scrollbar { display: none; }
-  .hx-stops > .hx-stop { flex: 0 0 min(78%, 290px); scroll-snap-align: start; }
-  .hx-stops > .hx-stop:only-child { flex-basis: 100%; }
-  .hx-featured .hero-stack-cards { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; gap: 12px; margin: 0 -16px; padding: 2px 16px 8px; scroll-padding: 0 16px; }
-  .hx-featured .hero-stack-cards::-webkit-scrollbar { display: none; }
-  .hx-featured .hero-stack-cards > * { flex: 0 0 80%; min-width: 0; scroll-snap-align: start; }
+  /* Phones: nothing to swipe. The days to come and the featured products
+     stack as compact rows, everything in view as you scroll down. */
+  .hx-head { margin-bottom: 10px; }
+  .hx-stops, .hx-stops[style] { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .hx-stop { gap: 12px; padding: 10px 12px; border-radius: 16px; }
+  .hx-leaf { width: 44px; padding: 5px 0 6px; border-radius: 11px; }
+  .hx-leaf-month { font-size: 9.5px; }
+  .hx-leaf-day { font-size: 21px; }
+  .hx-stop-kind { font-size: 10px; }
+  .hx-stop-names { font-size: 14.5px; -webkit-line-clamp: 1; }
+  .hx-stop-meta { font-size: 12.5px; }
+  .hx-stop--more a { flex-direction: row; gap: 6px; padding: 11px 12px; }
+  .hx-stop-more-count, .hx-stop-more-text { font-size: 14px; font-weight: 700; }
+  .hx-featured .hero-stack-cards { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .hx-featured .card--featured { padding: 12px 14px; border-radius: 16px; }
+  /* A row each: icon and name on the left, the number on the right, then
+     the refresh-cycle bar (or the Discontinued tag) across the foot. */
+  .hx-featured .card--featured .card-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name count" "foot foot"; align-items: center; gap: 8px 12px; }
+  .hx-featured .card--featured .card-name-row { grid-area: name; gap: 10px; min-width: 0; }
+  .hx-featured .card--featured .card-name-row :is(svg, img) { width: 28px; height: 28px; }
+  .hx-featured .card--featured .card-name { font-size: 15.5px; }
+  .hx-featured .card--featured .card-featured-count, .hx-featured .card--featured .card-featured-gone + .card-featured-count { grid-area: count; flex-direction: column; align-items: flex-end; gap: 2px; margin: 0; max-width: 150px; text-align: right; }
+  .hx-featured .card--featured .card-featured-count-number { font-size: 28px; }
+  .hx-featured .card--featured .card-featured-count-suffix { font-size: 11.5px; line-height: 1.25; }
+  .hx-featured .card--featured :is(.card-featured-cycle, .card-featured-gone) { grid-area: foot; margin: 0; }
+  .hx-featured .card--featured .card-featured-gone { justify-self: start; }
+  .hx-featured .card-featured-cycle { flex-direction: row; align-items: center; gap: 10px; }
+  .hx-featured .card-featured-cycle-bar { flex: 1 1 auto; height: 5px; }
+  .hx-featured .card-featured-cycle-note { flex: none; font-size: 11.5px; }
+  .hx-featured .card-featured-cycle--single .card-featured-cycle-note { flex: 1 1 auto; }
   .hx-featured .card--featured:hover { transform: none; }
 }
