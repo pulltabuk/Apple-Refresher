@@ -6000,8 +6000,8 @@
     try { locked = JSON.parse((lockRes.data && lockRes.data.body) || 'null'); } catch (err) { locked = null; }
     const published = factsRes.data || [];
     const events = eventsRes.data || [];
-    // The products in the big homepage tile, as the build picks them:
-    // featured and with a release date, slot order first, at most 3.
+    // The products in the homepage hero, as the build picks them: featured
+    // and with a release date, slot order first, at most 3.
     const featured = cachedProducts.filter((p) => p.featured && (p.refresh_history || []).length);
     const order = featuredOrder.map(String);
     featured.sort((a, b) => {
@@ -6015,9 +6015,10 @@
     if (!pool.length) { listEl.textContent = 'No facts yet.'; return; }
     for (let i = 0; i < 7; i++) {
       const day = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
-      // An Apple Event in the big tile means no product is there that day.
+      // With an Apple Event in the hero, only the first two featured
+      // products show beside it (as build.js picks them).
       const eventInTile = events.some((e) => e.featured) || events.some((e) => e.event_date >= day);
-      const item = window.FactsKit.pickDailyFact(pool, day, eventInTile ? [] : tileSlugs, locked);
+      const item = window.FactsKit.pickDailyFact(pool, day, eventInTile ? tileSlugs.slice(0, 2) : tileSlugs, locked);
       if (!item) continue;
       const row = document.createElement('div');
       row.className = 'admin-fact-row fact-rotation-row' + (i === 0 ? ' is-today' : '');

@@ -2648,27 +2648,21 @@
         var dates = i.product.refresh_history || [];
         return !dates.length || !dates.every(function (d) { return d > todayStr; });
       });
-      // Must match build.js: featured products fill the tiles in their
-      // chosen order, random picks fill whatever is left.
-      var heroFeatured, heroRest;
+      // Must match build.js (heroItems): an Apple Event and the featured
+      // products, three boxes at most; with nothing featured, one random
+      // pick (the one the page was built with, while it still qualifies).
+      var heroItems;
       if (activeEvent) {
-        heroFeatured = null;
-        heroRest = featuredItems.slice(0, 2);
+        heroItems = featuredItems.slice(0, 2);
       } else if (featuredItems.length) {
-        // Must match homePage(): the featured products take turns. Keep the
-        // one the page already picked so the tile doesn't change under you.
-        var rotation = featuredItems.slice(0, 3);
-        heroFeatured = rotation.filter(function (i) { return i.product.slug === window.__heroPick; })[0] ||
-          rotation[Math.floor(Math.random() * rotation.length)];
-        window.__heroPick = heroFeatured.product.slug;
-        heroRest = rotation.filter(function (i) { return i !== heroFeatured; });
+        heroItems = featuredItems.slice(0, 3);
       } else {
+        var builtLink = heroCardsSection.querySelector('.card--featured .card-link');
+        var builtSlug = builtLink ? (builtLink.getAttribute('href') || '').replace(/^\/products\/|\/$/g, '') : '';
+        var kept = releasedOnly.filter(function (i) { return i.product.slug === builtSlug; })[0];
         var heroPicks = pickRandomJS(releasedOnly, 3);
-        heroFeatured = heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0];
-        heroRest = heroPicks.filter(function (i) { return i !== heroFeatured; });
-      }
-      if (heroFeatured || activeEvent) {
-        heroRest = heroRest.concat(pickRandomJS(releasedOnly.filter(function (i) { return i !== heroFeatured && heroRest.indexOf(i) === -1; }), 2 - heroRest.length));
+        var pick = kept || heroPicks.slice().sort(function (a, b) { return b.status.ratio - a.status.ratio; })[0];
+        heroItems = pick ? [pick] : [];
       }
 
       // Must match eventHeroTileHtml() in src/templates.js. The artwork's
@@ -2676,20 +2670,25 @@
       // newly added one keeps the standard violet until the next build).
       var builtTile = heroCardsSection.querySelector('[data-event-hero][data-tint]');
       var heroTint = activeEvent && builtTile && builtTile.getAttribute('data-tint-for') === String(activeEvent.id || '') ? builtTile.getAttribute('data-tint') : '';
-      var featuredSlotHtml = activeEvent
+      var boxes = (activeEvent ? 1 : 0) + heroItems.length;
+      // Must match homePage(): the event box first, then each featured
+      // product; two or more boxes stack (intro-hero-cards--stack).
+      var heroHtml = (activeEvent
         ? window.FactsKit.eventHeroHtml(activeEvent, {
             href: '/events/' + eventSlugJS(activeEvent) + '/',
             tint: heroTint,
             products: products.map(function (p) { return { name: p.name, slug: p.slug }; }),
           })
-        : (heroFeatured ? featuredCardHtmlJS(heroFeatured.product, heroFeatured.status, products) : '');
-      // Must match homePage(): the big tile only (the Live counts are a
-      // strip under the hero, refreshed above).
-      var heroHtml = featuredSlotHtml;
+        : '') + heroItems.map(function (i) { return featuredCardHtmlJS(i.product, i.status, products); }).join('');
+      if (!boxes) return;
       // Usually the live tiles say exactly what the built ones do; then
       // nothing is touched, so nothing on the page can move.
       if (sameContentJS(heroCardsSection.innerHTML, heroHtml)) return;
-      keepPlaceJS(function () { heroCardsSection.innerHTML = heroHtml; });
+      keepPlaceJS(function () {
+        heroCardsSection.innerHTML = heroHtml;
+        heroCardsSection.classList.toggle('intro-hero-cards--stack', boxes > 1);
+        heroCardsSection.setAttribute('data-count', String(boxes));
+      });
     }
   }
 
@@ -3874,12 +3873,14 @@
       var wide = function () {
         return Array.prototype.some.call(link.children, function (el) { return el.scrollWidth > el.clientWidth + 1 || el.getBoundingClientRect().width > link.clientWidth + 1; });
       };
+      // A compact tile in a stack grows less, and needs less room spare.
+      var stacked = cards.classList.contains('intro-hero-cards--stack');
       var ok = function (scale) {
         card.style.setProperty('--feature-fit', String(scale));
-        return row.offsetHeight <= base + 1 && !wide() && spare() >= 48;
+        return row.offsetHeight <= base + 1 && !wide() && spare() >= (stacked ? 12 : 48);
       };
       if (!ok(1.05)) { card.style.removeProperty('--feature-fit'); return; }
-      var a = 1.05, z = 1.9;
+      var a = 1.05, z = stacked ? 1.35 : 1.9;
       for (var j = 0; j < 8; j++) {
         var m = (a + z) / 2;
         if (ok(m)) a = m; else z = m;

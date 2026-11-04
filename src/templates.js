@@ -2323,20 +2323,19 @@ function siteStatsHtml(s) {
   </nav>`;
 }
 
-function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, dailyFact, pageContent, countdown, earningsNext, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const featuredSlotHtml = activeEvent
-    ? eventHeroTileHtml(activeEvent, productsBySlug)
-    : heroRotation && heroRotation.length > 1
-    // Every featured product is built in; the script after the hero shows
-    // one at random on each visit, so the tile rotates without a swap.
-    ? heroRotation.map((i, n) => featuredCardHtml(i.product, i.status, productsBySlug)
-        .replace('<article ', `<article data-hero-slug="${escapeHtml(i.product.slug)}"${n ? ' hidden' : ''} `)).join('\n')
-    : heroFeatured
-    ? featuredCardHtml(heroFeatured.product, heroFeatured.status, productsBySlug)
-    : '';
-  // The big tile: an Apple Event or a featured product. The Live counts
-  // run in a strip under the hero (below).
-  const heroCardsHtml = heroFeatured || activeEvent ? featuredSlotHtml : emptyState('products');
+function homePage({ heroItems, overdueItems, categoryLinks, totalCount, galleryPicks, productsBySlug, activeEvent, dailyFact, pageContent, countdown, earningsNext, stats, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  // The right-hand column: an Apple Event (when one is on) above the
+  // featured products, three boxes at most (build.js picks them). One box
+  // is the big tile; two or three stack, each a compact tile, sharing the
+  // column's height (a swipe row on phones). Must match renderHeroCards()
+  // in public/app.js.
+  const stackItems = heroItems || [];
+  const heroBoxes = (activeEvent ? 1 : 0) + stackItems.length;
+  const heroCardsHtml = heroBoxes
+    ? [activeEvent ? eventHeroTileHtml(activeEvent, productsBySlug) : '']
+      .concat(stackItems.map((i) => featuredCardHtml(i.product, i.status, productsBySlug)))
+      .filter(Boolean).join('\n')
+    : emptyState('products');
   // What's coming up: product countdowns and the next earnings. Beside
   // the words when something counts down (three columns), else under them.
   // One box: the soonest has the clock, every other launch ticked in the
@@ -2400,11 +2399,10 @@ function homePage({ heroFeatured, heroRotation, heroRest, overdueItems, category
     ${sideHtml.trim() ? `<div class="intro-hero-text intro-hero-side${countdowns.length ? ' intro-hero-side--countdown' : ' intro-hero-text--calm'}">
       ${sideHtml}
     </div>` : ''}
-    <div class="intro-hero-cards" id="hero-cards">
+    <div class="intro-hero-cards${heroBoxes > 1 ? ' intro-hero-cards--stack' : ''}" id="hero-cards" data-count="${heroBoxes}">
       ${heroCardsHtml}
     </div>
     ${earningsNext ? earningsLineHtml(earningsNext, 'stacked') : ''}
-    <script>(function(){var c=document.querySelectorAll('#hero-cards [data-hero-slug]');if(c.length<2)return;var k=Math.floor(Math.random()*c.length);for(var i=0;i<c.length;i++)c[i].hidden=i!==k;window.__heroPick=c[k].getAttribute('data-hero-slug');})();</script>
   </div>
 </section>
 ${overdueSection}
