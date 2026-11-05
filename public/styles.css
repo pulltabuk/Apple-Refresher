@@ -4239,3 +4239,18 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
 .intro-cta:hover { background: var(--pill-bg-hover); color: #fff; transform: translateY(-1px); box-shadow: 0 12px 24px -12px rgba(46, 26, 61, 0.7); }
 .intro-cta.intro-cta--ghost { background: #fff; color: #2a1c30; border: 1px solid #d8cfdb; box-shadow: none; }
 .intro-cta.intro-cta--ghost:hover { background: #f6f1f7; color: #2a1c30; border-color: #bfb2c4; }
+
+/* Photos: what a photo shows (iPod, Apple Store) in burnt orange, where
+   it was taken (Cardiff, United Kingdom) in the dark plum, so the two
+   rows read apart. On gallery tiles, a photo's page and the homepage's
+   gallery strip. */
+.gallery-tags a.pill[href^="/gallery/?search="]:not(.pill--location),
+.card .gallery-card-footer a.pill[href^="/gallery/?search="]:not(.pill--location),
+.gallery-strip-pills .pill.pill--tag:not(.pill--muted) {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+.gallery-tags a.pill[href^="/gallery/?search="]:not(.pill--location):hover,
+.card .gallery-card-footer a.pill[href^="/gallery/?search="]:not(.pill--location):hover,
+.gallery-strip-item:hover .gallery-strip-pills .pill.pill--tag {
+  background: var(--accent-dark); border-color: var(--accent-dark); color: #fff;
+}
