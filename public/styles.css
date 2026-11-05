@@ -4230,3 +4230,12 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
 .gallery-strip-item:hover .pill.pill--tag {
   background: var(--pill-bg-hover); border-color: transparent; color: #fff;
 }
+
+/* Call-to-action buttons ("Browse all products", "Full gallery", "All
+   iPhone", "Send message") in the same dark plum as the pill tags and
+   the homepage's "Coming up" tiles; the outlined kind (a second choice
+   beside one) stays white with dark words. */
+.intro-cta { border: 0; background: var(--pill-bg); color: #fff; box-shadow: 0 8px 18px -10px rgba(46, 26, 61, 0.6); transition: background 0.15s ease, box-shadow 0.2s ease, transform 0.2s ease; }
+.intro-cta:hover { background: var(--pill-bg-hover); color: #fff; transform: translateY(-1px); box-shadow: 0 12px 24px -12px rgba(46, 26, 61, 0.7); }
+.intro-cta.intro-cta--ghost { background: #fff; color: #2a1c30; border: 1px solid #d8cfdb; box-shadow: none; }
+.intro-cta.intro-cta--ghost:hover { background: #f6f1f7; color: #2a1c30; border-color: #bfb2c4; }
