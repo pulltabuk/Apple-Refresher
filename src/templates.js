@@ -2313,30 +2313,22 @@ function heroEarningsSpotHtml(e) {
   </a>`;
 }
 
-// Everything after the spotlight, a card per day: a calendar leaf (the
-// month in the colour of what's happening), what it is, and how far off
-// ("in 9 days", kept current by app.js). Four cards at most: past three,
-// the last says how many more and opens Coming soon.
+// Everything after the spotlight, a mini tile each (every product its
+// own, earnings too), soonest first: a calendar leaf (the month in the
+// colour of what's happening), what it is, and how far off ("in 9 days",
+// kept current by app.js). The whole tile opens the product. Six tiles at
+// most: past that, five and one saying how many more, opening Coming soon.
 function heroRailHtml(items, earnings) {
   const year = String(new Date().getUTCFullYear());
-  const stops = [];
-  items.forEach((item) => {
-    const kind = !item.product ? 'event' : item.kind === 'preorder' ? 'preorder' : 'launch';
-    const last = stops[stops.length - 1];
-    if (last && last.date === item.date && last.kind !== 'event' && kind !== 'event' && last.kind !== 'earnings') {
-      last.items.push(item);
-      if (kind !== last.kind) last.kind = 'launch';
-    } else {
-      stops.push({ date: item.date, kind, items: [item] });
-    }
-  });
+  const stops = items.map((item) => ({ date: item.date, kind: !item.product ? 'event' : item.kind === 'preorder' ? 'preorder' : 'launch', item }));
   if (earnings) {
-    stops.push({ date: earnings.report_date, kind: 'earnings', items: [{ label: `Apple ${earningsQuarter(earnings)} results`, href: '/earnings/', time: earnings.report_time || null, date: earnings.report_date }] });
+    stops.push({ date: earnings.report_date, kind: 'earnings', item: { label: `Apple ${earningsQuarter(earnings)} results`, href: '/earnings/', time: earnings.report_time || null } });
     stops.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   }
   if (!stops.length) return '';
   const KIND_LABEL = { launch: 'Launch', preorder: 'Pre-orders', event: 'Apple Event', earnings: 'Earnings' };
-  const shown = stops.length > 4 ? stops.slice(0, 3) : stops;
+  const MAX = 6;
+  const shown = stops.length > MAX ? stops.slice(0, MAX - 1) : stops;
   const rest = stops.slice(shown.length);
   const stopHtml = (stop) => {
     const exact = datePrecision(stop.date) === 'day';
@@ -2344,23 +2336,21 @@ function heroRailHtml(items, earnings) {
     const month = d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
     const day = exact ? String(d.getUTCDate()) : (stop.date.slice(0, 4) === year ? '–' : `’${stop.date.slice(2, 4)}`);
     const away = exact ? FactsKit.daysUntilText(stop.date) : '';
-    const times = Array.from(new Set(stop.items.map((i) => i.time || '')));
-    const time = times.length === 1 && times[0] ? escapeHtml(times[0]) : '';
-    const names = stop.items.slice(0, 2).map((i) => `<a href="${i.href}">${escapeHtml(i.label)}</a>`).join(', ');
-    const more = stop.items.length > 2 ? ` <span class="hx-stop-extra">+${stop.items.length - 2} more</span>` : '';
+    const time = stop.item.time ? escapeHtml(stop.item.time) : '';
     const meta = [away ? `<span data-days-until="${escapeHtml(stop.date)}">${escapeHtml(away)}</span>` : escapeHtml(formatDate(stop.date)), time].filter(Boolean).join(' &middot; ');
-    return `<li class="hx-stop hx-stop--${stop.kind}">
+    return `<li class="hx-stop hx-stop--${stop.kind}"><a class="hx-stop-link" href="${stop.item.href}">
       <span class="hx-leaf" aria-hidden="true"><span class="hx-leaf-month">${escapeHtml(month)}</span><span class="hx-leaf-day">${escapeHtml(day)}</span></span>
-      <span class="hx-stop-body"><span class="hx-stop-kind">${KIND_LABEL[stop.kind]}<span class="sr-only">, ${escapeHtml(formatDate(stop.date))}</span></span><span class="hx-stop-names">${names}${more}</span><span class="hx-stop-meta">${meta}</span></span>
-    </li>`;
+      <span class="hx-stop-body"><span class="hx-stop-kind">${KIND_LABEL[stop.kind]}<span class="sr-only">, ${escapeHtml(formatDate(stop.date))}</span></span><span class="hx-stop-names">${escapeHtml(stop.item.label)}</span><span class="hx-stop-meta">${meta}</span></span>
+    </a></li>`;
   };
-  const restCount = rest.reduce((n, s) => n + s.items.length, 0);
   const moreHtml = rest.length
-    ? `<li class="hx-stop hx-stop--more"><a href="/coming-soon/"><span class="hx-stop-more-count">+${restCount}</span><span class="hx-stop-more-text">more coming</span></a></li>`
+    ? `<li class="hx-stop hx-stop--more"><a href="/coming-soon/"><span class="hx-stop-more-count">+${rest.length}</span><span class="hx-stop-more-text">more coming</span></a></li>`
     : '';
+  // Up to four side by side; five or six as two rows of three.
+  const tiles = shown.length + (rest.length ? 1 : 0);
   return `<section class="hx-rail" aria-labelledby="hx-rail-title">
     <div class="hx-head"><h2 class="hx-title" id="hx-rail-title">Coming up</h2><a class="hx-head-link" href="/coming-soon/">Everything coming soon <span aria-hidden="true">&rarr;</span></a></div>
-    <ol class="hx-stops" style="--stops:${shown.length + (rest.length ? 1 : 0)}">${shown.map(stopHtml).join('')}${moreHtml}</ol>
+    <ol class="hx-stops" style="--stops:${tiles <= 4 ? tiles : 3}">${shown.map(stopHtml).join('')}${moreHtml}</ol>
   </section>`;
 }
 
