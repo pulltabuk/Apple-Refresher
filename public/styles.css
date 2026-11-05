@@ -4129,3 +4129,63 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
   .hx-featured .card-featured-cycle--single .card-featured-cycle-note { flex: 1 1 auto; }
   .hx-featured .card--featured:hover { transform: none; }
 }
+
+/* ---------- Admin: X posts, in four steps ----------
+   1 Start from (ideas, an article, Claude), 2 the post, 3 the card, 4
+   check and send. On a computer step 4 sits beside the others and stays
+   in view (the card, the post as X will show it, and the buttons), so
+   every change shows as it's made. Phones: one column, in order. */
+.x-intro { margin: 0 0 14px; }
+.x-compose { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; margin-top: 18px; }
+@media (min-width: 980px) {
+  .x-compose { grid-template-columns: minmax(0, 1fr) minmax(0, 400px); align-items: start; gap: 22px; }
+  .x-compose-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; border-radius: 16px; }
+}
+.x-compose-main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.x-step { padding: 18px 18px 20px; border: 1px solid #e7e1d6; border-radius: 16px; background: #fff; }
+.x-step--send { background: #fbf9f5; }
+.x-step-title { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 17px; font-weight: 800; line-height: 1.2; }
+.x-step-num { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; font-weight: 800; }
+.x-start { display: flex; flex-direction: column; gap: 10px; }
+.x-start-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 10px; }
+.x-start-label { font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.x-start-field { display: flex; gap: 8px; min-width: 0; }
+.x-start-field input { flex: 1; min-width: 0; font: inherit; padding: 8px 11px; border: 1px solid var(--border); border-radius: 9px; }
+.x-start-note { margin: -4px 0 2px 102px; font-size: 13px; }
+#tab-x .x-start .fact-suggestions { margin: 0; }
+#tab-x .x-start .fact-suggestions:empty { display: none; }
+#tab-x :is(.x-text, .x-preview, .x-card-fields, .x-preview-head, .x-emoji-row, .x-done-row) { max-width: none; }
+#tab-x .x-options { margin-top: 10px; }
+#tab-x .x-card-toggle { margin-top: 0; }
+#tab-x .x-card-fields { gap: 5px; margin: 12px 0 0; padding: 0; border: 0; background: none; }
+#tab-x .x-card-fields label:first-child { margin-top: 0; }
+.x-format { display: flex; gap: 6px; margin: 2px 0; }
+.x-format-btn { min-width: 38px; height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-size: 15px; cursor: pointer; }
+.x-format-btn:hover { background: var(--accent-bg); border-color: #e9c6a7; }
+#tab-x .x-card { max-width: 100%; margin: 0 0 12px; border: 1px solid #e7e1d6; }
+#tab-x .x-preview-head { margin-top: 0; }
+#tab-x .x-preview { background: #fff; }
+.x-count { margin: 6px 0 0; }
+.x-emoji-box { margin: 12px 0 0; padding-top: 12px; border-top: 1px solid #ece6db; }
+.x-emoji-box > summary { cursor: pointer; font-size: 14px; font-weight: 700; }
+.x-emoji-box > summary .admin-hint { font-weight: 400; margin-left: 4px; }
+#tab-x .x-emoji-box .x-emoji-row { gap: 4px; margin-top: 8px; }
+#tab-x .x-emoji-box .x-emoji { font-size: 19px; padding: 5px; }
+.x-actions--send { margin-top: 14px; }
+.x-actions--send #x-post-btn { flex: 1 0 100%; padding-top: 12px; padding-bottom: 12px; font-size: 16px; }
+.x-actions--send .admin-btn:not(#x-post-btn) { flex: 1 1 0; }
+.x-actions--more { margin-top: 8px; }
+.x-actions--more .admin-btn[hidden] { display: none; }
+#tab-x .x-after { margin-top: 12px; }
+#tab-x .x-done-row { margin: 16px 0 0; padding-top: 14px; }
+#x-done-btn { width: 100%; }
+@media (max-width: 600px) {
+  .x-step { padding: 14px 14px 16px; }
+  .x-start-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .x-start-note { margin-left: 0; }
+}
+.x-icon-box { margin-top: 6px; }
+.x-icon-box > summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+.x-icon-box > summary .admin-hint { font-weight: 400; margin-left: 4px; }
+.x-icon-box[open] > summary { margin-bottom: 8px; }
+.x-icon-box input { margin-top: 6px; }

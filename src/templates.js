@@ -4071,7 +4071,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   </div>
 
   <div id="tab-x" class="admin-tab-panel" style="display:none;">
-    <p class="admin-hint">Posts for the Apple Sunset X account only. Nothing here is saved or shown on the website.</p>
+    <p class="admin-hint x-intro">Posts for the Apple Sunset X account only. Nothing here is saved or shown on the website.</p>
 
     <section class="x-drafts" id="x-drafts" aria-labelledby="x-drafts-title">
       <div class="x-drafts-head">
@@ -4082,86 +4082,122 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <div id="x-drafts-list" class="x-drafts-list"></div>
     </section>
 
-    <h3 class="admin-form-section">1. Pick an idea, or write one with Claude</h3>
-    <div class="x-source-row">
-      <button type="button" id="x-ideas-btn" class="admin-btn admin-btn--primary">Ideas from my data</button>
-      <span class="admin-hint">On this day, coming soon, longest waits, product facts and site statistics. Tap one to use it.</span>
-    </div>
-    <div id="x-ideas" class="fact-suggestions"></div>
-    <div class="fact-research">
-      <input type="text" id="x-topic" placeholder="Or an idea for Claude, e.g. the first iPod, or Apple's oldest product still on sale" autocomplete="off" aria-label="Idea for Claude">
-      <button type="button" id="x-claude-btn" class="admin-btn">Write with Claude</button>
-    </div>
-    <p class="admin-hint" id="x-claude-note">Claude writes 5 posts, each checked against two sources (free in the Claude app). Copy the one you like into the box below.</p>
-    <div class="fact-research x-article-row">
-      <input type="url" id="x-article" placeholder="Or paste an article link to share, e.g. from MacRumors" autocomplete="off" aria-label="Article link to share">
-      <button type="button" id="x-article-btn" class="admin-btn">Share article</button>
-    </div>
-    <p class="admin-hint" id="x-article-note">Writes the post for you: the headline, credit to the site&rsquo;s X account, and a link straight to the article.</p>
-    <p class="admin-hint x-bookmarklet-row">Quicker on a computer: drag <a id="x-bookmarklet" class="x-bookmarklet" href="#">&#8599; Tweet this</a> to your bookmarks bar. Click it on any article and this page opens with the post written.</p>
+    <div class="x-compose">
+      <div class="x-compose-main">
+        <section class="x-step" aria-labelledby="x-step-1">
+          <h3 class="x-step-title" id="x-step-1"><span class="x-step-num">1</span>Start from</h3>
+          <div class="x-start">
+            <div class="x-start-row">
+              <span class="x-start-label">Your data</span>
+              <div class="x-start-field"><button type="button" id="x-ideas-btn" class="admin-btn admin-btn--primary">Ideas from my data</button></div>
+            </div>
+            <div id="x-ideas" class="fact-suggestions"></div>
+            <div class="x-start-row">
+              <span class="x-start-label">An article</span>
+              <div class="x-start-field">
+                <input type="url" id="x-article" placeholder="Paste a link, e.g. from MacRumors" autocomplete="off" aria-label="Article link to share">
+                <button type="button" id="x-article-btn" class="admin-btn">Share</button>
+              </div>
+            </div>
+            <p class="admin-hint x-start-note" id="x-article-note">Writes the post: the headline, credit to the site and a link to the article.</p>
+            <p class="admin-hint x-start-note x-bookmarklet-row">Quicker on a computer: drag <a id="x-bookmarklet" class="x-bookmarklet" href="#">&#8599; Tweet this</a> to your bookmarks bar, then click it on any article.</p>
+            <div class="x-start-row">
+              <span class="x-start-label">Claude</span>
+              <div class="x-start-field">
+                <input type="text" id="x-topic" placeholder="An idea, e.g. the first iPod" autocomplete="off" aria-label="Idea for Claude">
+                <button type="button" id="x-claude-btn" class="admin-btn">Write</button>
+              </div>
+            </div>
+            <p class="admin-hint x-start-note" id="x-claude-note">Claude writes 5 posts, each checked against two sources. Copy the one you like into step 2.</p>
+          </div>
+        </section>
 
-    <h3 class="admin-form-section">2. Your post</h3>
-    <textarea id="x-text" class="x-text" rows="4" placeholder="Write or paste your post here"></textarea>
-    <div class="x-options">
-      <label class="checkbox-label"><input type="checkbox" id="x-tags" checked> Add hashtags</label>
-      <label class="checkbox-label"><input type="checkbox" id="x-link-on"> Add a link</label>
-      <input type="text" id="x-link" placeholder="https://applesunset.com/" autocomplete="off" aria-label="Link">
-    </div>
-    <div class="x-options">
-      <label class="checkbox-label"><input type="checkbox" id="x-card-on" checked> Make a card image</label>
-      <input type="text" id="x-card-label" value="Did you know?" autocomplete="off" aria-label="Card heading" title="The small line at the top of the card, picked from your post (On this day, Launch day, Did you know?) until you type your own">
-    </div>
-    <div class="x-card-fields" id="x-card-fields">
-      <label for="x-card-title">Card title <span class="admin-hint">optional, above the headline, e.g. iPhone 16</span></label>
-      <input type="text" id="x-card-title" autocomplete="off" maxlength="40">
-      <label for="x-card-emoji">Card icon <span class="admin-hint">what is this post about? Tap one. The Apple Sunset logo always sits small in the corner.</span></label>
-      <select id="x-card-icon" hidden><option value="auto">Automatic</option></select>
-      <div class="icon-picker" id="x-card-icon-picker"></div>
-      <p class="admin-hint icon-picker-auto" id="x-card-icon-auto"></p>
-      <input type="text" id="x-card-emoji" autocomplete="off" maxlength="16" placeholder="Or type or paste any other emoji" aria-label="Any other emoji for the card">
-      <label for="x-card-headline">Card headline <span class="admin-hint">the large text: a figure like 1,433 days or 2014, or a short headline (it wraps onto two lines). Leave empty for none.</span></label>
-      <input type="text" id="x-card-headline" autocomplete="off" maxlength="60">
-      <label for="x-card-line">Card line <span class="admin-hint">the smaller text below it. Press Return for a new line, e.g. to make a list; each line starts on its own.</span></label>
-      <textarea id="x-card-line" rows="4"></textarea>
-      <label for="x-card-source">Card source <span class="admin-hint">small text at the bottom, e.g. Source: 9to5Mac. Filled in for you when you share an article.</span></label>
-      <input type="text" id="x-card-source" autocomplete="off" maxlength="60">
-      <p id="x-card-note" class="admin-hint x-card-note" hidden></p>
-    </div>
-    <div class="x-preview-head">
-      <p class="admin-hint">How it will look on X (you can edit it here):</p>
-      <button type="button" id="x-preview-reset" class="admin-btn admin-btn--small" hidden>Reset</button>
-    </div>
-    <textarea id="x-preview" class="x-preview" rows="6" placeholder="Your post will appear here." aria-label="The post as it will look on X"></textarea>
-    <div class="x-emoji-row" id="x-emoji-row"><span class="admin-hint">Add an emoji where the cursor is:</span><button type="button" class="x-emoji" data-emoji="🍎" aria-label="Add 🍎">🍎</button><button type="button" class="x-emoji" data-emoji="📱" aria-label="Add 📱">📱</button><button type="button" class="x-emoji" data-emoji="💻" aria-label="Add 💻">💻</button><button type="button" class="x-emoji" data-emoji="⌚" aria-label="Add ⌚">⌚</button><button type="button" class="x-emoji" data-emoji="🎧" aria-label="Add 🎧">🎧</button><button type="button" class="x-emoji" data-emoji="📅" aria-label="Add 📅">📅</button><button type="button" class="x-emoji" data-emoji="⏳" aria-label="Add ⏳">⏳</button><button type="button" class="x-emoji" data-emoji="🎉" aria-label="Add 🎉">🎉</button><button type="button" class="x-emoji" data-emoji="🔥" aria-label="Add 🔥">🔥</button><button type="button" class="x-emoji" data-emoji="👀" aria-label="Add 👀">👀</button><button type="button" class="x-emoji" data-emoji="🤔" aria-label="Add 🤔">🤔</button><button type="button" class="x-emoji" data-emoji="💯" aria-label="Add 💯">💯</button><button type="button" class="x-emoji" data-emoji="🚀" aria-label="Add 🚀">🚀</button><button type="button" class="x-emoji" data-emoji="✨" aria-label="Add ✨">✨</button><button type="button" class="x-emoji" data-emoji="👇" aria-label="Add 👇">👇</button><span class="admin-hint">(on a Mac, Ctrl + Cmd + Space has them all)</span></div>
-    <p id="x-preview-note" class="admin-hint" hidden>Edited by hand, so the boxes above no longer change it. Reset rebuilds it from them.</p>
-    <p id="x-count" class="admin-hint"></p>
-    <p id="x-link-note" class="admin-hint" hidden></p>
-    <img id="x-card" class="x-card" alt="" hidden>
-    <div class="x-actions">
-      <button type="button" id="x-post-btn" class="admin-btn admin-btn--primary">Post to X</button>
-      <button type="button" id="x-buffer-queue-btn" class="admin-btn">Add to Buffer queue</button>
-      <button type="button" id="x-buffer-schedule-btn" class="admin-btn">Schedule in Buffer&hellip;</button>
-      <button type="button" id="x-copy-btn" class="admin-btn">Copy text</button>
-      <button type="button" id="x-card-btn" class="admin-btn" hidden>Download card</button>
-      <button type="button" id="x-clear-btn" class="admin-btn">Clear</button>
-    </div>
-    <div id="x-buffer-when" class="x-buffer-when" hidden>
-      <input type="datetime-local" id="x-buffer-at" aria-label="When to post">
-      <button type="button" id="x-buffer-at-btn" class="admin-btn admin-btn--primary">Schedule</button>
-    </div>
-    <p id="x-buffer-note" class="admin-hint" hidden></p>
-    <p id="x-over" class="x-over" hidden><span id="x-over-text"></span> <button type="button" id="x-over-tags" class="admin-btn admin-btn--small">Remove the hashtags</button></p>
-    <div id="x-after" class="x-after" hidden>
-      <p><strong>Your post is open in X.</strong> Once it&rsquo;s posted, what next?</p>
-      <div class="x-actions">
-        <button type="button" id="x-another-btn" class="admin-btn admin-btn--primary">Write another</button>
-        <button type="button" id="x-edit-btn" class="admin-btn">Keep editing this one</button>
-        <button type="button" id="x-back-btn" class="admin-btn">Done: back to admin</button>
+        <section class="x-step" aria-labelledby="x-step-2">
+          <h3 class="x-step-title" id="x-step-2"><span class="x-step-num">2</span>Write the post</h3>
+          <textarea id="x-text" class="x-text" rows="4" placeholder="Write or paste your post here"></textarea>
+          <div class="x-options">
+            <label class="checkbox-label"><input type="checkbox" id="x-tags" checked> Hashtags</label>
+            <label class="checkbox-label"><input type="checkbox" id="x-link-on"> Link</label>
+            <input type="text" id="x-link" placeholder="https://applesunset.com/" autocomplete="off" aria-label="Link">
+          </div>
+        </section>
+
+        <section class="x-step" aria-labelledby="x-step-3">
+          <h3 class="x-step-title" id="x-step-3"><span class="x-step-num">3</span>The card</h3>
+          <div class="x-options x-card-toggle">
+            <label class="checkbox-label"><input type="checkbox" id="x-card-on" checked> Add a card image</label>
+          </div>
+          <div class="x-card-fields" id="x-card-fields">
+            <label for="x-card-label">Heading <span class="admin-hint">the small line at the top, e.g. Did you know?</span></label>
+            <input type="text" id="x-card-label" value="Did you know?" autocomplete="off">
+            <label for="x-card-title">Title <span class="admin-hint">optional, e.g. iPhone 16</span></label>
+            <input type="text" id="x-card-title" autocomplete="off" maxlength="40">
+            <label for="x-card-headline">Headline <span class="admin-hint">the big text: a figure like 1,433 days, or a few words</span></label>
+            <input type="text" id="x-card-headline" autocomplete="off" maxlength="60">
+            <label for="x-card-line">Main text <span class="admin-hint">select words, then B or I; &bull; starts a list</span></label>
+            <div class="x-format" role="toolbar" aria-label="Format the main text">
+              <button type="button" class="x-format-btn" data-format="bold" aria-label="Bold" title="Bold"><b>B</b></button>
+              <button type="button" class="x-format-btn" data-format="italic" aria-label="Italic" title="Italic"><i>I</i></button>
+              <button type="button" class="x-format-btn x-format-btn--wide" data-format="bullet" aria-label="Bullet points" title="Bullet points">&bull; List</button>
+            </div>
+            <textarea id="x-card-line" rows="4"></textarea>
+            <label for="x-card-source">Source <span class="admin-hint">small text at the bottom, e.g. Source: 9to5Mac</span></label>
+            <input type="text" id="x-card-source" autocomplete="off" maxlength="60">
+            <details class="x-icon-box">
+              <summary>Icon <span class="admin-hint">automatic unless you pick one; tap to change</span></summary>
+              <select id="x-card-icon" hidden><option value="auto">Automatic</option></select>
+              <div class="icon-picker" id="x-card-icon-picker"></div>
+              <p class="admin-hint icon-picker-auto" id="x-card-icon-auto"></p>
+              <input type="text" id="x-card-emoji" autocomplete="off" maxlength="16" placeholder="Or type or paste any emoji" aria-label="Any other emoji for the card">
+            </details>
+            <p id="x-card-note" class="admin-hint x-card-note" hidden></p>
+          </div>
+        </section>
       </div>
-    </div>
-    <p class="admin-hint" id="x-note">With a card, it shows under your post on X as the link&rsquo;s preview picture.</p>
-    <div class="x-done-row">
-      <button type="button" id="x-done-btn" class="admin-btn admin-btn--primary">Done: clear and back to admin</button>
+
+      <aside class="x-compose-side">
+        <section class="x-step x-step--send" aria-labelledby="x-step-4">
+          <h3 class="x-step-title" id="x-step-4"><span class="x-step-num">4</span>Check and send</h3>
+          <img id="x-card" class="x-card" alt="The card image" hidden>
+          <div class="x-preview-head">
+            <p class="admin-hint">The post on X (you can edit it here)</p>
+            <button type="button" id="x-preview-reset" class="admin-btn admin-btn--small" hidden>Reset</button>
+          </div>
+          <textarea id="x-preview" class="x-preview" rows="5" placeholder="Your post will appear here." aria-label="The post as it will look on X"></textarea>
+          <p id="x-count" class="admin-hint x-count"></p>
+          <p id="x-preview-note" class="admin-hint" hidden>Edited by hand, so steps 2 and 3 no longer change it. Reset rebuilds it.</p>
+          <p id="x-link-note" class="admin-hint" hidden></p>
+          <p id="x-over" class="x-over" hidden><span id="x-over-text"></span> <button type="button" id="x-over-tags" class="admin-btn admin-btn--small">Remove the hashtags</button></p>
+          <div class="x-actions x-actions--send">
+            <button type="button" id="x-post-btn" class="admin-btn admin-btn--primary">Post to X</button>
+            <button type="button" id="x-buffer-queue-btn" class="admin-btn">Add to Buffer queue</button>
+            <button type="button" id="x-buffer-schedule-btn" class="admin-btn">Schedule in Buffer&hellip;</button>
+          </div>
+          <div id="x-buffer-when" class="x-buffer-when" hidden>
+            <input type="datetime-local" id="x-buffer-at" aria-label="When to post">
+            <button type="button" id="x-buffer-at-btn" class="admin-btn admin-btn--primary">Schedule</button>
+          </div>
+          <p id="x-buffer-note" class="admin-hint" hidden></p>
+          <div class="x-actions x-actions--more">
+            <button type="button" id="x-copy-btn" class="admin-btn admin-btn--small">Copy text</button>
+            <button type="button" id="x-card-btn" class="admin-btn admin-btn--small" hidden>Download card</button>
+          </div>
+          <details class="x-emoji-box">
+            <summary>Emoji <span class="admin-hint">added where you were last typing</span></summary>
+            <div class="x-emoji-row" id="x-emoji-row"><button type="button" class="x-emoji" data-emoji="🍎" aria-label="Add 🍎">🍎</button><button type="button" class="x-emoji" data-emoji="🍏" aria-label="Add 🍏">🍏</button><button type="button" class="x-emoji" data-emoji="📱" aria-label="Add 📱">📱</button><button type="button" class="x-emoji" data-emoji="💻" aria-label="Add 💻">💻</button><button type="button" class="x-emoji" data-emoji="🖥️" aria-label="Add 🖥️">🖥️</button><button type="button" class="x-emoji" data-emoji="⌚" aria-label="Add ⌚">⌚</button><button type="button" class="x-emoji" data-emoji="🎧" aria-label="Add 🎧">🎧</button><button type="button" class="x-emoji" data-emoji="📺" aria-label="Add 📺">📺</button><button type="button" class="x-emoji" data-emoji="⌨️" aria-label="Add ⌨️">⌨️</button><button type="button" class="x-emoji" data-emoji="🖱️" aria-label="Add 🖱️">🖱️</button><button type="button" class="x-emoji" data-emoji="🔋" aria-label="Add 🔋">🔋</button><button type="button" class="x-emoji" data-emoji="🔌" aria-label="Add 🔌">🔌</button><button type="button" class="x-emoji" data-emoji="📸" aria-label="Add 📸">📸</button><button type="button" class="x-emoji" data-emoji="🎮" aria-label="Add 🎮">🎮</button><button type="button" class="x-emoji" data-emoji="🎵" aria-label="Add 🎵">🎵</button><button type="button" class="x-emoji" data-emoji="💡" aria-label="Add 💡">💡</button><button type="button" class="x-emoji" data-emoji="📅" aria-label="Add 📅">📅</button><button type="button" class="x-emoji" data-emoji="🗓️" aria-label="Add 🗓️">🗓️</button><button type="button" class="x-emoji" data-emoji="⏳" aria-label="Add ⏳">⏳</button><button type="button" class="x-emoji" data-emoji="⏰" aria-label="Add ⏰">⏰</button><button type="button" class="x-emoji" data-emoji="🆕" aria-label="Add 🆕">🆕</button><button type="button" class="x-emoji" data-emoji="🔜" aria-label="Add 🔜">🔜</button><button type="button" class="x-emoji" data-emoji="💰" aria-label="Add 💰">💰</button><button type="button" class="x-emoji" data-emoji="💷" aria-label="Add 💷">💷</button><button type="button" class="x-emoji" data-emoji="💵" aria-label="Add 💵">💵</button><button type="button" class="x-emoji" data-emoji="📈" aria-label="Add 📈">📈</button><button type="button" class="x-emoji" data-emoji="📉" aria-label="Add 📉">📉</button><button type="button" class="x-emoji" data-emoji="🛒" aria-label="Add 🛒">🛒</button><button type="button" class="x-emoji" data-emoji="📦" aria-label="Add 📦">📦</button><button type="button" class="x-emoji" data-emoji="🎉" aria-label="Add 🎉">🎉</button><button type="button" class="x-emoji" data-emoji="🥳" aria-label="Add 🥳">🥳</button><button type="button" class="x-emoji" data-emoji="🔥" aria-label="Add 🔥">🔥</button><button type="button" class="x-emoji" data-emoji="👀" aria-label="Add 👀">👀</button><button type="button" class="x-emoji" data-emoji="🤔" aria-label="Add 🤔">🤔</button><button type="button" class="x-emoji" data-emoji="🤯" aria-label="Add 🤯">🤯</button><button type="button" class="x-emoji" data-emoji="😮" aria-label="Add 😮">😮</button><button type="button" class="x-emoji" data-emoji="😍" aria-label="Add 😍">😍</button><button type="button" class="x-emoji" data-emoji="😂" aria-label="Add 😂">😂</button><button type="button" class="x-emoji" data-emoji="👏" aria-label="Add 👏">👏</button><button type="button" class="x-emoji" data-emoji="🙌" aria-label="Add 🙌">🙌</button><button type="button" class="x-emoji" data-emoji="👍" aria-label="Add 👍">👍</button><button type="button" class="x-emoji" data-emoji="❤️" aria-label="Add ❤️">❤️</button><button type="button" class="x-emoji" data-emoji="💯" aria-label="Add 💯">💯</button><button type="button" class="x-emoji" data-emoji="⭐" aria-label="Add ⭐">⭐</button><button type="button" class="x-emoji" data-emoji="🏆" aria-label="Add 🏆">🏆</button><button type="button" class="x-emoji" data-emoji="🚀" aria-label="Add 🚀">🚀</button><button type="button" class="x-emoji" data-emoji="✨" aria-label="Add ✨">✨</button><button type="button" class="x-emoji" data-emoji="⚡" aria-label="Add ⚡">⚡</button><button type="button" class="x-emoji" data-emoji="👇" aria-label="Add 👇">👇</button><button type="button" class="x-emoji" data-emoji="👉" aria-label="Add 👉">👉</button><button type="button" class="x-emoji" data-emoji="➡️" aria-label="Add ➡️">➡️</button><button type="button" class="x-emoji" data-emoji="✅" aria-label="Add ✅">✅</button><button type="button" class="x-emoji" data-emoji="❌" aria-label="Add ❌">❌</button><button type="button" class="x-emoji" data-emoji="⚠️" aria-label="Add ⚠️">⚠️</button><button type="button" class="x-emoji" data-emoji="📣" aria-label="Add 📣">📣</button><button type="button" class="x-emoji" data-emoji="🔔" aria-label="Add 🔔">🔔</button><button type="button" class="x-emoji" data-emoji="📰" aria-label="Add 📰">📰</button><button type="button" class="x-emoji" data-emoji="🧵" aria-label="Add 🧵">🧵</button><button type="button" class="x-emoji" data-emoji="🔗" aria-label="Add 🔗">🔗</button><button type="button" class="x-emoji" data-emoji="🇬🇧" aria-label="Add 🇬🇧">🇬🇧</button><button type="button" class="x-emoji" data-emoji="🇺🇸" aria-label="Add 🇺🇸">🇺🇸</button></div>
+          </details>
+          <div id="x-after" class="x-after" hidden>
+            <p><strong>Your post is open in X.</strong> Once it&rsquo;s posted:</p>
+            <div class="x-actions">
+              <button type="button" id="x-another-btn" class="admin-btn admin-btn--primary">Start a new post</button>
+              <button type="button" id="x-edit-btn" class="admin-btn">Keep editing this one</button>
+            </div>
+          </div>
+          <div class="x-done-row">
+            <button type="button" id="x-done-btn" class="admin-btn">Done: start a new post</button>
+          </div>
+        </section>
+      </aside>
     </div>
   </div>
 
