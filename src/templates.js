@@ -2033,7 +2033,9 @@ function groupCountdowns(countdown) {
   const out = [];
   const byMoment = {};
   items.forEach((item) => {
-    const key = item.product ? `${item.date}|${item.time || ''}` : null;
+    // One group per day (pre-orders apart from launches), whatever the
+    // time: the list is soonest first, so the group's clock is the earliest.
+    const key = item.product ? `${item.date}|${item.kind || 'launch'}` : null;
     if (key && byMoment[key]) {
       byMoment[key].group.push(item);
       return;
@@ -2269,7 +2271,8 @@ function heroLaunchSpotHtml(item) {
     : members.length > 1 ? 'Next launches' : 'Next launch';
   const away = exactDay && !over ? FactsKit.daysUntilText(item.date) : '';
   const when = weekdayDateText(item.date);
-  const time = item.time ? timeWithUk(item.date, item.time) : '';
+  const mixedTimes = new Set(members.map((m) => m.time || '')).size > 1;
+  const time = item.time && !mixedTimes ? timeWithUk(item.date, item.time) : '';
   const single = members.length === 1;
   const title = single
     ? `<h2 class="hx-spot-title"><a href="${item.href}">${escapeHtml(item.label)}</a></h2>`
@@ -2279,7 +2282,7 @@ function heroLaunchSpotHtml(item) {
   const sub = [single ? escapeHtml(when) : '', time,
     rel ? `In stores ${escapeHtml(formatDate(rel))}` : ''].filter(Boolean).join(' &middot; ');
   const icon = single && item.product ? `<span class="hx-spot-icon">${productIcon(item.product, 34)}</span>` : '';
-  const chips = single ? '' : `<ul class="hx-chips">${members.map((m) => `<li><a class="hx-chip" href="${m.href}">${m.product ? `<span class="hx-chip-icon">${productIcon(m.product, 20)}</span>` : ''}<span class="hx-chip-name">${escapeHtml(m.label)}</span></a></li>`).join('')}</ul>`;
+  const chips = single ? '' : `<ul class="hx-chips">${members.map((m) => `<li><a class="hx-chip" href="${m.href}">${m.product ? `<span class="hx-chip-icon">${productIcon(m.product, 20)}</span>` : ''}<span class="hx-chip-name">${escapeHtml(m.label)}</span>${mixedTimes && m.time ? `<span class="hx-chip-time">${timeWithUk(m.date, m.time)}</span>` : ''}</a></li>`).join('')}</ul>`;
   const clock = exactDay
     ? `<div class="hx-clock" data-countdown-clock role="timer" aria-label="Time to go">${over ? doneBadgeHtml(done.text, members[0].href) : FactsKit.eventClockUnits(target - Date.now())}</div>`
     : '';
@@ -2647,18 +2650,25 @@ ${filterBar('decade', decades, null, decadeCounts, items.length)}
 // when that is still ahead, as its own page and badge show it.
 function comingSoonGroups(products, today) {
   const day = today || new Date().toISOString().slice(0, 10);
-  const byMoment = {};
+  // One group per launch day, whatever time each product lands: the
+  // group's clock counts to the earliest, and when the day's products
+  // have different times (mixedTimes) each shows its own.
+  const byDay = {};
   (products || []).forEach((p) => {
     if (p.discontinued) return;
     const due = (p.refresh_history || []).slice().sort().pop();
     if (!due || due < day) return;
-    const key = due + '|' + (p.release_time || '');
-    (byMoment[key] = byMoment[key] || { date: due, time: p.release_time || null, products: [] }).products.push(p);
+    (byDay[due] = byDay[due] || { date: due, products: [] }).products.push(p);
   });
-  // Soonest first: by day, then by the moment on that day.
-  return Object.values(byMoment)
-    .map((g) => ({ ...g, at: comingTargetMs(g.date, g.time), products: g.products.sort((a, b) => a.name.localeCompare(b.name)) }))
-    .sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : (a.at || 0) - (b.at || 0)));
+  return Object.values(byDay)
+    .map((g) => {
+      const at = (p) => { const ms = comingTargetMs(g.date, p.release_time || null); return isNaN(ms) ? Infinity : ms; };
+      const first = g.products.slice().sort((a, b) => at(a) - at(b))[0];
+      const time = first.release_time || null;
+      const mixedTimes = new Set(g.products.map((p) => p.release_time || '')).size > 1;
+      return { ...g, time, mixedTimes, at: comingTargetMs(g.date, time), products: g.products.sort((a, b) => a.name.localeCompare(b.name)) };
+    })
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
 // The moment a release lands: its release time ("9am ET") when it has
@@ -2755,14 +2765,14 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
       extras.preorder ? `Pre-orders ${formatDate(extras.preorder)}${single.preorder_time ? ` &middot; ${timeWithUk(extras.preorder, single.preorder_time)}` : ''}` : '',
       single.price ? `From ${escapeHtml(formatPrice(single.price))}` : '',
     ].filter(Boolean) : [];
-    const nameHtml = (p, linked) => `<${linked ? `a href="/products/${p.slug}/"` : 'span'} class="coming-next-product"><span class="coming-next-icon">${productIcon(p, 56)}</span><span class="coming-next-text"><span class="coming-next-name">${escapeHtml(p.name)}</span><span class="coming-next-family">${escapeHtml(p.category || '')}</span></span></${linked ? 'a' : 'span'}>`;
+    const nameHtml = (p, linked) => `<${linked ? `a href="/products/${p.slug}/"` : 'span'} class="coming-next-product"><span class="coming-next-icon">${productIcon(p, 56)}</span><span class="coming-next-text"><span class="coming-next-name">${escapeHtml(p.name)}</span><span class="coming-next-family">${escapeHtml(p.category || '')}${next.mixedTimes && p.release_time && exact(next) ? ` &middot; ${timeWithUk(next.date, p.release_time)}` : ''}</span></span></${linked ? 'a' : 'span'}>`;
     const tag = single ? 'a' : 'div';
     const nextHtml = `<section class="coming-next-wrap" aria-label="Next to launch" data-coming-lead data-families="${escapeHtml(next.products.map((p) => p.category || '').join('|'))}">
   <${tag} class="coming-next${exact(next) ? '' : ' coming-next--expected'}"${single ? ` href="/products/${single.slug}/"` : ''}${exact(next) ? ` data-countdown="${escapeHtml(next.date)}"${next.time ? ` data-countdown-time="${escapeHtml(next.time)}"` : ''} ${comingDoneAttrs(next.date)}${single ? '' : ` data-done-href="/products/${next.products[0].slug}/"`}` : ''}>
     <span class="coming-next-main">
       <span class="coming-next-kicker countdown-label">Next to launch</span>
       <span class="coming-next-names">${next.products.map((p) => nameHtml(p, !single)).join('')}</span>
-      <span class="coming-next-date countdown-date">${exact(next) ? 'Coming ' : 'Expected '}${escapeHtml(comingDateText(next.date))}${exact(next) && next.time ? ` &middot; ${timeWithUk(next.date, next.time)}` : ''}${comingAwayHtml(next.date)}</span>
+      <span class="coming-next-date countdown-date">${exact(next) ? 'Coming ' : 'Expected '}${escapeHtml(comingDateText(next.date))}${exact(next) && next.time && !next.mixedTimes ? ` &middot; ${timeWithUk(next.date, next.time)}` : ''}${comingAwayHtml(next.date)}</span>
       ${facts.length ? `<span class="coming-next-facts">${facts.map((f) => `<span>${f}</span>`).join(' &middot; ')}</span>` : ''}
       ${single ? '<span class="coming-next-cta">See the product &rarr;</span>' : ''}
     </span>
@@ -2773,12 +2783,12 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     // to launch has cards too, hidden while its big tile shows, so a
     // sort or a family filter (app.js) can lay every product out alike.
     let order = 0;
-    const cards = groups.flatMap((g, gi) => g.products.map((p) => `<a class="coming-card${gi === 0 ? ' coming-card--lead' : ''}" href="/products/${p.slug}/" data-order="${order++}" data-name="${escapeHtml(p.name.toLowerCase())}" data-family="${escapeHtml(p.category || '')}"${gi === 0 ? ' hidden' : ''}${exact(g) ? ` data-countdown="${escapeHtml(g.date)}"${g.time ? ` data-countdown-time="${escapeHtml(g.time)}"` : ''} ${comingDoneAttrs(g.date)}` : ''}>
+    const cards = groups.flatMap((g, gi) => g.products.map((p) => ({ g, gi, p, t: p.release_time || null }))).map(({ g, gi, p, t }) => `<a class="coming-card${gi === 0 ? ' coming-card--lead' : ''}" href="/products/${p.slug}/" data-order="${order++}" data-name="${escapeHtml(p.name.toLowerCase())}" data-family="${escapeHtml(p.category || '')}"${gi === 0 ? ' hidden' : ''}${exact(g) ? ` data-countdown="${escapeHtml(g.date)}"${t ? ` data-countdown-time="${escapeHtml(t)}"` : ''} ${comingDoneAttrs(g.date)}` : ''}>
     <span class="coming-card-head"><span class="coming-card-icon">${productIcon(p, 34)}</span><span class="coming-card-text"><span class="coming-card-name">${escapeHtml(p.name)}</span><span class="coming-card-family">${escapeHtml(p.category || '')}</span></span></span>
-    ${exact(g) ? `<span class="coming-clock coming-clock--small" data-countdown-clock role="timer">${comingClockHtml(g.date, g.time)}</span>` : ''}
-    <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${exact(g) && g.time ? ` &middot; ${timeWithUk(g.date, g.time)}` : ''}${comingAwayHtml(g.date)}</span>
+    ${exact(g) ? `<span class="coming-clock coming-clock--small" data-countdown-clock role="timer">${comingClockHtml(g.date, t)}</span>` : ''}
+    <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${exact(g) && t ? ` &middot; ${timeWithUk(g.date, t)}` : ''}${comingAwayHtml(g.date)}</span>
     ${comingPreorderHtml(p, g.date)}
-  </a>`));
+  </a>`);
     body = `
 <h1>${pageHeading(pageContent, 'Coming soon')}</h1>
 ${pageStandardLine(pageContent, '<p class="page-intro">Every Apple product with a release date still to come, soonest first, counting down to the day it reaches shops.</p>')}
