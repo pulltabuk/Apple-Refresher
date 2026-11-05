@@ -4208,3 +4208,25 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
 .hx-stop:has(> .hx-stop-link):hover { background: radial-gradient(120% 140% at 100% 0%, rgba(232, 117, 44, 0.34) 0%, transparent 60%), linear-gradient(135deg, #352439 0%, #1c1321 100%); border-color: transparent; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 16px 30px -16px rgba(46, 26, 61, 0.65); }
 .hx-stop.hx-stop--more a { color: #ffd59a; }
 .hx-stop.hx-stop--more a:hover { background: rgba(255, 255, 255, 0.06); color: #ffe7c4; }
+
+/* ---------- Pill tags in the spotlight's dark tones ----------
+   Every tag pill on the site (a product's family, a photo's subjects and
+   place, an event's products) is dark plum with white words, like the
+   homepage's "Coming up" tiles, a little lighter on hover. "+3 more"
+   stays a quiet outline; status badges keep their own colours. */
+:root { --pill-bg: linear-gradient(135deg, #36243c 0%, #1b121f 100%); --pill-bg-hover: linear-gradient(135deg, #4b3253 0%, #2a1c30 100%); }
+.pill:not(.pill--muted):not(.pill--count),
+.card .pill:not(.pill--muted):not(.pill--count),
+.card .gallery-card-footer .pill:not(.pill--muted):not(.pill--count),
+.card.card--event-archive .gallery-tags-row .pill:not(.pill--muted),
+.card.card--event-archive.card--tinted .gallery-tags-row .pill:not(.pill--muted) {
+  background: var(--pill-bg); border-color: transparent; color: #fff;
+}
+.pill:not(.pill--muted):not(.pill--count):hover,
+.card .pill:not(.pill--muted):not(.pill--count):hover,
+.card .gallery-card-footer .pill:not(.pill--muted):not(.pill--count):hover,
+.card.card--event-archive .gallery-tags-row .pill:not(.pill--muted):hover,
+.card.card--event-archive.card--tinted .gallery-tags-row .pill:not(.pill--muted):hover,
+.gallery-strip-item:hover .pill.pill--tag {
+  background: var(--pill-bg-hover); border-color: transparent; color: #fff;
+}
