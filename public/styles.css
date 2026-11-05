@@ -4097,7 +4097,7 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
   .hx-head { margin-bottom: 10px; }
   /* A rule between "Coming up" and "Featured products", so the two
      lists of rows don't run together. */
-  .hx-rail + .hx-featured { padding-top: 22px; border-top: 1px solid var(--border); }
+  .hx-upnext:has(.hx-stops) + .hx-featured { padding-top: 22px; border-top: 1px solid var(--border); }
   .hx-stops, .hx-stops[style] { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .hx-stop { border-radius: 16px; }
   .hx-stop-link { gap: 12px; padding: 10px 12px; }
@@ -4189,3 +4189,22 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
 .x-icon-box > summary .admin-hint { font-weight: 400; margin-left: 4px; }
 .x-icon-box[open] > summary { margin-bottom: 8px; }
 .x-icon-box input { margin-top: 6px; }
+
+/* "Coming up" as one block: its heading, the spotlight, then a dark mini
+   tile for each launch after it, in the spotlight's own colours (the
+   calendar leaf stays white, like an app icon). */
+.hx-upnext { display: flex; flex-direction: column; gap: 12px; }
+.hx-upnext:not(:has(.hx-head)) { display: none; }
+.hx-upnext > .hx-head { margin: 0; }
+.hx-upnext .hx-event:empty { display: none; }
+.hx-stop { --hx-kind-light: #8fd65d; border: 0; color: #fff; background: radial-gradient(120% 140% at 100% 0%, rgba(232, 117, 44, 0.24) 0%, transparent 60%), linear-gradient(135deg, #2a1c30 0%, #160f1b 100%); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 12px 26px -16px rgba(46, 26, 61, 0.55); }
+.hx-stop--preorder { --hx-kind-light: #5eead4; }
+.hx-stop--event { --hx-kind-light: #c4b5fd; }
+.hx-stop--earnings { --hx-kind-light: #fbbf24; }
+.hx-stop .hx-stop-kind { color: var(--hx-kind-light); }
+.hx-stop .hx-stop-names { color: #fff; }
+.hx-stop .hx-stop-meta { color: rgba(255, 255, 255, 0.66); }
+.hx-stop .hx-leaf { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3); }
+.hx-stop:has(> .hx-stop-link):hover { background: radial-gradient(120% 140% at 100% 0%, rgba(232, 117, 44, 0.34) 0%, transparent 60%), linear-gradient(135deg, #352439 0%, #1c1321 100%); border-color: transparent; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 16px 30px -16px rgba(46, 26, 61, 0.65); }
+.hx-stop.hx-stop--more a { color: #ffd59a; }
+.hx-stop.hx-stop--more a:hover { background: rgba(255, 255, 255, 0.06); color: #ffe7c4; }
