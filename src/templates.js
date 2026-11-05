@@ -2313,7 +2313,8 @@ function heroEarningsSpotHtml(e) {
   </a>`;
 }
 
-// Everything after the spotlight, a mini tile each (every product its
+// Everything after the spotlight (under it, in the same dark tones), a
+// mini tile each (every product its
 // own, earnings too), soonest first: a calendar leaf (the month in the
 // colour of what's happening), what it is, and how far off ("in 9 days",
 // kept current by app.js). The whole tile opens the product. Six tiles at
@@ -2348,10 +2349,7 @@ function heroRailHtml(items, earnings) {
     : '';
   // Up to four side by side; five or six as two rows of three.
   const tiles = shown.length + (rest.length ? 1 : 0);
-  return `<section class="hx-rail" aria-labelledby="hx-rail-title">
-    <div class="hx-head"><h2 class="hx-title" id="hx-rail-title">Coming up</h2><a class="hx-head-link" href="/coming-soon/">Everything coming soon <span aria-hidden="true">&rarr;</span></a></div>
-    <ol class="hx-stops" style="--stops:${tiles <= 4 ? tiles : 3}">${shown.map(stopHtml).join('')}${moreHtml}</ol>
-  </section>`;
+  return `<ol class="hx-stops" style="--stops:${tiles <= 4 ? tiles : 3}">${shown.map(stopHtml).join('')}${moreHtml}</ol>`;
 }
 
 // The featured products' heading and row. app.js redraws the inside of
@@ -2524,9 +2522,12 @@ function homePage({ heroItems, overdueItems, categoryLinks, totalCount, galleryP
       ${pageIntroHtml(pageContent, siteUrl, 'intro') || `<p class="intro-subtitle">Apple Sunset tracks how long it&rsquo;s been since every Apple product was last refreshed or discontinued.</p>
       <p class="intro-subtitle">See the latest refresh cycles, release timelines, and what&rsquo;s still current, all in one place.</p>`}
     </div>
-    <div class="hx-event" id="hero-event">${eventBoxHtml}</div>
-    ${spotHtml}
-    ${railHtml}
+    <section class="hx-upnext" aria-labelledby="hx-upnext-title">
+      ${eventBoxHtml || spotHtml || railHtml ? '<div class="hx-head"><h2 class="hx-title" id="hx-upnext-title">Coming up</h2><a class="hx-head-link" href="/coming-soon/">Everything coming soon <span aria-hidden="true">&rarr;</span></a></div>' : ''}
+      <div class="hx-event" id="hero-event">${eventBoxHtml}</div>
+      ${spotHtml}
+      ${railHtml}
+    </section>
     <section class="hx-featured" id="hero-cards" data-count="${heroBoxes}">${heroBoxes ? heroFeaturedInnerHtml(featuredCardsHtml) : emptyState('products')}</section>
   </div>
 </section>
