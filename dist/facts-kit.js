@@ -1067,6 +1067,146 @@
     return bottomAt(lines.length, s);
   }
 
+  // --- The card's main text with formatting: **bold**, _italic_, and
+  // lines starting "• " as a bulleted list (a wrapped line hangs under the
+  // words, not the bullet). Text with none of these is drawn by fitText
+  // exactly as before. With bold in it, the rest is set a little lighter
+  // so the bold stands out. Same arguments as fitText, less the weight. ---
+  const CARD_BOLD_RE = /\*\*[^*\n]+\*\*/;
+  const CARD_ITALIC_RE = /(^|[^\w])_([^_\n]+)_(?!\w)/;
+  const CARD_BULLET_RE = /^\s*•\s+/;
+  function hasCardMarks(text) {
+    const t = String(text || '');
+    return CARD_BOLD_RE.test(t) || CARD_ITALIC_RE.test(t) || /^\s*•\s/m.test(t);
+  }
+  function stripCardMarks(text) {
+    return String(text || '').replace(/\*\*([^*\n]+)\*\*/g, '$1').replace(/(^|[^\w])_([^_\n]+)_(?!\w)/g, '$1$2');
+  }
+  // One paragraph as runs of text: [{ text, bold, italic }].
+  function cardRuns(para) {
+    const runs = [];
+    String(para).split(/(\*\*[^*\n]+\*\*)/).forEach((part, i) => {
+      const bold = i % 2 === 1;
+      const inner = bold ? part.slice(2, -2) : part;
+      const re = new RegExp(CARD_ITALIC_RE.source, 'g');
+      let last = 0;
+      let m;
+      while ((m = re.exec(inner))) {
+        const start = m.index + m[1].length;
+        if (start > last) runs.push({ text: inner.slice(last, start), bold, italic: false });
+        runs.push({ text: m[2], bold, italic: true });
+        last = re.lastIndex;
+      }
+      if (last < inner.length) runs.push({ text: inner.slice(last), bold, italic: false });
+    });
+    return runs.filter((r) => r.text);
+  }
+  // Runs as words, each a list of pieces (a word can change style
+  // part-way, e.g. bold with a plain comma after it).
+  function cardWords(runs) {
+    const words = [];
+    let cur = [];
+    runs.forEach((r) => {
+      r.text.split(/([ \t]+)/).forEach((piece, j) => {
+        if (j % 2 === 1) { if (cur.length) words.push(cur); cur = []; return; }
+        if (piece) cur.push({ text: piece, bold: r.bold, italic: r.italic });
+      });
+    });
+    if (cur.length) words.push(cur);
+    return words;
+  }
+  function fitRichText(ctx, text, x, y, maxWidth, size, minSize, maxLines, maxBottom, keepWhole, leading) {
+    const LH = leading || 1.18;
+    const base = CARD_BOLD_RE.test(text) ? '500' : '700';
+    const fontOf = (seg, sz) => (seg.italic ? 'italic ' : '') + (seg.bold ? '800' : base) + ' ' + sz + 'px ' + FONT;
+    const paras = String(text || '').split('\n').filter((p) => p.trim()).map((p) => ({
+      bullet: CARD_BULLET_RE.test(p),
+      words: cardWords(cardRuns(p.replace(CARD_BULLET_RE, '').trim())),
+    }));
+    const widthOf = (word, sz) => word.reduce((t, seg) => { ctx.font = fontOf(seg, sz); return t + ctx.measureText(seg.text).width; }, 0);
+    const gapOf = (sz) => Math.round(sz * 0.32);
+    const bottomAt = (n, sz, starts) => y + sz + (n - 1) * Math.round(sz * LH) + starts.filter((i) => i > 0 && i < n).length * gapOf(sz) + Math.round(sz * 0.3);
+    let space = 0;
+    const layout = (sz) => {
+      ctx.font = base + ' ' + sz + 'px ' + FONT;
+      space = ctx.measureText(' ').width;
+      const indent = ctx.measureText('•').width + space * 1.8;
+      const out = [];
+      out.starts = [];
+      out.widest = 0;
+      paras.forEach((p) => {
+        out.starts.push(out.length);
+        const ind = p.bullet ? indent : 0;
+        let line = [];
+        let lw = 0;
+        let first = true;
+        const flush = () => {
+          out.push({ words: line, width: lw, ind, bullet: p.bullet && first });
+          out.widest = Math.max(out.widest, lw + ind);
+          first = false;
+          line = [];
+          lw = 0;
+        };
+        p.words.forEach((w) => {
+          const ww = widthOf(w, sz);
+          if (line.length && lw + space + ww > maxWidth - ind) flush();
+          lw = line.length ? lw + space + ww : ww;
+          line.push({ pieces: w, width: ww });
+        });
+        if (line.length) flush();
+      });
+      return out;
+    };
+    let s = size;
+    let lines;
+    for (;;) {
+      lines = layout(s);
+      const whole = !keepWhole || s <= keepWhole || lines.length === lines.starts.length;
+      const fits = whole && lines.length <= maxLines && lines.widest <= maxWidth && (!maxBottom || bottomAt(lines.length, s, lines.starts) <= maxBottom);
+      if (fits || s <= minSize) break;
+      s -= 2;
+    }
+    const starts = lines.starts;
+    let allowed = maxLines;
+    if (maxBottom) while (allowed > 1 && bottomAt(allowed, s, starts) > maxBottom) allowed -= 1;
+    if (lines.length > allowed) {
+      // Too long even at the smallest size: cut, with the cut shown.
+      fitText.cut = true;
+      lines = lines.slice(0, allowed);
+      const last = lines[allowed - 1];
+      const dots = { text: '…', bold: false, italic: false };
+      ctx.font = fontOf(dots, s);
+      const dw = ctx.measureText(dots.text).width;
+      while (last.words.length > 1 && last.ind + last.width + dw > maxWidth) {
+        const dropped = last.words.pop();
+        last.width -= dropped.width + space;
+      }
+      const end = last.words[last.words.length - 1];
+      if (end) { end.pieces = end.pieces.concat([dots]); end.width += dw; last.width += dw; }
+    }
+    const lh = Math.round(s * LH);
+    const textColour = ctx.fillStyle;
+    lines.forEach((line, i) => {
+      const ly = y + s + i * lh + starts.filter((k) => k > 0 && k <= i).length * gapOf(s);
+      if (line.bullet) {
+        ctx.font = '800 ' + s + 'px ' + FONT;
+        ctx.fillStyle = '#ffd59a';
+        ctx.fillText('•', x, ly);
+        ctx.fillStyle = textColour;
+      }
+      let px = x + line.ind;
+      line.words.forEach((word, k) => {
+        if (k) px += space;
+        word.pieces.forEach((seg) => {
+          ctx.font = fontOf(seg, s);
+          ctx.fillText(seg.text, px, ly);
+          px += ctx.measureText(seg.text).width;
+        });
+      });
+    });
+    return bottomAt(lines.length, s, starts);
+  }
+
   // --- A product's video, from its one video_url: an uploaded file plays
   // in a <video>; a YouTube or Vimeo link plays in that site's player; any
   // other link becomes a "Watch on ..." link. public/app.js keeps a copy
@@ -1239,7 +1379,7 @@
     // drawing it.
     const textHeight = (text, size, leading, maxLines) => {
       ctx.font = '700 ' + size + 'px ' + FONT;
-      const n = Math.min(maxLines, wrapLines(ctx, text, cw).length);
+      const n = Math.min(maxLines, wrapLines(ctx, stripCardMarks(text), cw).length);
       return size + (n - 1) * Math.round(size * leading) + Math.round(size * 0.3);
     };
     ctx.fillStyle = '#ffffff';
@@ -1274,9 +1414,13 @@
       fitText.cut = false;
       // With no headline, the line takes its space, in larger type.
       const listy = /\n\s*\S/.test(subject.caption);
+      // Bold, italic or bullets typed in the composer: drawn as such.
+      const draw = own && hasCardMarks(subject.caption)
+        ? (t, px, py, w, weight, ...rest) => fitRichText(ctx, t, px, py, w, ...rest)
+        : (t, px, py, w, weight, ...rest) => fitText(ctx, t, px, py, w, weight, ...rest);
       y = own && !subject.big
-        ? fitText(ctx, subject.caption, cx, y + 12, cw, '700', listy ? 44 : 58, listy ? 26 : 38, listy ? 10 : 5, TEXT_BOTTOM, listy ? 32 : 0, listy ? 0 : CAPTION_LEADING)
-        : fitText(ctx, subject.caption, cx, y + (subject.big ? CAPTION_GAP : 0) + (listy ? 6 : 0), cw, '700', listy ? 40 : CAPTION_SIZE + 2, listy ? 24 : 34, listy ? 9 : 4, TEXT_BOTTOM, listy ? 28 : 0, listy ? 0 : CAPTION_LEADING);
+        ? draw(subject.caption, cx, y + 12, cw, '700', listy ? 44 : 58, listy ? 26 : 38, listy ? 10 : 5, TEXT_BOTTOM, listy ? 32 : 0, listy ? 0 : CAPTION_LEADING)
+        : draw(subject.caption, cx, y + (subject.big ? CAPTION_GAP : 0) + (listy ? 6 : 0), cw, '700', listy ? 40 : CAPTION_SIZE + 2, listy ? 24 : 34, listy ? 9 : 4, TEXT_BOTTOM, listy ? 28 : 0, listy ? 0 : CAPTION_LEADING);
       lineCut = lineCut || fitText.cut;
     }
     if (subject.sub) {

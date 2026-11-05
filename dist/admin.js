@@ -524,6 +524,9 @@
     // The card's heading ("On this day", "Launch day"): picked from the
     // post until the writer types one or an idea brings its own.
     let cardLabelOwn = false;
+    // Whether this post has gone to X or Buffer, so Done can start a new
+    // one without asking.
+    let sentThisPost = false;
     const cardFields = () => ({
       headline: $x('x-card-headline').value,
       line: $x('x-card-line').value,
@@ -823,7 +826,7 @@
     $x('x-claude-btn').addEventListener('click', () => {
       const prompt = window.FactsKit.xPostPrompt($x('x-topic').value.trim());
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(prompt).catch(() => {});
-      $x('x-claude-note').textContent = 'Claude opened in a new tab (the request is also copied, in case it opens empty). Check its sources, then copy the post you like into the box below.';
+      $x('x-claude-note').textContent = 'Claude opened in a new tab (the request is also copied, in case it opens empty). Check its sources, then copy the post you like into step 2.';
       window.open(window.FactsKit.claudeResearchUrl(prompt), '_blank', 'noopener');
     });
     $x('x-topic').addEventListener('keydown', (e) => {
@@ -893,6 +896,7 @@
       composerDraft = null;
       $x('x-buffer-note').hidden = true;
       $x('x-buffer-when').hidden = true;
+      sentThisPost = false;
       unlockFields();
       refresh();
     }
@@ -908,48 +912,96 @@
     });
 
     $x('x-post-btn').addEventListener('click', () => {
+      sentThisPost = true;
       window.open('https://x.com/intent/post?text=' + encodeURIComponent(postText()), '_blank', 'noopener');
       $x('x-after').hidden = false;
       $x('x-after').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
-    // Emoji buttons: added where the cursor is in the X box (the end, if
-    // it hasn't been clicked into), which then counts as edited by hand.
-    let previewCaret = null;
-    ['select', 'keyup', 'click'].forEach((ev) => $x('x-preview').addEventListener(ev, () => {
-      const box = $x('x-preview');
-      previewCaret = [box.selectionStart, box.selectionEnd];
-    }));
+    // Emoji buttons: added where you were last typing (the post, a card
+    // field or the X box), at the cursor; into the X box at its end if
+    // nothing has been clicked into yet. In the X box that counts as
+    // editing it by hand; anywhere else the X box and card follow as usual.
+    const EMOJI_TARGETS = ['x-text', 'x-preview', 'x-card-label', 'x-card-title', 'x-card-headline', 'x-card-line', 'x-card-source'];
+    let emojiTarget = 'x-preview';
+    const carets = {};
+    EMOJI_TARGETS.forEach((id) => ['focus', 'select', 'keyup', 'click', 'input'].forEach((ev) => $x(id).addEventListener(ev, () => {
+      const box = $x(id);
+      emojiTarget = id;
+      carets[id] = [box.selectionStart, box.selectionEnd];
+    })));
     document.querySelectorAll('#x-emoji-row .x-emoji').forEach((btn) => btn.addEventListener('click', () => {
-      const box = $x('x-preview');
-      if (!box.value.trim()) return;
-      const [start, end] = previewCaret || [box.value.length, box.value.length];
+      let id = emojiTarget;
+      if (id === 'x-preview' && !$x('x-preview').value.trim()) id = 'x-text';
+      const box = $x(id);
+      const [start, end] = carets[id] || [box.value.length, box.value.length];
       box.setRangeText(btn.dataset.emoji, start, end, 'end');
-      previewCaret = [box.selectionStart, box.selectionEnd];
-      previewOwn = true;
-      updateCount();
+      carets[id] = [box.selectionStart, box.selectionEnd];
+      emojiTarget = id;
+      if (id === 'x-preview') { previewOwn = true; updateCount(); } else box.dispatchEvent(new Event('input', { bubbles: true }));
       box.focus();
     }));
-    // Done: start afresh and go back to the admin's first tab.
-    $x('x-done-btn').addEventListener('click', () => $x('x-back-btn').click());
-    $x('x-clear-btn').addEventListener('click', () => {
-      if ($x('x-text').value.trim() && !window.confirm('Clear this post and start again?')) return;
-      clearPost();
-      $x('x-text').focus();
+
+    // The card's main text: B and I wrap the selected words in ** or _
+    // (the card draws them bold or italic), and again takes them off;
+    // with nothing selected they go in a pair, the cursor between.
+    // "• List" starts each selected line with a bullet, or takes the
+    // bullets off when every line already has one.
+    document.querySelectorAll('.x-format-btn').forEach((btn) => {
+      // Keeps the selection in the box on a computer.
+      btn.addEventListener('mousedown', (e) => e.preventDefault());
+      btn.addEventListener('click', () => {
+        const box = $x('x-card-line');
+        const v = box.value;
+        let a = box.selectionStart;
+        let b = box.selectionEnd;
+        if (btn.dataset.format === 'bullet') {
+          const from = v.lastIndexOf('\n', a - 1) + 1;
+          let to = v.indexOf('\n', b > a && v[b - 1] === '\n' ? b - 1 : b);
+          if (to === -1) to = v.length;
+          const lines = v.slice(from, to).split('\n');
+          const all = lines.every((l) => !l.trim() || /^\s*\u2022\s/.test(l));
+          const next = lines.map((l) => (!l.trim() ? l : all ? l.replace(/^\s*\u2022\s+/, '') : '\u2022 ' + l.replace(/^\s*[\u2022\-\u2013]\s+/, ''))).join('\n');
+          box.setRangeText(next, from, to, 'select');
+        } else {
+          const mark = btn.dataset.format === 'bold' ? '**' : '_';
+          // Spaces stay outside the marks ("**word** ", not "**word **").
+          while (a < b && /\s/.test(v[a])) a += 1;
+          while (b > a && /\s/.test(v[b - 1])) b -= 1;
+          const sel = v.slice(a, b);
+          const n = mark.length;
+          if (sel.length > n * 2 && sel.startsWith(mark) && sel.endsWith(mark)) {
+            box.setRangeText(sel.slice(n, sel.length - n), a, b, 'select');
+          } else if (sel && v.slice(a - n, a) === mark && v.slice(b, b + n) === mark) {
+            box.setRangeText(sel, a - n, b + n, 'select');
+          } else if (sel) {
+            box.setRangeText(mark + sel + mark, a, b, 'select');
+          } else {
+            box.setRangeText(mark + mark, a, b, 'end');
+            box.setSelectionRange(a + n, a + n);
+          }
+        }
+        box.focus();
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+      });
     });
-    $x('x-another-btn').addEventListener('click', () => {
+
+    // A fresh, empty post on this same page, back at its top.
+    function startNewPost() {
       clearPost();
-      $x('x-ideas-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const top = $x('tab-x').getBoundingClientRect().top + window.scrollY - 16;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
+    // Done: a new post, here. One that hasn't gone to X or Buffer yet is
+    // checked first, so a stray tap doesn't lose it.
+    $x('x-done-btn').addEventListener('click', () => {
+      if ($x('x-text').value.trim() && !sentThisPost && !window.confirm('This post hasn\u2019t been posted or sent to Buffer. Start a new one anyway?')) return;
+      startNewPost();
     });
+    $x('x-another-btn').addEventListener('click', startNewPost);
     $x('x-edit-btn').addEventListener('click', () => {
       $x('x-after').hidden = true;
       unlockFields();
       $x('x-text').focus();
-    });
-    $x('x-back-btn').addEventListener('click', () => {
-      clearPost();
-      const home = document.querySelector('.admin-tab-btn[data-tab="products"]');
-      if (home) home.click();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
     $x('x-copy-btn').addEventListener('click', () => {
       const text = postText();
@@ -1031,6 +1083,7 @@
         const label = $x('x-card-label').value.trim() || 'Did you know?';
         const imageUrl = wantsCard() ? await cardImageUrl(body, label, cardFields()) : '';
         const sent = await sendToBuffer({ text, imageUrl }, mode, dueAt);
+        sentThisPost = true;
         note.textContent = mode === 'schedule'
           ? 'Scheduled in Buffer for ' + whenText(sent.dueAt || dueAt) + '.'
           : 'Added to your Buffer queue' + (sent.dueAt ? ', going out ' + whenText(sent.dueAt) : '') + '.';
@@ -1066,7 +1119,6 @@
       $x('x-buffer-when').hidden = true;
       sendComposer('schedule', at);
     });
-    $x('x-clear-btn').addEventListener('click', () => { if (!$x('x-text').value.trim()) { composerDraft = null; $x('x-buffer-note').hidden = true; } });
 
     // --- Drafts to review: written each morning (x-drafts-background on
     // Netlify) from the site's data and, with an Anthropic key, researched
