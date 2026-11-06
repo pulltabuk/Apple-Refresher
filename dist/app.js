@@ -2689,10 +2689,12 @@
       // Must match build.js: the featured products in slot order, topped
       // up to three with the most recent releases (nothing still to come).
       var shownFeatured = featuredItems.slice(0, 3);
-      // Must match build.js: FactsKit.pickHeroTiles (featured picks, then
-      // the longest wait, the most overdue and the latest release).
+      // Must match build.js: FactsKit.pickHeroTiles (the most recently
+      // updated, the longest wait, and the day's random pick).
       if (!window.FactsKit || !window.FactsKit.pickHeroTiles) return;
-      var heroItems = window.FactsKit.pickHeroTiles(releasedOnly.filter(function (i) { return !comingSoon(i.product); }), shownFeatured, Date.now());
+      var tileCurrent = releasedOnly.filter(function (i) { return !comingSoon(i.product); });
+      var tileEveryone = tileCurrent.concat(products.filter(function (p) { return p.discontinued; }).map(function (p) { return { product: p, status: null }; }));
+      var heroItems = window.FactsKit.pickHeroTiles(tileCurrent, tileEveryone, Date.now());
 
       // Must match eventHeroTileHtml() in src/templates.js. The artwork's
       // colour comes from the built tile when it shows the same event (a

@@ -528,10 +528,11 @@ async function main() {
   // appear twice on screen. FACT_DATE (YYYY-MM-DD) overrides the date
   // for testing.
   // The homepage's three tiles (FactsKit.pickHeroTiles, which app.js's
-  // live refresh uses too): any featured picks first, then the longest
-  // wait, the most overdue and the latest release, turning over daily at
-  // 6am UK. Nothing still to come (that's in "Coming up").
-  const heroItems = FactsKit.pickHeroTiles(released.filter((i) => !comingSoon(i.product)), featuredItems.slice(0, 3), Date.now());
+  // live refresh uses too): the most recently updated, the longest wait,
+  // and a random product of the day (a new one at 6am UK). Nothing still
+  // to come: that's in "Coming up".
+  const tileCurrent = released.filter((i) => !comingSoon(i.product));
+  const heroItems = FactsKit.pickHeroTiles(tileCurrent, tileCurrent.concat(discontinuedItems), Date.now());
   const heroSlugs = heroItems.map((i) => i.product.slug);
   // Today's pick is saved (site_content row 'daily_fact'), so a rebuild
   // later the same day, after publishing a change, keeps the same fact.
