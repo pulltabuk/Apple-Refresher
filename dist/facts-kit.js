@@ -317,6 +317,14 @@
     return 'about ' + years + ' years';
   }
 
+  // The model a product replaced, by name, when it is known.
+  function predecessorName(p) {
+    const prev = p && p.previous_model;
+    if (!prev || prev === '__new__') return '';
+    const hit = (cardProducts || []).find((x) => x.slug === prev);
+    return hit ? appleName(hit.name) : '';
+  }
+
   // One live figure for a product: days since its last release, days
   // until a coming release, or the year it was discontinued.
   function productFigure(p) {
@@ -338,7 +346,11 @@
         kind: 'since',
         big: days.toLocaleString('en-GB'),
         caption: (days === 1 ? 'day' : 'days') + ' since its last release',
-        sub: releases.length === 1 ? 'Only release: ' + cardDate(last) : releases.length + ' releases since ' + releases[0].slice(0, 4),
+        // A successor's one release isn't the line's only one: it names
+        // the model it replaced instead (HomePod mini 2 after HomePod mini).
+        sub: releases.length === 1
+          ? (predecessorName(p) ? 'Replaced the ' + predecessorName(p) + ' ' + cardDate(last) : 'Only release: ' + cardDate(last))
+          : releases.length + ' releases since ' + releases[0].slice(0, 4),
       };
     }
     return { kind: '', big: '', caption: '', sub: '' };

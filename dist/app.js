@@ -7,8 +7,36 @@
     iPhone: 365, Mac: 500, iPad: 450, 'Apple Watch': 365, AirPods: 730, Other: 400,
   };
 
+  // Must match lineHistory() in src/status.js: a product's releases with
+  // those of the models it replaced, so a successor (HomePod mini 2) has
+  // a cycle to measure.
+  function lineHistoryJS(product, bySlug) {
+    var own = (product.refresh_history || []).slice().sort();
+    var last = own[own.length - 1];
+    var seen = {};
+    var dates = {};
+    own.forEach(function (d) { dates[d] = true; });
+    var prev = product.previous_model;
+    while (prev && prev !== '__new__' && bySlug[prev] && !seen[prev]) {
+      seen[prev] = true;
+      (bySlug[prev].refresh_history || []).forEach(function (d) { if (!last || d <= last) dates[d] = true; });
+      prev = bySlug[prev].previous_model;
+    }
+    return Object.keys(dates).sort();
+  }
+  function withLineHistoryJS(products) {
+    if (!Array.isArray(products)) return products;
+    var bySlug = {};
+    products.forEach(function (p) { bySlug[p.slug] = p; });
+    products.forEach(function (p) {
+      var line = lineHistoryJS(p, bySlug);
+      if (line.length > (p.refresh_history || []).length) p.line_history = line;
+    });
+    return products;
+  }
+
   function computeStatusJS(product) {
-    var history = (product.refresh_history || [])
+    var history = (product.line_history || product.refresh_history || [])
       .map(function (d) { return new Date(d); })
       .sort(function (a, b) { return a - b; });
     var lastRefresh = history[history.length - 1];
@@ -1199,7 +1227,7 @@
 
   // Must stay in step with heroCycle() in src/templates.js.
   function heroCycleJS(product, status, sortedDates, allProducts) {
-    if (sortedDates.length > 1 && status) return { days: status.avgCycleDays, family: null };
+    if (status && status.hasCycle) return { days: status.avgCycleDays, family: null };
     var family = (allProducts || []).filter(function (p) { return (p.category || '') === (product.category || ''); });
     var avg = familyAvgCycleJS(family);
     if (!avg) return null;
@@ -1274,7 +1302,7 @@
         : (when ? 'Released ' + when + ', and no' : 'No') + ' update has been recorded since, so there is nothing yet to measure a refresh cycle against.';
       bar = '<span class="days-hero-caption">' + text + '</span>';
     }
-    var suffix = info.suffix === 'since refresh' && (product.refresh_history || []).length <= 1 ? 'since release' : info.suffix;
+    var suffix = info.suffix === 'since refresh' && (product.line_history || product.refresh_history || []).length <= 1 ? 'since release' : info.suffix;
     return '<p class="days-hero days-hero--' + statusInfo.status + '"><span class="days-hero-number">' + info.days + '</span> ' + (info.days === 1 ? 'day' : 'days') + ' ' + suffix + bar + '</p>';
   }
 
@@ -1358,10 +1386,10 @@
         : null, 'lifespan'),
       keyFactJS('Launch price from', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null, 'price'),
       keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null, 'first'),
-      keyFactJS('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days')
+      keyFactJS('Typical cycle', status && !product.discontinued && status.hasCycle ? 'About every ' + pluralJS(status.avgCycleDays, 'day', 'days') + (sortedDates.length <= 1 ? '<span class="key-fact-note">counting the models it replaced</span>' : '')
         : !product.discontinued && cycle && cycle.single ? 'About every ' + pluralJS(cycle.days, 'day', 'days') + '<span class="key-fact-note">across ' + escapeHtmlJS(cycle.family || 'the family') + '</span>' : null, 'cycle'),
       (function () {
-        if (!status || sortedDates.length <= 1 || product.discontinued) return '';
+        if (!status || !status.hasCycle || product.discontinued) return '';
         var due = new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000);
         return keyFactJS(due.getTime() < Date.now() ? 'Was expected' : 'Next expected', due.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }), 'expected');
       })(),
@@ -1494,7 +1522,7 @@
   function fetchAllProductsJS() {
     return fetch(window.SUPABASE_URL + '/rest/v1/products?select=*', {
       headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY },
-    }).then(function (res) { return res.json(); }).then(appleNamesJS).then(function (products) {
+    }).then(function (res) { return res.json(); }).then(appleNamesJS).then(withLineHistoryJS).then(function (products) {
       if (Array.isArray(products) && products.length) linkProductsJS = products;
       return products;
     });
@@ -2458,7 +2486,7 @@
     return '<div class="card-featured-cycle card-featured-cycle--' + statusInfo.status + '">' +
       '<div class="card-featured-cycle-head"><span>Average refresh cycle</span><strong>' + pluralJS(statusInfo.avgCycleDays, 'day', 'days') + '</strong></div>' +
       '<div class="card-featured-cycle-bar"><span style="width:' + Math.min(100, Math.round(ratio * 100)) + '%"></span></div>' +
-      '<p class="card-featured-cycle-note">' + (ratio >= 1 ? ratio.toFixed(1) + '\u00d7 the usual wait' : Math.round(ratio * 100) + '% of the usual wait') + '</p>' +
+      '<p class="card-featured-cycle-note">' + (ratio >= 1 ? ratio.toFixed(1) + '\u00d7 the usual wait' : Math.max(1, Math.round(ratio * 100)) + '% of the usual wait') + '</p>' +
     '</div>';
   }
 

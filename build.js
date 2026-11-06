@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { computeStatus } = require('./src/status');
+const { computeStatus, withLineHistory } = require('./src/status');
 const shareImages = require('./src/share-images');
 const { productGroup, appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, comingSoonPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos, setLinkProducts, missingProductLinks, setEventTints } = require('./src/templates');
 const { eventColours } = require('./src/event-colours');
@@ -333,7 +333,8 @@ function withModelsDiscontinued(p) {
 }
 
 async function main() {
-  const products = (await loadProducts()).map(withModelsDiscontinued);
+  // A successor's cycle counts the models it replaced (src/status.js).
+  const products = withLineHistory((await loadProducts()).map(withModelsDiscontinued));
   // Links typed into notes and descriptions are checked against these.
   setLinkProducts(products);
   const aboutContent = await loadSiteContent();
