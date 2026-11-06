@@ -4296,3 +4296,9 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
   .hx-featured .card--featured .card-link > .card-featured-role { grid-area: role; margin-bottom: 0; }
   .hx-featured .card--featured[class*="card--role-"] { padding-top: 15px; }
 }
+
+/* Launch day: once the clock has become "Available now", it is one
+   button on one line, not squeezed into the first of the clock's four
+   columns (phones lay the clock out as a four-column grid). */
+.hx-spot.countdown--done .hx-clock, .hx-clock:has(> .countdown-done-badge) { display: flex; }
+.hx-spot .countdown-done-badge { white-space: nowrap; }
