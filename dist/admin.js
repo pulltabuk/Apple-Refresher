@@ -349,6 +349,25 @@
     });
   });
 
+  // A second tap on the button itself to confirm, instead of a browser
+  // pop-up: Safari can be set to block a site's pop-ups, and a blocked
+  // confirm() quietly answers no, so the button would seem to do nothing.
+  // The first tap changes the button's words for a few seconds; a second
+  // tap within that time goes ahead.
+  function confirmByTap(btn, askText) {
+    if (btn.dataset.armed === '1') {
+      clearTimeout(btn.armTimer);
+      btn.dataset.armed = '';
+      btn.textContent = btn.dataset.label;
+      return true;
+    }
+    btn.dataset.label = btn.textContent;
+    btn.dataset.armed = '1';
+    btn.textContent = askText;
+    btn.armTimer = setTimeout(() => { btn.dataset.armed = ''; btn.textContent = btn.dataset.label; }, 5000);
+    return false;
+  }
+
   // --- Publish: asks Netlify to rebuild, so admin changes go live.
   // Pages are generated from Supabase at build time, so saving here
   // alone does not update the public site.
@@ -362,7 +381,10 @@
         statusEl.textContent = text;
         statusEl.className = 'admin-hint admin-publish-status' + (kind ? ' is-' + kind : '');
       };
-      if (!window.confirm('Publish all saved changes to the live site?\n\nThe rebuild usually takes under a minute.')) return;
+      if (!confirmByTap(publishBtn, 'Tap again to publish')) {
+        setStatus('Tap again to publish every saved change to the live site (a minute or two).');
+        return;
+      }
       publishBtn.disabled = true;
       publishBtn.textContent = 'Publishing…';
       setStatus('Asking Netlify to rebuild the site…');
@@ -994,7 +1016,7 @@
     // Done: a new post, here. One that hasn't gone to X or Buffer yet is
     // checked first, so a stray tap doesn't lose it.
     $x('x-done-btn').addEventListener('click', () => {
-      if ($x('x-text').value.trim() && !sentThisPost && !window.confirm('This post hasn\u2019t been posted or sent to Buffer. Start a new one anyway?')) return;
+      if ($x('x-text').value.trim() && !sentThisPost && !confirmByTap($x('x-done-btn'), 'Not sent yet: tap again to clear it')) return;
       startNewPost();
     });
     $x('x-another-btn').addEventListener('click', startNewPost);
@@ -6621,7 +6643,13 @@
       }
       pageContentRows[key] = payload;
       fillPagetextTargets();
-      statusEl.textContent = 'Saved. It appears on the site after the next build, a minute or two.';
+      // Rebuild straight away, as saving earnings does, so the new words
+      // go live without a separate Publish.
+      statusEl.textContent = 'Saved. Rebuilding the site\u2026';
+      const built = await rebuildSite();
+      statusEl.textContent = built.ok
+        ? 'Saved and rebuilding: live in a minute or two, then refresh the page to see it.'
+        : 'Saved, but the rebuild didn\u2019t start (' + built.error + '). Press Publish changes at the top.';
     });
   }
 
