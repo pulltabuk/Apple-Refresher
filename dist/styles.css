@@ -3913,7 +3913,11 @@ a.coming-next:hover .coming-next-cta { background: #2f6115; }
    Phones: the strip and the featured row swipe sideways. */
 .hx { display: flex; flex-direction: column; gap: 26px; margin-top: 0.5rem; }
 .hx-words .intro-heading { margin-bottom: 0.65rem; }
-.hx-words :is(.intro-subtitle, .page-copy p) { max-width: 720px; }
+/* The intro runs the full width, its right edge in line with the
+   section links below it ("Everything coming soon"). */
+.hx-words :is(.page-copy, .intro-subtitle, .page-copy p) { max-width: none; }
+.hx-words .page-copy { margin-bottom: 0; }
+.hx-words .page-copy p:last-child { margin-bottom: 0; }
 .hx-words > :last-child, .hx-words .intro-subtitle:last-of-type { margin-bottom: 0; }
 .hx-event:empty { display: none; }
 
