@@ -1696,7 +1696,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
     ? `<div class="card-featured-cycle card-featured-cycle--${statusInfo.status}">
       <div class="card-featured-cycle-head"><span>Average refresh cycle</span><strong>${plural(statusInfo.avgCycleDays, 'day', 'days')}</strong></div>
       <div class="card-featured-cycle-bar"><span style="width:${Math.min(100, Math.round(statusInfo.ratio * 100))}%"></span></div>
-      <p class="card-featured-cycle-note">${statusInfo.ratio >= 1 ? `${statusInfo.ratio.toFixed(1)}&times; the usual wait` : `${Math.round(statusInfo.ratio * 100)}% of the usual wait`}</p>
+      <p class="card-featured-cycle-note">${statusInfo.ratio >= 1 ? `${statusInfo.ratio.toFixed(1)}&times; the usual wait` : `${Math.max(1, Math.round(statusInfo.ratio * 100))}% of the usual wait`}</p>
     </div>`
     : '';
   const detailRows = [
@@ -2282,7 +2282,7 @@ function heroLaunchSpotHtml(item) {
   const sub = [single ? escapeHtml(when) : '', time,
     rel ? `In stores ${escapeHtml(formatDate(rel))}` : ''].filter(Boolean).join(' &middot; ');
   const icon = single && item.product ? `<span class="hx-spot-icon">${productIcon(item.product, 34)}</span>` : '';
-  const chips = single ? '' : `<ul class="hx-chips">${members.map((m) => `<li><a class="hx-chip" href="${m.href}">${m.product ? `<span class="hx-chip-icon">${productIcon(m.product, 20)}</span>` : ''}<span class="hx-chip-name">${escapeHtml(m.label)}</span>${mixedTimes && m.time ? `<span class="hx-chip-time">${timeWithUk(m.date, m.time)}</span>` : ''}</a></li>`).join('')}</ul>`;
+  const chips = single ? '' : `<ul class="hx-chips">${members.map((m) => `<li><a class="hx-chip" href="${m.href}">${m.product ? `<span class="hx-chip-icon">${productIcon(m.product, 20)}</span>` : ''}<span class="hx-chip-text"><span class="hx-chip-name">${escapeHtml(m.label)}</span>${mixedTimes && m.time ? `<span class="hx-chip-time">${timeWithUk(m.date, m.time)}</span>` : ''}</span></a></li>`).join('')}</ul>`;
   const clock = exactDay
     ? `<div class="hx-clock" data-countdown-clock role="timer" aria-label="Time to go">${over ? doneBadgeHtml(done.text, members[0].href) : FactsKit.eventClockUnits(target - Date.now())}</div>`
     : '';
@@ -3096,7 +3096,8 @@ function heroCycle(product, status, sortedDates, allProducts) {
   // family's real gaps, labelled so it is clear which is being shown.
   // Never the built-in category default, which is a guess.
   // Must match heroCycleJS() in public/app.js.
-  if (sortedDates.length > 1 && status) return { days: status.avgCycleDays, family: null };
+  // With the models it replaced, a successor's line has its own cycle.
+  if (status && status.hasCycle) return { days: status.avgCycleDays, family: null };
   const fam = familyCadence((allProducts || []).filter((p) => (p.category || '') === (product.category || '')).map((p) => ({ product: p })));
   if (!fam) return null;
   // One release: the product has no gaps of its own, so the family's are
@@ -3184,7 +3185,7 @@ function heroStatHtml(product, statusInfo, cycleDays) {
     bar = `<span class="days-hero-caption">${text}</span>`;
   }
   // One release has never been refreshed: its days count from release.
-  const suffix = info.suffix === 'since refresh' && (product.refresh_history || []).length <= 1 ? 'since release' : info.suffix;
+  const suffix = info.suffix === 'since refresh' && (product.line_history || product.refresh_history || []).length <= 1 ? 'since release' : info.suffix;
   return `<p class="days-hero days-hero--${statusInfo.status}"><span class="days-hero-number">${info.days}</span> ${info.days === 1 ? 'day' : 'days'} ${suffix}${bar}</p>`;
 }
 
@@ -3288,11 +3289,11 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
       : null, 'lifespan'),
     keyFact('Launch price from', product.price ? escapeHtml(formatPrice(product.price)) : null, 'price'),
     keyFact('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDate(product.original_launch_date) : null, 'first'),
-    keyFact('Typical cycle', status && !product.discontinued && sortedDates.length > 1 ? `About every ${plural(status.avgCycleDays, 'day', 'days')}`
+    keyFact('Typical cycle', status && !product.discontinued && status.hasCycle ? `About every ${plural(status.avgCycleDays, 'day', 'days')}${sortedDates.length <= 1 ? '<span class="key-fact-note">counting the models it replaced</span>' : ''}`
       // One release: the family's cycle, said to be the family's.
       : !product.discontinued && cycle && cycle.single ? `About every ${plural(cycle.days, 'day', 'days')}<span class="key-fact-note">across ${escapeHtml(cycle.family || 'the family')}</span>` : null, 'cycle'),
     (() => {
-      if (!status || sortedDates.length <= 1 || product.discontinued) return '';
+      if (!status || !status.hasCycle || product.discontinued) return '';
       const due = new Date(new Date(status.lastRefresh).getTime() + status.avgCycleDays * 86400000);
       const label = due.getTime() < Date.now() ? 'Was expected' : 'Next expected';
       return keyFact(label, due.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }), 'expected');
