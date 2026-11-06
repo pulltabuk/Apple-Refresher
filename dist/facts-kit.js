@@ -2774,7 +2774,74 @@
     '</article>';
   }
 
+  // --- The homepage's three tiles. build.js and app.js's live refresh
+  // both use this, so they always agree. Manual featured picks (the
+  // admin's slots) come first, headed "Featured"; the rest fill
+  // themselves, one product each:
+  //  - Longest wait: the most days since a release, taking turns each
+  //    day through the top five ("2nd longest wait", and so on);
+  //  - Most overdue: the furthest past its own usual cycle, taking turns
+  //    through the top three ("Due next" when it isn't past it yet);
+  //  - Just refreshed: the newest release ("Latest release" once it's
+  //    more than six weeks old).
+  // The day turns at 6am UK, when the site rebuilds (daily-build).
+  // items: [{ product, status }] on sale now, nothing still to come.
+  function heroRotationDay(now) {
+    const t = (now == null ? Date.now() : now) - 6 * 3600000;
+    const ukDate = new Date(t + tzOffsetMs('Europe/London', t)).toISOString().slice(0, 10);
+    return Math.round(Date.parse(ukDate) / 86400000);
+  }
+  function pickHeroTiles(items, featured, now) {
+    const day = heroRotationDay(now);
+    const used = {};
+    const tiles = [];
+    const nth = (n) => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
+    (featured || []).slice(0, 3).forEach((i) => {
+      if (!i || !i.product || used[i.product.slug]) return;
+      used[i.product.slug] = true;
+      tiles.push(Object.assign({}, i, { role: { kind: 'featured', label: 'Featured' } }));
+    });
+    const pool = (items || []).filter((i) => i && i.product && i.status && !i.product.discontinued && i.status.daysSince >= 0);
+    const byName = (a, b) => String(a.product.name).localeCompare(String(b.product.name));
+    // The day's pick from the first `size` not already shown, and where
+    // it stands in the whole list (1 for the top).
+    const take = (sorted, size) => {
+      const open = sorted.map((i, rank) => ({ i, rank: rank + 1 })).filter((x) => !used[x.i.product.slug]).slice(0, size);
+      if (!open.length) return null;
+      const pick = open[((day % open.length) + open.length) % open.length];
+      used[pick.i.product.slug] = true;
+      return pick;
+    };
+    const roles = [
+      () => {
+        const r = take(pool.slice().sort((a, b) => b.status.daysSince - a.status.daysSince || byName(a, b)), 5);
+        return r && Object.assign({}, r.i, { role: { kind: 'wait', label: r.rank > 1 ? nth(r.rank) + ' longest wait' : 'Longest wait' } });
+      },
+      () => {
+        const r = take(pool.filter((i) => i.status.hasCycle).sort((a, b) => b.status.ratio - a.status.ratio || byName(a, b)), 3);
+        if (!r) return null;
+        const label = r.i.status.ratio < 1 ? 'Due next' : r.rank > 1 ? nth(r.rank) + ' most overdue' : 'Most overdue';
+        return Object.assign({}, r.i, { role: { kind: 'overdue', label } });
+      },
+      () => {
+        const r = take(pool.slice().sort((a, b) => a.status.daysSince - b.status.daysSince || byName(a, b)), 1);
+        return r && Object.assign({}, r.i, { role: { kind: 'fresh', label: r.i.status.daysSince <= 42 ? 'Just refreshed' : 'Latest release' } });
+      },
+    ];
+    for (let k = 0; k < roles.length && tiles.length < 3; k++) {
+      const tile = roles[k]();
+      if (tile) tiles.push(tile);
+    }
+    // Fewer products than roles: top up with the longest waits left.
+    pool.slice().sort((a, b) => b.status.daysSince - a.status.daysSince || byName(a, b)).forEach((i) => {
+      if (tiles.length < 3 && !used[i.product.slug]) { used[i.product.slug] = true; tiles.push(Object.assign({}, i, { role: { kind: 'wait', label: 'Long wait' } })); }
+    });
+    return tiles;
+  }
+
   const FactsKit = {
+    pickHeroTiles,
+    heroRotationDay,
     eventStartMs,
     eventClockUnits,
     eventTintStyle,

@@ -8,7 +8,19 @@
 // Runs on the schedule set in netlify.toml. It simply asks Netlify to
 // build, using the same build hook the Publish button uses.
 
+// The UK hour now (0-23), summer time or not.
+function ukHour(now) {
+  return Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: 'numeric', hourCycle: 'h23' }).format(now));
+}
+
 exports.handler = async () => {
+  // Runs at 00:05, 05:05 and 06:05 UTC (netlify.toml). The midnight run
+  // always builds; of the other two, only the one at 6am UK does, when
+  // the homepage's tiles turn over (FactsKit.pickHeroTiles).
+  const utcHour = new Date().getUTCHours();
+  if (utcHour !== 0 && ukHour(new Date()) !== 6) {
+    return { statusCode: 200, body: 'Not 6am in the UK: no rebuild this time.' };
+  }
   const hook = process.env.NETLIFY_BUILD_HOOK;
   if (!hook) {
     console.error('No NETLIFY_BUILD_HOOK set, so the daily rebuild did nothing.');

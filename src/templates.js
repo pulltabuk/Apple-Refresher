@@ -1649,7 +1649,9 @@ function daysUntil(dateStr) {
   return Math.round((target.getTime() - todayUtc) / 86400000);
 }
 
-function featuredCardHtml(product, statusInfo, productsBySlug) {
+// role: why it's on the homepage ({ kind, label }, FactsKit.pickHeroTiles),
+// shown as the tile's coloured header.
+function featuredCardHtml(product, statusInfo, productsBySlug, role) {
   const daysInfo = statusInfo ? badgeDaysInfo(product, statusInfo) : null;
   const countHtml = daysInfo
     ? (daysInfo.days < 0
@@ -1712,8 +1714,9 @@ function featuredCardHtml(product, statusInfo, productsBySlug) {
       : '',
     predecessor ? `<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ${escapeHtml(predecessor.name)}</div>` : '',
   ].filter(Boolean).join('\n');
-  return `<article class="card card--featured" data-category="${escapeHtml(product.category)}">
+  return `<article class="card card--featured${role ? ` card--role-${role.kind}` : ''}" data-category="${escapeHtml(product.category)}">
   <a class="card-link" href="/products/${product.slug}/">
+    ${role ? `<span class="card-featured-role">${escapeHtml(role.label)}</span>` : ''}
     <span class="card-featured-label">Featured</span>
     <div class="card-name-row">${productIcon(product, 42)}<p class="card-name">${escapeHtml(product.name)}</p></div>
     ${countHtml}
@@ -2355,7 +2358,7 @@ function heroRailHtml(items, earnings) {
 // The featured products' heading and row. app.js redraws the inside of
 // #hero-cards with the same markup (renderHeroCards), so keep in step.
 function heroFeaturedInnerHtml(cardsHtml) {
-  return `<div class="hx-head"><h2 class="hx-title">Featured products</h2><a class="hx-head-link" href="/products/">All products <span aria-hidden="true">&rarr;</span></a></div><div class="hero-stack-cards">${cardsHtml}</div>`;
+  return `<div class="hx-head"><h2 class="hx-title">Featured products</h2><a class="hx-head-link" href="/products/?sort=days-desc">See all longest waits <span aria-hidden="true">&rarr;</span></a></div><div class="hero-stack-cards">${cardsHtml}</div>`;
 }
 
 function earningsPage({ earnings, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
@@ -2460,7 +2463,7 @@ function homePage({ heroItems, overdueItems, categoryLinks, totalCount, galleryP
   const stackItems = heroItems || [];
   const heroBoxes = stackItems.length;
   const eventBoxHtml = activeEvent ? eventHeroTileHtml(activeEvent, productsBySlug) : '';
-  const featuredCardsHtml = stackItems.map((i) => featuredCardHtml(i.product, i.status, productsBySlug)).join('\n');
+  const featuredCardsHtml = stackItems.map((i) => featuredCardHtml(i.product, i.status, productsBySlug, i.role)).join('\n');
   const countdowns = groupCountdowns(countdown);
   const spotItem = !activeEvent && countdowns.length ? countdowns[0] : null;
   const spotHtml = spotItem ? heroLaunchSpotHtml(spotItem)
@@ -2483,16 +2486,6 @@ function homePage({ heroItems, overdueItems, categoryLinks, totalCount, galleryP
     ${categoryLinks.map((c) => `<a href="/categories/${slugify(c.category)}/">${escapeHtml(c.category)} <span>${c.count}</span></a>`).join('\n')}
   </nav>
 </details>`
-    : '';
-
-  const overdueSection = overdueItems && overdueItems.length
-    ? `<section class="homepage-section">
-  <h2>Products waiting longest for a refresh</h2>
-  <ol class="overdue-list" id="overdue-list">
-    ${overdueItems.map((i) => overdueRowHtml(i.product, i.status)).join('\n')}
-  </ol>
-  <p class="overdue-more"><a class="intro-cta" href="/products/">Browse all products</a></p>
-</section>`
     : '';
 
   const gallerySection = galleryPicks && galleryPicks.length
@@ -2531,7 +2524,6 @@ function homePage({ heroItems, overdueItems, categoryLinks, totalCount, galleryP
     <section class="hx-featured" id="hero-cards" data-count="${heroBoxes}">${heroBoxes ? heroFeaturedInnerHtml(featuredCardsHtml) : emptyState('products')}</section>
   </div>
 </section>
-${overdueSection}
 ${categoryLinksHtml}
 ${factSection}
 ${gallerySection}

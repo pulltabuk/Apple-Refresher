@@ -2490,7 +2490,8 @@
     '</div>';
   }
 
-  function featuredCardHtmlJS(product, statusInfo, allProducts) {
+  // role: the tile's coloured header (FactsKit.pickHeroTiles).
+  function featuredCardHtmlJS(product, statusInfo, allProducts, role) {
     var daysInfo = statusInfo ? badgeDaysInfoJS(product, statusInfo) : null;
     var countHtml = daysInfo
       ? (daysInfo.days < 0
@@ -2531,8 +2532,9 @@
       detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">' + (expectedPassed ? 'Refresh was expected' : 'Next refresh expected') + '</span> ' + nextExpected + '</div>');
     }
     if (predecessor) detailRows.push('<div class="card-featured-detail"><span class="card-featured-detail-label">Previous model</span> ' + escapeHtmlJS(predecessor.name) + '</div>');
-    return '<article class="card card--featured" data-category="' + escapeHtmlJS(product.category) + '">' +
+    return '<article class="card card--featured' + (role ? ' card--role-' + role.kind : '') + '" data-category="' + escapeHtmlJS(product.category) + '">' +
       '<a class="card-link" href="/products/' + product.slug + '/">' +
+        (role ? '<span class="card-featured-role">' + escapeHtmlJS(role.label) + '</span>' : '') +
         '<span class="card-featured-label">Featured</span>' +
         '<div class="card-name-row">' + productIconJS(product, 42) + '<p class="card-name">' + escapeHtmlJS(product.name) + '</p></div>' +
         countHtml +
@@ -2687,11 +2689,10 @@
       // Must match build.js: the featured products in slot order, topped
       // up to three with the most recent releases (nothing still to come).
       var shownFeatured = featuredItems.slice(0, 3);
-      var lastOutJS = function (p) { return (p.refresh_history || []).filter(function (d) { return d <= todayIso; }).sort().pop() || ''; };
-      var heroItems = shownFeatured.concat(releasedOnly
-        .filter(function (i) { return !comingSoon(i.product) && shownFeatured.indexOf(i) === -1; })
-        .sort(function (a, b) { return lastOutJS(b.product).localeCompare(lastOutJS(a.product)) || a.product.name.localeCompare(b.product.name); }))
-        .slice(0, 3);
+      // Must match build.js: FactsKit.pickHeroTiles (featured picks, then
+      // the longest wait, the most overdue and the latest release).
+      if (!window.FactsKit || !window.FactsKit.pickHeroTiles) return;
+      var heroItems = window.FactsKit.pickHeroTiles(releasedOnly.filter(function (i) { return !comingSoon(i.product); }), shownFeatured, Date.now());
 
       // Must match eventHeroTileHtml() in src/templates.js. The artwork's
       // colour comes from the built tile when it shows the same event (a
@@ -2710,9 +2711,9 @@
             products: products.map(function (p) { return { name: p.name, slug: p.slug }; }),
           })
         : '';
-      var cardsHtml = heroItems.map(function (i) { return featuredCardHtmlJS(i.product, i.status, products); }).join('');
+      var cardsHtml = heroItems.map(function (i) { return featuredCardHtmlJS(i.product, i.status, products, i.role); }).join('');
       // Must match heroFeaturedInnerHtml() in src/templates.js.
-      var heroHtml = '<div class="hx-head"><h2 class="hx-title">Featured products</h2><a class="hx-head-link" href="/products/">All products <span aria-hidden="true">&rarr;</span></a></div>' +
+      var heroHtml = '<div class="hx-head"><h2 class="hx-title">Featured products</h2><a class="hx-head-link" href="/products/?sort=days-desc">See all longest waits <span aria-hidden="true">&rarr;</span></a></div>' +
         '<div class="hero-stack-cards">' + cardsHtml + '</div>';
       // The event banner, refreshed on its own.
       if (heroEventSection && !sameContentJS(heroEventSection.innerHTML, eventHtml)) {
