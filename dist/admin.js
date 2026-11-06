@@ -6612,8 +6612,10 @@
       const { error } = await client.from('page_content').upsert(payload);
       const statusEl = document.getElementById('pagetext-status');
       if (error) {
-        statusEl.textContent = /heading|subheading|hide_default_line/.test(error.message || '')
-          ? 'Save failed: run supabase-schema-update-23.sql in Supabase first.'
+        // No table at all, or one missing the newer columns: the script
+        // that sets it up (safe to run either way) is named.
+        statusEl.textContent = /page_content|schema cache|does not exist|heading|subheading|hide_default_line/.test(error.message || '')
+          ? 'Save failed: the page text table isn\u2019t set up in Supabase yet. Run supabase-schema-update-39.sql in the Supabase SQL editor, then save again.'
           : 'Save failed: ' + error.message;
         return;
       }
