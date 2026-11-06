@@ -527,17 +527,11 @@ async function main() {
   // products in the big tile are left out, so one product doesn't
   // appear twice on screen. FACT_DATE (YYYY-MM-DD) overrides the date
   // for testing.
-  // The hero's right-hand column: an Apple Event (when one is on) and the
-  // featured products, three boxes at most; with nothing featured, one
-  // random pick. Must match renderHeroCards() in public/app.js.
-  // Three boxes: the featured products in slot order, topped up with the
-  // most recent releases (nothing still to come) when fewer are featured.
-  // The Apple Event, when one is on, has its own banner above them.
-  const lastOut = (p) => (p.refresh_history || []).filter((d) => d <= today).sort().pop() || '';
-  const heroItems = featuredItems.slice(0, 3).concat(released
-    .filter((i) => !comingSoon(i.product) && !featuredItems.slice(0, 3).includes(i))
-    .sort((a, b) => lastOut(b.product).localeCompare(lastOut(a.product)) || a.product.name.localeCompare(b.product.name)))
-    .slice(0, 3);
+  // The homepage's three tiles (FactsKit.pickHeroTiles, which app.js's
+  // live refresh uses too): any featured picks first, then the longest
+  // wait, the most overdue and the latest release, turning over daily at
+  // 6am UK. Nothing still to come (that's in "Coming up").
+  const heroItems = FactsKit.pickHeroTiles(released.filter((i) => !comingSoon(i.product)), featuredItems.slice(0, 3), Date.now());
   const heroSlugs = heroItems.map((i) => i.product.slug);
   // Today's pick is saved (site_content row 'daily_fact'), so a rebuild
   // later the same day, after publishing a change, keeps the same fact.
