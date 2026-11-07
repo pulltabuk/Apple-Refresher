@@ -1860,7 +1860,20 @@
     };
 
     // Only facts already shown on the homepage: by year, then month, newest first.
-    const diary = entries.filter((e) => e.shown).sort((a, b) => (b.shown < a.shown ? -1 : b.shown > a.shown ? 1 : 0) || keyOrder(a, b));
+    // options.onlyMonth ('2026-10'): that month alone, without the year and
+    //   month headings (a month's own page has them as its title).
+    // options.recentMonths (2): every month is there, so a search finds any
+    //   fact, but those before the latest two carry facts-month--older (and
+    //   a year left with only those, facts-year--older), which the page
+    //   hides until someone searches.
+    let diary = entries.filter((e) => e.shown).sort((a, b) => (b.shown < a.shown ? -1 : b.shown > a.shown ? 1 : 0) || keyOrder(a, b));
+    if (options.onlyMonth) {
+      diary = diary.filter((e) => e.shown.slice(0, 7) === options.onlyMonth);
+      return diary.length ? '<div class="facts-grid">' + diary.map(card).join('') + '</div>' : '';
+    }
+    const months = Array.from(new Set(diary.map((e) => e.shown.slice(0, 7))));
+    const recent = options.recentMonths ? months.slice(0, options.recentMonths) : months;
+    const isOlder = (m) => recent.indexOf(m) === -1;
     let diaryHtml = '';
     let year = '';
     let month = '';
@@ -1871,10 +1884,11 @@
         if (month) diaryHtml += '</div></section>';
         if (y !== year) {
           if (year) diaryHtml += '</section>';
-          diaryHtml += '<section class="facts-year" data-year="' + y + '"><h2 class="facts-year-title">' + y + '</h2>';
+          const yearOlder = months.filter((mm) => mm.slice(0, 4) === y).every(isOlder);
+          diaryHtml += '<section class="facts-year' + (yearOlder ? ' facts-year--older' : '') + '" data-year="' + y + '"><h2 class="facts-year-title">' + y + '</h2>';
           year = y;
         }
-        diaryHtml += '<section class="facts-month" data-month="' + m + '"><h3 class="facts-month-title">' + MONTH_NAMES_LONG[Number(m.slice(5, 7)) - 1] + '</h3><div class="facts-grid">';
+        diaryHtml += '<section class="facts-month' + (isOlder(m) ? ' facts-month--older' : '') + '" data-month="' + m + '"><h3 class="facts-month-title">' + MONTH_NAMES_LONG[Number(m.slice(5, 7)) - 1] + '</h3><div class="facts-grid">';
         month = m;
       }
       diaryHtml += card(e);
@@ -1882,6 +1896,25 @@
     if (month) diaryHtml += '</div></section></section>';
 
     return diaryHtml;
+  }
+
+  // The months with facts shown on the homepage, newest first:
+  // [{ month: '2026-10', count: 31 }]. For the Facts page's archive links
+  // and each month's own page.
+  function factsDiaryMonths(facts, products, opts) {
+    const options = opts || {};
+    const today = new Date().toISOString().slice(0, 10);
+    const isDay = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+    const pool = {};
+    dailyFactPool(products, facts).forEach((item) => { if (!(item.pin && item.pin > today)) pool[item.key] = true; });
+    const shownOn = {};
+    (options.history || []).forEach((h) => {
+      if (h && h.key && pool[h.key] && isDay(h.date) && h.date <= today && (!shownOn[h.key] || h.date > shownOn[h.key])) shownOn[h.key] = h.date;
+    });
+    if (options.todayKey && pool[options.todayKey] && !shownOn[options.todayKey]) shownOn[options.todayKey] = today;
+    const counts = {};
+    Object.keys(shownOn).forEach((k) => { const m = shownOn[k].slice(0, 7); counts[m] = (counts[m] || 0) + 1; });
+    return Object.keys(counts).sort().reverse().map((m) => ({ month: m, count: counts[m] }));
   }
 
   // --- X posts: ideas worked out from the site's own data, the post
@@ -2830,6 +2863,7 @@
   }
 
   const FactsKit = {
+    factsDiaryMonths,
     pickHeroTiles,
     heroRotationDay,
     eventStartMs,

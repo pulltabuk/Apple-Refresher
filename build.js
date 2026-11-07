@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { computeStatus, withLineHistory } = require('./src/status');
 const shareImages = require('./src/share-images');
-const { productGroup, appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, comingSoonPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos, setLinkProducts, missingProductLinks, setEventTints } = require('./src/templates');
+const { productGroup, appleName, earningsPage, nextEarnings, earningsQuarter, homePage, allProductsPage, discontinuedPage, comingSoonPage, categoriesIndexPage, categoryPage, productPage, aboutPage, aboutCounts, contactPage, contactThanksPage, notFoundPage, adminPage, uploadPage, galleryPage, galleryPhotoPage, galleryPhotoImages, siteStats, photoLicencePage, factRelatedLink, eventsPage, eventDetailPage, factsPage, factsMonthPage, factsYearPage, factPage, setCustomCategoryIcons, launchDate, slugify, eventSlug, galleryPhotoSlug, rssFeedXml, mostRecentActivityDate, setServedPhotos, setLinkProducts, missingProductLinks, setEventTints } = require('./src/templates');
 const { eventColours } = require('./src/event-colours');
 const photoMirror = require('./src/photo-mirror');
 
@@ -576,7 +576,16 @@ async function main() {
   write('photo-licence/index.html', photoLicencePage(opts));
   write('gallery/index.html', galleryPage({ photos: galleryPhotos, pageContent: pageContent.gallery || null, ...opts }), galleryPhotos.map(galleryLastmod).filter(Boolean).sort().pop() || null);
   write('events/index.html', eventsPage({ events, productsBySlug, pageContent: pageContent.events || null, ...opts }));
-  write('facts/index.html', factsPage({ facts, products, todayKey: dailyFact ? dailyFact.key : '', history: factHistory, pageContent: pageContent.facts || null, ...opts }));
+  // The Facts page (the latest two months), a page for every month of
+  // facts and one for every year (src/templates.js, factsMonthPage).
+  const factMonths = FactsKit.factsDiaryMonths(facts, products, { todayKey: dailyFact ? dailyFact.key : '', history: factHistory });
+  write('facts/index.html', factsPage({ facts, products, todayKey: dailyFact ? dailyFact.key : '', history: factHistory, months: factMonths, pageContent: pageContent.facts || null, ...opts }));
+  factMonths.forEach((m) => {
+    write(`facts/${m.month.slice(0, 4)}/${m.month.slice(5, 7)}/index.html`, factsMonthPage({ facts, products, todayKey: dailyFact ? dailyFact.key : '', history: factHistory, month: m.month, months: factMonths, ...opts }));
+  });
+  Array.from(new Set(factMonths.map((m) => m.month.slice(0, 4)))).forEach((year) => {
+    write(`facts/${year}/index.html`, factsYearPage({ year, months: factMonths, ...opts }));
+  });
   write('earnings/index.html', earningsPage({ earnings, pageContent: pageContent.earnings || null, ...opts }));
 
   // One page per fact, whose link preview is the fact's card (made and

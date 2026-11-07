@@ -1929,8 +1929,26 @@ ${events.length ? '' : '<p id="no-events" class="page-intro">No events yet.</p>'
 // Statistics worked out from every product, then each product's own
 // "Did you know?". Built by the same code (public/facts-kit.js) that
 // the page's live refresh uses.
-function factsPage({ facts, products, todayKey, history, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
-  const inner = FactsKit.factsPageHtml(facts, products, { todayKey, history });
+// The Facts page shows the latest two months; every month also has its own
+// page (/facts/2026/10/) and every year a page of its months
+// (/facts/2026/), linked under "Earlier facts". A search on the Facts
+// page still finds any fact: the older months are on it, hidden until
+// someone searches.
+const FACTS_RECENT_MONTHS = 2;
+const FACTS_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const factsMonthName = (m) => `${FACTS_MONTH_NAMES[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
+function factsArchiveHtml(months, skip) {
+  const older = months.slice(skip || 0);
+  if (!older.length) return '';
+  const years = Array.from(new Set(older.map((m) => m.month.slice(0, 4))));
+  return `<nav class="facts-archive" aria-labelledby="facts-archive-title">
+  <h2 class="facts-archive-title" id="facts-archive-title">Earlier facts</h2>
+  ${years.map((y) => `<div class="facts-archive-year"><a class="facts-archive-year-link" href="/facts/${y}/">${y}</a><ul class="facts-archive-months">${older.filter((m) => m.month.slice(0, 4) === y).map((m) => `<li><a href="/facts/${y}/${m.month.slice(5, 7)}/">${FACTS_MONTH_NAMES[Number(m.month.slice(5, 7)) - 1]} <span class="facts-archive-count">${m.count}</span></a></li>`).join('')}</ul></div>`).join('\n  ')}
+</nav>`;
+}
+
+function factsPage({ facts, products, todayKey, history, months, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const inner = FactsKit.factsPageHtml(facts, products, { todayKey, history, recentMonths: FACTS_RECENT_MONTHS });
   const body = `
 <div class="page-header-row">
   <h1>${pageHeading(pageContent, 'Facts')}</h1>
@@ -1943,7 +1961,8 @@ ${inner ? '' : '<p id="no-facts" class="page-intro">Nothing here yet.</p>'}
   <input type="search" id="facts-search" class="search-input" placeholder="Search facts…" aria-label="Search facts">
 </div>
 <p id="facts-no-results" class="page-intro" hidden>No facts match your search.</p>
-<div id="facts-list" class="facts-list" data-mode="facts" data-today-key="${escapeHtml(todayKey || '')}" data-history="${escapeHtml(JSON.stringify(history || []))}">${inner}</div>`;
+<div id="facts-list" class="facts-list" data-mode="facts" data-recent-months="${FACTS_RECENT_MONTHS}" data-today-key="${escapeHtml(todayKey || '')}" data-history="${escapeHtml(JSON.stringify(history || []))}">${inner}</div>
+${factsArchiveHtml(months || [], FACTS_RECENT_MONTHS)}`;
   return shell({
     title: 'Apple Sunset: Apple Facts & Trivia',
     description: 'Every "Did you know?" fact from the Apple Sunset homepage, newest first.',
@@ -1953,6 +1972,62 @@ ${inner ? '' : '<p id="no-facts" class="page-intro">Nothing here yet.</p>'}
     supabaseUrl,
     supabaseAnonKey,
     scripts: [`<script src="${assetUrl('facts-kit.js')}" defer></script>`].concat(DEFAULT_SCRIPTS),
+  });
+}
+
+// One month of facts (/facts/2026/10/): the month's "Did you know?"
+// facts, newest first, with the months either side.
+function factsMonthPage({ facts, products, todayKey, history, month, months, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const inner = FactsKit.factsPageHtml(facts, products, { todayKey, history, onlyMonth: month });
+  const at = months.findIndex((m) => m.month === month);
+  const newer = at > 0 ? months[at - 1] : null;
+  const older = at >= 0 && at < months.length - 1 ? months[at + 1] : null;
+  const link = (m, dir) => `<a class="facts-nav-link facts-nav-link--${dir}" href="/facts/${m.month.slice(0, 4)}/${m.month.slice(5, 7)}/">${dir === 'older' ? '&larr; ' : ''}${factsMonthName(m.month)}${dir === 'newer' ? ' &rarr;' : ''}</a>`;
+  const name = factsMonthName(month);
+  const body = `
+<nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li><a href="/facts/">Facts</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li><a href="/facts/${month.slice(0, 4)}/">${month.slice(0, 4)}</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li aria-current="page">${FACTS_MONTH_NAMES[Number(month.slice(5, 7)) - 1]}</li></ol></nav>
+<h1>Facts from ${escapeHtml(name)}</h1>
+<p class="page-intro">Every &ldquo;Did you know?&rdquo; shown on the Apple Sunset homepage in ${escapeHtml(name)}, newest first.</p>
+<div class="controls-row facts-controls">
+  <input type="search" id="facts-search" class="search-input" placeholder="Search these facts…" aria-label="Search facts">
+</div>
+<p id="facts-no-results" class="page-intro" hidden>No facts match your search.</p>
+<div id="facts-list" class="facts-list facts-list--month" data-mode="facts" data-only-month="${month}" data-today-key="${escapeHtml(todayKey || '')}" data-history="${escapeHtml(JSON.stringify(history || []))}">${inner}</div>
+<nav class="facts-nav" aria-label="Other months">${older ? link(older, 'older') : '<span></span>'}<a class="facts-nav-link" href="/facts/">All facts</a>${newer ? link(newer, 'newer') : '<span></span>'}</nav>`;
+  return shell({
+    title: `Apple Sunset: Apple Facts from ${name}`,
+    description: `Every "Did you know?" fact from the Apple Sunset homepage in ${name}.`,
+    siteUrl,
+    path: `/facts/${month.slice(0, 4)}/${month.slice(5, 7)}/`,
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
+    scripts: [`<script src="${assetUrl('facts-kit.js')}" defer></script>`].concat(DEFAULT_SCRIPTS),
+  });
+}
+
+// One year of facts (/facts/2026/): its months, each with how many facts.
+function factsYearPage({ year, months, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  const inYear = months.filter((m) => m.month.slice(0, 4) === year);
+  const total = inYear.reduce((n, m) => n + m.count, 0);
+  const years = Array.from(new Set(months.map((m) => m.month.slice(0, 4))));
+  const at = years.indexOf(year);
+  const body = `
+<nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li><a href="/facts/">Facts</a></li><li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li aria-current="page">${year}</li></ol></nav>
+<h1>Facts from ${year}</h1>
+<p class="page-intro">${plural(total, 'fact', 'facts')} shown on the Apple Sunset homepage in ${year}, month by month.</p>
+<ul class="facts-year-months">
+  ${inYear.map((m) => `<li><a href="/facts/${year}/${m.month.slice(5, 7)}/"><span class="facts-year-month-name">${FACTS_MONTH_NAMES[Number(m.month.slice(5, 7)) - 1]}</span><span class="facts-year-month-count">${plural(m.count, 'fact', 'facts')}</span><span class="facts-year-month-go" aria-hidden="true">&rarr;</span></a></li>`).join('\n  ')}
+</ul>
+<nav class="facts-nav" aria-label="Other years">${at < years.length - 1 ? `<a class="facts-nav-link" href="/facts/${years[at + 1]}/">&larr; ${years[at + 1]}</a>` : '<span></span>'}<a class="facts-nav-link" href="/facts/">All facts</a>${at > 0 ? `<a class="facts-nav-link" href="/facts/${years[at - 1]}/">${years[at - 1]} &rarr;</a>` : '<span></span>'}</nav>`;
+  return shell({
+    title: `Apple Sunset: Apple Facts from ${year}`,
+    description: `Every "Did you know?" fact from the Apple Sunset homepage in ${year}, month by month.`,
+    siteUrl,
+    path: `/facts/${year}/`,
+    bodyHtml: body,
+    supabaseUrl,
+    supabaseAnonKey,
   });
 }
 
@@ -4751,6 +4826,8 @@ module.exports = {
   eventsPage,
   eventDetailPage,
   factsPage,
+  factsMonthPage,
+  factsYearPage,
   factPage,
   setCustomCategoryIcons,
   homePage,
