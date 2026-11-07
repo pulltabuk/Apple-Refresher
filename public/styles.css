@@ -4362,3 +4362,35 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
 .facts-year-month-name { font-size: 18px; font-weight: 800; }
 .facts-year-month-count { font-size: 14px; color: var(--text-secondary); }
 .facts-year-month-go { color: var(--accent); font-weight: 800; }
+
+/* The homepage's "Did you know?": a tile in the page, not a band across
+   the screen. A lightbulb in the sunset's colours on the left; "Did you
+   know?" as a pill with the product beside it; the fact a little larger;
+   its two links side by side. Phones: the lightbulb sits in the top row. */
+#fact-section .fact-box {
+  position: relative; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 18px;
+  width: auto; margin: 0; padding: 30px 36px 30px 118px; box-sizing: border-box;
+  border: 1px solid #f0dcc8; border-radius: 24px;
+  background: radial-gradient(110% 140% at 100% 0%, rgba(232, 117, 44, 0.12) 0%, transparent 55%), linear-gradient(135deg, #fffaf5 0%, #fbede0 100%);
+  box-shadow: 0 1px 2px rgba(30, 20, 10, 0.05), 0 16px 34px -18px rgba(194, 84, 12, 0.4);
+}
+#fact-section .fact-box::before {
+  content: ""; position: absolute; left: 32px; top: 30px; width: 62px; height: 62px; border-radius: 18px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6'/%3E%3Cpath d='M10 21.5h4'/%3E%3Cpath d='M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.6V16h6v-.1c0-.6.3-1.2.8-1.6A6.5 6.5 0 0 0 12 2.5z'/%3E%3C/svg%3E") center / 34px no-repeat,
+    linear-gradient(135deg, #f5b942 0%, #e8752c 42%, #c8432f 70%, #7d2a4a 100%);
+  box-shadow: 0 10px 20px -8px rgba(200, 67, 47, 0.55);
+}
+#fact-section .fact-box > * { max-width: none; margin-left: 0; margin-right: 0; }
+#fact-section .fact-label { flex: none; display: inline-block; margin: 0; padding: 5px 12px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 800; line-height: 1.2; letter-spacing: 0.09em; }
+#fact-section .fact-subject { flex: none; margin: 0; font-size: 15px; font-weight: 700; }
+#fact-section .fact-text { flex: 0 0 100%; margin: 14px 0 0; font-size: 21px; font-weight: 600; line-height: 1.45; color: var(--text); }
+#fact-section .fact-more-link { flex: none; display: inline-flex; margin: 16px 0 0; font-size: 15px; }
+#fact-section .fact-more-link + .fact-more-link { margin-left: 4px; }
+#fact-section .fact-tweet-btn { flex: 0 0 auto; margin: 18px 0 0; }
+@media (max-width: 700px) {
+  #fact-section .fact-box { gap: 0 12px; padding: 22px 20px 24px; border-radius: 20px; }
+  #fact-section .fact-box::before { position: static; flex: none; align-self: center; width: 40px; height: 40px; border-radius: 12px; background-size: 24px, auto; margin-right: -2px; }
+  #fact-section .fact-subject { flex: 0 0 100%; margin-top: 12px; }
+  #fact-section .fact-text { font-size: 18px; margin-top: 8px; }
+  #fact-section .fact-more-link { margin-top: 14px; }
+}
