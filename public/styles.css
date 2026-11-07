@@ -4319,3 +4319,15 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
 }
 /* Room below the row so the shadow isn't cut short. */
 .hx-featured .hero-stack-cards { padding-bottom: 6px; }
+
+/* More room between the three tiles, and bigger headers ("Most recently
+   updated", "Longest wait", "Featured") and product names inside them. */
+.hx-featured .hero-stack-cards { gap: 22px; }
+.card-featured-role { font-size: 13.5px; gap: 8px; letter-spacing: 0.09em; }
+.card-featured-role::before { width: 10px; height: 10px; }
+.hx-featured .card--featured .card-name { font-size: 19px; }
+@media (max-width: 700px) {
+  .hx-featured .hero-stack-cards { gap: 16px; }
+  .card-featured-role { font-size: 12.5px; }
+  .hx-featured .card--featured .card-name { font-size: 17px; }
+}
