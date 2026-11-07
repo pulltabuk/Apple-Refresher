@@ -4306,3 +4306,16 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
    columns (phones lay the clock out as a four-column grid). */
 .hx-spot.countdown--done .hx-clock, .hx-clock:has(> .countdown-done-badge) { display: flex; }
 .hx-spot .countdown-done-badge { white-space: nowrap; }
+
+/* The homepage's three tiles lift off the page: a soft layered shadow,
+   with a faint glow underneath in each tile's own colour (green, red,
+   plum), a little deeper on hover. */
+.hx-featured .card--featured {
+  border-color: #ebe5da;
+  box-shadow: 0 1px 2px rgba(30, 20, 10, 0.06), 0 8px 18px -6px rgba(30, 20, 10, 0.14), 0 22px 36px -24px color-mix(in srgb, var(--role, #8a7a66) 60%, transparent);
+}
+.hx-featured .card--featured:hover {
+  box-shadow: 0 2px 4px rgba(30, 20, 10, 0.07), 0 14px 28px -8px rgba(30, 20, 10, 0.2), 0 28px 44px -24px color-mix(in srgb, var(--role, #8a7a66) 75%, transparent);
+}
+/* Room below the row so the shadow isn't cut short. */
+.hx-featured .hero-stack-cards { padding-bottom: 6px; }
