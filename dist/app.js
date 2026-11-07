@@ -3285,6 +3285,9 @@
   function applyFactsSearchJS() {
     if (!factsListSection) return;
     var query = factsSearch ? factsSearch.value.trim() : '';
+    // The Facts page keeps months before the latest two out of sight
+    // until someone searches, so a search still finds any fact.
+    factsListSection.classList.toggle('is-searching', !!query);
     var shown = 0;
     factsListSection.querySelectorAll('.fact-card').forEach(function (cardEl) {
       var hit = !query || matchesSearchJS(cardEl.getAttribute('data-search') || cardEl.textContent, query);
@@ -3315,7 +3318,14 @@
         // diary of homepage facts, with today's first.
         var history = [];
         try { history = JSON.parse(factsListSection.getAttribute('data-history') || '[]'); } catch (err) { history = []; }
-        var html = window.FactsKit.factsPageHtml(facts, Array.isArray(results[1]) ? results[1] : [], { todayKey: factsListSection.getAttribute('data-today-key') || '', history: history });
+        // The Facts page: the latest months (data-recent-months); a month's
+        // own page: that month (data-only-month). Must match src/templates.js.
+        var html = window.FactsKit.factsPageHtml(facts, Array.isArray(results[1]) ? results[1] : [], {
+          todayKey: factsListSection.getAttribute('data-today-key') || '',
+          history: history,
+          recentMonths: Number(factsListSection.getAttribute('data-recent-months')) || 0,
+          onlyMonth: factsListSection.getAttribute('data-only-month') || '',
+        });
         factsListSection.innerHTML = html;
         var noFacts = document.getElementById('no-facts');
         if (noFacts) noFacts.style.display = html ? 'none' : '';
