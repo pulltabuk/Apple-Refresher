@@ -4399,4 +4399,13 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
    to match with a soft green ring. */
 .live-bar-live { font-size: 13px; letter-spacing: 0.09em; color: #2f8a1f; }
 .live-bar .site-stats-dot { width: 9px; height: 9px; background: #3fa52a; box-shadow: 0 0 0 3px rgba(63, 165, 42, 0.2); }
+/* The green dot stays solid; a soft green ring ripples out from it every
+   few seconds, so the bar reads as "live" at a glance. */
+.live-bar .site-stats-dot { animation: live-ring 2.6s ease-out infinite; }
+@keyframes live-ring {
+  0% { box-shadow: 0 0 0 0 rgba(63, 165, 42, 0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(63, 165, 42, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(63, 165, 42, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .live-bar .site-stats-dot { animation: none; } }
 @media (max-width: 700px) { .live-bar-live { font-size: 12.5px; } }
