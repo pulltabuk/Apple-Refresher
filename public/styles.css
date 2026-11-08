@@ -4394,3 +4394,9 @@ a.hx-spot:hover, .hx-event .event-hero:hover { color: #fff; transform: translate
   #fact-section .fact-text { font-size: 18px; margin-top: 8px; }
   #fact-section .fact-more-link { margin-top: 14px; }
 }
+
+/* "LIVE" on the Live bar: a little larger, in a clear green, its dot
+   to match with a soft green ring. */
+.live-bar-live { font-size: 13px; letter-spacing: 0.09em; color: #2f8a1f; }
+.live-bar .site-stats-dot { width: 9px; height: 9px; background: #3fa52a; box-shadow: 0 0 0 3px rgba(63, 165, 42, 0.2); }
+@media (max-width: 700px) { .live-bar-live { font-size: 12.5px; } }
