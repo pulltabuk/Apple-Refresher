@@ -4142,6 +4142,20 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
   <div id="tab-x" class="admin-tab-panel" style="display:none;">
     <p class="admin-hint x-intro">Posts for the Apple Sunset X account only. Nothing here is saved or shown on the website.</p>
 
+    <section class="x-sched" id="x-sched" aria-labelledby="x-sched-title">
+      <div class="x-sched-top">
+        <div class="x-sched-head">
+          <h3 class="x-sched-title" id="x-sched-title">Scheduled on X</h3>
+          <div class="x-sched-tools">
+            <button type="button" id="x-sched-refresh" class="x-sched-tool" aria-label="Refresh the list from Buffer" title="Refresh">&#8635;</button>
+            <a class="x-sched-tool x-sched-tool--text" href="https://publish.buffer.com/" target="_blank" rel="noopener">Open Buffer <span aria-hidden="true">&#8599;</span></a>
+          </div>
+        </div>
+        <div class="x-sched-stats" id="x-sched-stats"><p class="x-sched-msg">Checking Buffer&hellip;</p></div>
+      </div>
+      <div class="x-sched-body" id="x-sched-body"></div>
+    </section>
+
     <section class="x-drafts" id="x-drafts" aria-labelledby="x-drafts-title">
       <div class="x-drafts-head">
         <h3 class="admin-form-section" id="x-drafts-title">Drafts to review</h3>

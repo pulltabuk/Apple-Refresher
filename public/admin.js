@@ -1109,6 +1109,7 @@
         note.textContent = mode === 'schedule'
           ? 'Scheduled in Buffer for ' + whenText(sent.dueAt || dueAt) + '.'
           : 'Added to your Buffer queue' + (sent.dueAt ? ', going out ' + whenText(sent.dueAt) : '') + '.';
+        setTimeout(loadScheduled, 1500);
         if (composerDraft) {
           await markDraft(composerDraft, { status: mode === 'schedule' ? 'scheduled' : 'queued', buffer_post_id: sent.id || null, scheduled_for: sent.dueAt || dueAt || null, text: body });
           composerDraft = null;
@@ -1142,6 +1143,154 @@
       sendComposer('schedule', at);
     });
 
+    // --- Scheduled on X: what's waiting in Buffer to go out, read live from
+    // Buffer (so posts scheduled in Buffer itself show too), by day, with
+    // any that failed and the last few sent. Read-only: changes are made in
+    // Buffer.
+    const escX = (str) => String(str == null ? '' : str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const clockText = (iso) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const dayKey = (d) => d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+    function dayName(iso) {
+      const d = new Date(iso);
+      const today = new Date();
+      const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+      if (dayKey(d) === dayKey(today)) return 'Today';
+      if (dayKey(d) === dayKey(tomorrow)) return 'Tomorrow';
+      if (dayKey(d) === dayKey(yesterday)) return 'Yesterday';
+      return d.toLocaleDateString('en-GB', { weekday: 'long' });
+    }
+    const dateText = (iso) => new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '');
+    // "in 2h 15m", "in 3 days", "5m ago".
+    function relText(iso) {
+      const ms = Date.parse(iso) - Date.now();
+      const mins = Math.round(Math.abs(ms) / 60000);
+      let t;
+      if (mins < 1) return ms >= 0 ? 'any moment' : 'just now';
+      if (mins < 60) t = mins + 'm';
+      else if (mins < 48 * 60) { const h = Math.floor(mins / 60); const m = mins % 60; t = h + 'h' + (m && h < 10 ? ' ' + m + 'm' : ''); }
+      else t = Math.round(mins / 1440) + ' days';
+      return ms >= 0 ? 'in ' + t : t + ' ago';
+    }
+    function schedItem(post, opts) {
+      const at = post.dueAt || post.sentAt;
+      const li = document.createElement('li');
+      li.className = 'x-sched-item' + (opts.next ? ' is-next' : '') + (opts.kind === 'failed' ? ' is-failed' : '') + (opts.kind === 'sent' ? ' is-sent' : '');
+      const tag = opts.kind === 'failed' ? '<span class="x-sched-tag x-sched-tag--failed">Didn\u2019t go out</span>'
+        : opts.kind === 'sent' ? '<span class="x-sched-tag x-sched-tag--sent">Sent</span>'
+        : opts.next ? '<span class="x-sched-tag x-sched-tag--next">Next</span>'
+        : post.custom === true ? '<span class="x-sched-tag">Set time</span>'
+        : post.custom === false ? '<span class="x-sched-tag">Queue slot</span>' : '';
+      const when = opts.kind === 'upcoming' ? '' : '<span class="x-sched-date">' + escX(at ? dateText(at) : '') + '</span>';
+      li.innerHTML =
+        '<details class="x-sched-post">' +
+          '<summary>' +
+            '<time class="x-sched-time"' + (at ? ' datetime="' + escX(at) + '"' : '') + '>' + escX(at ? clockText(at) : '\u2014') + '</time>' +
+            '<span class="x-sched-main">' +
+              '<span class="x-sched-text"></span>' +
+              '<span class="x-sched-meta">' + tag + when + (at ? '<span class="x-sched-rel" data-at="' + escX(at) + '">' + escX(relText(at)) + '</span>' : '') + '</span>' +
+            '</span>' +
+            (post.image ? '<img class="x-sched-thumb" alt="" loading="lazy">' : '<span class="x-sched-thumb x-sched-thumb--none" aria-hidden="true">\uD835\uDD4F</span>') +
+          '</summary>' +
+          '<div class="x-sched-full"><p class="x-sched-full-text"></p>' +
+            (post.error ? '<p class="x-sched-error"></p>' : '') +
+            '<p class="x-sched-when"></p>' +
+          '</div>' +
+        '</details>';
+      li.querySelector('.x-sched-text').textContent = post.text.replace(/\s+/g, ' ').trim() || '(No text)';
+      li.querySelector('.x-sched-full-text').textContent = post.text || '(No text)';
+      if (post.error) li.querySelector('.x-sched-error').textContent = 'Buffer says: ' + post.error;
+      li.querySelector('.x-sched-when').textContent = at ? (opts.kind === 'sent' ? 'Sent ' : opts.kind === 'failed' ? 'Was due ' : 'Goes out ') + whenText(at) : 'In Buffer, without a time yet';
+      if (post.image) li.querySelector('img.x-sched-thumb').src = post.image;
+      return li;
+    }
+    function renderScheduled(data) {
+      const stats = $x('x-sched-stats');
+      const body = $x('x-sched-body');
+      const up = data.upcoming || [];
+      const failed = data.failed || [];
+      const sent = data.sent || [];
+      const next = up.find((p) => p.dueAt);
+      const last = up.slice().reverse().find((p) => p.dueAt);
+      const stat = (big, small, cls) => '<div class="x-sched-stat' + (cls ? ' ' + cls : '') + '"><strong>' + big + '</strong><span>' + small + '</span></div>';
+      stats.innerHTML = up.length
+        ? stat(String(up.length), up.length === 1 ? 'post scheduled' : 'posts scheduled') +
+          (next ? stat('<span class="x-sched-rel" data-at="' + escX(next.dueAt) + '" data-bare="1">' + escX(relText(next.dueAt).replace(/^in /, '')) + '</span>', 'until the next, ' + escX(dayName(next.dueAt).toLowerCase() === 'today' ? 'today' : dateText(next.dueAt)) + ' at ' + escX(clockText(next.dueAt))) : '') +
+          (last && up.length > 1 ? stat(escX(dayName(last.dueAt) === 'Today' || dayName(last.dueAt) === 'Tomorrow' ? dayName(last.dueAt) : dateText(last.dueAt)), 'last one goes out, ' + escX(clockText(last.dueAt))) : '')
+        : '<p class="x-sched-msg">Nothing scheduled right now. Posts you queue or schedule in Buffer show up here.</p>';
+      if (failed.length) stats.insertAdjacentHTML('beforeend', stat(String(failed.length), 'didn\u2019t go out', 'x-sched-stat--failed'));
+      body.innerHTML = '';
+      if (failed.length) {
+        const box = document.createElement('div');
+        box.className = 'x-sched-group x-sched-group--failed';
+        box.innerHTML = '<h4 class="x-sched-day"><span>Didn\u2019t go out</span><small>Fix or retry these in Buffer</small></h4><ol class="x-sched-items"></ol>';
+        failed.forEach((p) => box.lastChild.appendChild(schedItem(p, { kind: 'failed' })));
+        body.appendChild(box);
+      }
+      // Upcoming, a group per day.
+      let group = null;
+      let groupKey = '';
+      up.forEach((p) => {
+        const key = p.dueAt ? dayKey(new Date(p.dueAt)) : 'none';
+        if (key !== groupKey) {
+          groupKey = key;
+          const count = up.filter((q) => (q.dueAt ? dayKey(new Date(q.dueAt)) : 'none') === key).length;
+          group = document.createElement('div');
+          group.className = 'x-sched-group';
+          group.innerHTML = '<h4 class="x-sched-day"><span></span><small></small></h4><ol class="x-sched-items"></ol>';
+          group.querySelector('.x-sched-day span').textContent = p.dueAt ? dayName(p.dueAt) : 'No time yet';
+          group.querySelector('.x-sched-day small').textContent = (p.dueAt ? new Date(p.dueAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }) + ' \u00b7 ' : '') + count + (count === 1 ? ' post' : ' posts');
+          body.appendChild(group);
+        }
+        group.lastChild.appendChild(schedItem(p, { kind: 'upcoming', next: p === next }));
+      });
+      if (sent.length) {
+        const box = document.createElement('details');
+        box.className = 'x-sched-group x-sched-group--sent';
+        box.innerHTML = '<summary class="x-sched-day"><span>Recently sent</span><small>The last ' + sent.length + '</small></summary><ol class="x-sched-items"></ol>';
+        sent.forEach((p) => box.lastChild.appendChild(schedItem(p, { kind: 'sent' })));
+        body.appendChild(box);
+      }
+      const stamp = document.createElement('p');
+      stamp.className = 'x-sched-stamp';
+      stamp.textContent = 'From Buffer at ' + clockText(data.at || new Date().toISOString()) + '. Change or delete posts in Buffer.';
+      body.appendChild(stamp);
+    }
+    let schedLoading = false;
+    async function loadScheduled() {
+      if (schedLoading) return;
+      schedLoading = true;
+      const stats = $x('x-sched-stats');
+      const btn = $x('x-sched-refresh');
+      btn.classList.add('is-loading');
+      if (!stats.querySelector('.x-sched-stat')) stats.innerHTML = '<p class="x-sched-msg">Checking Buffer\u2026</p>';
+      try {
+        const token = await ownerToken();
+        if (!token) throw new Error('You\u2019re signed out. Log in again.');
+        const res = await fetch('/.netlify/functions/buffer', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'list' }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.error || 'Buffer didn\u2019t answer (' + res.status + ')');
+        renderScheduled(data);
+      } catch (err) {
+        stats.innerHTML = '<p class="x-sched-msg x-sched-msg--error"></p>';
+        stats.firstChild.textContent = 'Couldn\u2019t load the list from Buffer: ' + err.message;
+      }
+      btn.classList.remove('is-loading');
+      schedLoading = false;
+    }
+    $x('x-sched-refresh').addEventListener('click', loadScheduled);
+    // Keeps "in 2h 15m" current while the page is open.
+    setInterval(() => {
+      document.querySelectorAll('#x-sched .x-sched-rel[data-at]').forEach((el) => {
+        const t = relText(el.getAttribute('data-at'));
+        el.textContent = el.hasAttribute('data-bare') ? t.replace(/^in /, '') : t;
+      });
+    }, 60000);
+
     // --- Drafts to review: written each morning (x-drafts-background on
     // Netlify) from the site's data and, with an Anthropic key, researched
     // by Claude. Each can be queued or scheduled in Buffer, finished in the
@@ -1172,7 +1321,7 @@
       list.innerHTML = '';
       data.forEach((d) => list.appendChild(draftItem(d)));
     }
-    xDraftsLoader = loadDrafts;
+    xDraftsLoader = () => { loadDrafts(); loadScheduled(); };
 
     function draftItem(d) {
       const card = d.card || {};
@@ -1254,6 +1403,7 @@
           item.classList.add('is-done');
           note.textContent = mode === 'schedule' ? 'Scheduled in Buffer for ' + whenText(sent.dueAt || dueAt) + '.' : 'Added to your Buffer queue' + (sent.dueAt ? ', going out ' + whenText(sent.dueAt) : '') + '.';
           setTimeout(loadDrafts, 2500);
+          setTimeout(loadScheduled, 1500);
         } catch (err) {
           note.classList.add('x-card-note');
           note.textContent = 'Not sent: ' + err.message;
