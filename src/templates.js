@@ -3750,14 +3750,16 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <p class="admin-hint" id="timeline-group-note" style="display:none;"></p>
           </div>
 
-          <div class="admin-subfield">
-            <span class="admin-subfield-label">Launch price <span class="admin-optional">Optional, the price this version launched at</span></span>
+          <div class="admin-subfield admin-subfield--price">
+            <span class="admin-subfield-label">Launch price <span class="admin-optional">Optional, the price this version launched at</span><span class="price-missing-tag" aria-hidden="true">Not added yet</span></span>
             <div class="price-currency-row">
               <div class="segmented segmented--small" role="radiogroup" aria-label="Currency">
                 <label><input type="radio" name="price_currency" value="&pound;"><span>&pound;</span></label>
                 <label><input type="radio" name="price_currency" value="$" checked><span>$</span></label>
               </div>
-              <input type="text" id="price" placeholder="799" inputmode="decimal" autocomplete="off">
+              <!-- No suggested figure: the field starts empty. The blank
+                   placeholder lets the box show orange while it's empty. -->
+              <input type="text" id="price" placeholder=" " inputmode="decimal" autocomplete="off" aria-label="Launch price">
             </div>
           </div>
 

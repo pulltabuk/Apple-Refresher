@@ -4541,3 +4541,14 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
   .x-sched-post > summary { grid-template-columns: 46px minmax(0, 1fr); padding: 10px; }
   .x-sched-thumb { border-radius: 9px; }
 }
+
+/* Admin product form: the launch price sits in a bold orange box with a
+   "Not added yet" tag while it's empty, so it isn't missed; once a price
+   is typed it goes back to normal. */
+.admin-subfield--price { margin-left: -14px; margin-right: -14px; padding: 12px 14px 14px; border: 2px solid transparent; border-radius: 14px; transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; }
+.price-missing-tag { display: none; margin-left: 8px; padding: 2px 9px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11.5px; font-weight: 800; letter-spacing: 0.03em; vertical-align: 1px; white-space: nowrap; }
+.admin-subfield--price:has(#price:placeholder-shown) { border-color: var(--accent); background: var(--accent-bg); box-shadow: 0 0 0 4px rgba(194, 84, 12, 0.14); }
+.admin-subfield--price:has(#price:placeholder-shown) .price-missing-tag { display: inline-block; }
+.admin-subfield--price #price:placeholder-shown { border: 2px solid var(--accent); background: #fff; }
+.admin-subfield--price #price:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (max-width: 600px) { .admin-subfield--price { margin-left: -10px; margin-right: -10px; padding: 10px; } }
