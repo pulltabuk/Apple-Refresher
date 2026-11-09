@@ -4516,3 +4516,28 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 /* The date and "in 2h" stay together on one line. */
 .x-sched-at { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .x-sched-date + .x-sched-rel::before { content: "\00b7"; margin-right: 8px; color: #b5a993; font-weight: 700; }
+
+/* Scheduled on X: the cards large enough to read at a glance. Beside the
+   post on a computer; under its text, full width, on a phone. */
+.x-sched-post > summary { grid-template-columns: 58px minmax(0, 1fr) 360px; align-items: start; padding: 12px 12px 12px 14px; }
+.x-sched-time { padding-top: 2px; }
+.x-sched-text { -webkit-line-clamp: 4; font-size: 14.5px; }
+.x-sched-thumb { width: 360px; border-radius: 10px; }
+/* No card: a small quiet note, not a big empty box. */
+.x-sched-thumb--none { aspect-ratio: auto; height: 34px; border: 1px dashed #dcd2c3; background: transparent; font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: #ab9f8b; }
+.x-sched-card-link { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--accent-dark); text-decoration: none; }
+.x-sched-card-link:hover { text-decoration: underline; }
+@media (max-width: 1100px) {
+  .x-sched-post > summary { grid-template-columns: 58px minmax(0, 1fr) 280px; }
+  .x-sched-thumb { width: 280px; }
+}
+/* Narrower: the card goes under the text, as wide as the text. */
+@media (max-width: 900px) {
+  .x-sched-post > summary { grid-template-columns: 52px minmax(0, 1fr); }
+  .x-sched-thumb { grid-column: 2; width: 100%; max-width: 440px; margin-top: 2px; }
+  .x-sched-thumb--none { display: none; }
+}
+@media (max-width: 600px) {
+  .x-sched-post > summary { grid-template-columns: 46px minmax(0, 1fr); padding: 10px; }
+  .x-sched-thumb { border-radius: 9px; }
+}
