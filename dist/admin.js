@@ -3616,6 +3616,23 @@
     return from !== -1 && from < at ? { date: lastPicked.date, from: lastPicked.row } : null;
   }
   const precisionOf = (d) => (/^\d{4}$/.test(d || '') ? 'year' : /^\d{4}-\d{2}$/.test(d || '') ? 'month' : 'day');
+  // A month-only date from its month menu and year box ("2001-01"), or
+  // null until both are filled in. A menu and a box, not a month picker,
+  // because Safari on a Mac has no month picker.
+  function monthPickValue(prefix) {
+    const m = document.getElementById(prefix + '_month_select').value;
+    const y = document.getElementById(prefix + '_month_year').value.trim();
+    return m && /^\d{4}$/.test(y) ? y + '-' + m : null;
+  }
+  function setMonthPick(prefix, value) {
+    const ok = /^\d{4}-\d{2}$/.test(value || '');
+    document.getElementById(prefix + '_month_select').value = ok ? value.slice(5, 7) : '';
+    document.getElementById(prefix + '_month_year').value = ok ? value.slice(0, 4) : '';
+  }
+  // How exact the launch date is: a day, or only a month or year (older
+  // products). Follows the saved launch date, or the menu while it's empty.
+  let launchPrecision = 'day';
+  let launchPrecisionFor;
 
   function rowNote(row, text) {
     const rowEl = document.querySelector('[data-date-row="' + row + '"]');
@@ -3682,10 +3699,11 @@
     if (releasePrecisionFor !== target) {
       releasePrecision = target ? precisionOf(target) : 'day';
       releasePrecisionFor = target;
+      setMonthPick('release', null);
     }
     document.getElementById('release_precision').value = releasePrecision;
     const dayIn = document.getElementById('release_date_input');
-    const monthIn = document.getElementById('release_month_input');
+    const monthIn = document.getElementById('release_month_pick');
     const yearIn = document.getElementById('release_year_input');
     dayIn.hidden = releasePrecision !== 'day';
     monthIn.hidden = releasePrecision !== 'month';
@@ -3698,7 +3716,7 @@
       dayIn.classList.remove('is-suggested');
       rowNote('release', '');
     }
-    monthIn.value = target && precisionOf(target) === 'month' ? target : '';
+    if (target && precisionOf(target) === 'month') setMonthPick('release', target);
     yearIn.value = target && precisionOf(target) === 'year' ? target : '';
 
     // Its name and whether it was the product's launch.
@@ -3813,7 +3831,10 @@
       commitDate(row, null);
     });
   });
-  document.getElementById('release_month_input').addEventListener('change', (e) => { if (e.target.value) commitDate('release', e.target.value); });
+  ['release_month_select', 'release_month_year'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
+    const v = monthPickValue('release');
+    if (v) commitDate('release', v);
+  }));
   document.getElementById('release_year_input').addEventListener('change', (e) => {
     const v = e.target.value.trim();
     if (/^\d{4}$/.test(v)) commitDate('release', v);
@@ -3844,21 +3865,35 @@
     const input = document.getElementById('launch_date_input');
     const same = document.getElementById('launch_same_btn');
     const clear = document.querySelector('[data-date-clear="launch"]');
+    const yearIn = document.getElementById('launch_year_input');
     const launch = currentOriginalLaunchDate;
-    input.value = isFullDate(launch) ? launch : '';
+    // An exact day, or only a month or year: as saved, or as picked in
+    // the menu while there's no launch date yet.
+    if (launch && launchPrecisionFor !== launch) launchPrecision = precisionOf(launch);
+    launchPrecisionFor = launch;
+    document.getElementById('launch_precision').value = launchPrecision;
+    input.hidden = launchPrecision !== 'day';
+    document.getElementById('launch_month_pick').hidden = launchPrecision !== 'month';
+    yearIn.hidden = launchPrecision !== 'year';
     clear.hidden = !launch;
-    // Empty: it offers the release when that's the first one, otherwise
-    // the announced date above it, shown pale until its button is pressed.
-    const offer = launch ? null : launchSuggestion(target);
-    if (offer) input.value = offer.date;
-    input.classList.toggle('is-suggested', !!offer);
-    same.hidden = !offer;
-    same.textContent = offer ? '\u2713 Same as ' + SAME_AS[offer.from] : '';
-    same.title = offer ? 'Launched ' + formatAdminDate(offer.date) : '';
-    rowNote('launch', launch && !isFullDate(launch)
-      ? 'Recorded as ' + formatAdminDate(launch) + '. Pick a day to replace it.'
-      : launch && currentRefreshHistory.indexOf(launch) === -1
-      ? 'Tap \u201c\u2713 Same as launch\u201d by the release date below to make it the first release. (Saving adds it either way.)'
+    if (launchPrecision === 'day') {
+      input.value = isFullDate(launch) ? launch : '';
+      // Empty: it offers the release when that's the first one, otherwise
+      // the announced date above it, shown pale until its button is pressed.
+      const offer = launch ? null : launchSuggestion(target);
+      if (offer) input.value = offer.date;
+      input.classList.toggle('is-suggested', !!offer);
+      same.hidden = !offer;
+      same.textContent = offer ? '\u2713 Same as ' + SAME_AS[offer.from] : '';
+      same.title = offer ? 'Launched ' + formatAdminDate(offer.date) : '';
+    } else {
+      input.classList.remove('is-suggested');
+      same.hidden = true;
+      if (launchPrecision === 'month' && precisionOf(launch) === 'month') setMonthPick('launch', launch);
+      if (launchPrecision === 'year' && document.activeElement !== yearIn) yearIn.value = precisionOf(launch) === 'year' ? launch : '';
+    }
+    rowNote('launch', launch && currentRefreshHistory.indexOf(launch) === -1
+      ? 'Saving adds ' + formatAdminDate(launch) + ' to the list above as the first release.'
       : '');
   }
   function launchSuggestion(target) {
@@ -3878,10 +3913,27 @@
         renderDatesBox();
         return;
       }
+      // No releases yet (the first product in a line): the launch is the
+      // first release, so it goes straight into the list, taking any
+      // announced or pre-order dates already filled in for it.
+      if (!currentRefreshHistory.length) {
+        currentOriginalLaunchDate = value;
+        commitDate('release', value);
+        if (currentRefreshHistory.indexOf(value) === -1) currentOriginalLaunchDate = old;
+        productFormDirty = true;
+        renderRefreshHistory();
+        updateStatusReadout();
+        return;
+      }
       // Not a release yet: it stays a launch date only, and the Release
       // row offers it ("✓ Same as launch"). Saving adds it as the first
-      // release either way. A launch release already in the list moves.
-      if (currentRefreshHistory.indexOf(value) === -1 && old && old !== datesTarget() && currentRefreshHistory.indexOf(old) !== -1) {
+      // release either way. A launch release already in the list moves:
+      // always when it's the only release, or when the new date is the
+      // same one made more or less exact (9 Jan 2001 to Jan 2001).
+      const samePeriod = old && (value.indexOf(old) === 0 || old.indexOf(value) === 0);
+      if (currentRefreshHistory.indexOf(value) === -1 && old && currentRefreshHistory.indexOf(old) !== -1 &&
+          (old !== datesTarget() || currentRefreshHistory.length === 1 || samePeriod)) {
+        releasePrecisionFor = undefined;
         currentRefreshHistory = currentRefreshHistory.map((d) => (d === old ? value : d)).sort();
         if (currentGenerationDetails[old]) {
           currentGenerationDetails[value] = currentGenerationDetails[old];
@@ -3900,6 +3952,19 @@
     updateStatusReadout();
   }
   document.getElementById('launch_date_input').addEventListener('change', (e) => commitLaunch(e.target.value || null));
+  document.getElementById('launch_precision').addEventListener('change', (e) => {
+    launchPrecision = e.target.value;
+    setMonthPick('launch', null);
+    renderDatesBox();
+  });
+  ['launch_month_select', 'launch_month_year'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
+    const v = monthPickValue('launch');
+    if (v) commitLaunch(v);
+  }));
+  document.getElementById('launch_year_input').addEventListener('change', (e) => {
+    const v = e.target.value.trim();
+    if (/^\d{4}$/.test(v)) commitLaunch(v);
+  });
   document.getElementById('launch_same_btn').addEventListener('click', () => {
     const offer = launchSuggestion(datesTarget());
     if (offer) commitLaunch(offer.date);
@@ -4806,6 +4871,9 @@
     currentDropped = takeDroppedFromDetails(currentGenerationDetails);
     pendingModelsDiscontinued = !p.discontinued_date && lastDroppedDate() ? lastDroppedDate() : null;
     currentOriginalLaunchDate = p.original_launch_date || null;
+    launchPrecision = 'day';
+    launchPrecisionFor = undefined;
+    setMonthPick('launch', null);
     currentIconUrl = p.icon_url || null;
     currentVideoUrl = p.video_url || null;
     onFamilyChanged();
@@ -4873,6 +4941,9 @@
     document.getElementById('did_you_know_date').value = '';
     document.getElementById('did-you-know-date-note').hidden = factDateColumnExists();
     currentOriginalLaunchDate = null;
+    launchPrecision = 'day';
+    launchPrecisionFor = undefined;
+    setMonthPick('launch', null);
     currentRefreshHistory = [];
     currentGenerationDetails = {};
     currentDropped = [];

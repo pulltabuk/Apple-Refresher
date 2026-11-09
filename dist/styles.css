@@ -4559,3 +4559,7 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 .admin-save-error { order: -1; flex: 1 1 100%; margin: 0; padding: 9px 13px; border-radius: 10px; border: 1px solid #f0c3bc; background: #fff3f1; color: #a8261f; font-size: 14px; font-weight: 700; line-height: 1.4; }
 .admin-save-error:empty { display: none; }
 #price-error:not(:empty) { margin: 10px 0 0; font-size: 14px; font-weight: 700; }
+/* Month-only dates (release and launch): a month menu and a year box,
+   side by side, which works in every browser. */
+.admin-month-pick { display: inline-flex; align-items: center; gap: 8px; }
+.admin-month-pick[hidden] { display: none; }
