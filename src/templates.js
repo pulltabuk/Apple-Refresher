@@ -3751,7 +3751,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
 
           <div class="admin-subfield admin-subfield--price">
-            <span class="admin-subfield-label">Launch price <span class="admin-optional">Optional, the price this version launched at</span><span class="price-missing-tag" aria-hidden="true">Not added yet</span></span>
+            <span class="admin-subfield-label">Launch price <span class="admin-required">Required</span> <span class="admin-optional">the price this version launched at</span><span class="price-missing-tag" aria-hidden="true">Not added yet</span></span>
             <div class="price-currency-row">
               <div class="segmented segmented--small" role="radiogroup" aria-label="Currency">
                 <label><input type="radio" name="price_currency" value="&pound;"><span>&pound;</span></label>
@@ -3759,8 +3759,9 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               </div>
               <!-- No suggested figure: the field starts empty. The blank
                    placeholder lets the box show orange while it's empty. -->
-              <input type="text" id="price" placeholder=" " inputmode="decimal" autocomplete="off" aria-label="Launch price">
+              <input type="text" id="price" placeholder=" " inputmode="decimal" autocomplete="off" aria-label="Launch price" aria-required="true" aria-describedby="price-error">
             </div>
+            <p id="price-error" class="form-error" role="alert"></p>
           </div>
 
           <div class="admin-subfield">
@@ -3995,6 +3996,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <div class="admin-save-bar">
           <button type="submit" id="save-product-btn" class="admin-btn admin-btn--primary">Save product</button>
           <button type="button" id="cancel-product-btn" class="admin-btn admin-btn--ghost">Cancel</button>
+          <p id="save-error" class="form-error admin-save-error" role="alert"></p>
           <button type="button" id="delete-product-btn" class="admin-btn admin-btn--danger" style="display:none;">Delete</button>
         </div>
       </form>

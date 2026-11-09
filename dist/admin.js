@@ -4744,7 +4744,7 @@
   }
 
   function clearFormErrors() {
-    ['family-error', 'name-error', 'discontinued-error', 'generation-add-error', 'video-error'].forEach((id) => {
+    ['family-error', 'name-error', 'discontinued-error', 'generation-add-error', 'video-error', 'price-error', 'save-error'].forEach((id) => {
       document.getElementById(id).textContent = '';
     });
   }
@@ -5204,6 +5204,15 @@
         document.getElementById('name-error').textContent = 'Give this product line a name.';
         firstError = firstError || document.getElementById('step-line');
       }
+      // The launch price is required: no product saves without one.
+      const priceEntered = document.getElementById('price').value.trim();
+      if (!priceEntered) {
+        document.getElementById('price-error').textContent = 'Add the launch price before saving, e.g. 999, and pick \u00a3 or $ beside it.';
+        firstError = firstError || document.querySelector('.admin-subfield--price');
+      } else if (!/\d/.test(priceEntered)) {
+        document.getElementById('price-error').textContent = 'That price doesn\u2019t look right. Type the number only, e.g. 999 or 1,299.';
+        firstError = firstError || document.querySelector('.admin-subfield--price');
+      }
       // Announced or pre-order dates waiting for a release would be lost.
       const pendingUpdate = pendingUpdates.some((u) => u.date || (u.note || '').trim());
       if (pendingAnnouncedDate || pendingPreorderDate || pendingUpdate) {
@@ -5231,7 +5240,13 @@
         firstError = firstError || document.getElementById('step-extras');
       }
       if (firstError) {
+        // Said beside the Save button too, so it's clear nothing was saved.
+        const priceProblem = document.getElementById('price-error').textContent;
+        document.getElementById('save-error').textContent = 'Not saved. ' + (priceProblem && firstError === document.querySelector('.admin-subfield--price')
+          ? 'The launch price is required: add it above, then save again.'
+          : 'Fix the message in red above, then save again.');
         firstError.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        if (firstError.classList.contains('admin-subfield--price')) setTimeout(() => document.getElementById('price').focus({ preventScroll: true }), 350);
         return;
       }
 

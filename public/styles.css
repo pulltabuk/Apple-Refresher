@@ -4552,3 +4552,10 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 .admin-subfield--price #price:placeholder-shown { border: 2px solid var(--accent); background: #fff; }
 .admin-subfield--price #price:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 @media (max-width: 600px) { .admin-subfield--price { margin-left: -10px; margin-right: -10px; padding: 10px; } }
+/* "Required" beside the launch price, and the "Not saved" message that
+   sits in the save bar beside the Save button. */
+.admin-required { display: inline-block; margin: 0 4px 0 6px; padding: 1px 8px; border-radius: 999px; background: #2a1c30; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 0.03em; vertical-align: 1px; }
+.admin-save-bar { flex-wrap: wrap; }
+.admin-save-error { order: -1; flex: 1 1 100%; margin: 0; padding: 9px 13px; border-radius: 10px; border: 1px solid #f0c3bc; background: #fff3f1; color: #a8261f; font-size: 14px; font-weight: 700; line-height: 1.4; }
+.admin-save-error:empty { display: none; }
+#price-error:not(:empty) { margin: 10px 0 0; font-size: 14px; font-weight: 700; }
