@@ -1145,8 +1145,8 @@
 
     // --- Scheduled on X: what's waiting in Buffer to go out, read live from
     // Buffer (so posts scheduled in Buffer itself show too), by day, with
-    // any that failed and the last few sent. Read-only: changes are made in
-    // Buffer.
+    // any that failed and the last few sent. Each can be moved to a new
+    // time or deleted from here.
     const escX = (str) => String(str == null ? '' : str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const clockText = (iso) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     const dayKey = (d) => d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
@@ -1179,22 +1179,42 @@
       const tag = opts.kind === 'failed' ? '<span class="x-sched-tag x-sched-tag--failed">Didn\u2019t go out</span>'
         : opts.kind === 'sent' ? '<span class="x-sched-tag x-sched-tag--sent">Sent</span>'
         : opts.next ? '<span class="x-sched-tag x-sched-tag--next">Next</span>'
-        : post.custom === true ? '<span class="x-sched-tag">Set time</span>'
-        : post.custom === false ? '<span class="x-sched-tag">Queue slot</span>' : '';
-      const when = opts.kind === 'upcoming' ? '' : '<span class="x-sched-date">' + escX(at ? dateText(at) : '') + '</span>';
+        : post.custom === true ? '<span class="x-sched-tag" title="Scheduled for this date and time">Scheduled</span>'
+        : post.custom === false ? '<span class="x-sched-tag" title="In a Buffer queue slot">Queue</span>' : '';
+      // The date beside every time, so each post reads in full on its own.
+      const when = at ? '<span class="x-sched-date">' + escX(dateText(at)) + '</span>' : '';
       li.innerHTML =
         '<details class="x-sched-post">' +
           '<summary>' +
             '<time class="x-sched-time"' + (at ? ' datetime="' + escX(at) + '"' : '') + '>' + escX(at ? clockText(at) : '\u2014') + '</time>' +
             '<span class="x-sched-main">' +
               '<span class="x-sched-text"></span>' +
-              '<span class="x-sched-meta">' + tag + when + (at ? '<span class="x-sched-rel" data-at="' + escX(at) + '">' + escX(relText(at)) + '</span>' : '') + '</span>' +
+              '<span class="x-sched-meta">' + tag + (at ? '<span class="x-sched-at">' + when + '<span class="x-sched-rel" data-at="' + escX(at) + '">' + escX(relText(at)) + '</span></span>' : '') + '</span>' +
             '</span>' +
             (post.image ? '<img class="x-sched-thumb" alt="" loading="lazy">' : '<span class="x-sched-thumb x-sched-thumb--none" aria-hidden="true">\uD835\uDD4F</span>') +
           '</summary>' +
           '<div class="x-sched-full"><p class="x-sched-full-text"></p>' +
             (post.error ? '<p class="x-sched-error"></p>' : '') +
             '<p class="x-sched-when"></p>' +
+            (opts.kind !== 'sent' && post.id
+              ? '<div class="x-sched-actions">' +
+                  '<button type="button" class="x-sched-act" data-act="move">' + (opts.kind === 'failed' ? 'Try again at\u2026' : 'Move\u2026') + '</button>' +
+                  '<button type="button" class="x-sched-act x-sched-act--delete" data-act="delete">Delete</button>' +
+                '</div>' +
+                '<div class="x-sched-move" hidden>' +
+                  '<input type="datetime-local" aria-label="New time for this post">' +
+                  '<div class="x-sched-quick">' +
+                    '<button type="button" class="x-sched-chip" data-shift="60">+1 hour</button>' +
+                    '<button type="button" class="x-sched-chip" data-shift="1440">+1 day</button>' +
+                    '<button type="button" class="x-sched-chip" data-shift="10080">+1 week</button>' +
+                  '</div>' +
+                  '<div class="x-sched-move-btns">' +
+                    '<button type="button" class="admin-btn admin-btn--primary admin-btn--small" data-act="move-go">Move here</button>' +
+                    '<button type="button" class="admin-btn admin-btn--small" data-act="move-cancel">Cancel</button>' +
+                  '</div>' +
+                '</div>' +
+                '<p class="x-sched-act-note" hidden></p>'
+              : '') +
           '</div>' +
         '</details>';
       li.querySelector('.x-sched-text').textContent = post.text.replace(/\s+/g, ' ').trim() || '(No text)';
@@ -1202,7 +1222,83 @@
       if (post.error) li.querySelector('.x-sched-error').textContent = 'Buffer says: ' + post.error;
       li.querySelector('.x-sched-when').textContent = at ? (opts.kind === 'sent' ? 'Sent ' : opts.kind === 'failed' ? 'Was due ' : 'Goes out ') + whenText(at) : 'In Buffer, without a time yet';
       if (post.image) li.querySelector('img.x-sched-thumb').src = post.image;
+      if (li.querySelector('.x-sched-actions')) wireSchedActions(li, post, at);
       return li;
+    }
+    // A moment as a time picker's local "2026-11-09T18:00".
+    function pickerValue(ms) {
+      const t = new Date(ms);
+      const pad = (n) => String(n).padStart(2, '0');
+      return t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate()) + 'T' + pad(t.getHours()) + ':' + pad(t.getMinutes());
+    }
+    async function bufferRequest(payload) {
+      const token = await ownerToken();
+      if (!token) throw new Error('You\u2019re signed out. Log in again.');
+      const res = await fetch('/.netlify/functions/buffer', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Buffer didn\u2019t answer (' + res.status + ')');
+      return data;
+    }
+    // Move (a new time, quick +1 hour / day / week) and Delete (tap twice),
+    // inside an opened post.
+    function wireSchedActions(li, post, at) {
+      const moveBox = li.querySelector('.x-sched-move');
+      const picker = moveBox.querySelector('input');
+      const note = li.querySelector('.x-sched-act-note');
+      const moveBtn = li.querySelector('[data-act="move"]');
+      const delBtn = li.querySelector('[data-act="delete"]');
+      const goBtn = li.querySelector('[data-act="move-go"]');
+      const say = (text, bad) => { note.hidden = !text; note.textContent = text || ''; note.classList.toggle('is-error', !!bad); };
+      const busy = (on) => li.querySelectorAll('button').forEach((b) => { b.disabled = on; });
+      // The post's own time (or an hour from now, for one already past).
+      const base = () => Math.max(at ? Date.parse(at) : 0, Date.now() + 3600000);
+      moveBtn.addEventListener('click', () => {
+        moveBox.hidden = !moveBox.hidden;
+        say('');
+        if (!moveBox.hidden) {
+          picker.min = pickerValue(Date.now() + 120000);
+          if (!picker.value) picker.value = pickerValue(base());
+          picker.focus();
+        }
+      });
+      moveBox.querySelectorAll('[data-shift]').forEach((chip) => chip.addEventListener('click', () => {
+        const from = picker.value ? new Date(picker.value).getTime() : base();
+        picker.value = pickerValue(from + Number(chip.getAttribute('data-shift')) * 60000);
+      }));
+      li.querySelector('[data-act="move-cancel"]').addEventListener('click', () => { moveBox.hidden = true; picker.value = ''; say(''); });
+      goBtn.addEventListener('click', async () => {
+        const when = picker.value ? new Date(picker.value) : null;
+        if (!when || isNaN(when)) { picker.focus(); return; }
+        if (when.getTime() < Date.now() + 60000) { say('That time has passed. Pick a time in the future.', true); return; }
+        busy(true);
+        say('Moving\u2026');
+        try {
+          const done = await bufferRequest({ action: 'move', id: post.id, dueAt: when.toISOString() });
+          say('Moved to ' + whenText(done.dueAt || when.toISOString()) + '.');
+          li.classList.add('is-changed');
+          setTimeout(loadScheduled, 900);
+        } catch (err) {
+          busy(false);
+          say('Not moved: ' + err.message, true);
+        }
+      });
+      delBtn.addEventListener('click', async () => {
+        if (!confirmByTap(delBtn, 'Tap again to delete')) return;
+        busy(true);
+        say('Deleting\u2026');
+        try {
+          await bufferRequest({ action: 'delete', id: post.id });
+          li.classList.add('is-removed');
+          setTimeout(loadScheduled, 700);
+        } catch (err) {
+          busy(false);
+          say('Not deleted: ' + err.message, true);
+        }
+      });
     }
     function renderScheduled(data) {
       const stats = $x('x-sched-stats');
@@ -1253,7 +1349,7 @@
       }
       const stamp = document.createElement('p');
       stamp.className = 'x-sched-stamp';
-      stamp.textContent = 'From Buffer at ' + clockText(data.at || new Date().toISOString()) + '. Change or delete posts in Buffer.';
+      stamp.textContent = 'From Buffer at ' + clockText(data.at || new Date().toISOString()) + '. Tap a post to read it in full, move it or delete it.';
       body.appendChild(stamp);
     }
     let schedLoading = false;
@@ -1265,16 +1361,7 @@
       btn.classList.add('is-loading');
       if (!stats.querySelector('.x-sched-stat')) stats.innerHTML = '<p class="x-sched-msg">Checking Buffer\u2026</p>';
       try {
-        const token = await ownerToken();
-        if (!token) throw new Error('You\u2019re signed out. Log in again.');
-        const res = await fetch('/.netlify/functions/buffer', {
-          method: 'POST',
-          headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'list' }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok) throw new Error(data.error || 'Buffer didn\u2019t answer (' + res.status + ')');
-        renderScheduled(data);
+        renderScheduled(await bufferRequest({ action: 'list' }));
       } catch (err) {
         stats.innerHTML = '<p class="x-sched-msg x-sched-msg--error"></p>';
         stats.firstChild.textContent = 'Couldn\u2019t load the list from Buffer: ' + err.message;

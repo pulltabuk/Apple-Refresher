@@ -4484,7 +4484,35 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
   .x-sched-thumb { width: 60px; border-radius: 6px; }
   .x-sched-full { padding-left: 14px; }
 }
+/* Move and Delete, inside an opened post. */
+.x-sched-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.x-sched-act { display: inline-flex; align-items: center; height: 34px; padding: 0 15px; border-radius: 999px; border: 1px solid #2a1c30; background: #2a1c30; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease; }
+.x-sched-act:hover { background: #3d2a46; border-color: #3d2a46; }
+.x-sched-act--delete { background: #fff; border-color: #e6b9b3; color: #a8261f; }
+.x-sched-act--delete:hover { background: #fff3f1; border-color: #c8322a; }
+.x-sched-act--delete[data-armed="1"] { background: #c8322a; border-color: #c8322a; color: #fff; }
+.x-sched-act:disabled, .x-sched-move button:disabled { opacity: 0.55; cursor: default; }
+.x-sched-move { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 10px; padding: 12px; border-radius: 12px; background: #f8f6f1; border: 1px solid #ece7dc; }
+.x-sched-move[hidden] { display: none; }
+.x-sched-move input[type="datetime-local"] { flex: 0 1 220px; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid #d9d0c2; border-radius: 9px; background: #fff; font: inherit; font-size: 14px; }
+.x-sched-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.x-sched-chip { height: 30px; padding: 0 11px; border-radius: 999px; border: 1px solid #ddd3e2; background: #ece6ef; color: #2a1c30; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.x-sched-chip:hover { border-color: #2a1c30; }
+.x-sched-move-btns { display: flex; gap: 8px; margin-left: auto; }
+.x-sched-act-note { margin: 10px 0 0; font-size: 13px; font-weight: 600; color: #2f6a17; }
+.x-sched-act-note.is-error { color: #a8261f; }
+.x-sched-item { transition: opacity 0.35s ease, transform 0.35s ease; }
+.x-sched-item.is-removed { opacity: 0; transform: translateX(16px); }
+.x-sched-item.is-changed .x-sched-post > summary { border-color: #b7d79e; }
+@media (max-width: 600px) {
+  .x-sched-move input[type="datetime-local"] { flex: 1 1 100%; }
+  .x-sched-move-btns { margin-left: 0; width: 100%; }
+  .x-sched-move-btns .admin-btn { flex: 1; }
+}
 @media (prefers-reduced-motion: reduce) { .x-sched-tool.is-loading { animation: none; opacity: 0.6; } }
 /* The admin tabs wrap onto a second line on phones, rather than pushing
    the page sideways with X posts out of sight. */
 .admin-tabs { flex-wrap: wrap; }
+/* The date and "in 2h" stay together on one line. */
+.x-sched-at { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.x-sched-date + .x-sched-rel::before { content: "\00b7"; margin-right: 8px; color: #b5a993; font-weight: 700; }
