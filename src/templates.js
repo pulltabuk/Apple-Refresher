@@ -3840,13 +3840,21 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             </div>
 
             <div class="admin-date-row admin-date-row--launch" data-date-row="launch">
-              <span class="admin-release-time-label">Launched <span class="admin-optional">Optional: the product&rsquo;s first ever release</span></span>
+              <span class="admin-release-time-label admin-date-label-row">Launched <span class="admin-optional">Optional: the product&rsquo;s first ever release</span>
+                <select id="launch_precision" class="admin-date-precision" aria-label="How exact the launch date is">
+                  <option value="day">Exact day</option>
+                  <option value="month">Month only</option>
+                  <option value="year">Year only</option>
+                </select>
+              </span>
               <div class="admin-release-time-row">
                 <input type="date" id="launch_date_input" aria-label="Launch date">
+                <span class="admin-month-pick" id="launch_month_pick" hidden><select id="launch_month_select" aria-label="Launch month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><input type="number" id="launch_month_year" aria-label="Launch year" placeholder="YYYY" min="1970" max="2040" inputmode="numeric"></span>
+                <input type="number" id="launch_year_input" aria-label="Launch year" placeholder="YYYY" min="1970" max="2040" inputmode="numeric" hidden>
                 <button type="button" class="admin-btn admin-btn--small admin-date-use" id="launch_same_btn" hidden>&#10003; Same as release</button>
                 <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="launch">Clear</button>
               </div>
-              <p class="admin-hint" id="launch-date-hint">The day this product first went on sale. It joins the list above as its launch. Leave it blank if earlier models aren&rsquo;t listed yet.</p>
+              <p class="admin-hint" id="launch-date-hint">When this product first went on sale: the exact day, or just the month or year for older products. For the first product in a line it&rsquo;s all you need: it becomes the first release in the list above.</p>
             </div>
 
             <div class="admin-date-row" data-date-row="preorder">
@@ -3877,8 +3885,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               </span>
               <div class="admin-release-time-row">
                 <input type="date" id="release_date_input" aria-label="Release date">
-                <input type="month" id="release_month_input" aria-label="Release month" hidden>
-                <input type="number" id="release_year_input" aria-label="Release year" placeholder="YYYY" min="1970" max="2040" hidden>
+                <span class="admin-month-pick" id="release_month_pick" hidden><select id="release_month_select" aria-label="Release month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><input type="number" id="release_month_year" aria-label="Release year" placeholder="YYYY" min="1970" max="2040" inputmode="numeric"></span>
+                <input type="number" id="release_year_input" aria-label="Release year" placeholder="YYYY" min="1970" max="2040" inputmode="numeric" hidden>
                 <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="release" hidden>&#10003; Same day</button>
                 <input type="time" id="release_time_clock" aria-label="Release time">
                 <select id="release_time_zone" aria-label="Time zone">
