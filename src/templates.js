@@ -3585,6 +3585,15 @@ function aboutPage({ content, counts, siteUrl, supabaseUrl, supabaseAnonKey }) {
   });
 }
 
+// The years for the admin's month-only and year-only dates: newest first,
+// from two years ahead (announced releases) back to Apple's first, 1976.
+function adminYearOptions() {
+  const last = new Date().getFullYear() + 2;
+  let html = '<option value="">Year</option>';
+  for (let y = last; y >= 1976; y--) html += `<option value="${y}">${y}</option>`;
+  return html;
+}
+
 function datePrecisionFieldHtml(prefix, label, hint) {
   return `<div class="admin-subfield" id="${prefix}_field">
   <span class="admin-subfield-label">${label}</span>
@@ -3849,8 +3858,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               </span>
               <div class="admin-release-time-row">
                 <input type="date" id="launch_date_input" aria-label="Launch date">
-                <span class="admin-month-pick" id="launch_month_pick" hidden><select id="launch_month_select" aria-label="Launch month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><input type="number" id="launch_month_year" aria-label="Launch year" placeholder="YYYY" min="1970" max="2040" inputmode="numeric"></span>
-                <input type="number" id="launch_year_input" aria-label="Launch year" placeholder="YYYY" min="1970" max="2040" inputmode="numeric" hidden>
+                <span class="admin-month-pick" id="launch_month_pick" hidden><select id="launch_month_select" aria-label="Launch month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><select id="launch_month_year" aria-label="Launch year">${adminYearOptions()}</select></span>
+                <select id="launch_year_input" aria-label="Launch year" hidden>${adminYearOptions()}</select>
                 <button type="button" class="admin-btn admin-btn--small admin-date-use" id="launch_same_btn" hidden>&#10003; Same as release</button>
                 <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="launch">Clear</button>
               </div>
@@ -3885,8 +3894,8 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               </span>
               <div class="admin-release-time-row">
                 <input type="date" id="release_date_input" aria-label="Release date">
-                <span class="admin-month-pick" id="release_month_pick" hidden><select id="release_month_select" aria-label="Release month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><input type="number" id="release_month_year" aria-label="Release year" placeholder="YYYY" min="1970" max="2040" inputmode="numeric"></span>
-                <input type="number" id="release_year_input" aria-label="Release year" placeholder="YYYY" min="1970" max="2040" inputmode="numeric" hidden>
+                <span class="admin-month-pick" id="release_month_pick" hidden><select id="release_month_select" aria-label="Release month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><select id="release_month_year" aria-label="Release year">${adminYearOptions()}</select></span>
+                <select id="release_year_input" aria-label="Release year" hidden>${adminYearOptions()}</select>
                 <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="release" hidden>&#10003; Same day</button>
                 <input type="time" id="release_time_clock" aria-label="Release time">
                 <select id="release_time_zone" aria-label="Time zone">
