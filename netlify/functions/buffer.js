@@ -1,7 +1,8 @@
 // Sends a post to Buffer, which publishes it to X: added to Buffer's queue
 // (its next free slot) or scheduled for a set time, with the card attached
 // as an image. Also lists the X posts waiting in Buffer, the ones that
-// failed and the last few sent, for the X posts tab's "Scheduled on X".
+// failed and the last few sent, for the X posts tab's "Scheduled on X",
+// and deletes or moves (reschedules) one from there.
 // Called from the admin's X posts tab, by the site owner only.
 // The Buffer key lives in Netlify (BUFFER_API_KEY) and never reaches the
 // browser.
@@ -160,6 +161,42 @@ async function listAll(channel) {
   return { upcoming: [], sent: [], failed: [] };
 }
 
+// --- Deleting and moving a post. Buffer's deletePost takes the post's
+// id; editPost with only a new time and customScheduled moves it, keeping
+// its text and image (fields left out stay as they are).
+async function runMutation(variants, pick, what) {
+  let lastShapeError = '';
+  for (const m of variants) {
+    const r = await gql(m);
+    if (r.errors.length) {
+      const msg = r.errors.map((e) => e.message).join('; ');
+      if (SHAPE_ERROR.test(msg)) { lastShapeError = msg; continue; }
+      throw new Error('Buffer refused to ' + what + ': ' + msg);
+    }
+    const result = pick(r.data);
+    if (result && result.message) throw new Error('Buffer refused to ' + what + ': ' + result.message);
+    if (result && result.__typename && /error/i.test(result.__typename)) throw new Error('Buffer refused to ' + what + ' (' + result.__typename + ').');
+    return result || {};
+  }
+  throw new Error('Buffer didn’t accept the request’s format: ' + lastShapeError);
+}
+function deletePost(id) {
+  const input = 'input: { id: ' + lit(id) + ' }';
+  return runMutation([
+    'mutation { deletePost(' + input + ') { __typename ... on DeletePostSuccess { id } ... on VoidMutationError { message } } }',
+    'mutation { deletePost(' + input + ') { __typename } }',
+  ], (d) => d && d.deletePost, 'delete the post');
+}
+function movePost(id, dueAt) {
+  const input = 'input: { id: ' + lit(id) + ', mode: customScheduled, dueAt: ' + lit(dueAt) + ' }';
+  const errors = ['NotFoundError', 'UnauthorizedError', 'UnexpectedError', 'LimitReachedError', 'InvalidInputError'].map((t) => '... on ' + t + ' { message }').join(' ');
+  return runMutation([
+    'mutation { editPost(' + input + ') { __typename ... on PostActionSuccess { post { id dueAt } } ... on MutationError { message } } }',
+    'mutation { editPost(' + input + ') { __typename ... on PostActionSuccess { post { id dueAt } } ' + errors + ' } }',
+    'mutation { editPost(' + input + ') { __typename } }',
+  ], (d) => d && d.editPost, 'move the post');
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
   const denied = await ownerCheck(event);
@@ -174,6 +211,20 @@ exports.handler = async (event) => {
   try {
     const channel = await xChannel();
     if (input.action === 'check') return json(200, { ok: true, channel: channel.name || channel.id });
+    if (input.action === 'delete' || input.action === 'move') {
+      const id = String(input.id || '').trim();
+      if (!id) return json(400, { error: 'Which post? It has no id.' });
+      if (input.action === 'delete') {
+        await deletePost(id);
+        return json(200, { ok: true, id });
+      }
+      const t = Date.parse(input.dueAt);
+      if (isNaN(t)) return json(400, { error: 'Pick a date and time to move it to.' });
+      if (t < Date.now() + 60000) return json(400, { error: 'That time has passed. Pick a time in the future.' });
+      const dueAt = new Date(t).toISOString();
+      const result = await movePost(id, dueAt);
+      return json(200, { ok: true, id, dueAt: result.post && result.post.dueAt ? result.post.dueAt : dueAt });
+    }
     if (input.action === 'list') {
       const lists = await listAll(channel);
       return json(200, Object.assign({ ok: true, channel: channel.name || '', at: new Date().toISOString() }, lists));
