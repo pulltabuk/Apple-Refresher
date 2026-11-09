@@ -1191,11 +1191,12 @@
               '<span class="x-sched-text"></span>' +
               '<span class="x-sched-meta">' + tag + (at ? '<span class="x-sched-at">' + when + '<span class="x-sched-rel" data-at="' + escX(at) + '">' + escX(relText(at)) + '</span></span>' : '') + '</span>' +
             '</span>' +
-            (post.image ? '<img class="x-sched-thumb" alt="" loading="lazy">' : '<span class="x-sched-thumb x-sched-thumb--none" aria-hidden="true">\uD835\uDD4F</span>') +
+            (post.image ? '<img class="x-sched-thumb" alt="The card" loading="lazy">' : '<span class="x-sched-thumb x-sched-thumb--none">No card</span>') +
           '</summary>' +
           '<div class="x-sched-full"><p class="x-sched-full-text"></p>' +
             (post.error ? '<p class="x-sched-error"></p>' : '') +
             '<p class="x-sched-when"></p>' +
+            (post.image ? '<a class="x-sched-card-link" target="_blank" rel="noopener">Open the card full size <span aria-hidden="true">\u2197</span></a>' : '') +
             (opts.kind !== 'sent' && post.id
               ? '<div class="x-sched-actions">' +
                   '<button type="button" class="x-sched-act" data-act="move">' + (opts.kind === 'failed' ? 'Try again at\u2026' : 'Move\u2026') + '</button>' +
@@ -1221,7 +1222,10 @@
       li.querySelector('.x-sched-full-text').textContent = post.text || '(No text)';
       if (post.error) li.querySelector('.x-sched-error').textContent = 'Buffer says: ' + post.error;
       li.querySelector('.x-sched-when').textContent = at ? (opts.kind === 'sent' ? 'Sent ' : opts.kind === 'failed' ? 'Was due ' : 'Goes out ') + whenText(at) : 'In Buffer, without a time yet';
-      if (post.image) li.querySelector('img.x-sched-thumb').src = post.image;
+      if (post.image) {
+        li.querySelector('img.x-sched-thumb').src = post.image;
+        li.querySelector('.x-sched-card-link').href = post.image;
+      }
       if (li.querySelector('.x-sched-actions')) wireSchedActions(li, post, at);
       return li;
     }

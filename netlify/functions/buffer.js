@@ -98,10 +98,13 @@ function listQueries(orgId, channelId, statuses, direction, first) {
   if (listShape) out.sort((a, b) => (b.key === listShape) - (a.key === listShape));
   return out;
 }
+// The post's card: the full image (sharp when shown large), or the
+// thumbnail for a video.
 const firstImage = (assets) => {
   const list = Array.isArray(assets) ? assets : assets ? [assets] : [];
   const a = list.find((x) => x && (x.thumbnail || x.source));
-  return a ? a.thumbnail || a.source : '';
+  if (!a) return '';
+  return /video/i.test(String(a.type || '')) ? a.thumbnail || '' : a.source || a.thumbnail;
 };
 async function listPosts(orgId, channelId, statuses, direction, first) {
   let lastShapeError = '';
