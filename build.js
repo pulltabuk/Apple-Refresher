@@ -567,8 +567,12 @@ async function main() {
     earningsNext,
     ...opts,
   }));
-  write('products/index.html', allProductsPage({ items: productsPageItems, pageContent: pageContent.products || null, ...opts }));
-  write('discontinued/index.html', discontinuedPage({ items: discontinued, pageContent: pageContent.discontinued || null, ...opts }));
+  // A list page's sitemap date is its newest product activity (a release
+  // or a discontinuation), like the product pages', so Google can tell
+  // which pages have changed and crawl those first.
+  const latestActivity = (items) => items.map((i) => mostRecentActivityDate(i.product || i)).filter(Boolean).sort().pop() || null;
+  write('products/index.html', allProductsPage({ items: productsPageItems, pageContent: pageContent.products || null, ...opts }), latestActivity(allItems));
+  write('discontinued/index.html', discontinuedPage({ items: discontinued, pageContent: pageContent.discontinued || null, ...opts }), latestActivity(discontinued));
   write('coming-soon/index.html', comingSoonPage({ products, pageContent: pageContent['coming-soon'] || null, ...opts }));
   write('about/index.html', aboutPage({ content: aboutContent, counts: aboutCounts({ products, events, photos: galleryPhotos }), ...opts }));
   write('contact/index.html', contactPage(opts));
@@ -651,7 +655,7 @@ async function main() {
       items: inCategory,
     };
   });
-  write('categories/index.html', categoriesIndexPage({ groups, pageContent: pageContent.categories || null, ...opts }));
+  write('categories/index.html', categoriesIndexPage({ groups, pageContent: pageContent.categories || null, ...opts }), latestActivity(allItems));
   for (const category of categoryNames) {
     const items = allItems.filter((i) => i.product.category === category);
     write(`categories/${slugify(category)}/index.html`, categoryPage({
@@ -659,7 +663,7 @@ async function main() {
       items,
       pageContent: pageContent['category:' + slugify(category)] || null,
       ...opts,
-    }));
+    }), latestActivity(items));
   }
 
   // A share image per product, drawn at build time. If image rendering
