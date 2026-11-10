@@ -2780,26 +2780,21 @@ function comingDoneAttrs(date) {
   return `data-done-kicker="Launch day" data-done-text="🎉 Available now" data-done-date="Released ${escapeHtml(formatDate(date))}"`;
 }
 
-// Sort and family filter for the Coming soon page. Soonest first is the
-// default; app.js does the sorting and filtering in the page. Only shown
-// once there are three products or more to arrange.
+// Sort for the Coming soon page. Soonest first is the default; app.js
+// does the sorting in the page. Only shown once there are three products
+// or more to arrange. (There was a "Show" row of family pills too: with
+// only ever a handful of products coming, each pill pointed at one you
+// could already see, so it went.)
 const COMING_SORTS = [['soon', 'Soonest first'], ['late', 'Latest first'], ['az', 'A\u2013Z'], ['family', 'By family']];
 function comingControlsHtml(groups) {
   const all = groups.flatMap((g) => g.products);
   if (all.length < 3) return '';
-  const counts = {};
-  all.forEach((p) => { const f = p.category || ''; if (f) counts[f] = (counts[f] || 0) + 1; });
-  const families = Object.keys(counts).sort((a, b) => a.localeCompare(b));
-  const chip = (attr, value, label, on, count) => `<button type="button" class="coming-chip${on ? ' is-on' : ''}" ${attr}="${escapeHtml(value)}" aria-pressed="${on ? 'true' : 'false'}">${escapeHtml(label)}${count != null ? ` <span class="coming-chip-count">${count}</span>` : ''}</button>`;
+  const chip = (attr, value, label, on) => `<button type="button" class="coming-chip${on ? ' is-on' : ''}" ${attr}="${escapeHtml(value)}" aria-pressed="${on ? 'true' : 'false'}">${escapeHtml(label)}</button>`;
   return `<div class="coming-controls" data-coming-controls>
   <div class="coming-control-group" role="group" aria-label="Sort">
     <span class="coming-control-label">Sort</span>
     <div class="coming-chips">${COMING_SORTS.map(([v, l], i) => chip('data-coming-sort', v, l, i === 0)).join('')}</div>
   </div>
-  ${families.length > 1 ? `<div class="coming-control-group" role="group" aria-label="Show">
-    <span class="coming-control-label">Show</span>
-    <div class="coming-chips">${chip('data-coming-family', '', 'All', true, all.length)}${families.map((f) => chip('data-coming-family', f, f, false, counts[f])).join('')}</div>
-  </div>` : ''}
 </div>`;
 }
 
@@ -2825,7 +2820,7 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
     ].filter(Boolean) : [];
     const nameHtml = (p, linked) => `<${linked ? `a href="/products/${p.slug}/"` : 'span'} class="coming-next-product"><span class="coming-next-icon">${productIcon(p, 56)}</span><span class="coming-next-text"><span class="coming-next-name">${escapeHtml(p.name)}</span><span class="coming-next-family">${escapeHtml(p.category || '')}${next.mixedTimes && p.release_time && exact(next) ? ` &middot; ${timeWithUk(next.date, p.release_time)}` : ''}</span></span></${linked ? 'a' : 'span'}>`;
     const tag = single ? 'a' : 'div';
-    const nextHtml = `<section class="coming-next-wrap" aria-label="Next to launch" data-coming-lead data-families="${escapeHtml(next.products.map((p) => p.category || '').join('|'))}">
+    const nextHtml = `<section class="coming-next-wrap" aria-label="Next to launch" data-coming-lead>
   <${tag} class="coming-next${exact(next) ? '' : ' coming-next--expected'}"${single ? ` href="/products/${single.slug}/"` : ''}${exact(next) ? ` data-countdown="${escapeHtml(next.date)}"${next.time ? ` data-countdown-time="${escapeHtml(next.time)}"` : ''} ${comingDoneAttrs(next.date)}${single ? '' : ` data-done-href="/products/${next.products[0].slug}/"`}` : ''}>
     <span class="coming-next-main">
       <span class="coming-next-kicker countdown-label">Next to launch</span>
