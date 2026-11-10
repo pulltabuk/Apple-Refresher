@@ -4563,3 +4563,20 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
    side by side, which works in every browser. */
 .admin-month-pick { display: inline-flex; align-items: center; gap: 8px; }
 .admin-month-pick[hidden] { display: none; }
+
+/* Admin: a Clear button on every date box. Beside a single date box, the
+   two share a line; on the update and discontinued-model lines the old
+   "x" is a worded Clear button. */
+.date-with-clear { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.date-with-clear > input { flex: 1 1 auto; min-width: 0; }
+.admin-form .date-with-clear > input { margin: 0; }
+.date-with-clear > .date-clear-btn { flex: none; align-self: center; }
+.fact-asof .date-with-clear { display: inline-flex; }
+.fact-asof .date-with-clear > input { flex: none; }
+.admin-update-row { grid-template-columns: 22px auto auto minmax(0, 1fr) auto; }
+.admin-update-row--dropped { grid-template-columns: 22px auto minmax(0, 1fr) auto; }
+.admin-update-clear { width: auto; height: 34px; padding: 0 11px; font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; }
+@media (max-width: 560px) {
+  .admin-update-row { grid-template-columns: 18px minmax(0, 7.5em) minmax(0, 1fr) auto; }
+  .admin-update-row--dropped { grid-template-columns: 18px minmax(0, 7.5em) minmax(0, 1fr) auto; }
+}

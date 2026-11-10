@@ -3562,6 +3562,9 @@
   let pendingModelsDiscontinued = null;
   const MAX_UPDATES = 5;
   let lastPicked = null; // { row, date }: the last date picked in the box
+  // Rows whose pale suggested date was dismissed with Clear: they stay
+  // empty until another date is picked or a different release is shown.
+  const hiddenSuggestions = new Set();
   let releasePrecision = 'day';
   let releasePrecisionFor = undefined;
   const CHAIN = ['announced', 'launch', 'preorder', 'release'];
@@ -3591,6 +3594,7 @@
   // date picked above it. Never saved until its "✓ Same as…" button is
   // pressed.
   function rowSuggestion(row) {
+    if (hiddenSuggestions.has(row)) return null;
     // The first release, when a launch date is waiting for it.
     if (row === 'release' && isFullDate(currentOriginalLaunchDate) && currentRefreshHistory.indexOf(currentOriginalLaunchDate) === -1) {
       return { date: currentOriginalLaunchDate, from: 'launch' };
@@ -3662,7 +3666,7 @@
       useBtn.textContent = '\u2713 Same as ' + ((suggested && SAME_AS[suggested.from]) || 'above');
       useBtn.title = suggestion ? 'Use ' + formatAdminDate(suggestion) : '';
     }
-    if (clearBtn) clearBtn.hidden = !value;
+    if (clearBtn) clearBtn.hidden = false;
     rowNote(row, value && !isFullDate(value) ? 'Recorded as ' + formatAdminDate(value) + '. Pick a day to replace it.' : '');
   }
 
@@ -3718,6 +3722,11 @@
     }
     if (target && precisionOf(target) === 'month') setMonthPick('release', target);
     yearIn.value = target && precisionOf(target) === 'year' ? target : '';
+    // The launch is the first release, so with no later release this row
+    // repeats the Launched date above: say so.
+    if (target && target === currentOriginalLaunchDate) {
+      rowNote('release', 'This is the \u201cLaunched\u201d date above: the launch is the first release, so it shows in both. For a later release, choose \u201cAdd another release\u201d at the top of this box.');
+    }
 
     // Its name and whether it was the product's launch.
     const nameIn = document.getElementById('release_name_input');
@@ -3753,6 +3762,7 @@
     // The box shows a past release, but this date comes after it (and isn't
     // a small fix to its release day): it belongs to a new release, so one
     // is started and the recorded release is left as it is.
+    if (value) hiddenSuggestions.clear();
     const shown = datesTarget();
     const todayIso = new Date().toISOString().slice(0, 10);
     if (shown && shown < todayIso && value && value > shown && CHAIN.indexOf(row) !== -1) {
@@ -3827,10 +3837,39 @@
     if (useBtn) useBtn.addEventListener('click', () => { const v = rowSuggestion(row); if (v) commitDate(row, v.date); });
     const clearBtn = document.querySelector('[data-date-clear="' + row + '"]');
     if (clearBtn) clearBtn.addEventListener('click', () => {
+      // Clear empties the box for good: the saved date, a pale suggested
+      // one, or a half-typed one.
+      hiddenSuggestions.add(row);
+      if (row === 'release') { clearRelease(); return; }
       if (row === 'preorder') setPreorderTimeFields(null);
       commitDate(row, null);
     });
   });
+  // Clearing the release date: that release leaves the list above, and
+  // its other dates (announced, pre-orders), name and updates stay in the
+  // box, waiting for a new release date. A launch date stays too.
+  function clearRelease() {
+    const target = datesTarget();
+    setMonthPick('release', null);
+    if (!target) { renderDatesBox(); return; }
+    const info = currentGenerationDetails[target] || {};
+    pendingName = info.name || '';
+    pendingAnnouncedDate = info.announced || null;
+    pendingPreorderDate = info.preorder || null;
+    pendingUpdates = Array.isArray(info.updates) ? info.updates.filter((u) => !updateIsBlank(u)) : [];
+    currentRefreshHistory = currentRefreshHistory.filter((d) => d !== target);
+    delete currentGenerationDetails[target];
+    expandedGenerations.delete(target);
+    setReleaseTimeFields(null);
+    // The box stays on the release being filled in, rather than jumping
+    // to an older one and showing its dates.
+    datesMode = currentRefreshHistory.length ? 'add' : 'next';
+    releasePrecisionFor = null;
+    lastPicked = null;
+    productFormDirty = true;
+    renderRefreshHistory();
+    updateStatusReadout();
+  }
   ['release_month_select', 'release_month_year'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
     const v = monthPickValue('release');
     if (v) commitDate('release', v);
@@ -3847,6 +3886,7 @@
   document.querySelectorAll('input[name="dates_mode"]').forEach((radio) => radio.addEventListener('change', () => {
     datesMode = radio.value;
     lastPicked = null;
+    hiddenSuggestions.clear();
     renderDatesBox();
   }));
   document.getElementById('release_name_input').addEventListener('input', (e) => {
@@ -3875,7 +3915,7 @@
     input.hidden = launchPrecision !== 'day';
     document.getElementById('launch_month_pick').hidden = launchPrecision !== 'month';
     yearIn.hidden = launchPrecision !== 'year';
-    clear.hidden = !launch;
+    clear.hidden = false;
     if (launchPrecision === 'day') {
       input.value = isFullDate(launch) ? launch : '';
       // Empty: it offers the release when that's the first one, otherwise
@@ -3897,6 +3937,7 @@
       : '');
   }
   function launchSuggestion(target) {
+    if (hiddenSuggestions.has('launch')) return null;
     const earliest = currentRefreshHistory.slice().sort()[0];
     if (target && target === earliest && isFullDate(target)) return { date: target, from: 'release' };
     const ann = rowValue('announced', target);
@@ -3904,6 +3945,7 @@
   }
   function commitLaunch(value) {
     const old = currentOriginalLaunchDate;
+    if (value) hiddenSuggestions.clear();
     if (!value) {
       currentOriginalLaunchDate = null;
     } else if (value !== old) {
@@ -3969,7 +4011,12 @@
     const offer = launchSuggestion(datesTarget());
     if (offer) commitLaunch(offer.date);
   });
-  document.querySelector('[data-date-clear="launch"]').addEventListener('click', () => commitLaunch(null));
+  document.querySelector('[data-date-clear="launch"]').addEventListener('click', () => {
+    hiddenSuggestions.add('launch');
+    setMonthPick('launch', null);
+    document.getElementById('launch_year_input').value = '';
+    commitLaunch(null);
+  });
 
   // --- Updates to a release since it came out (a new model such as the
   // 4GB one, more memory, a new colour): five lines, always shown, each a
@@ -4061,12 +4108,11 @@
       const clear = document.createElement('button');
       clear.type = 'button';
       clear.className = 'admin-update-clear';
-      clear.textContent = '×';
+      clear.textContent = 'Clear';
       clear.title = 'Clear this line';
       clear.setAttribute('aria-label', 'Clear update ' + (i + 1));
       clear.dataset.i = i;
       clear.dataset.field = 'clear';
-      clear.hidden = updateIsBlank(u);
       clear.addEventListener('click', () => {
         list.splice(i, 1);
         list.push(blankUpdate());
@@ -4189,12 +4235,11 @@
       const clear = document.createElement('button');
       clear.type = 'button';
       clear.className = 'admin-update-clear';
-      clear.textContent = '\u00d7';
+      clear.textContent = 'Clear';
       clear.title = 'Clear this line';
       clear.setAttribute('aria-label', 'Clear model discontinued ' + (i + 1));
       clear.dataset.i = i;
       clear.dataset.field = 'clear';
-      clear.hidden = droppedIsBlank(u);
       clear.addEventListener('click', () => {
         const before = lastDroppedDate();
         currentDropped.splice(i, 1);
@@ -4320,6 +4365,7 @@
     pendingName = '';
     pendingUpdates = [];
     lastPicked = null;
+    hiddenSuggestions.clear();
     releasePrecisionFor = undefined;
     pendingAnnouncedDate = null;
     pendingPreorderDate = null;
@@ -4581,6 +4627,7 @@
           annInput.value = /^\d{4}-\d{2}-\d{2}$/.test(info.announced || '') ? info.announced : '';
           annInput.addEventListener('change', () => { detailFor(date).announced = annInput.value || null; });
           annLabel.appendChild(annInput);
+          addDateClear(annInput);
           if (info.announced && !/^\d{4}-\d{2}-\d{2}$/.test(info.announced)) {
             const note = document.createElement('span');
             note.className = 'admin-hint';
@@ -4596,6 +4643,7 @@
           preInput.value = /^\d{4}-\d{2}-\d{2}$/.test(info.preorder || '') ? info.preorder : '';
           preInput.addEventListener('change', () => { detailFor(date).preorder = preInput.value || null; });
           preLabel.appendChild(preInput);
+          addDateClear(preInput);
           if (info.preorder && !/^\d{4}-\d{2}-\d{2}$/.test(info.preorder)) {
             const note = document.createElement('span');
             note.className = 'admin-hint';
@@ -5284,6 +5332,9 @@
         document.getElementById('price-error').textContent = 'That price doesn\u2019t look right. Type the number only, e.g. 999 or 1,299.';
         firstError = firstError || document.querySelector('.admin-subfield--price');
       }
+      // A launch date with no release listed (its release date was
+      // cleared) is the first release: it takes the dates waiting for one.
+      if (!currentRefreshHistory.length && currentOriginalLaunchDate) commitDate('release', currentOriginalLaunchDate);
       // Announced or pre-order dates waiting for a release would be lost.
       const pendingUpdate = pendingUpdates.some((u) => u.date || (u.note || '').trim());
       if (pendingAnnouncedDate || pendingPreorderDate || pendingUpdate) {
@@ -6917,6 +6968,29 @@
     const input = document.getElementById('did_you_know_date');
     if (input) input.addEventListener('input', () => { factDateTouched = true; });
   })();
+  // A Clear button beside a date box: a browser's own date box has no
+  // quick way to empty it (in Safari, none at all). It empties the box
+  // and tells the box's own code, as if the date had been deleted by hand.
+  function addDateClear(input) {
+    if (!input || input.dataset.hasClear) return;
+    input.dataset.hasClear = '1';
+    const wrap = document.createElement('span');
+    wrap.className = 'date-with-clear';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'admin-btn admin-btn--small admin-btn--ghost date-clear-btn';
+    btn.textContent = 'Clear';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    wrap.appendChild(btn);
+  }
+  ['did_you_know_date', 'event_date', 'earn_date', 'earn_qend'].forEach((id) => addDateClear(document.getElementById(id)));
   // Only send the date once the database has the column, so saving keeps
   // working before the SQL update has been run.
   function factDateColumnExists() {
