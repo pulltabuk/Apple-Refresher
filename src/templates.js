@@ -3897,6 +3897,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
                 <span class="admin-month-pick" id="release_month_pick" hidden><select id="release_month_select" aria-label="Release month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><select id="release_month_year" aria-label="Release year">${adminYearOptions()}</select></span>
                 <select id="release_year_input" aria-label="Release year" hidden>${adminYearOptions()}</select>
                 <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="release" hidden>&#10003; Same day</button>
+                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="release">Clear date</button>
                 <input type="time" id="release_time_clock" aria-label="Release time">
                 <select id="release_time_zone" aria-label="Time zone">
                   <option value="UK">UK (GMT/BST)</option>
