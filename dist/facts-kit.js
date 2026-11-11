@@ -1773,6 +1773,37 @@
     return '';
   }
 
+  // The start of a text as whole sentences: the first sentence always,
+  // then each one after it while the total stays within `max` characters.
+  // Never cut mid-sentence (the Coming soon tiles' "Did you know?"). A
+  // sentence ends at . ! or ? followed by a space and a capital, a digit
+  // or an Apple-style name (iPhone, macOS); not at a decimal point, an
+  // initial ("U.S.") or a common abbreviation.
+  function leadSentences(text, max) {
+    const clean = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!clean) return '';
+    const limit = max || 170;
+    const parts = [];
+    const end = /[.!?]+["'\u2019\u201d)\]]*(?=\s+["'\u201c\u2018(\[]?(?:[A-Z0-9]|i[A-Z]|macOS|watchOS|tvOS|visionOS|eSIM))/g;
+    let start = 0;
+    let m;
+    while ((m = end.exec(clean))) {
+      const stop = m.index + m[0].length;
+      const word = ((clean.slice(start, m.index).match(/(\S+)$/) || [])[1] || '').replace(/^["'\u201c\u2018(\[]+/, '');
+      if (/^(?:Mr|Mrs|Ms|Dr|St|Jr|Sr|vs|etc|Inc|Ltd|Co|Corp|No|approx)$/i.test(word) || /(?:^|\.)[A-Za-z]$/.test(word)) continue;
+      parts.push(clean.slice(start, stop).trim());
+      start = stop;
+    }
+    const tail = clean.slice(start).trim();
+    if (tail) parts.push(tail);
+    let out = parts[0] || '';
+    for (let i = 1; i < parts.length; i++) {
+      if ((out + ' ' + parts[i]).length > limit) break;
+      out += ' ' + parts[i];
+    }
+    return out;
+  }
+
   // Text out of saved HTML: tags dropped, and every character reference
   // turned back into its character (&ldquo; &pound; &#8217; ...), each
   // once, so the text can be shown or escaped again as it stands.
@@ -2966,6 +2997,7 @@
     productFactPrompt,
     productNotesPrompt,
     plainText,
+    leadSentences,
     claudeResearchPrompt,
     claudeResearchUrl,
     factKey,
