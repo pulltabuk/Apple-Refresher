@@ -2782,13 +2782,14 @@ function comingDoneAttrs(date) {
 
 // Sort for the Coming soon page. Soonest first is the default; app.js
 // does the sorting in the page. Only shown once there are three products
-// or more to arrange. (There was a "Show" row of family pills too: with
-// only ever a handful of products coming, each pill pointed at one you
-// could already see, so it went.)
+// or more on at least two launch days: with one day there is nothing to
+// put in a different order. (There was a "Show" row of family pills too:
+// with only ever a handful of products coming, each pill pointed at one
+// you could already see, so it went.)
 const COMING_SORTS = [['soon', 'Soonest first'], ['late', 'Latest first'], ['az', 'A\u2013Z'], ['family', 'By family']];
 function comingControlsHtml(groups) {
   const all = groups.flatMap((g) => g.products);
-  if (all.length < 3) return '';
+  if (all.length < 3 || groups.length < 2) return '';
   const chip = (attr, value, label, on) => `<button type="button" class="coming-chip${on ? ' is-on' : ''}" ${attr}="${escapeHtml(value)}" aria-pressed="${on ? 'true' : 'false'}">${escapeHtml(label)}</button>`;
   return `<div class="coming-controls" data-coming-controls>
   <div class="coming-control-group" role="group" aria-label="Sort">
@@ -2801,56 +2802,84 @@ function comingControlsHtml(groups) {
 function comingSoonPage({ products, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const groups = comingSoonGroups(products);
   const exact = (g) => datePrecision(g.date) === 'day';
-  const [next, ...later] = groups;
   let body;
-  if (!next) {
+  if (!groups.length) {
     body = `
 <h1>${pageHeading(pageContent, 'Coming soon')}</h1>
 ${pageStandardLine(pageContent, '<p class="page-intro">Nothing has a release date yet. When Apple announces a product and when it reaches shops, it shows here with a countdown.</p>')}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <p><a class="intro-cta" href="/events/">See Apple Events</a></p>`;
   } else {
-    // The next to launch: first and biggest, counting down to the second.
-    const single = next.products.length === 1 ? next.products[0] : null;
-    const extras = single ? upcomingExtras(single) : {};
-    const facts = single ? [
-      extras.announced ? `Announced ${formatDate(extras.announced)}` : '',
-      extras.preorder ? `Pre-orders ${formatDate(extras.preorder)}${single.preorder_time ? ` &middot; ${timeWithUk(extras.preorder, single.preorder_time)}` : ''}` : '',
-      single.price ? `From ${escapeHtml(formatPrice(single.price))}` : '',
-    ].filter(Boolean) : [];
-    const nameHtml = (p, linked) => `<${linked ? `a href="/products/${p.slug}/"` : 'span'} class="coming-next-product"><span class="coming-next-icon">${productIcon(p, 56)}</span><span class="coming-next-text"><span class="coming-next-name">${escapeHtml(p.name)}</span><span class="coming-next-family">${escapeHtml(p.category || '')}${next.mixedTimes && p.release_time && exact(next) ? ` &middot; ${timeWithUk(next.date, p.release_time)}` : ''}</span></span></${linked ? 'a' : 'span'}>`;
-    const tag = single ? 'a' : 'div';
-    const nextHtml = `<section class="coming-next-wrap" aria-label="Next to launch" data-coming-lead>
-  <${tag} class="coming-next${exact(next) ? '' : ' coming-next--expected'}"${single ? ` href="/products/${single.slug}/"` : ''}${exact(next) ? ` data-countdown="${escapeHtml(next.date)}"${next.time ? ` data-countdown-time="${escapeHtml(next.time)}"` : ''} ${comingDoneAttrs(next.date)}${single ? '' : ` data-done-href="/products/${next.products[0].slug}/"`}` : ''}>
-    <span class="coming-next-main">
-      <span class="coming-next-kicker countdown-label">Next to launch</span>
-      <span class="coming-next-names">${next.products.map((p) => nameHtml(p, !single)).join('')}</span>
-      <span class="coming-next-date countdown-date">${exact(next) ? 'Coming ' : 'Expected '}${escapeHtml(comingDateText(next.date))}${exact(next) && next.time && !next.mixedTimes ? ` &middot; ${timeWithUk(next.date, next.time)}` : ''}${comingAwayHtml(next.date)}</span>
-      ${facts.length ? `<span class="coming-next-facts">${facts.map((f) => `<span>${f}</span>`).join(' &middot; ')}</span>` : ''}
-      ${single ? '<span class="coming-next-cta">See the product &rarr;</span>' : ''}
-    </span>
-    ${exact(next) ? `<span class="coming-clock" data-countdown-clock role="timer">${comingClockHtml(next.date, next.time, single ? '' : `/products/${next.products[0].slug}/`)}</span>` : ''}
-  </${tag}>
-</section>`;
-    // Then everything after it, soonest first: one card each. The next
-    // to launch has cards too, hidden while its big tile shows, so a
-    // sort or a family filter (app.js) can lay every product out alike.
+    // One panel per launch day, soonest first: a header with the date and
+    // the day's one countdown clock, then a tile for each product landing
+    // that day. The clock counts to the day's first product; when their
+    // times differ (mixedTimes), each tile says its own.
     let order = 0;
-    const cards = groups.flatMap((g, gi) => g.products.map((p) => ({ g, gi, p, t: p.release_time || null }))).map(({ g, gi, p, t }) => `<a class="coming-card${gi === 0 ? ' coming-card--lead' : ''}" href="/products/${p.slug}/" data-order="${order++}" data-name="${escapeHtml(p.name.toLowerCase())}" data-family="${escapeHtml(p.category || '')}"${gi === 0 ? ' hidden' : ''}${exact(g) ? ` data-countdown="${escapeHtml(g.date)}"${t ? ` data-countdown-time="${escapeHtml(t)}"` : ''} ${comingDoneAttrs(g.date)}` : ''}>
-    <span class="coming-card-head"><span class="coming-card-icon">${productIcon(p, 34)}</span><span class="coming-card-text"><span class="coming-card-name">${escapeHtml(p.name)}</span><span class="coming-card-family">${escapeHtml(p.category || '')}</span></span></span>
-    ${exact(g) ? `<span class="coming-clock coming-clock--small" data-countdown-clock role="timer">${comingClockHtml(g.date, t)}</span>` : ''}
-    <span class="coming-card-date countdown-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${exact(g) && t ? ` &middot; ${timeWithUk(g.date, t)}` : ''}${comingAwayHtml(g.date)}</span>
-    ${comingPreorderHtml(p, g.date)}
-  </a>`);
+    // When the whole day was announced together, the header says so once;
+    // otherwise each tile gives its own announcement date.
+    const sharedAnnounced = (g) => {
+      const dates = g.products.map((p) => upcomingExtras(p).announced || '');
+      return dates[0] && dates.every((d) => d === dates[0]) ? dates[0] : null;
+    };
+    const tileHtml = (p, g, flat) => {
+      const extras = upcomingExtras(p);
+      const ownTime = exact(g) && p.release_time && (flat || g.mixedTimes) ? timeWithUk(g.date, p.release_time) : '';
+      const meta = [
+        ownTime,
+        extras.announced && (flat || !sharedAnnounced(g)) ? `Announced ${escapeHtml(formatDate(extras.announced))}` : '',
+        p.price ? `From ${escapeHtml(formatPrice(p.price))}` : '',
+      ].filter(Boolean);
+      return `<a class="coming-tile" href="/products/${p.slug}/" data-order="${order++}" data-name="${escapeHtml(p.name.toLowerCase())}" data-family="${escapeHtml(p.category || '')}">
+      <span class="coming-tile-icon">${productIcon(p, 44)}</span>
+      <span class="coming-tile-text">
+        <span class="coming-tile-name">${escapeHtml(p.name)}</span>
+        <span class="coming-tile-family">${escapeHtml(p.category || '')}</span>
+        ${flat ? `<span class="coming-tile-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${comingAwayHtml(g.date)}</span>` : ''}
+        ${meta.length ? `<span class="coming-tile-meta">${meta.join(' &middot; ')}</span>` : ''}
+        ${comingPreorderHtml(p, g.date)}
+      </span>
+      <span class="coming-tile-go" aria-hidden="true">&rsaquo;</span>
+    </a>`;
+    };
+    // Under the date: the time, when the day's products share one, and
+    // when they were announced, when they share that. (How far off it is
+    // is the clock's job.)
+    const dayNoteHtml = (g) => {
+      const parts = [
+        exact(g) && g.time && !g.mixedTimes ? timeWithUk(g.date, g.time) : '',
+        sharedAnnounced(g) ? `Announced ${escapeHtml(formatDate(sharedAnnounced(g)))}` : '',
+      ].filter(Boolean);
+      return parts.length ? `<span class="coming-day-note">${parts.join(' &middot; ')}</span>` : '';
+    };
+    const dayHtml = (g, gi) => `<section class="coming-day${gi === 0 ? ' coming-day--next' : ''}${exact(g) ? '' : ' coming-day--expected'}" data-coming-day data-order="${gi}"${exact(g) ? ` data-countdown="${escapeHtml(g.date)}"${g.time ? ` data-countdown-time="${escapeHtml(g.time)}"` : ''} ${comingDoneAttrs(g.date)}` : ''}>
+  <header class="coming-day-head">
+    <div class="coming-day-when">
+      <span class="coming-day-kicker countdown-label">${gi === 0 ? 'Next to launch' : 'Also on the way'}</span>
+      <h2 class="coming-day-date countdown-date">${exact(g) ? '' : 'Expected '}${escapeHtml(comingDateText(g.date))}</h2>
+      ${dayNoteHtml(g)}
+    </div>
+    ${exact(g) ? `<span class="coming-clock${gi === 0 ? '' : ' coming-clock--small'}" data-countdown-clock role="timer">${comingClockHtml(g.date, g.time)}</span>` : ''}
+  </header>
+  <div class="coming-tiles">
+    ${g.products.map((p) => tileHtml(p, g, false)).join('\n    ')}
+  </div>
+</section>`;
+    const daysHtml = groups.map(dayHtml).join('\n');
+    // The same products again, each with its own date, for the A–Z and
+    // by-family sorts (app.js shows one view or the other).
+    order = 0;
+    const flatHtml = groups.flatMap((g) => g.products.map((p) => tileHtml(p, g, true))).join('\n  ');
     body = `
 <h1>${pageHeading(pageContent, 'Coming soon')}</h1>
 ${pageStandardLine(pageContent, '<p class="page-intro">Every Apple product with a release date still to come, soonest first, counting down to the day it reaches shops.</p>')}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 ${comingControlsHtml(groups)}
-${nextHtml}
-<h2 class="coming-later-title"${cards.length > next.products.length ? '' : ' hidden'}>Also on the way</h2>
-<div class="coming-grid" data-coming-grid>
-  ${cards.join('\n  ')}
+<div class="coming-days" data-coming-days>
+${daysHtml}
+</div>
+<h2 class="coming-flat-title" hidden>Everything coming soon</h2>
+<div class="coming-tiles coming-tiles--flat" data-coming-flat hidden>
+  ${flatHtml}
 </div>
 ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   }
