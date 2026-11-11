@@ -3989,17 +3989,19 @@
     setInterval(tickAll, 1000);
   })();
 
-  // Coming soon page: sort. Soonest first is the page as built, the next
-  // to launch in its big tile. Any other sort lays every product out as a
-  // card. The choice stays in the address (?sort=late), so Back from a
-  // product returns to it.
+  // Coming soon page: sort. Soonest first is the page as built, a panel
+  // per launch day with its one clock; Latest first turns the days round.
+  // A\u2013Z and By family lay every product out as a tile of its own
+  // (each with its date), with no clocks. The choice stays in the address
+  // (?sort=late), so Back from a product returns to it.
   (function comingSort() {
     var controls = document.querySelector('[data-coming-controls]');
-    var grid = document.querySelector('[data-coming-grid]');
-    if (!controls || !grid) return;
-    var lead = document.querySelector('[data-coming-lead]');
-    var title = document.querySelector('.coming-later-title');
-    var cards = Array.prototype.slice.call(grid.querySelectorAll('.coming-card'));
+    var days = document.querySelector('[data-coming-days]');
+    var flat = document.querySelector('[data-coming-flat]');
+    if (!controls || !days || !flat) return;
+    var title = document.querySelector('.coming-flat-title');
+    var sections = Array.prototype.slice.call(days.querySelectorAll('[data-coming-day]'));
+    var tiles = Array.prototype.slice.call(flat.querySelectorAll('.coming-tile'));
     var SORT_NAMES = { soon: 'soonest first', late: 'latest first', az: 'A\u2013Z', family: 'by family' };
     var byOrder = function (a, b) { return +a.getAttribute('data-order') - +b.getAttribute('data-order'); };
     var SORTS = {
@@ -4012,19 +4014,15 @@
     var state = { sort: SORTS[params.get('sort')] ? params.get('sort') : 'soon' };
 
     function apply(remember) {
-      var showLead = !!lead && state.sort === 'soon';
-      if (lead) lead.hidden = !showLead;
-      var shown = 0;
-      cards.slice().sort(SORTS[state.sort]).forEach(function (card) {
-        var visible = !(card.classList.contains('coming-card--lead') && showLead);
-        card.hidden = !visible;
-        if (visible) shown++;
-        grid.appendChild(card);
-      });
+      var byDay = state.sort === 'soon' || state.sort === 'late';
+      days.hidden = !byDay;
+      flat.hidden = byDay;
       if (title) {
-        title.hidden = !shown;
-        title.textContent = showLead ? 'Also on the way' : 'Everything coming soon, ' + SORT_NAMES[state.sort];
+        title.hidden = byDay;
+        title.textContent = 'Everything coming soon, ' + SORT_NAMES[state.sort];
       }
+      if (byDay) sections.slice().sort(SORTS[state.sort]).forEach(function (el) { days.appendChild(el); });
+      else tiles.slice().sort(SORTS[state.sort]).forEach(function (el) { flat.appendChild(el); });
       controls.querySelectorAll('[data-coming-sort]').forEach(function (b) {
         var on = b.getAttribute('data-coming-sort') === state.sort;
         b.classList.toggle('is-on', on);
