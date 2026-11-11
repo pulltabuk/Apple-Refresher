@@ -2799,16 +2799,101 @@ function comingControlsHtml(groups) {
 </div>`;
 }
 
+// The picture for an empty Coming soon page: the sun going down over an
+// empty horizon, in the site's own sunset colours. Drawn here (an SVG,
+// moved gently by styles.css) rather than a GIF, so it is sharp on every
+// screen, a few hundred bytes, and still when a visitor asks for less
+// motion.
+function comingEmptyArtHtml() {
+  const stripes = [[118, 3], [130, 4], [143, 5], [157, 6], [170, 8]];
+  const glints = [[186, 124], [198, 94], [211, 68], [225, 44], [240, 26]];
+  const stars = [[58, 34, 1.6], [112, 62, 1.1], [171, 26, 1.3], [318, 40, 1.5], [382, 70, 1.1], [428, 28, 1.4]];
+  return `<svg class="coming-empty-svg" viewBox="0 0 480 270" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="ce-sky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="176"><stop offset="0" stop-color="#24162c"/><stop offset="0.45" stop-color="#5b2130"/><stop offset="0.78" stop-color="#b1451f"/><stop offset="1" stop-color="#f0922e"/></linearGradient>
+    <linearGradient id="ce-sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#ff8a3d"/></linearGradient>
+    <linearGradient id="ce-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b1d3a"/><stop offset="1" stop-color="#170f1d"/></linearGradient>
+    <radialGradient id="ce-glow"><stop offset="0" stop-color="#ffc46b" stop-opacity="0.55"/><stop offset="1" stop-color="#ffc46b" stop-opacity="0"/></radialGradient>
+    <clipPath id="ce-frame"><rect width="480" height="270" rx="26"/></clipPath>
+    <clipPath id="ce-above"><rect width="480" height="176"/></clipPath>
+    <clipPath id="ce-disc"><circle cx="240" cy="150" r="74"/></clipPath>
+  </defs>
+  <g clip-path="url(#ce-frame)">
+    <rect width="480" height="176" fill="url(#ce-sky)"/>
+    <g fill="#fff">${stars.map(([x, y, r]) => `<circle class="ce-star" cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>
+    <g clip-path="url(#ce-above)">
+      <circle cx="240" cy="158" r="150" fill="url(#ce-glow)"/>
+      <g class="ce-sun">
+        <circle cx="240" cy="150" r="74" fill="url(#ce-sun)"/>
+        <g clip-path="url(#ce-disc)" fill="url(#ce-sky)">${stripes.map(([y, h]) => `<rect x="150" y="${y}" width="180" height="${h}"/>`).join('')}</g>
+      </g>
+      <g class="ce-birds"><g transform="translate(0 104)" fill="none" stroke="#2a1c30" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M0 0q4-5 8 0q4-5 8 0"/><path d="M24 12q3-4 6 0q3-4 6 0"/></g></g>
+    </g>
+    <rect y="176" width="480" height="94" fill="url(#ce-sea)"/>
+    <rect y="175.5" width="480" height="1" fill="#ffd9a0" opacity="0.55"/>
+    <g fill="#ff9d47">${glints.map(([y, w]) => `<rect class="ce-glint" x="${240 - w / 2}" y="${y}" width="${w}" height="4" rx="2"/>`).join('')}</g>
+  </g>
+</svg>`;
+}
+
+// Products released in the last 30 days (not discontinued), newest
+// first: the "Just launched" row on an empty Coming soon page.
+function justLaunchedProducts(products, today) {
+  const day = today || new Date().toISOString().slice(0, 10);
+  const since = new Date(Date.parse(day + 'T12:00:00Z') - 30 * 86400000).toISOString().slice(0, 10);
+  return (products || [])
+    .filter((p) => !p.discontinued)
+    .map((p) => ({ product: p, date: (p.refresh_history || []).filter((d) => datePrecision(d) === 'day' && d <= day).sort().pop() }))
+    .filter((x) => x.date && x.date >= since)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.product.name.localeCompare(b.product.name)));
+}
+
 function comingSoonPage({ products, pageContent, siteUrl, supabaseUrl, supabaseAnonKey }) {
   const groups = comingSoonGroups(products);
   const exact = (g) => datePrecision(g.date) === 'day';
   let body;
   if (!groups.length) {
+    // Nothing to count down to: the picture and a line saying so, in the
+    // middle of the page, then anything that came out in the last 30 days
+    // (the same tiles, each with its "Did you know?").
+    const launched = justLaunchedProducts(products);
+    const launchedTile = ({ product: p, date }) => {
+      const fact = FactsKit.plainText(p.did_you_know).replace(/\s+/g, ' ').trim() || FactsKit.productFactCandidates(p, products)[0] || '';
+      return `<a class="coming-tile" href="/products/${p.slug}/">
+      <span class="coming-tile-main">
+        <span class="coming-tile-icon">${productIcon(p, 44)}</span>
+        <span class="coming-tile-text">
+          <span class="coming-tile-name">${escapeHtml(p.name)}</span>
+          <span class="coming-tile-family">${escapeHtml(p.category || '')}</span>
+          <span class="coming-tile-date">Released ${escapeHtml(formatDate(date))}</span>
+          ${p.price ? `<span class="coming-tile-meta">From ${escapeHtml(formatPrice(p.price))}</span>` : ''}
+        </span>
+        <span class="coming-tile-go" aria-hidden="true">&rsaquo;</span>
+      </span>
+      ${fact ? `<span class="coming-tile-fact"><span class="coming-tile-fact-label">Did you know?</span> <span class="coming-tile-fact-text">${escapeHtml(fact)}</span></span>` : ''}
+    </a>`;
+    };
     body = `
 <h1>${pageHeading(pageContent, 'Coming soon')}</h1>
-${pageStandardLine(pageContent, '<p class="page-intro">Nothing has a release date yet. When Apple announces a product and when it reaches shops, it shows here with a countdown.</p>')}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
-<p><a class="intro-cta" href="/events/">See Apple Events</a></p>`;
+<section class="coming-empty" aria-labelledby="coming-empty-title">
+  <div class="coming-empty-art">${comingEmptyArtHtml()}</div>
+  <h2 class="coming-empty-title" id="coming-empty-title">Nothing on the horizon just yet</h2>
+  <p class="coming-empty-text">No Apple product has a release date at the moment. When Apple announces one, it shows here with a countdown to the day it reaches shops.</p>
+  <p class="coming-empty-cta"><a class="intro-cta" href="/events/">See Apple Events</a></p>
+</section>
+${launched.length ? `<section class="coming-day coming-day--plain coming-launched" aria-labelledby="coming-launched-title">
+  <header class="coming-day-head">
+    <div class="coming-day-when">
+      <span class="coming-day-kicker">Just launched</span>
+      <h2 class="coming-day-date" id="coming-launched-title">Out in the last 30 days</h2>
+    </div>
+  </header>
+  <div class="coming-tiles">
+    ${launched.map(launchedTile).join('\n    ')}
+  </div>
+</section>` : ''}
+${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
   } else {
     // One panel per launch day, soonest first: a header with the date and
     // the day's one countdown clock, then a tile for each product landing
