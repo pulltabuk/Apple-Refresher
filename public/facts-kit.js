@@ -1748,6 +1748,31 @@
     return out.slice(0, 3);
   }
 
+  // One line about a product still to come, worked out from the dates
+  // already in the database: how long since the model before it, since
+  // its own last update, or since Apple announced it. For the Coming soon
+  // page, where a product has no "Did you know?" of its own yet.
+  function comingFact(product, allProducts) {
+    const today = new Date().toISOString().slice(0, 10);
+    const due = (product.refresh_history || []).slice().sort().pop();
+    if (!due || due < today) return '';
+    const name = product.name || 'this product';
+    const prev = product.previous_model ? (allProducts || []).find((p) => p.slug === product.previous_model) : null;
+    const prevLatest = prev ? pastReleases(prev).pop() : null;
+    if (prev && prevLatest) {
+      return 'Arrives ' + spanText(daysBetweenIso(prevLatest, due)) + ' after the ' + prev.name + ', the model before it.';
+    }
+    const mine = pastReleases(product).pop();
+    if (mine) return 'The first update to the ' + name + ' in ' + spanText(daysBetweenIso(mine, due)) + '.';
+    const details = product.generation_details && typeof product.generation_details === 'object' ? product.generation_details : {};
+    const announced = (details[due] || {}).announced;
+    if (announced && announced < due && /^\d{4}-\d{2}-\d{2}$/.test(announced) && /^\d{4}-\d{2}-\d{2}$/.test(due)) {
+      return 'Goes on sale ' + spanText(daysBetweenIso(announced, due)) + ' after Apple announced it, on ' + longDate(announced) + '.';
+    }
+    if (product.is_new_launch || product.previous_model === '__new__') return 'The first product in a new Apple line.';
+    return '';
+  }
+
   function plainText(html) {
     return String(html || '').replace(/<\/(p|div|li|h\d)>|<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')
       .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&rsquo;/g, '’')
@@ -2925,6 +2950,7 @@
     checkXCardLink,
     factsPageHtml,
     productFactCandidates,
+    comingFact,
     productFactPrompt,
     productNotesPrompt,
     plainText,

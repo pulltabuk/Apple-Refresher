@@ -2829,16 +2829,23 @@ ${pageIntroHtml(pageContent, siteUrl, 'intro')}
         extras.announced && (flat || !sharedAnnounced(g)) ? `Announced ${escapeHtml(formatDate(extras.announced))}` : '',
         p.price ? `From ${escapeHtml(formatPrice(p.price))}` : '',
       ].filter(Boolean);
+      // A "Did you know?" on every tile, with nothing to fill in: the
+      // product's own fact (as plain text; the whole of it is on its
+      // page), or one worked out from its dates (FactsKit.comingFact).
+      const fact = FactsKit.plainText(p.did_you_know).replace(/\s+/g, ' ').trim() || FactsKit.comingFact(p, products);
       return `<a class="coming-tile" href="/products/${p.slug}/" data-order="${order++}" data-name="${escapeHtml(p.name.toLowerCase())}" data-family="${escapeHtml(p.category || '')}">
-      <span class="coming-tile-icon">${productIcon(p, 44)}</span>
-      <span class="coming-tile-text">
-        <span class="coming-tile-name">${escapeHtml(p.name)}</span>
-        <span class="coming-tile-family">${escapeHtml(p.category || '')}</span>
-        ${flat ? `<span class="coming-tile-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${comingAwayHtml(g.date)}</span>` : ''}
-        ${meta.length ? `<span class="coming-tile-meta">${meta.join(' &middot; ')}</span>` : ''}
-        ${comingPreorderHtml(p, g.date)}
+      <span class="coming-tile-main">
+        <span class="coming-tile-icon">${productIcon(p, 44)}</span>
+        <span class="coming-tile-text">
+          <span class="coming-tile-name">${escapeHtml(p.name)}</span>
+          <span class="coming-tile-family">${escapeHtml(p.category || '')}</span>
+          ${flat ? `<span class="coming-tile-date">${exact(g) ? 'Coming ' : 'Expected '}${escapeHtml(formatDate(g.date))}${comingAwayHtml(g.date)}</span>` : ''}
+          ${meta.length ? `<span class="coming-tile-meta">${meta.join(' &middot; ')}</span>` : ''}
+          ${comingPreorderHtml(p, g.date)}
+        </span>
+        <span class="coming-tile-go" aria-hidden="true">&rsaquo;</span>
       </span>
-      <span class="coming-tile-go" aria-hidden="true">&rsaquo;</span>
+      ${fact ? `<span class="coming-tile-fact"><span class="coming-tile-fact-label">Did you know?</span> <span class="coming-tile-fact-text">${escapeHtml(fact)}</span></span>` : ''}
     </a>`;
     };
     // Under the date: the time, when the day's products share one, and
