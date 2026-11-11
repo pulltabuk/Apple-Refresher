@@ -2800,39 +2800,45 @@ function comingControlsHtml(groups) {
 }
 
 // The picture for an empty Coming soon page: the sun going down over an
-// empty horizon, in the site's own sunset colours. Drawn here (an SVG,
-// moved gently by styles.css) rather than a GIF, so it is sharp on every
-// screen, a few hundred bytes, and still when a visitor asks for less
-// motion.
+// empty horizon, in the site's own sunset colours, as wide as the page.
+// Drawn here (an SVG, moved gently by styles.css) rather than a GIF, so
+// it is sharp on every screen, a few hundred bytes, and still when a
+// visitor asks for less motion. The scene is wide (1200 x 340) with the
+// sun in the middle: a laptop shows all of it, and a narrower screen
+// (tablet, phone) shows the middle of it at the same height, the sides
+// trimmed (preserveAspectRatio "slice"), so the sun is never squashed.
 function comingEmptyArtHtml() {
-  const stripes = [[118, 3], [130, 4], [143, 5], [157, 6], [170, 8]];
-  const glints = [[186, 124], [198, 94], [211, 68], [225, 44], [240, 26]];
-  const stars = [[58, 34, 1.6], [112, 62, 1.1], [171, 26, 1.3], [318, 40, 1.5], [382, 70, 1.1], [428, 28, 1.4]];
-  return `<svg class="coming-empty-svg" viewBox="0 0 480 270" aria-hidden="true" focusable="false">
+  const HORIZON = 222;
+  const stripes = [[150, 4], [165, 5], [181, 6], [198, 8], [213, 10]];
+  const glints = [[234, 168], [249, 128], [265, 92], [282, 60], [300, 34]];
+  const stars = [[46, 44, 1.5], [128, 92, 1.1], [205, 30, 1.6], [286, 74, 1.2], [352, 38, 1.4], [418, 96, 1.1], [476, 26, 1.6], [545, 58, 1.2], [662, 34, 1.4], [731, 84, 1.1], [790, 22, 1.6], [858, 66, 1.2], [934, 40, 1.5], [1012, 96, 1.1], [1088, 30, 1.6], [1160, 72, 1.2]];
+  // Thin clouds catching the light, out to the sides.
+  const clouds = [[70, 148, 250, 6], [150, 163, 150, 5], [300, 132, 120, 4], [860, 138, 260, 6], [930, 154, 160, 5], [800, 168, 110, 4]];
+  const birds = (y) => `<g transform="translate(0 ${y})" fill="none" stroke="#2a1c30" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M0 0q4-5 8 0q4-5 8 0"/><path d="M24 12q3-4 6 0q3-4 6 0"/><path d="M-20 16q3-4 6 0q3-4 6 0"/></g>`;
+  return `<svg class="coming-empty-svg" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
   <defs>
-    <linearGradient id="ce-sky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="176"><stop offset="0" stop-color="#24162c"/><stop offset="0.45" stop-color="#5b2130"/><stop offset="0.78" stop-color="#b1451f"/><stop offset="1" stop-color="#f0922e"/></linearGradient>
+    <linearGradient id="ce-sky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${HORIZON}"><stop offset="0" stop-color="#24162c"/><stop offset="0.45" stop-color="#5b2130"/><stop offset="0.78" stop-color="#b1451f"/><stop offset="1" stop-color="#f0922e"/></linearGradient>
     <linearGradient id="ce-sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#ff8a3d"/></linearGradient>
     <linearGradient id="ce-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b1d3a"/><stop offset="1" stop-color="#170f1d"/></linearGradient>
     <radialGradient id="ce-glow"><stop offset="0" stop-color="#ffc46b" stop-opacity="0.55"/><stop offset="1" stop-color="#ffc46b" stop-opacity="0"/></radialGradient>
-    <clipPath id="ce-frame"><rect width="480" height="270" rx="26"/></clipPath>
-    <clipPath id="ce-above"><rect width="480" height="176"/></clipPath>
-    <clipPath id="ce-disc"><circle cx="240" cy="150" r="74"/></clipPath>
+    <clipPath id="ce-above"><rect width="1200" height="${HORIZON}"/></clipPath>
+    <clipPath id="ce-disc"><circle cx="600" cy="190" r="96"/></clipPath>
   </defs>
-  <g clip-path="url(#ce-frame)">
-    <rect width="480" height="176" fill="url(#ce-sky)"/>
-    <g fill="#fff">${stars.map(([x, y, r]) => `<circle class="ce-star" cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>
-    <g clip-path="url(#ce-above)">
-      <circle cx="240" cy="158" r="150" fill="url(#ce-glow)"/>
-      <g class="ce-sun">
-        <circle cx="240" cy="150" r="74" fill="url(#ce-sun)"/>
-        <g clip-path="url(#ce-disc)" fill="url(#ce-sky)">${stripes.map(([y, h]) => `<rect x="150" y="${y}" width="180" height="${h}"/>`).join('')}</g>
-      </g>
-      <g class="ce-birds"><g transform="translate(0 104)" fill="none" stroke="#2a1c30" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M0 0q4-5 8 0q4-5 8 0"/><path d="M24 12q3-4 6 0q3-4 6 0"/></g></g>
+  <rect width="1200" height="${HORIZON}" fill="url(#ce-sky)"/>
+  <g fill="#fff">${stars.map(([x, y, r]) => `<circle class="ce-star" cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>
+  <g clip-path="url(#ce-above)">
+    <ellipse cx="600" cy="205" rx="430" ry="200" fill="url(#ce-glow)"/>
+    <g fill="#ffb36b" opacity="0.26">${clouds.map(([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}"/>`).join('')}</g>
+    <g class="ce-sun">
+      <circle cx="600" cy="190" r="96" fill="url(#ce-sun)"/>
+      <g clip-path="url(#ce-disc)" fill="url(#ce-sky)">${stripes.map(([y, h]) => `<rect x="490" y="${y}" width="220" height="${h}"/>`).join('')}</g>
     </g>
-    <rect y="176" width="480" height="94" fill="url(#ce-sea)"/>
-    <rect y="175.5" width="480" height="1" fill="#ffd9a0" opacity="0.55"/>
-    <g fill="#ff9d47">${glints.map(([y, w]) => `<rect class="ce-glint" x="${240 - w / 2}" y="${y}" width="${w}" height="4" rx="2"/>`).join('')}</g>
+    <g class="ce-birds">${birds(118)}</g>
+    <g class="ce-birds ce-birds--two">${birds(88)}</g>
   </g>
+  <rect y="${HORIZON}" width="1200" height="${340 - HORIZON}" fill="url(#ce-sea)"/>
+  <rect y="${HORIZON - 0.5}" width="1200" height="1" fill="#ffd9a0" opacity="0.55"/>
+  <g fill="#ff9d47">${glints.map(([y, w]) => `<rect class="ce-glint" x="${600 - w / 2}" y="${y}" width="${w}" height="5" rx="2.5"/>`).join('')}</g>
 </svg>`;
 }
 
@@ -2853,12 +2859,12 @@ function comingSoonPage({ products, pageContent, siteUrl, supabaseUrl, supabaseA
   const exact = (g) => datePrecision(g.date) === 'day';
   let body;
   if (!groups.length) {
-    // Nothing to count down to: the picture and a line saying so, in the
-    // middle of the page, then anything that came out in the last 30 days
+    // Nothing to count down to: the picture, as wide as the page, and a
+    // line saying so, then anything that came out in the last 30 days
     // (the same tiles, each with its "Did you know?").
     const launched = justLaunchedProducts(products);
     const launchedTile = ({ product: p, date }) => {
-      const fact = FactsKit.plainText(p.did_you_know).replace(/\s+/g, ' ').trim() || FactsKit.productFactCandidates(p, products)[0] || '';
+      const fact = FactsKit.leadSentences(FactsKit.plainText(p.did_you_know), 170) || FactsKit.productFactCandidates(p, products)[0] || '';
       return `<a class="coming-tile" href="/products/${p.slug}/">
       <span class="coming-tile-main">
         <span class="coming-tile-icon">${productIcon(p, 44)}</span>
@@ -2878,9 +2884,11 @@ function comingSoonPage({ products, pageContent, siteUrl, supabaseUrl, supabaseA
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 <section class="coming-empty" aria-labelledby="coming-empty-title">
   <div class="coming-empty-art">${comingEmptyArtHtml()}</div>
-  <h2 class="coming-empty-title" id="coming-empty-title">Nothing on the horizon just yet</h2>
-  <p class="coming-empty-text">No Apple product has a release date at the moment. When Apple announces one, it shows here with a countdown to the day it reaches shops.</p>
-  <p class="coming-empty-cta"><a class="intro-cta" href="/events/">See Apple Events</a></p>
+  <div class="coming-empty-copy">
+    <h2 class="coming-empty-title" id="coming-empty-title">Nothing on the horizon just yet</h2>
+    <p class="coming-empty-text">No Apple product has a release date at the moment. When Apple announces one, it shows here with a countdown to the day it reaches shops.</p>
+    <p class="coming-empty-cta"><a class="intro-cta" href="/events/">See Apple Events</a></p>
+  </div>
 </section>
 ${launched.length ? `<section class="coming-day coming-day--plain coming-launched" aria-labelledby="coming-launched-title">
   <header class="coming-day-head">
@@ -2915,9 +2923,10 @@ ${pageIntroHtml(pageContent, siteUrl, 'footer')}`;
         p.price ? `From ${escapeHtml(formatPrice(p.price))}` : '',
       ].filter(Boolean);
       // A "Did you know?" on every tile, with nothing to fill in: the
-      // product's own fact (as plain text; the whole of it is on its
-      // page), or one worked out from its dates (FactsKit.comingFact).
-      const fact = FactsKit.plainText(p.did_you_know).replace(/\s+/g, ' ').trim() || FactsKit.comingFact(p, products);
+      // product's own fact (as plain text, whole sentences only, never
+      // cut mid-sentence; all of it is on its page), or one worked out
+      // from its dates (FactsKit.comingFact).
+      const fact = FactsKit.leadSentences(FactsKit.plainText(p.did_you_know), 170) || FactsKit.comingFact(p, products);
       return `<a class="coming-tile" href="/products/${p.slug}/" data-order="${order++}" data-name="${escapeHtml(p.name.toLowerCase())}" data-family="${escapeHtml(p.category || '')}">
       <span class="coming-tile-main">
         <span class="coming-tile-icon">${productIcon(p, 44)}</span>
