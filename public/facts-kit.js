@@ -1773,10 +1773,22 @@
     return '';
   }
 
+  // Text out of saved HTML: tags dropped, and every character reference
+  // turned back into its character (&ldquo; &pound; &#8217; ...), each
+  // once, so the text can be shown or escaped again as it stands.
+  const ENTITY_CHARS = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: '\u2019', rsquo: '\u2019', lsquo: '\u2018', ldquo: '\u201c', rdquo: '\u201d', mdash: '\u2014', ndash: '\u2013', hellip: '\u2026', pound: '\u00a3', euro: '\u20ac', middot: '\u00b7', times: '\u00d7', frac12: '\u00bd', deg: '\u00b0', trade: '\u2122', reg: '\u00ae', copy: '\u00a9' };
   function plainText(html) {
     return String(html || '').replace(/<\/(p|div|li|h\d)>|<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&rsquo;/g, '’')
-      .replace(/[ \t]+/g, ' ').replace(/\n\s*/g, '\n').trim();
+      .replace(/&(#x?[0-9a-f]+|[a-z][a-z0-9]*);/gi, function (whole, code) {
+        if (code === '#39') return '\u2019';
+        if (code.charAt(0) === '#') {
+          const n = /^#x/i.test(code) ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+          return n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : whole;
+        }
+        const hit = ENTITY_CHARS[code.toLowerCase()];
+        return hit === undefined ? whole : hit;
+      })
+      .replace(/[ \t\u00a0]+/g, ' ').replace(/\n\s*/g, '\n').trim();
   }
 
   // A "Did you know?" request about one product, avoiding facts already
