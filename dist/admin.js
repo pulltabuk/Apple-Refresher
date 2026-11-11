@@ -1281,8 +1281,9 @@
         busy(true);
         say('Moving\u2026');
         try {
-          const done = await bufferRequest({ action: 'move', id: post.id, dueAt: when.toISOString() });
-          say('Moved to ' + whenText(done.dueAt || when.toISOString()) + '.');
+          // The text and card go with it: Buffer wants the whole post again.
+          const done = await bufferRequest({ action: 'move', id: post.id, dueAt: when.toISOString(), text: post.text || '', imageUrl: post.image || '' });
+          say('Moved to ' + whenText(done.dueAt || when.toISOString()) + '.' + (done.imageLost ? ' Buffer dropped the card image: add it back in Buffer.' : ''), !!done.imageLost);
           li.classList.add('is-changed');
           setTimeout(loadScheduled, 900);
         } catch (err) {
