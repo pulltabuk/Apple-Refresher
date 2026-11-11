@@ -64,7 +64,7 @@ function mutations(text, channelId, imageUrl, mode, dueAt) {
   const base = 'text: ' + lit(text) + ', channelId: ' + lit(channelId) + ', schedulingType: automatic, ' +
     (mode === 'schedule' ? 'mode: customScheduled, dueAt: ' + lit(dueAt) : 'mode: addToQueue');
   const assets = imageUrl
-    ? ['assets: { images: [{ url: ' + lit(imageUrl) + ' }] }', 'assets: [{ image: { url: ' + lit(imageUrl) + ' } }]']
+    ? ['assets: [{ image: { url: ' + lit(imageUrl) + ' } }]', 'assets: { images: [{ url: ' + lit(imageUrl) + ' }] }']
     : [''];
   const results = [
     '... on PostActionSuccess { post { id dueAt } } ... on MutationError { message }',
@@ -165,8 +165,10 @@ async function listAll(channel) {
 }
 
 // --- Deleting and moving a post. Buffer's deletePost takes the post's
-// id; editPost with only a new time and customScheduled moves it, keeping
-// its text and image (fields left out stay as they are).
+// id. Moving is editPost with a new time, but Buffer checks the edit as a
+// whole post: a new time by itself is refused ("Post must have either
+// text or media"). So the post is read first, and its own text and media
+// go back unchanged with the new time.
 async function runMutation(variants, pick, what) {
   let lastShapeError = '';
   for (const m of variants) {
@@ -190,14 +192,59 @@ function deletePost(id) {
     'mutation { deletePost(' + input + ') { __typename } }',
   ], (d) => d && d.deletePost, 'delete the post');
 }
-function movePost(id, dueAt) {
-  const input = 'input: { id: ' + lit(id) + ', mode: customScheduled, dueAt: ' + lit(dueAt) + ' }';
+// The post as Buffer has it: its text and its media, or null if Buffer
+// won't say (then the admin's own copy of the text and card is used).
+async function readPost(id) {
+  const selections = ['id text assets { source thumbnail type mimeType }', 'id text assets { source thumbnail }', 'id text'];
+  for (const sel of selections) {
+    const r = await gql('query { post(input: { id: ' + lit(id) + ' }) { ' + sel + ' } }');
+    if (r.errors.length) {
+      const msg = r.errors.map((e) => e.message).join('; ');
+      if (SHAPE_ERROR.test(msg)) continue;
+      throw new Error('Buffer wouldn’t open the post: ' + msg);
+    }
+    const p = r.data && r.data.post;
+    if (!p) throw new Error('Buffer couldn’t find that post. It may have gone out already: refresh the list.');
+    return { text: p.text || '', assets: p.assets === undefined ? null : Array.isArray(p.assets) ? p.assets : p.assets ? [p.assets] : [] };
+  }
+  return null;
+}
+// A post's media, as editPost takes it: [{ image: { url } }, ...].
+// Throws for media that can't be handed back (a document, or one with no
+// address), so a post never loses it by being moved from here.
+function assetsInput(assets) {
+  return assets.map((a) => {
+    const kind = String((a && (a.type || a.mimeType)) || 'image');
+    if (!a || !a.source || /pdf|document/i.test(kind)) {
+      throw new Error('This post has an attachment that can’t be moved from here. Move it in Buffer instead.');
+    }
+    return '{ ' + (/video/i.test(kind) ? 'video' : 'image') + ': { url: ' + lit(a.source) + ' } }';
+  });
+}
+async function movePost(id, dueAt, hint) {
+  const post = await readPost(id);
+  const text = post ? post.text : String((hint && hint.text) || '');
+  const assets = post && post.assets
+    ? post.assets
+    : hint && /^https:\/\//i.test(String(hint.imageUrl || '')) ? [{ source: String(hint.imageUrl), type: 'image' }] : [];
+  const media = assetsInput(assets);
+  if (!text.trim() && !media.length) throw new Error('Buffer has no text or image for this post, so it can’t be moved from here. Open it in Buffer.');
+  const input = 'input: { id: ' + lit(id) +
+    (text.trim() ? ', text: ' + lit(text) : '') +
+    (media.length ? ', assets: [' + media.join(', ') + ']' : '') +
+    ', mode: customScheduled, dueAt: ' + lit(dueAt) + ' }';
   const errors = ['NotFoundError', 'UnauthorizedError', 'UnexpectedError', 'LimitReachedError', 'InvalidInputError'].map((t) => '... on ' + t + ' { message }').join(' ');
-  return runMutation([
+  const result = await runMutation([
+    'mutation { editPost(' + input + ') { __typename ... on PostActionSuccess { post { id dueAt assets { source } } } ... on MutationError { message } } }',
     'mutation { editPost(' + input + ') { __typename ... on PostActionSuccess { post { id dueAt } } ... on MutationError { message } } }',
     'mutation { editPost(' + input + ') { __typename ... on PostActionSuccess { post { id dueAt } } ' + errors + ' } }',
     'mutation { editPost(' + input + ') { __typename } }',
   ], (d) => d && d.editPost, 'move the post');
+  // Said, never silent: the card was sent with the move but isn't on the
+  // post Buffer handed back.
+  const after = result.post && result.post.assets;
+  const imageLost = media.length > 0 && Array.isArray(after) && after.length === 0;
+  return { post: result.post || null, imageLost };
 }
 
 exports.handler = async (event) => {
@@ -225,8 +272,8 @@ exports.handler = async (event) => {
       if (isNaN(t)) return json(400, { error: 'Pick a date and time to move it to.' });
       if (t < Date.now() + 60000) return json(400, { error: 'That time has passed. Pick a time in the future.' });
       const dueAt = new Date(t).toISOString();
-      const result = await movePost(id, dueAt);
-      return json(200, { ok: true, id, dueAt: result.post && result.post.dueAt ? result.post.dueAt : dueAt });
+      const result = await movePost(id, dueAt, { text: input.text, imageUrl: input.imageUrl });
+      return json(200, { ok: true, id, dueAt: result.post && result.post.dueAt ? result.post.dueAt : dueAt, imageLost: result.imageLost });
     }
     if (input.action === 'list') {
       const lists = await listAll(channel);
