@@ -4632,3 +4632,8 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
   .site-nav-home-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
   .site-nav a.site-nav-home:hover { text-decoration: none; opacity: 0.8; }
 }
+
+/* Key fact tiles in a row line up: app.js (alignKeyFacts) gives every
+   label in a row the height of the tallest ("Announced" is one line,
+   "Pre-orders opened" two), so the values all start on the same line. */
+.key-fact-label { box-sizing: border-box; }
