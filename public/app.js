@@ -1528,6 +1528,45 @@
     });
   }
 
+  // --- Key fact tiles (Announced, Pre-orders opened, Release date, Launch
+  // price...): in each row of tiles, every label takes the height of the
+  // tallest one, so the values (the dates, the price) all start on the
+  // same line whether a label fits on one line or wraps to two. Run when
+  // the page loads, when it's re-rendered, when the web font arrives and
+  // when the window changes size.
+  function alignKeyFacts() {
+    Array.prototype.forEach.call(document.querySelectorAll('.key-facts-row'), function (row) {
+      var labels = Array.prototype.slice.call(row.querySelectorAll('.key-fact-label'));
+      labels.forEach(function (label) { label.style.minHeight = ''; });
+      // Tiles side by side share a top edge: one group per line of tiles.
+      var lines = {};
+      labels.forEach(function (label) {
+        var tile = label.closest('.key-fact');
+        if (!tile) return;
+        var top = Math.round(tile.getBoundingClientRect().top);
+        (lines[top] = lines[top] || []).push(label);
+      });
+      Object.keys(lines).forEach(function (top) {
+        var group = lines[top];
+        if (group.length < 2) return;
+        var heights = group.map(function (label) { return label.getBoundingClientRect().height; });
+        var tallest = Math.max.apply(null, heights);
+        if (tallest - Math.min.apply(null, heights) < 1) return;
+        group.forEach(function (label) { label.style.minHeight = Math.ceil(tallest) + 'px'; });
+      });
+    });
+  }
+  (function () {
+    alignKeyFacts();
+    var timer = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(timer);
+      timer = setTimeout(alignKeyFacts, 120);
+    });
+    window.addEventListener('load', alignKeyFacts);
+    if (document.fonts && document.fonts.ready && document.fonts.ready.then) document.fonts.ready.then(alignKeyFacts);
+  })();
+
   // --- Waiting button: works whether rendered at build time or injected live.
 
   function votedKey(slug) { return 'waited_' + slug; }
@@ -3470,6 +3509,7 @@
         var status = product.discontinued ? null : computeStatusJS(product);
         productPageEl.innerHTML = productBodyHtmlJS(product, status, bySlug, galleryPhotos);
         wireWaitButtons(productPageEl.querySelectorAll('.wait-btn'));
+        alignKeyFacts();
         revealAdminEditLinks(productPageEl.querySelectorAll('.admin-edit-link'));
         // The re-render replaces the button, so its click handler must be
         // attached again or it shows but does nothing.
