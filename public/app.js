@@ -1416,7 +1416,7 @@
       video && video.kind === 'link' ? specRowJS('Video', '<a href="' + escapeHtmlJS(video.src) + '" target="_blank" rel="noopener">Watch on ' + escapeHtmlJS(video.host) + ' &#8599;</a>') : '',
       product.press_release_url ? specRowJS('Press release', '<a href="' + product.press_release_url + '" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>') : '',
       product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
-      product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> ' + ((product.waiting_count || 0) === 1 ? 'person' : 'people')),
+      product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> <span class="wait-count-word">' + ((product.waiting_count || 0) === 1 ? 'person' : 'people') + '</span>'),
     ].filter(Boolean).join('');
 
     var allProducts = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
@@ -1541,7 +1541,16 @@
       var countEl = container ? container.querySelector('.wait-count-value') : null;
 
       function showVoted(count) {
-        if (countEl) countEl.textContent = count;
+        if (countEl) {
+          countEl.textContent = count;
+          // The word goes with the number: "1 person", "2 people". (It
+          // used to stay as the page was built, so 1 becoming 2 read
+          // "2 person".)
+          var word = count === 1 ? 'person' : 'people';
+          var wordEl = container.querySelector('.wait-count-word');
+          if (wordEl) wordEl.textContent = word;
+          else if (countEl.nextSibling && countEl.nextSibling.nodeType === 3) countEl.nextSibling.textContent = ' ' + word;
+        }
         btn.style.display = 'none';
       }
 

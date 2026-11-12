@@ -3511,7 +3511,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     video && video.kind === 'link' ? specRow('Video', `<a href="${escapeHtml(video.src)}" target="_blank" rel="noopener">Watch on ${escapeHtml(video.host)} &#8599;</a>`) : '',
     product.press_release_url ? specRow('Press release', `<a href="${product.press_release_url}" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>`) : '',
     product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(externalLinkLabel(product))} &#8599;</a>`) : '',
-    product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> ${(product.waiting_count || 0) === 1 ? 'person' : 'people'}`),
+    product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> <span class="wait-count-word">${(product.waiting_count || 0) === 1 ? 'person' : 'people'}</span>`),
   ].filter(Boolean).join('\n');
 
   // Named after what the timeline shows: the family, or the product's own
