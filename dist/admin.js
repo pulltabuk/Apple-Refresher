@@ -5617,7 +5617,8 @@
   const galleryForm = document.getElementById('gallery-form');
   const galleryTagsListEl = document.getElementById('gallery-tags-list');
   const galleryImageThumbsEl = document.getElementById('gallery-image-thumbs');
-  const MAX_GALLERY_IMAGES = 12;
+  // Photos in one album (the same limit as the phone app, upload.js).
+  const MAX_GALLERY_IMAGES = 24;
 
   function showGalleryList() {
     galleryListView.style.display = 'block';

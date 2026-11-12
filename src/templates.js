@@ -4167,7 +4167,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
       <h3 id="gallery-form-title">Add photo</h3>
       <form id="gallery-form" class="admin-form">
         <div class="admin-subfield">
-          <span class="admin-subfield-label">Photos (up to 6, e.g. several angles taken at once)</span>
+          <span class="admin-subfield-label">Photos (up to 24 in one album; the first is the main one)</span>
           <div id="gallery-image-thumbs" class="admin-thumbs"></div>
           <label for="gallery-image-upload" class="admin-btn admin-btn--small admin-btn--primary">Add photos</label>
           <input type="file" id="gallery-image-upload" accept="image/*" multiple class="admin-file-input">
@@ -4876,7 +4876,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
         <div class="up-photos" id="up-photos"></div>
         <label for="up-file" class="gallery-action gallery-action--primary gallery-action--block" id="up-file-label">Choose photos</label>
         <input type="file" id="up-file" accept="image/*" multiple class="up-file-input">
-        <p class="up-hint">Up to 12 in one set. The first photo is the main one. Location data is removed from the files before upload.</p>
+        <p class="up-hint">Up to 24 in one set. The first photo is the main one. Location data is removed from the files before upload.</p>
       </div>
 
       <div class="up-card">

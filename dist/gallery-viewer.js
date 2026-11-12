@@ -607,9 +607,13 @@
             b.classList.toggle('is-active', i === index);
             if (i === index) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
           });
+          // Keep the thumbnail of the photo showing in the middle of the
+          // strip. Measured from the strip's own left edge (offsetLeft is
+          // from the page's, which left the first thumbnail cut off).
           var on = thumbs.children[index];
           if (on && thumbs.scrollWidth > thumbs.clientWidth) {
-            thumbs.scrollTo({ left: on.offsetLeft - (thumbs.clientWidth - on.offsetWidth) / 2, behavior: animate && !reduceMotion ? 'smooth' : 'auto' });
+            var inStrip = thumbs.scrollLeft + on.getBoundingClientRect().left - thumbs.getBoundingClientRect().left;
+            thumbs.scrollTo({ left: Math.max(0, inStrip - (thumbs.clientWidth - on.offsetWidth) / 2), behavior: animate && !reduceMotion ? 'smooth' : 'auto' });
           }
         }
         if (counter) counter.textContent = (index + 1) + ' / ' + imgs.length;
