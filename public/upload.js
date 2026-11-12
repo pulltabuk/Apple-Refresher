@@ -20,7 +20,7 @@
     });
   }
 
-  const MAX_PHOTOS = 12;
+  const MAX_PHOTOS = 24; // photos in one album (the same limit as the admin, admin.js)
   const MAX_EDGE = 2560; // longest side in pixels after resizing
   const JPEG_QUALITY = 0.85;
   const LIST_CACHE_KEY = 'upload-gallery-cache-v1';
