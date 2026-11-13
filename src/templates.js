@@ -2202,6 +2202,13 @@ function countdownStopsHtml(items) {
 // The badge a countdown becomes when its moment comes ("🎉 Available
 // now"): a link to the product (or event) when the tile around it isn't
 // already one. app.js builds the same (countdown(), data-done-href).
+// Where the launch-day badge ("Available now", "Pre-order now") of a
+// tile for several products goes: the Coming soon page, which lists them
+// all on the day. (It used to go to the first of them only.)
+function groupDoneHref(members) {
+  return members.length > 1 && members.every((m) => m.product) ? '/coming-soon/' : members[0].href;
+}
+
 function doneBadgeHtml(text, href) {
   return href
     ? `<a class="countdown-done-badge countdown-done-badge--link" href="${href}">${escapeHtml(text)}<span class="countdown-done-go" aria-hidden="true">&rarr;</span></a>`
@@ -2230,7 +2237,7 @@ function oneCountdownHtml(item, tail) {
   const linkedNames = !!(members || tail);
   const tag = linkedNames ? 'div' : 'a';
   // The tile isn't a link (its names are): the badge links instead.
-  const doneHref = linkedNames ? (members ? members[0].href : item.href) : '';
+  const doneHref = linkedNames ? (members ? groupDoneHref(members) : item.href) : '';
   // A product counts down with its icon, as on the featured tile.
   const nameHtml = (m, linked) => (m.product
     ? `<${linked ? `a href="${m.href}"` : 'span'} class="countdown-name-row"><span class="countdown-icon">${productIcon(m.product, 32)}</span><span class="countdown-name">${escapeHtml(m.label)}</span></${linked ? 'a' : 'span'}>`
@@ -2362,9 +2369,9 @@ function heroLaunchSpotHtml(item) {
   const icon = single && item.product ? `<span class="hx-spot-icon">${productIcon(item.product, 34)}</span>` : '';
   const chips = single ? '' : `<ul class="hx-chips">${members.map((m) => `<li><a class="hx-chip" href="${m.href}">${m.product ? `<span class="hx-chip-icon">${productIcon(m.product, 20)}</span>` : ''}<span class="hx-chip-text"><span class="hx-chip-name">${escapeHtml(m.label)}</span>${mixedTimes && m.time ? `<span class="hx-chip-time">${timeWithUk(m.date, m.time)}</span>` : ''}</span></a></li>`).join('')}</ul>`;
   const clock = exactDay
-    ? `<div class="hx-clock" data-countdown-clock role="timer" aria-label="Time to go">${over ? doneBadgeHtml(done.text, members[0].href) : FactsKit.eventClockUnits(target - Date.now())}</div>`
+    ? `<div class="hx-clock" data-countdown-clock role="timer" aria-label="Time to go">${over ? doneBadgeHtml(done.text, groupDoneHref(members)) : FactsKit.eventClockUnits(target - Date.now())}</div>`
     : '';
-  return `<div class="hx-spot hx-spot--${isEvent ? 'event' : 'launch'}${over ? ' countdown--done' : ''}${single ? ' hx-spot--single' : ''}"${exactDay ? ` data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}" data-done-href="${members[0].href}"` : ''}>
+  return `<div class="hx-spot hx-spot--${isEvent ? 'event' : 'launch'}${over ? ' countdown--done' : ''}${single ? ' hx-spot--single' : ''}"${exactDay ? ` data-countdown="${escapeHtml(item.date)}"${item.time ? ` data-countdown-time="${escapeHtml(item.time)}"` : ''} data-done-kicker="${escapeHtml(done.kicker)}" data-done-text="${escapeHtml(done.text)}" data-done-href="${groupDoneHref(members)}"` : ''}>
     <div class="hx-spot-main">
       <p class="hx-eyebrow">${HX_DOT}<span class="countdown-label">${escapeHtml(label)}</span>${away ? `<span class="hx-eyebrow-in" data-days-until="${escapeHtml(item.date)}">${escapeHtml(away)}</span>` : ''}</p>
       <div class="hx-spot-head">${icon}<div>${title}${sub ? `<p class="hx-spot-sub">${sub}</p>` : ''}</div></div>
