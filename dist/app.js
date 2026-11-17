@@ -1788,10 +1788,36 @@
     }
     return seen;
   }
+  // Nothing coming soon: the list still opens with its green Coming soon
+  // bar, and under it a line saying so beside a small sunset (the picture
+  // from the Coming soon page, in miniature).
+  var COMING_EMPTY_ART = '<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">' +
+    '<defs>' +
+      '<linearGradient id="pce-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#24162c"/><stop offset="0.5" stop-color="#7a2a26"/><stop offset="1" stop-color="#f0922e"/></linearGradient>' +
+      '<linearGradient id="pce-sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#ff8a3d"/></linearGradient>' +
+      '<clipPath id="pce-frame"><rect width="64" height="64" rx="14"/></clipPath>' +
+      '<clipPath id="pce-above"><rect width="64" height="42"/></clipPath>' +
+    '</defs>' +
+    '<g clip-path="url(#pce-frame)">' +
+      '<rect width="64" height="42" fill="url(#pce-sky)"/>' +
+      '<g clip-path="url(#pce-above)"><circle cx="32" cy="36" r="17" fill="url(#pce-sun)"/>' +
+        '<rect x="14" y="30" width="36" height="1.6" fill="#b1451f"/><rect x="14" y="34.5" width="36" height="2.2" fill="#c9571f"/><rect x="14" y="39" width="36" height="3" fill="#e07a26"/></g>' +
+      '<rect y="42" width="64" height="22" fill="#2a1630"/>' +
+      '<g fill="#ff9d47"><rect x="21" y="46" width="22" height="2" rx="1"/><rect x="25" y="51" width="14" height="2" rx="1"/><rect x="28.5" y="56" width="7" height="2" rx="1"/></g>' +
+    '</g></svg>';
+  function comingEmptyHtml() {
+    return '<span class="products-coming-empty-art">' + COMING_EMPTY_ART + '</span>' +
+      '<span class="products-coming-empty-text">' +
+        '<strong>Nothing in the pipeline right now</strong>' +
+        '<span>When Apple gives a product a release date, it shows here first, with a countdown.</span>' +
+      '</span>' +
+      '<a class="products-coming-empty-link" href="/coming-soon/">Coming soon page <span aria-hidden="true">\u2192</span></a>';
+  }
+
   function updateStatusDivider(matching) {
     var grid = document.getElementById('grid');
     if (!grid || grid.getAttribute('data-mode') !== 'all') return;
-    grid.querySelectorAll('.products-status-divider').forEach(function (d) { d.remove(); });
+    grid.querySelectorAll('.products-status-divider, .products-coming-empty').forEach(function (d) { d.remove(); });
     var all = matching || Array.prototype.slice.call(grid.querySelectorAll('.card'));
     var groups = groupsInOrder(all);
     if (!groups || groups.length < 2) return;
@@ -1806,6 +1832,22 @@
       d.innerHTML = '<span class="products-status-divider-label">' + GROUP_LABELS[g] + '</span><span class="products-status-divider-count">' + counts[g] + '</span>';
       grid.insertBefore(d, c);
     });
+    // The whole list (nothing searched for or filtered out), at its
+    // start, with on-sale products first: where Coming soon would be.
+    var everyCard = grid.querySelectorAll('.card');
+    var first = shown[0];
+    if (!first || counts.coming || all.length !== everyCard.length || groups[0] !== 'current' || first !== all[0]) return;
+    var onSaleBar = first.previousElementSibling;
+    if (!onSaleBar || !onSaleBar.classList.contains('products-status-divider')) return;
+    var bar = document.createElement('div');
+    bar.className = 'products-status-divider products-status-divider--coming products-status-divider--first';
+    bar.innerHTML = '<span class="products-status-divider-label">' + GROUP_LABELS.coming + '</span><span class="products-status-divider-count">0</span>';
+    var note = document.createElement('div');
+    note.className = 'products-coming-empty';
+    note.innerHTML = comingEmptyHtml();
+    grid.insertBefore(bar, onSaleBar);
+    grid.insertBefore(note, onSaleBar);
+    onSaleBar.classList.remove('products-status-divider--first');
   }
 
   // The number of tiles per row changes with the window, so pages are
