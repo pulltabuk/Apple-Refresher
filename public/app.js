@@ -144,6 +144,19 @@
     return h.length ? h[0] : null;
   }
 
+  // Must match periodEnd() in src/templates.js: the last day a
+  // month-only or year-only date can mean.
+  function periodEndJS(str) {
+    if (!str) return str;
+    if (datePrecisionJS(str) === 'year') return str + '-12-31';
+    if (datePrecisionJS(str) === 'month') {
+      var parts = str.split('-');
+      var last = new Date(Number(parts[0]), Number(parts[1]), 0).getDate();
+      return str + '-' + (last < 10 ? '0' : '') + last;
+    }
+    return str;
+  }
+
   function monthsBetweenJS(a, b) {
     var days = (new Date(b) - new Date(a)) / 86400000;
     return Math.max(0, Math.round(days / 30.4375));
@@ -497,16 +510,26 @@
 
   function appleSupportStatusJS(product) {
     if (!product.discontinued || !product.discontinued_date) return null;
-    var years = daysBetweenJS(product.discontinued_date, new Date().toISOString().slice(0, 10)) / 365.25;
+    var years = daysBetweenJS(periodEndJS(product.discontinued_date), new Date().toISOString().slice(0, 10)) / 365.25;
     if (years >= 7) return 'Obsolete (Apple no longer services it)';
     if (years >= 5) return 'Vintage (limited repairs, subject to parts)';
     return 'Discontinued, not yet Vintage';
   }
 
+  // Must match lifespanText() in src/templates.js: no more exact than
+  // its two dates.
   function lifespanTextJS(start, end) {
+    var ps = datePrecisionJS(start), pe = datePrecisionJS(end);
+    if (ps === 'year' || pe === 'year') {
+      var n = Number(String(end).slice(0, 4)) - Number(String(start).slice(0, 4));
+      return n < 1 ? 'under a year' : 'about ' + n + ' year' + (n === 1 ? '' : 's');
+    }
     var days = Math.max(0, Math.round((new Date(end) - new Date(start)) / 86400000));
-    if (days < 31) return days + ' day' + (days === 1 ? '' : 's');
-    var months = monthsBetweenJS(start, end);
+    if (days < 31 && ps === 'day' && pe === 'day') return days + ' day' + (days === 1 ? '' : 's');
+    var months = ps === 'month' || pe === 'month'
+      ? Math.max(0, (Number(String(end).slice(0, 4)) - Number(String(start).slice(0, 4))) * 12 + Number(String(end).slice(5, 7)) - Number(String(start).slice(5, 7)))
+      : monthsBetweenJS(start, end);
+    if (!months) return 'under a month';
     var years = Math.floor(months / 12), rem = months % 12, parts = [];
     if (years) parts.push(years + ' year' + (years === 1 ? '' : 's'));
     if (rem || !years) parts.push(rem + ' month' + (rem === 1 ? '' : 's'));
@@ -1015,7 +1038,7 @@
       if (launch) meta.push('Released ' + formatDateJS(launch));
       var year = product.discontinued_date ? String(product.discontinued_date).slice(0, 4) : '';
       figure = year
-        ? '<span class="prow-num">' + year + '</span> <span class="prow-unit">discontinued ' + escapeHtmlJS(formatDateJS(product.discontinued_date).replace(/ \d{4}$/, '')) + '</span>' +
+        ? '<span class="prow-num">' + year + '</span> <span class="prow-unit">discontinued' + (datePrecisionJS(product.discontinued_date) === 'year' ? '' : ' ' + escapeHtmlJS(formatDateJS(product.discontinued_date).replace(/ \d{4}$/, ''))) + '</span>' +
           '<span class="prow-ended">' + escapeHtmlJS(formatDateJS(product.discontinued_date)) + '</span>'
         : '<span class="prow-unit">Discontinued</span>';
       status = '<span class="prow-status prow-status--discontinued">Discontinued</span>';
@@ -1251,7 +1274,7 @@
     if (product.discontinued) {
       // Must match heroStatHtml() in src/templates.js.
       var end = product.discontinued_date || null;
-      var releases = (product.refresh_history || []).filter(function (d) { return !end || d <= end; }).sort();
+      var releases = (product.refresh_history || []).filter(function (d) { return !end || d <= periodEndJS(end); }).sort();
       var first = releases[0] || null;
       var isDay = function (d) { return /^\d{4}-\d{2}-\d{2}$/.test(d || ''); };
       var span = first && end && isDay(first) && isDay(end) ? lifespanTextJS(first, end) : null;
@@ -1386,7 +1409,7 @@
       keyFactJS('Lifespan', launch && product.discontinued && product.discontinued_date
         ? (/^\d{4}-\d{2}-\d{2}$/.test(launch) && /^\d{4}-\d{2}-\d{2}$/.test(product.discontinued_date)
           ? daysBetweenJS(launch, product.discontinued_date).toLocaleString('en-GB') + ' days<span class="key-fact-note">' + lifespanTextJS(launch, product.discontinued_date) + '</span>'
-          : lifespanTextJS(launch, product.discontinued_date))
+          : lifespanTextJS(launch, product.discontinued_date).replace(/^[a-z]/, function (c) { return c.toUpperCase(); }))
         : null, 'lifespan'),
       keyFactJS('Launch price from', product.price ? escapeHtmlJS(formatPriceJS(product.price)) : null, 'price'),
       keyFactJS('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDateJS(product.original_launch_date) : null, 'first'),
@@ -2436,9 +2459,11 @@
     var angles = [];
 
     if (d.status === 'discontinued') {
-      angles.push(d.name + ' was discontinued on ' + d.facts['discontinued'] + (d.facts['lifespan'] ? ', after ' + d.facts['lifespan'] + ' on sale.' : '.') + '\n\nHere\u2019s its full story, from launch to retirement.');
+      // "on 9 May 2022", or "in May 2022" / "in 2022" for a vaguer date.
+      var whenGone = (/^\d{1,2} /.test(d.facts['discontinued'] || '') ? 'on ' : 'in ') + d.facts['discontinued'];
+      angles.push(d.name + ' was discontinued ' + whenGone + (d.facts['lifespan'] ? ', after ' + d.facts['lifespan'].replace(/^(About|Under)\b/, function (w) { return w.toLowerCase(); }) + ' on sale.' : '.') + '\n\nHere\u2019s its full story, from launch to retirement.');
       if (d.fact) angles.push('Did you know? ' + d.fact + '\n\nThe full history of the ' + d.name + ' is here.');
-      angles.push('Remember the ' + d.name + '?\n\nIt left Apple\u2019s line-up on ' + d.facts['discontinued'] + '. Here\u2019s what replaced it.');
+      angles.push('Remember the ' + d.name + '?\n\nIt left Apple\u2019s line-up ' + whenGone + '. Here\u2019s what replaced it.');
     } else if (d.status === 'upcoming') {
       angles.push('The ' + d.name + ' is almost here. \u23F3\n\nEverything we know so far, including the release date and price.');
       if (d.fact) angles.push('Did you know? ' + d.fact + '\n\nThe ' + d.name + ' arrives soon.');
@@ -2665,8 +2690,10 @@
       : product.discontinued && launchDateJS(product) && product.discontinued_date
       // Must match featuredCardHtml(): how long a discontinued one was on sale.
       ? '<span class="card-featured-gone"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.16"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Discontinued ' + formatDateJS(product.discontinued_date) + '</span></span><div class="card-featured-count card-featured-count--discontinued">' +
-        '<span class="card-featured-count-number">' + daysBetweenJS(launchDateJS(product), product.discontinued_date).toLocaleString('en-GB') + '</span> ' +
-        '<span class="card-featured-count-suffix">days on sale, ' + formatDateJS(String(launchDateJS(product)).slice(0, 7)) + ' \u2013 ' + formatDateJS(String(product.discontinued_date).slice(0, 7)) + '</span></div>'
+        (datePrecisionJS(launchDateJS(product)) === 'day' && datePrecisionJS(product.discontinued_date) === 'day'
+          ? '<span class="card-featured-count-number">' + daysBetweenJS(launchDateJS(product), product.discontinued_date).toLocaleString('en-GB') + '</span> <span class="card-featured-count-suffix">days on sale, '
+          : '<span class="card-featured-count-number card-featured-count-number--words">' + lifespanTextJS(launchDateJS(product), product.discontinued_date) + '</span> <span class="card-featured-count-suffix">on sale, ') +
+        formatDateJS(String(launchDateJS(product)).slice(0, 7)) + ' \u2013 ' + formatDateJS(String(product.discontinued_date).slice(0, 7)) + '</span></div>'
       : badgeHtmlJS(product, statusInfo);
     var launch = launchDateJS(product);
     var predecessor = product.previous_model && allProducts ? allProducts.filter(function (p) { return p.slug === product.previous_model; })[0] : null;

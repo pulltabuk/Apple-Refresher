@@ -218,10 +218,10 @@ function rssFeedXml({ allItems, siteUrl }) {
     // later release.
     const first = (product.refresh_history || []).slice().sort()[0];
     const desc = product.discontinued && product.discontinued_date === date
-      ? `${product.name} was discontinued on ${formatDate(date)}.`
+      ? `${product.name} was discontinued ${onDate(date)}.`
       : date === (product.original_launch_date || first)
-      ? `${product.name} was released on ${formatDate(date)}.`
-      : `A new ${product.name} was released on ${formatDate(date)}.`;
+      ? `${product.name} was released ${onDate(date)}.`
+      : `A new ${product.name} was released ${onDate(date)}.`;
     let pubDate;
     try {
       pubDate = new Date(date).toUTCString();
@@ -267,6 +267,25 @@ function formatDate(str) {
     return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
   }
   return new Date(str).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// "on 9 May 2022", or "in May 2022" / "in 2022" when only the month or
+// the year is known. Must match onDateJS() in public/app.js.
+function onDate(str) {
+  if (!str) return '';
+  return `${datePrecision(str) === 'day' ? 'on' : 'in'} ${formatDate(str)}`;
+}
+
+// The last day a month-only or year-only date can mean ("2021" is any
+// day up to 31 December), for sums that must not run early.
+function periodEnd(str) {
+  if (!str) return str;
+  if (datePrecision(str) === 'year') return `${str}-12-31`;
+  if (datePrecision(str) === 'month') {
+    const [y, m] = str.split('-').map(Number);
+    return `${str}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+  }
+  return str;
 }
 
 function sortedHistory(product) {
@@ -725,16 +744,28 @@ function horizontalTimelineHtml(product, allProducts) {
 
 function appleSupportStatus(product) {
   if (!product.discontinued || !product.discontinued_date) return null;
-  const years = daysBetween(product.discontinued_date, new Date().toISOString().slice(0, 10)) / 365.25;
+  const years = daysBetween(periodEnd(product.discontinued_date), new Date().toISOString().slice(0, 10)) / 365.25;
   if (years >= 7) return 'Obsolete (Apple no longer services it)';
   if (years >= 5) return 'Vintage (limited repairs, subject to parts)';
   return 'Discontinued, not yet Vintage';
 }
 
+// A span of time, no more exact than its two dates: whole years when
+// only a year is known for either, whole months when only a month is.
+// Must match lifespanTextJS() in public/app.js.
 function lifespanText(start, end) {
+  const ps = datePrecision(start);
+  const pe = datePrecision(end);
+  if (ps === 'year' || pe === 'year') {
+    const n = Number(String(end).slice(0, 4)) - Number(String(start).slice(0, 4));
+    return n < 1 ? 'under a year' : `about ${n} year${n === 1 ? '' : 's'}`;
+  }
   const days = Math.max(0, Math.round((new Date(end) - new Date(start)) / 86400000));
-  if (days < 31) return `${days} day${days === 1 ? '' : 's'}`;
-  const months = monthsBetween(start, end);
+  if (days < 31 && ps === 'day' && pe === 'day') return `${days} day${days === 1 ? '' : 's'}`;
+  const months = ps === 'month' || pe === 'month'
+    ? Math.max(0, (Number(String(end).slice(0, 4)) - Number(String(start).slice(0, 4))) * 12 + Number(String(end).slice(5, 7)) - Number(String(start).slice(5, 7)))
+    : monthsBetween(start, end);
+  if (!months) return 'under a month';
   const years = Math.floor(months / 12);
   const rem = months % 12;
   const parts = [];
@@ -876,12 +907,12 @@ function categoryStatsSentence(category, items) {
     const parts = [];
     if (ending.ended) {
       parts.push(ending.date
-        ? `Apple ended the ${cat} line on ${formatDate(ending.date)}, when it discontinued the ${name}, the last one.`
+        ? `Apple ended the ${cat} line ${onDate(ending.date)}, when it discontinued the ${name}, the last one.`
         : `Apple has ended the ${cat} line. The ${name} was the last one.`);
     } else if (ending.date) {
       const many = ending.names.length > 1;
       const who = ending.names.length > 2 ? `the ${ending.names[0]} and others` : `the ${ending.names.join(' and the ')}`;
-      parts.push(`No ${cat} is on sale now. The last ${many ? 'ones' : 'one'}, ${escapeHtml(who)}, ${many ? 'were' : 'was'} discontinued on ${formatDate(ending.date)}.`);
+      parts.push(`No ${cat} is on sale now. The last ${many ? 'ones' : 'one'}, ${escapeHtml(who)}, ${many ? 'were' : 'was'} discontinued ${onDate(ending.date)}.`);
     } else {
       parts.push(`No ${cat} is on sale now.`);
     }
@@ -1251,7 +1282,7 @@ function productRowInner(product, statusInfo) {
     // current products (More in, All products), the plain date instead,
     // so it never reads like a current product's day count (styles.css).
     figure = year
-      ? `<span class="prow-num">${year}</span> <span class="prow-unit">discontinued ${escapeHtml(formatDate(product.discontinued_date).replace(/ \d{4}$/, ''))}</span><span class="prow-ended">${escapeHtml(formatDate(product.discontinued_date))}</span>`
+      ? `<span class="prow-num">${year}</span> <span class="prow-unit">discontinued${datePrecision(product.discontinued_date) === 'year' ? '' : ` ${escapeHtml(formatDate(product.discontinued_date).replace(/ \d{4}$/, ''))}`}</span><span class="prow-ended">${escapeHtml(formatDate(product.discontinued_date))}</span>`
       : '<span class="prow-unit">Discontinued</span>';
     status = '<span class="prow-status prow-status--discontinued">Discontinued</span>';
   } else if (statusInfo) {
@@ -1673,7 +1704,9 @@ function featuredCardHtml(product, statusInfo, productsBySlug, role) {
     : product.discontinued && launchDate(product) && product.discontinued_date
     // A discontinued product (featured as a look back): how long it was on
     // sale. Must match featuredCardHtmlJS() in public/app.js.
-    ? `<span class="card-featured-gone"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.16"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Discontinued ${formatDate(product.discontinued_date)}</span></span><div class="card-featured-count card-featured-count--discontinued"><span class="card-featured-count-number">${daysBetween(launchDate(product), product.discontinued_date).toLocaleString('en-GB')}</span> <span class="card-featured-count-suffix">days on sale, ${formatDate(String(launchDate(product)).slice(0, 7))} &ndash; ${formatDate(String(product.discontinued_date).slice(0, 7))}</span></div>`
+    ? `<span class="card-featured-gone"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.16"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Discontinued ${formatDate(product.discontinued_date)}</span></span><div class="card-featured-count card-featured-count--discontinued">${datePrecision(launchDate(product)) === 'day' && datePrecision(product.discontinued_date) === 'day'
+      ? `<span class="card-featured-count-number">${daysBetween(launchDate(product), product.discontinued_date).toLocaleString('en-GB')}</span> <span class="card-featured-count-suffix">days on sale, `
+      : `<span class="card-featured-count-number card-featured-count-number--words">${lifespanText(launchDate(product), product.discontinued_date)}</span> <span class="card-featured-count-suffix">on sale, `}${formatDate(String(launchDate(product)).slice(0, 7))} &ndash; ${formatDate(String(product.discontinued_date).slice(0, 7))}</span></div>`
     : productBadge(product, statusInfo);
   const launch = launchDate(product);
   const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
@@ -3325,7 +3358,7 @@ function heroStatHtml(product, statusInfo, cycleDays) {
   // date, and how long it was on sale. Keep in step with heroStatHtmlJS().
   if (product.discontinued) {
     const end = product.discontinued_date || null;
-    const releases = (product.refresh_history || []).filter((d) => !end || d <= end).sort();
+    const releases = (product.refresh_history || []).filter((d) => !end || d <= periodEnd(end)).sort();
     const first = releases[0] || null;
     const span = first && end && datePrecision(first) === 'day' && datePrecision(end) === 'day' ? lifespanText(first, end) : null;
     const days = span ? daysBetween(first, end) : null;
@@ -3492,7 +3525,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     keyFact('Lifespan', launch && product.discontinued && product.discontinued_date
       ? (datePrecision(launch) === 'day' && datePrecision(product.discontinued_date) === 'day'
         ? `${daysBetween(launch, product.discontinued_date).toLocaleString('en-GB')} days<span class="key-fact-note">${lifespanText(launch, product.discontinued_date)}</span>`
-        : lifespanText(launch, product.discontinued_date))
+        : lifespanText(launch, product.discontinued_date).replace(/^[a-z]/, (c) => c.toUpperCase()))
       : null, 'lifespan'),
     keyFact('Launch price from', product.price ? escapeHtml(formatPrice(product.price)) : null, 'price'),
     keyFact('First release', product.original_launch_date && product.original_launch_date !== latest ? formatDate(product.original_launch_date) : null, 'first'),
@@ -3596,7 +3629,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
 
   const comingOn = status && status.daysSince < 0 ? (product.refresh_history || []).slice().sort().pop() : null;
   const description = product.discontinued
-    ? `${product.name} was discontinued${product.discontinued_date ? ` in ${formatDate(product.discontinued_date)}` : ''}${launch ? `, after launching in ${formatDate(launch)}` : ''}.${successor ? ` It was replaced by the ${successor.name}.` : ''}`
+    ? `${product.name} was discontinued${product.discontinued_date ? ` ${onDate(product.discontinued_date)}` : ''}${launch ? `, after launching ${onDate(launch)}` : ''}.${successor ? ` It was replaced by the ${successor.name}.` : ''}`
     : comingOn
     ? `${product.name} is coming ${formatDate(comingOn)}. See every generation and the full release history.`
     : status
@@ -4063,9 +4096,17 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             </div>
 
             <div class="admin-date-row admin-date-row--end" data-date-row="discontinued">
-              <span class="admin-release-time-label">Discontinued <span class="admin-optional">Optional</span></span>
+              <span class="admin-release-time-label admin-date-label-row"><span>Discontinued <span class="admin-optional">Optional</span></span>
+                <select id="discontinued_precision" class="admin-date-precision" aria-label="How exact the discontinued date is">
+                  <option value="day">Exact day</option>
+                  <option value="month">Month only</option>
+                  <option value="year">Year only</option>
+                </select>
+              </span>
               <div class="admin-release-time-row">
                 <input type="date" id="discontinued_date_input" aria-label="Discontinued date">
+                <span class="admin-month-pick" id="discontinued_month_pick" hidden><select id="discontinued_month_select" aria-label="Discontinued month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><select id="discontinued_month_year" aria-label="Discontinued year">${adminYearOptions()}</select></span>
+                <select id="discontinued_year_input" aria-label="Discontinued year" hidden>${adminYearOptions()}</select>
                 <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="discontinued" hidden>&#10003; Same day</button>
                 <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="discontinued">Clear</button>
                 <button type="button" class="admin-btn admin-btn--small admin-end-line-btn" id="end_of_line_btn" aria-pressed="false" hidden>End of the line</button>

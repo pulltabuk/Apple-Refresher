@@ -1557,19 +1557,20 @@
         const launch = p.original_launch_date || (p.refresh_history || []).slice().sort()[0];
         if (!launch) return null;
         const days = Math.round((new Date(p.discontinued_date) - new Date(launch)) / 86400000);
-        return days > 0 ? { name: p.name, days: days } : null;
+        const exact = /^\d{4}-\d{2}-\d{2}/.test(launch) && /^\d{4}-\d{2}-\d{2}/.test(p.discontinued_date);
+        return days > 0 ? { name: p.name, days: days, exact: exact } : null;
       })
       .filter(Boolean);
     if (lifespans.length >= 2) {
       const longest = lifespans.slice().sort((a, b) => b.days - a.days)[0];
       const longYears = Math.floor(longest.days / 365);
-      const longText = longYears >= 1 ? 'about ' + longYears + ' year' + (longYears === 1 ? '' : 's') : longest.days + ' days';
+      const longText = longYears >= 1 ? 'about ' + longYears + ' year' + (longYears === 1 ? '' : 's') : longest.exact ? longest.days + ' days' : 'under a year';
       facts.push('The ' + longest.name + ' had the longest run of any discontinued product tracked by Apple Sunset, lasting ' + longText + ' before being replaced.');
 
       const shortest = lifespans.slice().sort((a, b) => a.days - b.days)[0];
       if (shortest.name !== longest.name) {
         const shortYears = Math.floor(shortest.days / 365);
-        const shortText = shortYears >= 1 ? 'about ' + shortYears + ' year' + (shortYears === 1 ? '' : 's') : 'just ' + shortest.days + ' days';
+        const shortText = shortYears >= 1 ? 'about ' + shortYears + ' year' + (shortYears === 1 ? '' : 's') : shortest.exact ? 'just ' + shortest.days + ' days' : 'under a year';
         facts.push('The ' + shortest.name + ' had the shortest run of any discontinued product tracked by Apple Sunset, lasting ' + shortText + '.');
       }
     }
@@ -1692,7 +1693,15 @@
     return days + (days === 1 ? ' day' : ' days');
   }
   function daysBetweenIso(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
-  function longDate(iso) { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  // "9 May 2022", or "May 2022" / "2022" when that is all that's known.
+  function longDate(iso) {
+    const v = String(iso || '');
+    if (/^\d{4}$/.test(v)) return v;
+    if (/^\d{4}-\d{2}$/.test(v)) return new Date(Date.UTC(+v.slice(0, 4), +v.slice(5, 7) - 1, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  // The same in a sentence: "on 9 May 2022", "in May 2022", "in 2022".
+  function onLongDate(iso) { return (/^\d{4}-\d{2}-\d{2}/.test(String(iso || '')) ? 'on ' : 'in ') + longDate(iso); }
   function parsePrice(text) {
     const m = String(text || '').match(/^([£$€])?\s*([\d,.]+)/);
     return m ? { symbol: m[1] || '', value: parseFloat(m[2].replace(/,/g, '')) } : null;
@@ -1715,7 +1724,7 @@
       out.push('The ' + name + ' went on sale ' + spanText(daysBetweenIso(info.announced, latest)) + ' after Apple announced it, on ' + longDate(info.announced) + '.');
     }
     if (latest && info.preorder && info.preorder < latest) {
-      out.push('Pre-orders for the ' + name + ' opened ' + (function (n) { return n + (n === 1 ? ' day' : ' days'); })(daysBetweenIso(info.preorder, latest)) + ' before it reached customers on ' + longDate(latest) + '.');
+      out.push('Pre-orders for the ' + name + ' opened ' + (function (n) { return n + (n === 1 ? ' day' : ' days'); })(daysBetweenIso(info.preorder, latest)) + ' before it reached customers ' + onLongDate(latest) + '.');
     }
     if (releases.length >= 2) {
       const gaps = releases.slice(1).map((d, i) => daysBetweenIso(releases[i], d)).filter((g) => g > 0);
@@ -1727,7 +1736,7 @@
       }
     }
     if (product.discontinued && product.discontinued_date && releases.length) {
-      out.push('The ' + name + ' was on sale for ' + spanText(daysBetweenIso(releases[0], product.discontinued_date)) + ' before Apple discontinued it on ' + longDate(product.discontinued_date) + '.');
+      out.push('The ' + name + ' was on sale for ' + spanText(daysBetweenIso(releases[0], product.discontinued_date)) + ' before Apple discontinued it ' + onLongDate(product.discontinued_date) + '.');
     }
     const prev = product.previous_model ? (allProducts || []).find((p) => p.slug === product.previous_model) : null;
     if (prev && latest) {
@@ -1741,7 +1750,7 @@
         out.push('The ' + name + ' launched at ' + mine.symbol + mine.value + ', ' + mine.symbol + diff + (mine.value > theirs.value ? ' more' : ' less') + ' than the ' + prev.name + ' at ' + theirs.symbol + theirs.value + '.');
       }
     }
-    if (latest) {
+    if (/^\d{4}-\d{2}-\d{2}/.test(latest || '')) {
       const weekday = new Date(latest).toLocaleDateString('en-GB', { weekday: 'long' });
       out.push('The ' + name + ' was released on a ' + weekday + ', ' + longDate(latest) + '.');
     }
@@ -2184,7 +2193,7 @@
         const next = (p.refresh_history || []).filter((d) => d > today).sort()[0];
         if (next) {
           const days = daysBetweenDates(today, next);
-          ideas.push({ kind: 'Coming soon', text: days + ' day' + (days === 1 ? '' : 's') + ' to go until the ' + p.name + ' arrives on ' + longDate(next) + '.', link: productLink(p) });
+          ideas.push({ kind: 'Coming soon', text: days + ' day' + (days === 1 ? '' : 's') + ' to go until the ' + p.name + ' arrives ' + onLongDate(next) + '.', link: productLink(p) });
         }
       }
       const fact = plainText(p.did_you_know).replace(/\s+/g, ' ');
