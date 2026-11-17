@@ -1015,7 +1015,7 @@
       if (launch) meta.push('Released ' + formatDateJS(launch));
       var year = product.discontinued_date ? String(product.discontinued_date).slice(0, 4) : '';
       figure = year
-        ? '<span class="prow-num">' + year + '</span> <span class="prow-unit">discontinued ' + escapeHtmlJS(formatDateJS(product.discontinued_date).replace(/ \d{4}$/, '')) + '</span>' +
+        ? '<span class="prow-num">' + year + '</span> <span class="prow-unit">discontinued' + (datePrecisionJS(product.discontinued_date) === 'year' ? '' : ' ' + escapeHtmlJS(formatDateJS(product.discontinued_date).replace(/ \d{4}$/, ''))) + '</span>' +
           '<span class="prow-ended">' + escapeHtmlJS(formatDateJS(product.discontinued_date)) + '</span>'
         : '<span class="prow-unit">Discontinued</span>';
       status = '<span class="prow-status prow-status--discontinued">Discontinued</span>';
@@ -2665,8 +2665,9 @@
       : product.discontinued && launchDateJS(product) && product.discontinued_date
       // Must match featuredCardHtml(): how long a discontinued one was on sale.
       ? '<span class="card-featured-gone"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.16"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Discontinued ' + formatDateJS(product.discontinued_date) + '</span></span><div class="card-featured-count card-featured-count--discontinued">' +
-        '<span class="card-featured-count-number">' + daysBetweenJS(launchDateJS(product), product.discontinued_date).toLocaleString('en-GB') + '</span> ' +
-        '<span class="card-featured-count-suffix">days on sale, ' + formatDateJS(String(launchDateJS(product)).slice(0, 7)) + ' \u2013 ' + formatDateJS(String(product.discontinued_date).slice(0, 7)) + '</span></div>'
+        (datePrecisionJS(launchDateJS(product)) === 'day' && datePrecisionJS(product.discontinued_date) === 'day'
+          ? '<span class="card-featured-count-number">' + daysBetweenJS(launchDateJS(product), product.discontinued_date).toLocaleString('en-GB') + '</span> <span class="card-featured-count-suffix">days on sale, '
+          : '<span class="card-featured-count-number">' + lifespanTextJS(launchDateJS(product), product.discontinued_date) + '</span> <span class="card-featured-count-suffix">on sale, ') + formatDateJS(String(launchDateJS(product)).slice(0, 7)) + ' \u2013 ' + formatDateJS(String(product.discontinued_date).slice(0, 7)) + '</span></div>'
       : badgeHtmlJS(product, statusInfo);
     var launch = launchDateJS(product);
     var predecessor = product.previous_model && allProducts ? allProducts.filter(function (p) { return p.slug === product.previous_model; })[0] : null;

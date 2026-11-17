@@ -1251,7 +1251,7 @@ function productRowInner(product, statusInfo) {
     // current products (More in, All products), the plain date instead,
     // so it never reads like a current product's day count (styles.css).
     figure = year
-      ? `<span class="prow-num">${year}</span> <span class="prow-unit">discontinued ${escapeHtml(formatDate(product.discontinued_date).replace(/ \d{4}$/, ''))}</span><span class="prow-ended">${escapeHtml(formatDate(product.discontinued_date))}</span>`
+      ? `<span class="prow-num">${year}</span> <span class="prow-unit">discontinued${datePrecision(product.discontinued_date) === 'year' ? '' : ' ' + escapeHtml(formatDate(product.discontinued_date).replace(/ \d{4}$/, ''))}</span><span class="prow-ended">${escapeHtml(formatDate(product.discontinued_date))}</span>`
       : '<span class="prow-unit">Discontinued</span>';
     status = '<span class="prow-status prow-status--discontinued">Discontinued</span>';
   } else if (statusInfo) {
@@ -1673,7 +1673,7 @@ function featuredCardHtml(product, statusInfo, productsBySlug, role) {
     : product.discontinued && launchDate(product) && product.discontinued_date
     // A discontinued product (featured as a look back): how long it was on
     // sale. Must match featuredCardHtmlJS() in public/app.js.
-    ? `<span class="card-featured-gone"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.16"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Discontinued ${formatDate(product.discontinued_date)}</span></span><div class="card-featured-count card-featured-count--discontinued"><span class="card-featured-count-number">${daysBetween(launchDate(product), product.discontinued_date).toLocaleString('en-GB')}</span> <span class="card-featured-count-suffix">days on sale, ${formatDate(String(launchDate(product)).slice(0, 7))} &ndash; ${formatDate(String(product.discontinued_date).slice(0, 7))}</span></div>`
+    ? `<span class="card-featured-gone"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.16"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Discontinued ${formatDate(product.discontinued_date)}</span></span><div class="card-featured-count card-featured-count--discontinued">${datePrecision(launchDate(product)) === 'day' && datePrecision(product.discontinued_date) === 'day' ? `<span class="card-featured-count-number">${daysBetween(launchDate(product), product.discontinued_date).toLocaleString('en-GB')}</span> <span class="card-featured-count-suffix">days on sale, ` : `<span class="card-featured-count-number">${lifespanText(launchDate(product), product.discontinued_date)}</span> <span class="card-featured-count-suffix">on sale, `}${formatDate(String(launchDate(product)).slice(0, 7))} &ndash; ${formatDate(String(product.discontinued_date).slice(0, 7))}</span></div>`
     : productBadge(product, statusInfo);
   const launch = launchDate(product);
   const predecessor = product.previous_model && productsBySlug ? productsBySlug[product.previous_model] : null;
@@ -4063,9 +4063,17 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             </div>
 
             <div class="admin-date-row admin-date-row--end" data-date-row="discontinued">
-              <span class="admin-release-time-label">Discontinued <span class="admin-optional">Optional</span></span>
+              <span class="admin-release-time-label admin-date-label-row"><span>Discontinued <span class="admin-optional">Optional</span></span>
+                <select id="discontinued_precision" class="admin-date-precision" aria-label="How exact the discontinued date is">
+                  <option value="day">Exact day</option>
+                  <option value="month">Month only</option>
+                  <option value="year">Year only</option>
+                </select>
+              </span>
               <div class="admin-release-time-row">
                 <input type="date" id="discontinued_date_input" aria-label="Discontinued date">
+                <span class="admin-month-pick" id="discontinued_month_pick" hidden><select id="discontinued_month_select" aria-label="Discontinued month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><select id="discontinued_month_year" aria-label="Discontinued year">${adminYearOptions()}</select></span>
+                <select id="discontinued_year_input" aria-label="Discontinued year" hidden>${adminYearOptions()}</select>
                 <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="discontinued" hidden>&#10003; Same day</button>
                 <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="discontinued">Clear</button>
                 <button type="button" class="admin-btn admin-btn--small admin-end-line-btn" id="end_of_line_btn" aria-pressed="false" hidden>End of the line</button>
