@@ -1635,18 +1635,38 @@
   // that day (the homepage's "+2" beside Apple's last release). A
   // note above the list says so, with a way back to the whole list.
   var releasedFilter = '';
-  function clearReleasedFilter() {
-    releasedFilter = '';
+  var releasedPillsCleared = false;
+  function dropReleasedFromUrl() {
     var params = new URLSearchParams(window.location.search);
+    if (!params.has('released')) return;
     params.delete('released');
     var qs = params.toString();
     if (window.history && history.replaceState) history.replaceState(history.state, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+  }
+  function clearReleasedFilter() {
+    releasedFilter = '';
+    dropReleasedFromUrl();
     applyFilters();
+  }
+  // While the one-day view shows, no "Show" pill is lit: "All" would say
+  // the list is everything, which it isn't. Leaving the view lights the
+  // pill for whatever the list then shows.
+  function syncStatusPills(releasedOn) {
+    if (!releasedOn && !releasedPillsCleared) return;
+    var bar = document.querySelector('.filter-bar[data-filter-key="status"]');
+    if (!bar) return;
+    var want = activeFilters.status || 'all';
+    bar.querySelectorAll('.filter-btn').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-filter-value') === want && !(releasedOn && want === 'all'));
+    });
+    releasedPillsCleared = releasedOn;
   }
   function updateReleasedNote(showing, count) {
     var grid = document.getElementById('grid');
     var note = document.getElementById('released-note');
-    if (!releasedFilter || !showing || !grid) { if (note) note.remove(); return; }
+    var on = !!(releasedFilter && showing && grid);
+    syncStatusPills(on);
+    if (!on) { if (note) note.remove(); return; }
     if (!note) {
       note = document.createElement('p');
       note.id = 'released-note';
@@ -1654,10 +1674,23 @@
       var before = document.getElementById('sort-heading') || grid;
       before.parentNode.insertBefore(note, before);
     }
-    note.innerHTML = '<span class="released-note-text"><strong>Released ' + escapeHtmlJS(formatDateJS(releasedFilter)) + '</strong> ' + count + ' product' + (count === 1 ? '' : 's') + '</span>' +
-      '<button type="button" class="released-note-clear">Show all products</button>';
+    // Says these are all of them (so the button can't read as "more of
+    // the same"), and the button is plain, not the note's green.
+    var which = count > 1 ? 'These are all ' + count + ' products released that day.'
+      : count === 1 ? 'This is the only product released that day.'
+      : 'No product on sale was last released that day.';
+    note.innerHTML = '<span class="released-note-text"><strong>Released ' + escapeHtmlJS(formatDateJS(releasedFilter)) + '</strong><span>' + which + '</span></span>' +
+      '<button type="button" class="released-note-clear"><span aria-hidden="true">\u2190</span> Back to the full product list</button>';
     note.querySelector('.released-note-clear').addEventListener('click', clearReleasedFilter);
   }
+  // Any filter pill (or the family menu, which clicks one) leaves the
+  // one-day view before the pill does its own work, so the list shows
+  // what the pills say.
+  document.addEventListener('click', function (e) {
+    if (!releasedFilter || !e.target || !e.target.closest || !e.target.closest('.filter-bar .filter-btn')) return;
+    releasedFilter = '';
+    dropReleasedFromUrl();
+  }, true);
 
   if (searchInput) {
     var searchFromUrl = new URLSearchParams(window.location.search).get('search');
