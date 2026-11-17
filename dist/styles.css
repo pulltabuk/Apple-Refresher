@@ -4653,3 +4653,11 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
   .products-coming-empty-text { flex-basis: calc(100% - 64px); }
   .products-coming-empty-link { margin-left: 64px; }
 }
+
+/* All products, opened on one release day (/products/?released=): a
+   green note over the list saying which day, with a way back to all. */
+.released-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin: 0 0 0.85rem; padding: 10px 12px 10px 16px; border-radius: 12px; background: var(--fresh-bg); border: 1px solid #d3e4bf; color: var(--fresh-text); font-size: 15px; }
+.released-note-text strong { margin-right: 8px; font-weight: 800; }
+.released-note-clear { flex: none; padding: 7px 14px; border: 0; border-radius: 999px; background: #3d7a1e; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.released-note-clear:hover { background: #2f6115; }
+.released-note + .sort-heading { display: none; }

@@ -988,8 +988,12 @@
     var discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
     var lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetweenJS(launch, product.discontinued_date) : '';
     var decade = product.discontinued && product.discontinued_date ? Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10 + 's' : '';
+    // Must match cardHtml() in src/templates.js: the day an on-sale
+    // product last came out (for /products/?released=).
+    var todayIso = new Date().toISOString().slice(0, 10);
+    var lastRelease = product.discontinued ? '' : ((product.refresh_history || []).filter(function (d) { return d <= todayIso && d !== product.discontinued_date; }).sort().pop() || '');
     return (
-      '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-group="' + productGroupJS(product, statusInfo) + '" data-days="' + days + '" data-wait="' + (days !== '' ? statusInfo.ratio.toFixed(3) : '') + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
+      '<article class="card' + (status === 'discontinued' ? ' card--discontinued' : '') + '" data-released="' + escapeHtmlJS(lastRelease) + '" data-category="' + escapeHtmlJS(product.category) + '" data-status="' + status + '" data-group="' + productGroupJS(product, statusInfo) + '" data-days="' + days + '" data-wait="' + (days !== '' ? statusInfo.ratio.toFixed(3) : '') + '" data-launch="' + launchTs + '" data-discontinued="' + discTs + '" data-lifespan="' + lifespanDays + '" data-decade="' + decade + '">' +
         productRowInnerJS(product, statusInfo) +
       '</article>'
     );
@@ -1627,6 +1631,33 @@
   var searchInput = document.getElementById('search-input');
   var noResults = document.getElementById('no-results');
   var activeFilters = {};
+  // /products/?released=2026-11-13: only the products that last came out
+  // that day (the homepage's "+2" beside Apple's last release). A
+  // note above the list says so, with a way back to the whole list.
+  var releasedFilter = '';
+  function clearReleasedFilter() {
+    releasedFilter = '';
+    var params = new URLSearchParams(window.location.search);
+    params.delete('released');
+    var qs = params.toString();
+    if (window.history && history.replaceState) history.replaceState(history.state, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+    applyFilters();
+  }
+  function updateReleasedNote(showing, count) {
+    var grid = document.getElementById('grid');
+    var note = document.getElementById('released-note');
+    if (!releasedFilter || !showing || !grid) { if (note) note.remove(); return; }
+    if (!note) {
+      note = document.createElement('p');
+      note.id = 'released-note';
+      note.className = 'released-note';
+      var before = document.getElementById('sort-heading') || grid;
+      before.parentNode.insertBefore(note, before);
+    }
+    note.innerHTML = '<span class="released-note-text"><strong>Released ' + escapeHtmlJS(formatDateJS(releasedFilter)) + '</strong> ' + count + ' product' + (count === 1 ? '' : 's') + '</span>' +
+      '<button type="button" class="released-note-clear">Show all products</button>';
+    note.querySelector('.released-note-clear').addEventListener('click', clearReleasedFilter);
+  }
 
   if (searchInput) {
     var searchFromUrl = new URLSearchParams(window.location.search).get('search');
@@ -1682,6 +1713,7 @@
           var want = activeFilters[key];
           if (want !== 'all' && card.getAttribute('data-' + key) !== want) show = false;
         });
+        if (releasedFilter && card.getAttribute('data-released') !== releasedFilter) show = false;
       }
       if (paginated) {
         card.setAttribute('data-matches-filter', show ? 'true' : 'false');
@@ -1691,6 +1723,7 @@
       if (show) visibleCount++;
     });
     if (noResults) noResults.style.display = visibleCount === 0 ? '' : 'none';
+    updateReleasedNote(!query, visibleCount);
     applyOtherFamiliesJS(query, visibleCount);
     if (paginated) {
       if (keepPage !== true) {
@@ -1750,6 +1783,9 @@
     });
     var familyPicker = document.querySelector('[data-family-select]');
     if (familyPicker) familyPicker.value = activeFilters.category && activeFilters.category !== 'all' ? activeFilters.category : '';
+    var allGrid = document.getElementById('grid');
+    var released = params.get('released') || '';
+    releasedFilter = allGrid && allGrid.getAttribute('data-mode') === 'all' && /^\d{4}-\d{2}-\d{2}$/.test(released) ? released : '';
   }
   window.addEventListener('popstate', function () {
     if (!isPaginatedGrid()) return;
@@ -2674,9 +2710,12 @@
   function liveBarLatestHtmlJS(latest, days) {
     var others = latest.others || [];
     var name = escapeHtmlJS(latest.name) + (others.length ? ' <span class="live-bar-more" title="' + escapeHtmlJS('Also: ' + others.join(', ')) + '">+' + others.length + '</span>' : '');
+    // One product: its page. Several released together ("+2"): the
+    // All products list showing just those (?released=, below).
+    var href = others.length && latest.date ? '/products/?released=' + escapeHtmlJS(latest.date) : '/products/' + escapeHtmlJS(latest.slug) + '/';
     return days === 0
-      ? '<a class="live-bar-latest" href="/products/' + escapeHtmlJS(latest.slug) + '/"><strong>New today</strong> from Apple: <span class="live-bar-name">' + name + '</span></a>'
-      : '<a class="live-bar-latest" href="/products/' + escapeHtmlJS(latest.slug) + '/"><strong>' + days + ' ' + (days === 1 ? 'day' : 'days') + '</strong> since Apple\u2019s last release: <span class="live-bar-name">' + name + '</span></a>';
+      ? '<a class="live-bar-latest" href="' + href + '"><strong>New today</strong> from Apple: <span class="live-bar-name">' + name + '</span></a>'
+      : '<a class="live-bar-latest" href="' + href + '"><strong>' + days + ' ' + (days === 1 ? 'day' : 'days') + '</strong> since Apple\u2019s last release: <span class="live-bar-name">' + name + '</span></a>';
   }
   function siteStatsHtmlJS(s) {
     if (!s || !s.total) return '';
