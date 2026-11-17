@@ -3638,6 +3638,10 @@
   // products). Follows the saved launch date, or the menu while it's empty.
   let launchPrecision = 'day';
   let launchPrecisionFor;
+  // The same for the discontinued date: Apple often only said the month
+  // or the year an older product went.
+  let discontinuedPrecision = 'day';
+  let discontinuedPrecisionFor;
 
   function rowNote(row, text) {
     const rowEl = document.querySelector('[data-date-row="' + row + '"]');
@@ -3671,6 +3675,39 @@
     rowNote(row, value && !isFullDate(value) ? 'Recorded as ' + formatAdminDate(value) + '. Pick a day to replace it.' : '');
   }
 
+  // The Discontinued row: an exact day, or just the month or the year.
+  // It follows the saved date, or the menu while there's no date yet.
+  function paintDiscontinuedRow(target) {
+    const input = document.getElementById('discontinued_date_input');
+    const yearIn = document.getElementById('discontinued_year_input');
+    const disc = currentDiscontinuedDate;
+    const changed = discontinuedPrecisionFor !== disc;
+    if (disc && changed) discontinuedPrecision = precisionOf(disc);
+    // Removed from the list above: its month and year menus empty too.
+    if (!disc && changed && discontinuedPrecisionFor) {
+      setMonthPick('discontinued', null);
+      yearIn.value = '';
+    }
+    discontinuedPrecisionFor = disc;
+    document.getElementById('discontinued_precision').value = discontinuedPrecision;
+    input.hidden = discontinuedPrecision !== 'day';
+    document.getElementById('discontinued_month_pick').hidden = discontinuedPrecision !== 'month';
+    yearIn.hidden = discontinuedPrecision !== 'year';
+    if (discontinuedPrecision === 'day') {
+      paintDateRow('discontinued', disc, target);
+      return;
+    }
+    input.classList.remove('is-suggested');
+    document.querySelector('[data-date-use="discontinued"]').hidden = true;
+    if (discontinuedPrecision === 'month' && precisionOf(disc) === 'month') setMonthPick('discontinued', disc);
+    if (discontinuedPrecision === 'year' && document.activeElement !== yearIn) yearIn.value = precisionOf(disc) === 'year' ? disc : '';
+    // A date saved more (or less) exactly than the menu now says stays
+    // until a new one is picked: say what it is.
+    rowNote('discontinued', disc && precisionOf(disc) !== discontinuedPrecision
+      ? 'Recorded as ' + formatAdminDate(disc) + '. Pick a ' + discontinuedPrecision + ' to replace it.'
+      : '');
+  }
+
   function renderDatesBox() {
     const box = document.getElementById('generation-add-panel');
     if (!box) return;
@@ -3697,7 +3734,7 @@
 
     paintDateRow('announced', rowValue('announced', target), target);
     paintDateRow('preorder', rowValue('preorder', target), target);
-    paintDateRow('discontinued', currentDiscontinuedDate, target);
+    paintDiscontinuedRow(target);
 
     // The release: an exact day (with a time), or just a month or year
     // when Apple has only said roughly when.
@@ -3843,6 +3880,10 @@
       hiddenSuggestions.add(row);
       if (row === 'release') { clearRelease(); return; }
       if (row === 'preorder') setPreorderTimeFields(null);
+      if (row === 'discontinued') {
+        setMonthPick('discontinued', null);
+        document.getElementById('discontinued_year_input').value = '';
+      }
       commitDate(row, null);
     });
   });
@@ -3882,6 +3923,20 @@
   document.getElementById('release_precision').addEventListener('change', (e) => {
     releasePrecision = e.target.value;
     releasePrecisionFor = datesTarget();
+    renderDatesBox();
+  });
+  // Discontinued: the month menus, the year menu and how exact it is.
+  ['discontinued_month_select', 'discontinued_month_year'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
+    const v = monthPickValue('discontinued');
+    if (v) commitDate('discontinued', v);
+  }));
+  document.getElementById('discontinued_year_input').addEventListener('change', (e) => {
+    const v = e.target.value.trim();
+    if (/^\d{4}$/.test(v)) commitDate('discontinued', v);
+  });
+  document.getElementById('discontinued_precision').addEventListener('change', (e) => {
+    discontinuedPrecision = e.target.value;
+    setMonthPick('discontinued', null);
     renderDatesBox();
   });
   document.querySelectorAll('input[name="dates_mode"]').forEach((radio) => radio.addEventListener('change', () => {
@@ -4923,6 +4978,9 @@
     launchPrecision = 'day';
     launchPrecisionFor = undefined;
     setMonthPick('launch', null);
+    discontinuedPrecision = 'day';
+    discontinuedPrecisionFor = undefined;
+    setMonthPick('discontinued', null);
     currentIconUrl = p.icon_url || null;
     currentVideoUrl = p.video_url || null;
     onFamilyChanged();
@@ -4993,6 +5051,9 @@
     launchPrecision = 'day';
     launchPrecisionFor = undefined;
     setMonthPick('launch', null);
+    discontinuedPrecision = 'day';
+    discontinuedPrecisionFor = undefined;
+    setMonthPick('discontinued', null);
     currentRefreshHistory = [];
     currentGenerationDetails = {};
     currentDropped = [];
@@ -5520,6 +5581,17 @@
         result = await saveRow(payload);
       }
 
+      // A month-only or year-only discontinued date, on a database whose
+      // column still only takes a full date (supabase-schema-update-40.sql
+      // not run yet): say exactly what to do, with the form left as it is.
+      if (result.error && payload.discontinued_date && !isFullDate(payload.discontinued_date) &&
+          (result.error.code === '22007' || /type date/i.test(result.error.message || ''))) {
+        console.error('Save failed on a discontinued date that is not a full date:', result.error);
+        window.alert('Not saved yet. A month-only or year-only discontinued date needs a one-off database update first.\n\n' +
+          'Run supabase-schema-update-40.sql in the Supabase SQL editor, then press Save again. Everything you typed is still in the form.\n\n' +
+          '(Or switch the Discontinued date back to \u201cExact day\u201d to save now.)');
+        return;
+      }
       if (result.error) {
         console.error('Save failed:', result.error);
         const missingColumns = /generation_details|icon_url|specs_url|press_release_url|in_countdown|did_you_know/.test(result.error.message || '');
