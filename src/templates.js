@@ -1221,7 +1221,11 @@ function cardHtml(product, statusInfo) {
   const discTs = product.discontinued && product.discontinued_date ? new Date(product.discontinued_date).getTime() : '';
   const lifespanDays = launch && product.discontinued && product.discontinued_date ? daysBetween(launch, product.discontinued_date) : '';
   const decade = product.discontinued && product.discontinued_date ? `${Math.floor(new Date(product.discontinued_date).getFullYear() / 10) * 10}s` : '';
-  return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-group="${productGroup(product, statusInfo)}" data-days="${days}" data-wait="${days !== '' ? statusInfo.ratio.toFixed(3) : ''}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
+  // The day an on-sale product last came out, for /products/?released=
+  // (the homepage's "+2" beside Apple's last release).
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const lastRelease = product.discontinued ? '' : ((product.refresh_history || []).filter((d) => d <= todayIso && d !== product.discontinued_date).sort().pop() || '');
+  return `<article class="card${status === 'discontinued' ? ' card--discontinued' : ''}" data-released="${escapeHtml(lastRelease)}" data-category="${escapeHtml(product.category)}" data-status="${status}" data-group="${productGroup(product, statusInfo)}" data-days="${days}" data-wait="${days !== '' ? statusInfo.ratio.toFixed(3) : ''}" data-launch="${launchTs}" data-discontinued="${discTs}" data-lifespan="${lifespanDays}" data-decade="${decade}">
   ${productRowInner(product, statusInfo)}
 </article>`;
 }
@@ -2521,9 +2525,13 @@ function siteStats(products) {
 function liveBarLatestHtml(latest, days) {
   const others = latest.others || [];
   const name = `${escapeHtml(latest.name)}${others.length ? ` <span class="live-bar-more" title="${escapeHtml('Also: ' + others.join(', '))}">+${others.length}</span>` : ''}`;
+  // One product: its page. Several released together ("+2"): the
+  // All products list showing just those (app.js, ?released=). (It used
+  // to go to the first of them only.)
+  const href = others.length && latest.date ? `/products/?released=${escapeHtml(latest.date)}` : `/products/${escapeHtml(latest.slug)}/`;
   return days === 0
-    ? `<a class="live-bar-latest" href="/products/${escapeHtml(latest.slug)}/"><strong>New today</strong> from Apple: <span class="live-bar-name">${name}</span></a>`
-    : `<a class="live-bar-latest" href="/products/${escapeHtml(latest.slug)}/"><strong>${days} ${days === 1 ? 'day' : 'days'}</strong> since Apple&rsquo;s last release: <span class="live-bar-name">${name}</span></a>`;
+    ? `<a class="live-bar-latest" href="${href}"><strong>New today</strong> from Apple: <span class="live-bar-name">${name}</span></a>`
+    : `<a class="live-bar-latest" href="${href}"><strong>${days} ${days === 1 ? 'day' : 'days'}</strong> since Apple&rsquo;s last release: <span class="live-bar-name">${name}</span></a>`;
 }
 function siteStatsHtml(s) {
   if (!s || !s.total) return '';
