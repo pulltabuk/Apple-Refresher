@@ -46,6 +46,12 @@ function wrap(text, maxChars) {
 }
 
 function formatLongDate(value) {
+  // A year only, or a month and year: as they are, not as the 1st.
+  if (/^\d{4}$/.test(String(value))) return String(value);
+  if (/^\d{4}-\d{2}$/.test(String(value))) {
+    const [y, m] = String(value).split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  }
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });

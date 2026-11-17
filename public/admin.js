@@ -3638,6 +3638,9 @@
   // products). Follows the saved launch date, or the menu while it's empty.
   let launchPrecision = 'day';
   let launchPrecisionFor;
+  // The same for the discontinued date.
+  let discontinuedPrecision = 'day';
+  let discontinuedPrecisionFor;
 
   function rowNote(row, text) {
     const rowEl = document.querySelector('[data-date-row="' + row + '"]');
@@ -3697,7 +3700,7 @@
 
     paintDateRow('announced', rowValue('announced', target), target);
     paintDateRow('preorder', rowValue('preorder', target), target);
-    paintDateRow('discontinued', currentDiscontinuedDate, target);
+    paintDiscontinuedRow(target);
 
     // The release: an exact day (with a time), or just a month or year
     // when Apple has only said roughly when.
@@ -3757,6 +3760,44 @@
   }
   // Older name, still called from a few places.
   const updateCountdownOption = renderDatesBox;
+
+  // Discontinued: an exact day, or only a month or year (older products).
+  // Follows the saved date, or the menu while it's empty.
+  function paintDiscontinuedRow(target) {
+    const d = currentDiscontinuedDate;
+    if (d && discontinuedPrecisionFor !== d) discontinuedPrecision = precisionOf(d);
+    discontinuedPrecisionFor = d;
+    const input = document.getElementById('discontinued_date_input');
+    const yearIn = document.getElementById('discontinued_year_input');
+    document.getElementById('discontinued_precision').value = discontinuedPrecision;
+    input.hidden = discontinuedPrecision !== 'day';
+    document.getElementById('discontinued_month_pick').hidden = discontinuedPrecision !== 'month';
+    yearIn.hidden = discontinuedPrecision !== 'year';
+    if (discontinuedPrecision === 'day') {
+      paintDateRow('discontinued', d, target);
+      return;
+    }
+    input.classList.remove('is-suggested');
+    document.querySelector('[data-date-use="discontinued"]').hidden = true;
+    if (discontinuedPrecision === 'month' && precisionOf(d) === 'month') setMonthPick('discontinued', d);
+    if (discontinuedPrecision === 'year' && document.activeElement !== yearIn) yearIn.value = d && precisionOf(d) === 'year' ? d : '';
+    rowNote('discontinued', d && precisionOf(d) !== discontinuedPrecision
+      ? 'Recorded as ' + formatAdminDate(d) + '. Pick a ' + discontinuedPrecision + ' to replace it.'
+      : '');
+  }
+  document.getElementById('discontinued_precision').addEventListener('change', (e) => {
+    discontinuedPrecision = e.target.value;
+    setMonthPick('discontinued', null);
+    renderDatesBox();
+  });
+  ['discontinued_month_select', 'discontinued_month_year'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
+    const v = monthPickValue('discontinued');
+    if (v) commitDate('discontinued', v);
+  }));
+  document.getElementById('discontinued_year_input').addEventListener('change', (e) => {
+    const v = e.target.value.trim();
+    if (/^\d{4}$/.test(v)) commitDate('discontinued', v);
+  });
 
   // Keeping a date (picked, typed or "Same day") in one of the rows.
   function commitDate(row, value) {
@@ -3843,6 +3884,10 @@
       hiddenSuggestions.add(row);
       if (row === 'release') { clearRelease(); return; }
       if (row === 'preorder') setPreorderTimeFields(null);
+      if (row === 'discontinued') {
+        setMonthPick('discontinued', null);
+        document.getElementById('discontinued_year_input').value = '';
+      }
       commitDate(row, null);
     });
   });
@@ -4923,6 +4968,9 @@
     launchPrecision = 'day';
     launchPrecisionFor = undefined;
     setMonthPick('launch', null);
+    discontinuedPrecision = 'day';
+    discontinuedPrecisionFor = undefined;
+    setMonthPick('discontinued', null);
     currentIconUrl = p.icon_url || null;
     currentVideoUrl = p.video_url || null;
     onFamilyChanged();
@@ -4993,6 +5041,9 @@
     launchPrecision = 'day';
     launchPrecisionFor = undefined;
     setMonthPick('launch', null);
+    discontinuedPrecision = 'day';
+    discontinuedPrecisionFor = undefined;
+    setMonthPick('discontinued', null);
     currentRefreshHistory = [];
     currentGenerationDetails = {};
     currentDropped = [];
@@ -5523,6 +5574,10 @@
       if (result.error) {
         console.error('Save failed:', result.error);
         const missingColumns = /generation_details|icon_url|specs_url|press_release_url|in_countdown|did_you_know/.test(result.error.message || '');
+        if (/type date/.test(result.error.message || '') && discontinuedDate && !isFullDate(discontinuedDate)) {
+          window.alert('Save failed: the database only takes an exact day for the discontinued date so far. Run supabase-schema-update-40.sql in the Supabase SQL editor, then save again (your changes are still in the form).\n\n(' + result.error.message + ')');
+          return;
+        }
         window.alert(missingColumns
           ? 'Save failed because the database hasn\u2019t been updated yet. Run the latest supabase-schema-update SQL file in the Supabase SQL editor, then save again.\n\n(' + result.error.message + ')'
           : 'Save failed: ' + result.error.message);
