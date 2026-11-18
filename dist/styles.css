@@ -4672,3 +4672,21 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 @media (min-width: 900px) {
   .intro-hero-cards .card--featured .card-featured-count-number--words { font-size: 44px; }
 }
+
+/* X posts: one saved Claude chat for post requests ("Social Media
+   Posts"), under the Claude row. */
+.x-chat-line { margin: 0; font-size: 13px; }
+.x-chat-toggle { font: inherit; font-weight: 700; padding: 0; margin-left: 4px; border: 0; background: none; color: var(--accent-dark); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.x-chat-toggle:hover { color: var(--accent); }
+.x-chat-form { display: grid; gap: 8px; margin-top: 8px; padding: 12px 14px; border: 1px solid #e7e1d6; border-radius: 12px; background: #fbf9f5; }
+.x-chat-form[hidden] { display: none; }
+.x-chat-form .admin-hint, .x-chat-form .form-error { margin: 0; }
+.x-chat-form .form-error:empty { display: none; }
+.x-chat-label { font-size: 13px; font-weight: 700; }
+.x-chat-request { display: block; box-sizing: border-box; width: calc(100% - 102px); margin: 0 0 4px 102px; padding: 8px 11px; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; border: 1px solid var(--border); border-radius: 9px; background: #fbf9f5; }
+.x-chat-request[hidden] { display: none; }
+@media (max-width: 600px) {
+  .x-chat-request { width: 100%; margin-left: 0; }
+  .x-chat-form .x-start-field { flex-wrap: wrap; }
+  .x-chat-form .x-start-field input { flex: 1 1 100%; }
+}

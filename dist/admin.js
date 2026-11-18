@@ -845,11 +845,81 @@
       showIdeas();
     });
 
+    // --- One Claude chat for every post request ("Social Media Posts").
+    // Its link is kept in site_content ('claude-chat'), so the phone app
+    // uses the same one. A link can open a chat but can't put words in
+    // it, so the request is copied and pasted there.
+    let claudeChatLink = '';
+    function paintClaudeChat() {
+      const t = window.FactsKit.claudeTarget(claudeChatLink);
+      $x('x-chat-status').textContent = !t ? 'Opens a new Claude chat each time.'
+        : t.kind === 'chat' ? 'Opens your \u201cSocial Media Posts\u201d chat, with the request copied ready to paste.'
+          : 'Opens a new chat in your \u201cSocial Media Posts\u201d project.';
+      $x('x-chat-edit').textContent = t ? 'Change' : 'Use one chat';
+      $x('x-chat-clear').hidden = !t;
+      if (document.activeElement !== $x('x-chat-link')) $x('x-chat-link').value = t ? t.url : '';
+    }
+    async function loadClaudeChat() {
+      try {
+        const { data, error } = await client.from('site_content').select('body').eq('id', 'claude-chat').maybeSingle();
+        if (error) return;
+        claudeChatLink = (data && data.body) || '';
+        paintClaudeChat();
+      } catch (err) { /* offline: a new chat each time, as before */ }
+    }
+    async function saveClaudeChat(link) {
+      const errEl = $x('x-chat-error');
+      errEl.textContent = '';
+      const t = link ? window.FactsKit.claudeTarget(link) : null;
+      if (link && !t) {
+        errEl.textContent = 'That isn\u2019t a Claude chat link. Open the chat in Claude and copy the address from the top of the browser: it starts https://claude.ai/chat/';
+        return;
+      }
+      const result = await client.from('site_content').upsert({ id: 'claude-chat', body: t ? t.url : '' });
+      if (result.error) {
+        errEl.textContent = 'Not saved: ' + result.error.message;
+        return;
+      }
+      claudeChatLink = t ? t.url : '';
+      $x('x-chat-form').hidden = true;
+      $x('x-chat-edit').setAttribute('aria-expanded', 'false');
+      paintClaudeChat();
+      adminToast(t ? 'Saved. Post requests now go to that ' + t.kind + '.' : 'Cleared. Post requests open a new chat each time.', true);
+    }
+    $x('x-chat-edit').addEventListener('click', () => {
+      const form = $x('x-chat-form');
+      form.hidden = !form.hidden;
+      $x('x-chat-edit').setAttribute('aria-expanded', form.hidden ? 'false' : 'true');
+      $x('x-chat-error').textContent = '';
+      if (!form.hidden) $x('x-chat-link').focus();
+    });
+    $x('x-chat-save').addEventListener('click', () => saveClaudeChat($x('x-chat-link').value.trim()));
+    $x('x-chat-clear').addEventListener('click', () => { $x('x-chat-link').value = ''; saveClaudeChat(''); });
+    $x('x-chat-link').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); $x('x-chat-save').click(); }
+    });
+    loadClaudeChat();
+
     $x('x-claude-btn').addEventListener('click', () => {
       const prompt = window.FactsKit.xPostPrompt($x('x-topic').value.trim());
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(prompt).catch(() => {});
-      $x('x-claude-note').textContent = 'Claude opened in a new tab (the request is also copied, in case it opens empty). Check its sources, then copy the post you like into step 2.';
-      window.open(window.FactsKit.claudeResearchUrl(prompt), '_blank', 'noopener');
+      const target = window.FactsKit.claudePostTarget(prompt, claudeChatLink);
+      const box = $x('x-claude-request');
+      box.hidden = true;
+      const copied = navigator.clipboard && navigator.clipboard.writeText
+        ? navigator.clipboard.writeText(prompt)
+        : Promise.reject(new Error('No clipboard'));
+      copied.catch(() => {
+        // With a saved chat the copy is the only way the request gets
+        // there, so when it fails the request is shown to copy by hand.
+        if (!target.pasted) return;
+        box.value = prompt;
+        box.hidden = false;
+        $x('x-claude-note').textContent = 'Your chat opened in a new tab, but the request couldn\u2019t be copied for you. Copy it from the box below and paste it into the chat.';
+      });
+      $x('x-claude-note').textContent = target.pasted
+        ? 'Your \u201cSocial Media Posts\u201d chat opened in a new tab. The request is copied: paste it into the chat and press Enter. Check its sources, then copy the post you like into step 2.'
+        : 'Claude opened in a new tab (the request is also copied, in case it opens empty). Check its sources, then copy the post you like into step 2.';
+      window.open(target.url, '_blank', 'noopener');
     });
     $x('x-topic').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); $x('x-claude-btn').click(); }
@@ -1413,7 +1483,7 @@
       list.innerHTML = '';
       data.forEach((d) => list.appendChild(draftItem(d)));
     }
-    xDraftsLoader = () => { loadDrafts(); loadScheduled(); };
+    xDraftsLoader = () => { loadDrafts(); loadScheduled(); loadClaudeChat(); };
 
     function draftItem(d) {
       const card = d.card || {};

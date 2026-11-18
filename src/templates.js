@@ -4395,6 +4395,20 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               </div>
             </div>
             <p class="admin-hint x-start-note" id="x-claude-note">Claude writes 5 posts, each checked against two sources. Copy the one you like into step 2.</p>
+            <textarea id="x-claude-request" class="x-chat-request" rows="5" readonly hidden aria-label="The request for Claude"></textarea>
+            <div class="x-chat x-start-note" id="x-chat">
+              <p class="admin-hint x-chat-line"><span id="x-chat-status">Opens a new Claude chat each time.</span> <button type="button" class="x-chat-toggle" id="x-chat-edit" aria-expanded="false" aria-controls="x-chat-form">Use one chat</button></p>
+              <div class="x-chat-form" id="x-chat-form" hidden>
+                <label class="x-chat-label" for="x-chat-link">Link to your &ldquo;Social Media Posts&rdquo; chat in Claude</label>
+                <div class="x-start-field">
+                  <input type="url" id="x-chat-link" placeholder="https://claude.ai/chat/&hellip;" autocomplete="off" spellcheck="false">
+                  <button type="button" class="admin-btn" id="x-chat-save">Save</button>
+                  <button type="button" class="admin-btn admin-btn--ghost" id="x-chat-clear" hidden>Clear</button>
+                </div>
+                <p class="admin-hint">In Claude, start a chat and rename it &ldquo;Social Media Posts&rdquo;, then copy its address from the top of the browser and paste it here. From then on the Write button opens that chat with the request copied: paste it in and press Enter. The phone app uses the same chat.</p>
+                <p class="form-error" id="x-chat-error"></p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -4708,6 +4722,7 @@ ${supabaseUrl ? `<link rel="preconnect" href="${escapeHtml(supabaseUrl)}" crosso
       <textarea id="up-x-topic" class="up-fact-edit up-fact-edit--short" placeholder="Or an idea for Claude, e.g. the first iPod" aria-label="Idea for Claude"></textarea>
       <button type="button" id="up-x-claude" class="gallery-action gallery-action--block">Write with Claude</button>
       <p class="up-hint" id="up-x-claude-note"></p>
+      <textarea id="up-x-claude-request" class="up-fact-edit" rows="5" readonly hidden aria-label="The request for Claude"></textarea>
     </div>
     <div class="up-card">
       <h2>Your post</h2>
