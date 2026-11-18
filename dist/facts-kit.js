@@ -1682,6 +1682,25 @@
     return 'https://claude.ai/new?q=' + encodeURIComponent(prompt);
   }
 
+  // One saved place in Claude for post requests, read from its link:
+  // claude.ai/chat/<id> (one chat, kept going) or claude.ai/project/<id>
+  // (a new chat inside that project each time). Anything else is null.
+  function claudeTarget(link) {
+    const m = /^https:\/\/claude\.ai\/(chat|project)\/([A-Za-z0-9-]{8,80})\/?(?:[?#].*)?$/.exec(String(link || '').trim());
+    return m ? { kind: m[1], id: m[2], url: 'https://claude.ai/' + m[1] + '/' + m[2] } : null;
+  }
+  // Where a post request opens: { url, pasted, kind }. A link can open a
+  // chat but can't put words in it, so with a saved chat the request is
+  // copied and pasted there (pasted: true). A saved project gets a new
+  // chat with the request filled in (Claude's "project" link parameter,
+  // which Anthropic doesn't document: without it this is a plain new chat).
+  function claudePostTarget(prompt, link) {
+    const t = claudeTarget(link);
+    if (t && t.kind === 'chat') return { url: t.url, pasted: true, kind: 'chat' };
+    if (t && t.kind === 'project') return { url: 'https://claude.ai/new?project=' + encodeURIComponent(t.id) + '&q=' + encodeURIComponent(prompt), pasted: false, kind: 'project' };
+    return { url: claudeResearchUrl(prompt), pasted: false, kind: 'new' };
+  }
+
   // --- One product: facts worked out from its own data, and Claude
   // research requests for its "Did you know?" and its Notes. Shared by
   // the laptop admin and the phone app.
@@ -3009,6 +3028,8 @@
     leadSentences,
     claudeResearchPrompt,
     claudeResearchUrl,
+    claudeTarget,
+    claudePostTarget,
     factKey,
     factCardPath,
     factPageUrl,

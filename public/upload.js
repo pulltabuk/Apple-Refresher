@@ -1083,9 +1083,30 @@
     xShowIdeas();
   });
 
+  // The saved "Social Media Posts" chat, set in the admin's X posts tab
+  // (site_content 'claude-chat'). With one saved, the request is copied
+  // and that chat opens, for it to be pasted into; a link can't fill it in.
+  let claudeChatLink = '';
+  client.from('site_content').select('body').eq('id', 'claude-chat').maybeSingle()
+    .then((res) => { claudeChatLink = (res && res.data && res.data.body) || ''; }, () => {});
   $('up-x-claude').addEventListener('click', () => {
-    openClaude(window.FactsKit.xPostPrompt($('up-x-topic').value.trim()), 'up-x-claude-note',
-      'Claude is writing 5 posts, each checked against two sources (the request is also copied). Check its sources, then copy the one you like into the box below.');
+    const prompt = window.FactsKit.xPostPrompt($('up-x-topic').value.trim());
+    const target = window.FactsKit.claudePostTarget(prompt, claudeChatLink);
+    const box = $('up-x-claude-request');
+    box.hidden = true;
+    const copied = navigator.clipboard && navigator.clipboard.writeText
+      ? navigator.clipboard.writeText(prompt)
+      : Promise.reject(new Error('No clipboard'));
+    copied.catch(() => {
+      if (!target.pasted) return;
+      box.value = prompt;
+      box.hidden = false;
+      $('up-x-claude-note').textContent = 'Your chat is opening, but the request couldn\u2019t be copied for you. Copy it from the box below and paste it into the chat.';
+    });
+    $('up-x-claude-note').textContent = target.pasted
+      ? 'Your \u201cSocial Media Posts\u201d chat is opening. The request is copied: paste it into the chat and send. Check its sources, then copy the post you like into the box below.'
+      : 'Claude is writing 5 posts, each checked against two sources (the request is also copied). Check its sources, then copy the one you like into the box below.';
+    window.open(target.url, '_blank');
   });
 
   ['up-x-text', 'up-x-link'].forEach((id) => $(id).addEventListener('input', xRefresh));
