@@ -4000,134 +4000,31 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         <section class="admin-step" id="step-generations">
           <h3 class="admin-step-title"><span class="admin-step-num">3</span> Dates</h3>
-          <p class="admin-hint">Every release date, oldest first, all in this one list. Add another on the line under it; Edit changes one. Each can be an exact day, or just a month or a year.</p>
-          <ul id="refresh-history-list" class="generation-list"></ul>
-          <div class="release-add" id="release-add">
-            <span class="release-add-label">Add a release date</span>
-            <div class="release-add-row">
-              <span id="release-add-date"></span>
-              <input type="text" id="release-add-name" placeholder="Name (optional)" autocomplete="off" aria-label="Name of this release (optional)">
-              <button type="button" class="admin-btn admin-btn--small" id="release-add-btn">Add</button>
+          <p class="admin-hint">One line for each date, in the order they happen. Pick the day, month and year. If you only know the month, leave the day on &ldquo;Day&rdquo;; if you only know the year, leave the month too. A pale date is only a starting point, copied from the line above or the last release: change it, or press &ldquo;&#10003; Use&rdquo; to keep it.</p>
+          <div class="dates-panel" id="generation-add-panel">
+            <div id="dates-panel"></div>
+            <div class="dates-add" id="dates-add">
+              <button type="button" class="admin-btn admin-btn--small" id="dates-add-release">+ Another release</button>
+              <button type="button" class="admin-btn admin-btn--small" id="dates-add-dropped">+ A model discontinued separately</button>
             </div>
-            <p class="form-error" id="release-add-error"></p>
-          </div>
-          <div class="admin-dates-box" id="generation-add-panel">
-            <div class="admin-dates-head">
-              <p class="admin-dates-title" id="dates-box-title">Next release</p>
-              <div class="segmented segmented--small admin-dates-mode" id="dates-mode" role="radiogroup" aria-label="Which release these dates are for" hidden>
-                <label><input type="radio" name="dates_mode" value="next" checked><span id="dates-mode-next">Next release</span></label>
-                <label><input type="radio" name="dates_mode" value="add"><span>Add another release</span></label>
-              </div>
-            </div>
-            <p class="admin-hint" id="dates-box-hint">Fill in what you know, top to bottom. An empty date starts on the one above it: tap its &ldquo;&#10003; Same as&hellip;&rdquo; button to keep it, or open the calendar and pick a day near it.</p>
-
-            <div class="admin-date-row admin-date-row--first" data-date-row="announced">
-              <span class="admin-release-time-label">Announced <span class="admin-optional">Optional</span></span>
-              <div class="admin-release-time-row">
-                <input type="date" id="announced_date_input" aria-label="Announced date">
-                <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="announced" hidden>&#10003; Same day</button>
-                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="announced">Clear</button>
-              </div>
-            </div>
-
-            <div class="admin-date-row admin-date-row--launch" data-date-row="launch">
-              <span class="admin-release-time-label admin-date-label-row">Launched <span class="admin-optional">Optional: the product&rsquo;s first ever release</span>
-                <select id="launch_precision" class="admin-date-precision" aria-label="How exact the launch date is">
-                  <option value="day">Exact day</option>
-                  <option value="month">Month only</option>
-                  <option value="year">Year only</option>
-                </select>
-              </span>
-              <div class="admin-release-time-row">
-                <input type="date" id="launch_date_input" aria-label="Launch date">
-                <span class="admin-month-pick" id="launch_month_pick" hidden><select id="launch_month_select" aria-label="Launch month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><select id="launch_month_year" aria-label="Launch year">${adminYearOptions()}</select></span>
-                <select id="launch_year_input" aria-label="Launch year" hidden>${adminYearOptions()}</select>
-                <button type="button" class="admin-btn admin-btn--small admin-date-use" id="launch_same_btn" hidden>&#10003; Same as release</button>
-                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="launch">Clear</button>
-              </div>
-              <p class="admin-hint" id="launch-date-hint">When this product first went on sale: the exact day, or just the month or year for older products. For the first product in a line it&rsquo;s all you need: it becomes the first release in the list above.</p>
-            </div>
-
-            <div class="admin-date-row" data-date-row="preorder">
-              <span class="admin-release-time-label">Pre-orders open <span class="admin-optional">Optional</span></span>
-              <div class="admin-release-time-row">
-                <input type="date" id="preorder_date_input" aria-label="Pre-order date">
-                <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="preorder" hidden>&#10003; Same day</button>
-                <input type="time" id="preorder_time_clock" aria-label="Pre-order time">
-                <select id="preorder_time_zone" aria-label="Pre-order time zone">
-                  <option value="UK">UK (GMT/BST)</option>
-                  <option value="ET">ET (New York)</option>
-                  <option value="CT">CT (Chicago)</option>
-                  <option value="PT">PT (California)</option>
-                  <option value="CET">CET (Paris)</option>
-                </select>
-                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="preorder">Clear</button>
-              </div>
-              <p id="preorder-date-hint" class="admin-hint">The homepage counts down to pre-orders first, then to the release once they open. Leave the time blank for 1pm UK, when Apple&rsquo;s pre-orders usually open.</p>
-            </div>
-
-            <div class="admin-date-row" data-date-row="release">
-              <span class="admin-release-time-label admin-date-label-row">Release date and time
-                <select id="release_precision" class="admin-date-precision" aria-label="How exact the release date is">
-                  <option value="day">Exact day</option>
-                  <option value="month">Month only</option>
-                  <option value="year">Year only</option>
-                </select>
-              </span>
-              <div class="admin-release-time-row">
-                <input type="date" id="release_date_input" aria-label="Release date">
-                <span class="admin-month-pick" id="release_month_pick" hidden><select id="release_month_select" aria-label="Release month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><select id="release_month_year" aria-label="Release year">${adminYearOptions()}</select></span>
-                <select id="release_year_input" aria-label="Release year" hidden>${adminYearOptions()}</select>
-                <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="release" hidden>&#10003; Same day</button>
-                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="release">Clear date</button>
-                <input type="time" id="release_time_clock" aria-label="Release time">
-                <select id="release_time_zone" aria-label="Time zone">
-                  <option value="UK">UK (GMT/BST)</option>
-                  <option value="ET">ET (New York)</option>
-                  <option value="CT">CT (Chicago)</option>
-                  <option value="PT">PT (California)</option>
-                  <option value="CET">CET (Paris)</option>
-                </select>
-                <button type="button" id="release_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear time</button>
-              </div>
-              <p id="release-date-hint" class="admin-hint">Leave the time blank for 8am on the day, when Apple Stores open.</p>
-              <label class="admin-date-name"><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="release_name_input" autocomplete="off"></label>
-              <div class="admin-date-updates" id="release-updates">
-                <span class="admin-release-time-label">Updates to this release <span class="admin-optional">Optional, up to 5</span></span>
-                <p class="admin-hint" id="release-updates-hint">Changes to this release after it came out, one per line: the date (a day, or just a month or a year), what kind, and what (e.g. Release &middot; 4GB model). Each shows under this release in the product&rsquo;s release history; none restarts the days-since count. A new version in its own right is a release date of its own: add it to the list at the top.</p>
-                <div class="admin-updates-list" id="release-updates-list"></div>
-              </div>
-            </div>
-
+            <p id="generation-add-error" class="form-error"></p>
             <div id="in-countdown-wrap" class="admin-date-countdown">
               <label class="checkbox-label"><input type="checkbox" id="in_countdown"> &#9201; Show in the homepage countdown</label>
               <p id="in-countdown-hint" class="admin-hint">More than one product can be counted down at once, and each drops off by itself once its date passes.</p>
             </div>
-
-            <div class="admin-date-row admin-date-row--end" data-date-row="discontinued">
-              <span class="admin-release-time-label admin-date-label-row"><span>Discontinued <span class="admin-optional">Optional</span></span>
-                <select id="discontinued_precision" class="admin-date-precision" aria-label="How exact the discontinued date is">
-                  <option value="day">Exact day</option>
-                  <option value="month">Month only</option>
-                  <option value="year">Year only</option>
-                </select>
+            <div id="dates-parked" hidden>
+              <span class="dates-time" id="preorder-time-wrap">
+                <input type="time" id="preorder_time_clock" aria-label="Pre-order time" title="Blank: 1pm UK, when Apple&rsquo;s pre-orders usually open">
+                <select id="preorder_time_zone" aria-label="Pre-order time zone"><option value="UK">UK (GMT/BST)</option><option value="ET">ET (New York)</option><option value="CT">CT (Chicago)</option><option value="PT">PT (California)</option><option value="CET">CET (Paris)</option></select>
               </span>
-              <div class="admin-release-time-row">
-                <input type="date" id="discontinued_date_input" aria-label="Discontinued date">
-                <span class="admin-month-pick" id="discontinued_month_pick" hidden><select id="discontinued_month_select" aria-label="Discontinued month"><option value="">Month</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><select id="discontinued_month_year" aria-label="Discontinued year">${adminYearOptions()}</select></span>
-                <select id="discontinued_year_input" aria-label="Discontinued year" hidden>${adminYearOptions()}</select>
-                <button type="button" class="admin-btn admin-btn--small admin-date-use" data-date-use="discontinued" hidden>&#10003; Same day</button>
-                <button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-date-clear="discontinued">Clear</button>
-                <button type="button" class="admin-btn admin-btn--small admin-end-line-btn" id="end_of_line_btn" aria-pressed="false" hidden>End of the line</button>
-              </div>
-              <p class="admin-hint" id="last-in-line-text" hidden>Tap &ldquo;End of the line&rdquo; if Apple ended the line with this one.</p>
-              <div class="admin-date-updates" id="dropped-models">
-                <span class="admin-release-time-label">Models discontinued separately <span class="admin-optional">Optional, up to 3</span></span>
-                <p class="admin-hint">When models go on different dates: the 32GB on one, the 64GB on another. Each shows in the release history, and the whole product is discontinued on the latest of them (filled in above for you).</p>
-                <div class="admin-updates-list" id="dropped-list"></div>
-              </div>
+              <span class="dates-time" id="release-time-wrap">
+                <input type="time" id="release_time_clock" aria-label="Release time" title="Blank: 8am on the day, when Apple Stores open">
+                <select id="release_time_zone" aria-label="Time zone"><option value="UK">UK (GMT/BST)</option><option value="ET">ET (New York)</option><option value="CT">CT (Chicago)</option><option value="PT">PT (California)</option><option value="CET">CET (Paris)</option></select>
+                <button type="button" id="release_time_clear" class="admin-btn admin-btn--small admin-btn--ghost">Clear time</button>
+              </span>
+              <button type="button" class="admin-btn admin-btn--small admin-end-line-btn" id="end_of_line_btn" aria-pressed="false" hidden>End of the line</button>
+              <p class="admin-hint dates-line-note" id="last-in-line-text" hidden></p>
             </div>
-            <p id="generation-add-error" class="form-error"></p>
           </div>
           <div class="admin-subfield" id="days-basis-wrap">
             <span class="admin-subfield-label">The big number on this product counts days since</span>
