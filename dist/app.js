@@ -185,7 +185,7 @@
     var info = generationDetailsJS(product)[date];
     var list = info && Array.isArray(info.updates) ? info.updates : [];
     return list
-      .filter(function (u) { return u && /^\d{4}-\d{2}(-\d{2})?$/.test(u.date || ''); })
+      .filter(function (u) { return u && /^\d{4}(-\d{2}(-\d{2})?)?$/.test(u.date || ''); })
       .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; })
       .slice(0, 10);
   }
