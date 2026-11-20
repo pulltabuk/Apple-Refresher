@@ -325,7 +325,7 @@ function withModelsDiscontinued(p) {
   let last = null;
   Object.keys(details).forEach((d) => {
     ((details[d] && details[d].updates) || []).forEach((u) => {
-      if (u && u.kind === 'dropped' && /^\d{4}-\d{2}-\d{2}$/.test(u.date || '') && (!last || u.date > last)) last = u.date;
+      if (u && u.kind === 'dropped' && /^\d{4}(-\d{2}(-\d{2})?)?$/.test(u.date || '') && (!last || u.date > last)) last = u.date;
     });
   });
   const today = new Date().toISOString().slice(0, 10);
