@@ -3856,6 +3856,118 @@
     document.getElementById(prefix + '_month_select').value = ok ? value.slice(5, 7) : '';
     document.getElementById(prefix + '_month_year').value = ok ? value.slice(0, 4) : '';
   }
+  // Any of the three: "2001-01-09", "2001-01" or "2001".
+  const anyDate = (d) => /^\d{4}(-\d{2}(-\d{2})?)?$/.test(d || '');
+  // The first and last day a date can mean ("1985" is any day that year).
+  const dateFloor = (d) => (/^\d{4}$/.test(d) ? d + '-01-01' : /^\d{4}-\d{2}$/.test(d) ? d + '-01' : d);
+  const dateCeil = (d) => {
+    if (/^\d{4}$/.test(d)) return d + '-12-31';
+    if (/^\d{4}-\d{2}$/.test(d)) return d + '-' + String(new Date(+d.slice(0, 4), +d.slice(5, 7), 0).getDate()).padStart(2, '0');
+    return d;
+  };
+  const MONTH_OPTIONS_HTML = '<option value="">Month</option>' + ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    .map((m, i) => '<option value="' + String(i + 1).padStart(2, '0') + '">' + m + '</option>').join('');
+  // --- A date that can be an exact day, or only a month or a year, as a
+  // control of its own: a small menu for which, then the matching boxes.
+  // For lists of dates, where each has its own menu: a release's later
+  // dates, the release list's Edit and its "Add a release date" line.
+  //   opts.value     the date now ("2001-01-09", "2001-01", "2001") or null
+  //   opts.state     kept by the caller across redraws: the menu's choice
+  //                  and a half-picked month or year
+  //   opts.label     what it is, for screen readers ("Update 2")
+  //   opts.onChange  called with the new date once one is fully picked
+  //                  (null when an exact day is emptied)
+  //   opts.index, opts.tag   data-i / data-field, so a redraw can put the
+  //                  cursor back in the same box
+  // Returns the element, with get(), set(value) and setPrecision(p).
+  // A place on an object for a control's state across redraws, left out
+  // of anything saved (it isn't enumerable).
+  function uiState(obj) {
+    if (!obj._ui) Object.defineProperty(obj, '_ui', { value: {}, enumerable: false });
+    return obj._ui;
+  }
+  function dateChoice(opts) {
+    const state = opts.state || {};
+    let value = opts.value || null;
+    const follow = () => {
+      if (value && state.shown !== value) state.precision = precisionOf(value);
+      state.shown = value;
+      if (!state.precision) state.precision = opts.precision || 'day';
+    };
+    follow();
+    const wrap = document.createElement('span');
+    wrap.className = 'date-choice';
+    const make = (tagName, part, label) => {
+      const el = document.createElement(tagName);
+      if (opts.index != null) el.dataset.i = opts.index;
+      el.dataset.field = (opts.tag || 'date') + '-' + part;
+      el.setAttribute('aria-label', (opts.label || 'Date') + ': ' + label);
+      wrap.appendChild(el);
+      return el;
+    };
+    const kind = make('select', 'kind', 'how exact');
+    kind.className = 'date-choice-kind';
+    kind.innerHTML = '<option value="day">Exact day</option><option value="month">Month only</option><option value="year">Year only</option>';
+    const day = make('input', 'day', 'day');
+    day.type = 'date';
+    const month = make('select', 'month', 'month');
+    month.innerHTML = MONTH_OPTIONS_HTML;
+    const years = document.getElementById('release_year_input').innerHTML;
+    const monthYear = make('select', 'monthyear', 'year');
+    monthYear.innerHTML = years;
+    const year = make('select', 'year', 'year');
+    year.innerHTML = years;
+    // A date kept more (or less) exactly than the menu now says stays
+    // until a new one is picked: say what it is.
+    const now = document.createElement('span');
+    now.className = 'admin-hint date-choice-now';
+    wrap.appendChild(now);
+    const paint = () => {
+      const p = state.precision;
+      const same = !!value && precisionOf(value) === p;
+      wrap.dataset.precision = p;
+      kind.value = p;
+      day.hidden = p !== 'day';
+      month.hidden = p !== 'month';
+      monthYear.hidden = p !== 'month';
+      year.hidden = p !== 'year';
+      day.value = same && p === 'day' ? value : '';
+      month.value = same && p === 'month' ? value.slice(5, 7) : (p === 'month' && state.month) || '';
+      monthYear.value = same && p === 'month' ? value.slice(0, 4) : (p === 'month' && state.year) || '';
+      year.value = same && p === 'year' ? value : '';
+      now.hidden = !value || same;
+      now.textContent = value && !same ? 'Now ' + formatAdminDate(value) : '';
+    };
+    const picked = (v) => {
+      value = v;
+      state.month = '';
+      state.year = '';
+      follow();
+      paint();
+      if (opts.onChange) opts.onChange(v);
+    };
+    kind.addEventListener('change', () => {
+      state.precision = kind.value;
+      state.month = '';
+      state.year = '';
+      paint();
+    });
+    day.addEventListener('change', () => picked(day.value || null));
+    const monthPicked = () => {
+      state.month = month.value;
+      state.year = monthYear.value;
+      if (month.value && monthYear.value) picked(monthYear.value + '-' + month.value);
+    };
+    month.addEventListener('change', monthPicked);
+    monthYear.addEventListener('change', monthPicked);
+    year.addEventListener('change', () => { if (year.value) picked(year.value); });
+    paint();
+    wrap.get = () => value;
+    wrap.set = (v) => { value = v || null; state.month = ''; state.year = ''; follow(); paint(); };
+    wrap.setPrecision = (p) => { state.precision = p; state.month = ''; state.year = ''; paint(); };
+    return wrap;
+  }
+
   // How exact the launch date is: a day, or only a month or year (older
   // products). Follows the saved launch date, or the menu while it's empty.
   let launchPrecision = 'day';
@@ -3951,7 +4063,7 @@
       ? (target === upcoming ? 'Next release' : 'Latest release')
       : releases.length ? 'Add a release' : 'First release';
     document.getElementById('dates-box-hint').textContent = target
-      ? 'These are the ' + (target === upcoming ? 'upcoming' : 'latest') + ' release’s dates, as in the list above; changing one here changes it there too. “Add another release” is for a new one. An empty date starts on the one you picked above it: tap its “✓ Same as…” button, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release.'
+      ? 'These are the ' + (target === upcoming ? 'upcoming' : 'latest') + ' release’s dates, as in the list above; changing one here changes it there too. For another release date, use “Add a release date” under that list. An empty date starts on the one you picked above it: tap its “✓ Same as…” button, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release.'
       : 'Fill in what you know, top to bottom. Each empty date starts on the one you picked above it: tap its “✓ Same as…” button, or open the calendar and pick a day near it. You can paste a date into any box too, even a line from Apple’s press release. The release joins the list above once its date is picked.';
 
     paintDateRow('announced', rowValue('announced', target), target);
@@ -3961,7 +4073,10 @@
     // The release: an exact day (with a time), or just a month or year
     // when Apple has only said roughly when.
     if (releasePrecisionFor !== target) {
-      releasePrecision = target ? precisionOf(target) : 'day';
+      // A new release starts as exact as the latest one (an older
+      // product's dates are usually all months, or all years).
+      const latest = releases[releases.length - 1];
+      releasePrecision = target ? precisionOf(target) : latest ? precisionOf(latest) : 'day';
       releasePrecisionFor = target;
       setMonthPick('release', null);
     }
@@ -4331,36 +4446,46 @@
     const active = listEl.contains(document.activeElement) ? document.activeElement : null;
     const keep = active ? { i: active.dataset.i, field: active.dataset.field, pos: active.selectionStart } : null;
     listEl.innerHTML = '';
+    // The lines in use, then one empty line for the next (up to five).
+    let shown = 0;
+    let emptyShown = false;
     list.slice(0, MAX_UPDATES).forEach((u, i) => {
+      if (updateIsBlank(u)) {
+        if (emptyShown) return;
+        emptyShown = true;
+      }
+      shown += 1;
       const row = document.createElement('div');
       row.className = 'admin-update-row' + (updateIsBlank(u) ? ' is-blank' : '');
       const num = document.createElement('span');
       num.className = 'admin-update-num';
-      num.textContent = String(i + 1);
+      num.textContent = String(shown);
       num.setAttribute('aria-hidden', 'true');
-      const dateIn = document.createElement('input');
-      dateIn.type = 'date';
-      dateIn.value = isFullDate(u.date) ? u.date : '';
-      dateIn.dataset.i = i;
-      dateIn.dataset.field = 'date';
-      dateIn.setAttribute('aria-label', 'Update ' + (i + 1) + ': date');
-      dateIn.addEventListener('change', () => {
-        const v = dateIn.value || null;
-        if (v && date && isFullDate(date) && v < date) {
-          window.alert('An update comes after the release it changes (' + formatAdminDate(date) + ').');
-          dateIn.value = isFullDate(u.date) ? u.date : '';
-          return;
-        }
-        u.date = v;
-        // Oldest first, blank lines last.
-        list.sort((a, b) => (!a.date && !b.date ? 0 : !a.date ? 1 : !b.date ? -1 : a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-        productFormDirty = true;
-        renderRefreshHistory();
+      // The date: an exact day, or just the month or the year.
+      const dateIn = dateChoice({
+        value: anyDate(u.date) ? u.date : null,
+        state: uiState(u),
+        index: i,
+        label: 'Update ' + shown,
+        onChange: (v) => {
+          // Not before the release it changes (a month or a year counts
+          // as any day in it).
+          if (v && date && dateCeil(v) < dateFloor(date)) {
+            window.alert('An update comes after the release it changes (' + formatAdminDate(date) + ').');
+            renderRefreshHistory();
+            return;
+          }
+          u.date = v;
+          // Oldest first, blank lines last.
+          list.sort((a, b) => (!a.date && !b.date ? 0 : !a.date ? 1 : !b.date ? -1 : a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+          productFormDirty = true;
+          renderRefreshHistory();
+        },
       });
       const kindIn = document.createElement('select');
       kindIn.dataset.i = i;
       kindIn.dataset.field = 'kind';
-      kindIn.setAttribute('aria-label', 'Update ' + (i + 1) + ': kind');
+      kindIn.setAttribute('aria-label', 'Update ' + shown + ': kind');
       UPDATE_KINDS.forEach((k) => {
         const opt = document.createElement('option');
         opt.value = k.value;
@@ -4380,7 +4505,7 @@
       noteIn.placeholder = 'What, e.g. 4GB model';
       noteIn.dataset.i = i;
       noteIn.dataset.field = 'note';
-      noteIn.setAttribute('aria-label', 'Update ' + (i + 1) + ': what');
+      noteIn.setAttribute('aria-label', 'Update ' + shown + ': what');
       noteIn.addEventListener('input', () => { u.note = noteIn.value; productFormDirty = true; });
       noteIn.addEventListener('change', () => renderRefreshHistory());
       const clear = document.createElement('button');
@@ -4388,7 +4513,7 @@
       clear.className = 'admin-update-clear';
       clear.textContent = 'Clear';
       clear.title = 'Clear this line';
-      clear.setAttribute('aria-label', 'Clear update ' + (i + 1));
+      clear.setAttribute('aria-label', 'Clear update ' + shown);
       clear.dataset.i = i;
       clear.dataset.field = 'clear';
       clear.addEventListener('click', () => {
@@ -4651,7 +4776,92 @@
     if (err) err.textContent = '';
   }
 
+  // The Edit panel's date menus (which of day, month or year), by entry,
+  // kept across the list's redraws.
+  const listDateUi = {};
+
+  // --- "Add a release date", the line under the list: any number of
+  // release dates, each an exact day or just a month or a year, all in
+  // the one list. Dates waiting in the green box for a release (an
+  // announcement or pre-order date picked first) join the one added.
+  function addRelease(value, name) {
+    // Whether the green box was waiting for a release (asked before the
+    // list changes, as the box then turns to the newest one).
+    const boxWaiting = !datesTarget();
+    currentRefreshHistory = currentRefreshHistory.concat(value).sort();
+    if ((name || '').trim()) detailFor(value).name = name.trim();
+    const fits = (d) => !d || !isFullDate(d) || !isFullDate(value) || d <= value;
+    if (boxWaiting && fits(pendingAnnouncedDate) && fits(pendingPreorderDate)) {
+      if (!(name || '').trim() && pendingName.trim()) detailFor(value).name = pendingName.trim();
+      if (pendingAnnouncedDate) detailFor(value).announced = pendingAnnouncedDate;
+      if (pendingPreorderDate) detailFor(value).preorder = pendingPreorderDate;
+      if (pendingUpdates.some((u) => !updateIsBlank(u))) detailFor(value).updates = pendingUpdates;
+      pendingAnnouncedDate = null;
+      pendingPreorderDate = null;
+      pendingName = '';
+      pendingUpdates = [];
+    }
+    // The green box follows: it shows the newest (or upcoming) release.
+    if (value === primaryRelease()) datesMode = 'next';
+    releasePrecisionFor = undefined;
+    lastPicked = null;
+    productFormDirty = true;
+    renderRefreshHistory();
+    updateStatusReadout();
+  }
+  const releaseAddState = {};
+  const releaseAddDate = dateChoice({ state: releaseAddState, label: 'New release date', tag: 'add' });
+  document.getElementById('release-add-date').appendChild(releaseAddDate);
+  function submitReleaseAdd() {
+    const errEl = document.getElementById('release-add-error');
+    const nameEl = document.getElementById('release-add-name');
+    const value = releaseAddDate.get();
+    errEl.textContent = '';
+    if (!value) {
+      errEl.textContent = releaseAddState.precision === 'month' ? 'Pick the month and the year first.'
+        : releaseAddState.precision === 'year' ? 'Pick the year first.'
+          : 'Pick the day first. If you only know the month or the year, change \u201cExact day\u201d to match.';
+      return;
+    }
+    if (currentRefreshHistory.indexOf(value) !== -1) {
+      errEl.textContent = 'There is already a release on ' + formatAdminDate(value) + '.';
+      return;
+    }
+    addRelease(value, nameEl.value);
+    // Ready for the next one, as exact as the last.
+    releaseAddDate.set(null);
+    nameEl.value = '';
+  }
+  document.getElementById('release-add-btn').addEventListener('click', submitReleaseAdd);
+  document.getElementById('release-add-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitReleaseAdd(); }
+  });
+  // A product just opened (or a new one): the line starts empty, as
+  // exact as that product's latest release.
+  function resetReleaseAdd() {
+    const latest = currentRefreshHistory.slice().sort().pop();
+    releaseAddDate.set(null);
+    releaseAddDate.setPrecision(latest ? precisionOf(latest) : 'day');
+    document.getElementById('release-add-name').value = '';
+    document.getElementById('release-add-error').textContent = '';
+    Object.keys(listDateUi).forEach((k) => { delete listDateUi[k]; });
+  }
+
+  // Redrawing the list takes boxes off the page, and a box that had the
+  // cursor can answer that by asking for another redraw: that one waits
+  // its turn, so the list is never drawn into twice at once.
+  let drawingHistory = false;
+  let drawHistoryAgain = false;
   function renderRefreshHistory() {
+    if (drawingHistory) { drawHistoryAgain = true; return; }
+    drawingHistory = true;
+    try { drawRefreshHistory(); } finally { drawingHistory = false; }
+    if (drawHistoryAgain) {
+      drawHistoryAgain = false;
+      renderRefreshHistory();
+    }
+  }
+  function drawRefreshHistory() {
     refreshHistoryListEl.innerHTML = '';
     updateCountdownOption();
     const productName = document.getElementById('name').value.trim();
@@ -4679,7 +4889,7 @@
     if (!dates.length && !pendingAnnouncedDate) {
       const empty = document.createElement('li');
       empty.className = 'generation-empty';
-      empty.textContent = 'No dates yet. Add the launch date below.';
+      empty.textContent = 'No release dates yet. Add the first on the line below.';
       refreshHistoryListEl.appendChild(empty);
     }
     // Oldest first, so the list reads the way the product's life ran:
@@ -4846,14 +5056,23 @@
 
         // Editing the date moves the entry, carrying its name and
         // announced date with it. Nothing has to be removed and retyped.
-        const dateLabel = document.createElement('label');
-        dateLabel.textContent = type === 'discontinued' ? 'Discontinued date' : 'Release date';
-        const dateInput = document.createElement('input');
-        dateInput.type = 'date';
-        dateInput.value = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
-        dateInput.addEventListener('change', () => {
-          const next = dateInput.value;
-          if (!next || next === date) return;
+        const dateLabel = document.createElement('div');
+        dateLabel.className = 'generation-date-field';
+        const dateCaption = document.createElement('span');
+        dateCaption.className = 'generation-date-caption';
+        dateCaption.textContent = type === 'discontinued' ? 'Discontinued date' : 'Release date';
+        dateLabel.appendChild(dateCaption);
+        // An exact day, or just the month or the year.
+        const stateKey = type + ':' + date;
+        if (!listDateUi[stateKey]) listDateUi[stateKey] = {};
+        const dateInput = dateChoice({
+          value: date,
+          state: listDateUi[stateKey],
+          label: dateCaption.textContent,
+          tag: 'entry',
+          onChange: (next) => {
+          if (!next || next === date) { renderRefreshHistory(); return; }
+          delete listDateUi[stateKey];
           if (type === 'discontinued') {
             currentDiscontinuedDate = next;
           } else {
@@ -4871,16 +5090,13 @@
           }
           expandedGenerations.delete(date);
           expandedGenerations.add(next);
+          releasePrecisionFor = undefined;
+          productFormDirty = true;
           renderRefreshHistory();
           updateStatusReadout();
+          },
         });
         dateLabel.appendChild(dateInput);
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-          const note = document.createElement('span');
-          note.className = 'admin-hint';
-          note.textContent = 'Stored as ' + formatAdminDate(date) + '. Picking a full date here replaces it.';
-          dateLabel.appendChild(note);
-        }
         fields.appendChild(dateLabel);
 
         if (type !== 'discontinued') {
@@ -5192,6 +5408,7 @@
     document.getElementById('did-you-know-date-note').hidden = factDateColumnExists();
     document.getElementById(p.days_basis === 'launch' ? 'days_basis_launch' : 'days_basis_refresh').checked = true;
     currentRefreshHistory = (p.refresh_history || []).slice().sort();
+    resetReleaseAdd();
     const details = p.generation_details && typeof p.generation_details === 'object' && !Array.isArray(p.generation_details) ? p.generation_details : {};
     currentGenerationDetails = JSON.parse(JSON.stringify(details));
     currentDropped = takeDroppedFromDetails(currentGenerationDetails);
@@ -5277,6 +5494,7 @@
     discontinuedPrecisionFor = undefined;
     setMonthPick('discontinued', null);
     currentRefreshHistory = [];
+    resetReleaseAdd();
     currentGenerationDetails = {};
     currentDropped = [];
     currentIconUrl = null;
@@ -5553,7 +5771,7 @@
       const preorder = info.preorder || null;
       const stillOnSale = !!info.still_on_sale;
       const updates = (Array.isArray(info.updates) ? info.updates : [])
-        .filter((u) => u && isFullDate(u.date))
+        .filter((u) => u && anyDate(u.date))
         .map((u) => ({ date: u.date, kind: UPDATE_KINDS.some((k) => k.value === u.kind) ? u.kind : 'update', note: (u.note || '').trim() || null }))
         .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
         .slice(0, MAX_UPDATES);

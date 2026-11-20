@@ -336,7 +336,7 @@ function releaseUpdates(product, date) {
   const info = generationDetails(product)[date];
   const list = info && Array.isArray(info.updates) ? info.updates : [];
   return list
-    .filter((u) => u && /^\d{4}-\d{2}(-\d{2})?$/.test(u.date || ''))
+    .filter((u) => u && /^\d{4}(-\d{2}(-\d{2})?)?$/.test(u.date || ''))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
     .slice(0, 10);
 }
@@ -4000,8 +4000,17 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         <section class="admin-step" id="step-generations">
           <h3 class="admin-step-title"><span class="admin-step-num">3</span> Dates</h3>
-          <p class="admin-hint">Every release so far, oldest first. Edit changes one. New dates go in the green box below.</p>
+          <p class="admin-hint">Every release date, oldest first, all in this one list. Add another on the line under it; Edit changes one. Each can be an exact day, or just a month or a year.</p>
           <ul id="refresh-history-list" class="generation-list"></ul>
+          <div class="release-add" id="release-add">
+            <span class="release-add-label">Add a release date</span>
+            <div class="release-add-row">
+              <span id="release-add-date"></span>
+              <input type="text" id="release-add-name" placeholder="Name (optional)" autocomplete="off" aria-label="Name of this release (optional)">
+              <button type="button" class="admin-btn admin-btn--small" id="release-add-btn">Add</button>
+            </div>
+            <p class="form-error" id="release-add-error"></p>
+          </div>
           <div class="admin-dates-box" id="generation-add-panel">
             <div class="admin-dates-head">
               <p class="admin-dates-title" id="dates-box-title">Next release</p>
@@ -4085,7 +4094,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
               <label class="admin-date-name"><span class="admin-label-row">Name of this version <span class="admin-optional">Optional, leave blank to use the suggestion</span></span><input type="text" id="release_name_input" autocomplete="off"></label>
               <div class="admin-date-updates" id="release-updates">
                 <span class="admin-release-time-label">Updates to this release <span class="admin-optional">Optional, up to 5</span></span>
-                <p class="admin-hint" id="release-updates-hint">Changes after it came out, one per line: the date, what kind, and what (e.g. Release &middot; 4GB model). Each shows under this release in the product&rsquo;s release history; none restarts the days-since count. Blank lines are ignored.</p>
+                <p class="admin-hint" id="release-updates-hint">Changes to this release after it came out, one per line: the date (a day, or just a month or a year), what kind, and what (e.g. Release &middot; 4GB model). Each shows under this release in the product&rsquo;s release history; none restarts the days-since count. A new version in its own right is a release date of its own: add it to the list at the top.</p>
                 <div class="admin-updates-list" id="release-updates-list"></div>
               </div>
             </div>

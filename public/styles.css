@@ -4713,3 +4713,46 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 .x-photo-preview[data-count="1"] img { height: auto; max-height: 520px; object-fit: contain; }
 .x-photo-preview[data-count="2"] { grid-template-rows: minmax(0, 1fr); }
 .x-photo-preview[data-count="3"] img:first-child { grid-row: span 2; }
+
+/* Admin dates: a date that can be an exact day, or just a month or a
+   year: a small menu for which, then the matching boxes (dateChoice in
+   admin.js). On each update line, in the release list's Edit, and on its
+   "Add a release date" line. */
+.date-choice { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+.date-choice > [hidden] { display: none; }
+.admin-form .date-choice :is(input[type="date"], select) { box-sizing: border-box; width: auto; min-width: 0; margin: 0; font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); }
+.admin-form .date-choice .date-choice-kind { font-weight: 600; }
+.date-choice-now { margin: 0; font-size: 12px; }
+/* An update line: the date (with its menu) on the first row, then what
+   kind and what, so the "what" box has room. */
+.admin-update-row:not(.admin-update-row--dropped) { grid-template-columns: 22px minmax(0, 9.5em) minmax(0, 1fr) auto; row-gap: 6px; padding-bottom: 10px; border-bottom: 1px dashed #cfe0b8; }
+.admin-update-row:not(.admin-update-row--dropped):last-child { padding-bottom: 0; border-bottom: 0; }
+.admin-update-row:not(.admin-update-row--dropped) > .admin-update-num { grid-column: 1; grid-row: 1; }
+.admin-update-row:not(.admin-update-row--dropped) > .date-choice { grid-column: 2 / 4; grid-row: 1; }
+.admin-update-row:not(.admin-update-row--dropped) > .admin-update-clear { grid-column: 4; grid-row: 1; }
+.admin-update-row:not(.admin-update-row--dropped) > select { grid-column: 2; grid-row: 2; }
+.admin-update-row:not(.admin-update-row--dropped) > input[type="text"] { grid-column: 3 / 5; grid-row: 2; }
+.admin-form .admin-update-row .date-choice :is(input[type="date"], select) { width: auto; border-color: #b9d39c; }
+.admin-update-row.is-blank .date-choice :is(input, select) { background: #f7fbf2; }
+/* The release list's Edit: its date, with the menu. */
+.generation-date-field { grid-column: 1 / -1; display: grid; gap: 4px; }
+.generation-date-caption { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+/* "Add a release date", the line under the list. */
+.release-add { display: grid; gap: 6px; margin: 8px 0 14px; padding: 10px 12px; border: 1px dashed #c9c5b9; border-radius: 10px; background: #fbf9f5; }
+.release-add-label { font-size: 13px; font-weight: 700; }
+.release-add-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin-form .release-add-row input[type="text"] { flex: 1 1 160px; min-width: 0; width: auto; margin: 0; font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.release-add .form-error { margin: 0; }
+.release-add .form-error:empty { display: none; }
+/* On a phone an update line's date takes two short rows: which kind of
+   date, then its boxes (a year fits beside its menu), with Clear beside
+   them at the top. */
+@media (max-width: 640px) {
+  .admin-update-row:not(.admin-update-row--dropped) { grid-template-columns: 18px minmax(0, 7.5em) minmax(0, 1fr) auto; }
+  .admin-update-row:not(.admin-update-row--dropped) > .admin-update-clear { align-self: start; }
+  .admin-update-row .date-choice { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  .admin-form .admin-update-row .date-choice :is(input[type="date"], select) { width: 100%; grid-column: auto; grid-row: auto; }
+  .admin-form .admin-update-row .date-choice[data-precision="month"] select.date-choice-kind,
+  .admin-form .admin-update-row .date-choice input[type="date"],
+  .admin-update-row .date-choice .date-choice-now { grid-column: 1 / -1; }
+}
