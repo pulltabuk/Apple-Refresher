@@ -4423,9 +4423,18 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         </section>
 
         <section class="x-step" aria-labelledby="x-step-3">
-          <h3 class="x-step-title" id="x-step-3"><span class="x-step-num">3</span>The card</h3>
+          <h3 class="x-step-title" id="x-step-3"><span class="x-step-num">3</span>The picture</h3>
           <div class="x-options x-card-toggle">
             <label class="checkbox-label"><input type="checkbox" id="x-card-on" checked> Add a card image</label>
+          </div>
+          <div class="x-photos" id="x-photos">
+            <div class="x-photos-row">
+              <button type="button" class="admin-btn admin-btn--small" id="x-photos-btn">Use my own photos instead</button>
+              <span class="admin-hint" id="x-photos-hint">Up to 4. They go out in place of the card.</span>
+              <input type="file" id="x-photos-input" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif" multiple hidden>
+            </div>
+            <ul class="x-photos-list" id="x-photos-list" hidden></ul>
+            <p class="form-error" id="x-photos-error"></p>
           </div>
           <div class="x-card-fields" id="x-card-fields">
             <label for="x-card-label">Heading <span class="admin-hint">the small line at the top, e.g. Did you know?</span></label>
@@ -4459,6 +4468,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
         <section class="x-step x-step--send" aria-labelledby="x-step-4">
           <h3 class="x-step-title" id="x-step-4"><span class="x-step-num">4</span>Check and send</h3>
           <img id="x-card" class="x-card" alt="The card image" hidden>
+          <div id="x-photo-preview" class="x-photo-preview" hidden></div>
           <div class="x-preview-head">
             <p class="admin-hint">The post on X (you can edit it here)</p>
             <button type="button" id="x-preview-reset" class="admin-btn admin-btn--small" hidden>Reset</button>
@@ -4478,6 +4488,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
             <button type="button" id="x-buffer-at-btn" class="admin-btn admin-btn--primary">Schedule</button>
           </div>
           <p id="x-buffer-note" class="admin-hint" hidden></p>
+          <p id="x-photos-send-note" class="admin-hint" hidden>Your photos go out with the two Buffer buttons. &ldquo;Post to X&rdquo; can&rsquo;t carry pictures: add them in X once it opens.</p>
           <div class="x-actions x-actions--more">
             <button type="button" id="x-copy-btn" class="admin-btn admin-btn--small">Copy text</button>
             <button type="button" id="x-card-btn" class="admin-btn admin-btn--small" hidden>Download card</button>

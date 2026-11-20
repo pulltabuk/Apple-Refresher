@@ -4690,3 +4690,26 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
   .x-chat-form .x-start-field { flex-wrap: wrap; }
   .x-chat-form .x-start-field input { flex: 1 1 100%; }
 }
+
+/* X posts: the writer's own photos in place of the card (step 3), and
+   how they will sit on the post (step 4), laid out the way X does: one
+   whole, two side by side, three with the first tall, four in a square. */
+.x-card-toggle[hidden] { display: none; }
+.x-photos { max-width: 640px; margin: 10px 0 0; }
+.x-photos-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.x-photos-row .admin-hint { margin: 0; }
+.x-photos-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; margin: 10px 0 0; padding: 0; list-style: none; }
+.x-photos-list[hidden] { display: none; }
+.x-photo { display: grid; gap: 6px; min-width: 0; }
+.x-photo img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid #e7e1d6; border-radius: 10px; background: #f4f1ea; }
+.x-photo-remove { font: inherit; font-size: 13px; font-weight: 600; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); cursor: pointer; }
+.x-photo-remove:hover { border-color: var(--accent); color: var(--accent-dark); }
+.x-photos .form-error { margin: 8px 0 0; }
+.x-photos .form-error:empty { display: none; }
+.x-photo-preview { display: grid; gap: 3px; aspect-ratio: 16 / 9; margin: 0 0 12px; overflow: hidden; border: 1px solid #e7e1d6; border-radius: 12px; background: #f4f1ea; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+.x-photo-preview[hidden] { display: none; }
+.x-photo-preview img { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: cover; }
+.x-photo-preview[data-count="1"] { display: block; aspect-ratio: auto; }
+.x-photo-preview[data-count="1"] img { height: auto; max-height: 520px; object-fit: contain; }
+.x-photo-preview[data-count="2"] { grid-template-rows: minmax(0, 1fr); }
+.x-photo-preview[data-count="3"] img:first-child { grid-row: span 2; }
