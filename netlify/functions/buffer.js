@@ -60,11 +60,14 @@ async function findXChannel() {
 // refusing the post itself: try the next shape.
 const SHAPE_ERROR = /unknown|not defined|cannot query|expected|undefined field|field .* (?:not|doesn)|argument|validat|syntax|type /i;
 
-function mutations(text, channelId, imageUrl, mode, dueAt) {
+// imageUrls: the pictures to attach, in order (the card, or up to four
+// of the writer's own photos).
+function mutations(text, channelId, imageUrls, mode, dueAt) {
   const base = 'text: ' + lit(text) + ', channelId: ' + lit(channelId) + ', schedulingType: automatic, ' +
     (mode === 'schedule' ? 'mode: customScheduled, dueAt: ' + lit(dueAt) : 'mode: addToQueue');
-  const assets = imageUrl
-    ? ['assets: [{ image: { url: ' + lit(imageUrl) + ' } }]', 'assets: { images: [{ url: ' + lit(imageUrl) + ' }] }']
+  const assets = imageUrls.length
+    ? ['assets: [' + imageUrls.map((u) => '{ image: { url: ' + lit(u) + ' } }').join(', ') + ']',
+      'assets: { images: [' + imageUrls.map((u) => '{ url: ' + lit(u) + ' }').join(', ') + '] }']
     : [''];
   const results = [
     '... on PostActionSuccess { post { id dueAt } } ... on MutationError { message }',
@@ -290,10 +293,14 @@ exports.handler = async (event) => {
       if (t < Date.now() + 60000) return json(400, { error: 'That time has passed. Pick a time in the future.' });
       dueAt = new Date(t).toISOString();
     }
-    const imageUrl = /^https:\/\//i.test(String(input.imageUrl || '')) ? String(input.imageUrl) : '';
+    // The pictures: the writer's own photos (imageUrls, up to four, X's
+    // limit), or the one card image (imageUrl).
+    const isHttps = (u) => typeof u === 'string' && /^https:\/\//i.test(u);
+    const imageUrls = (Array.isArray(input.imageUrls) ? input.imageUrls : []).filter(isHttps).slice(0, 4);
+    if (!imageUrls.length && isHttps(input.imageUrl)) imageUrls.push(input.imageUrl);
 
     let lastShapeError = '';
-    for (const m of mutations(text, channel.id, imageUrl, mode, dueAt)) {
+    for (const m of mutations(text, channel.id, imageUrls, mode, dueAt)) {
       const r = await gql(m);
       if (r.errors.length) {
         const msg = r.errors.map((e) => e.message).join('; ');

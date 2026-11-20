@@ -532,6 +532,8 @@
     let ideas = [];
     let shown = 0;
     let cardUrl = null;
+    // The writer's own photos, in place of the card: { file, preview, url }.
+    let xPhotos = [];
     let cardTimer = null;
 
     // The card rides along as the link's preview (see xCardLink in
@@ -579,7 +581,7 @@
     const postText = () => $x('x-preview').value.trim();
 
     const cardSig = () => ($x('x-card-label').value.trim() || 'Did you know?') + '\n' + $x('x-text').value.trim() + '\n' + JSON.stringify(cardFields()) + '\n' + outsideLink();
-    const wantsCard = () => $x('x-card-on').checked && !!$x('x-text').value.trim();
+    const wantsCard = () => $x('x-card-on').checked && !!$x('x-text').value.trim() && !xPhotos.length;
     const cardReady = () => !wantsCard() || (cardKey && cardFor === cardSig());
     // Whether the saved card's link opened properly when checked; if not,
     // the post carries the plain link.
@@ -671,17 +673,18 @@
       updateCount();
       // The card follows the text, redrawn a moment after typing stops.
       clearTimeout(cardTimer);
-      const wantCard = $x('x-card-on').checked && text;
+      // Own photos take the card's place: no card is drawn or shown.
+      const wantCard = wantsCard();
       $x('x-card').hidden = !wantCard;
       $x('x-card-btn').hidden = !wantCard;
-      $x('x-card-fields').hidden = !$x('x-card-on').checked;
+      $x('x-card-fields').hidden = !$x('x-card-on').checked || xPhotos.length > 0;
       if (!wantCard) $x('x-card-note').hidden = true;
       if (wantCard) {
         cardTimer = setTimeout(async () => {
           const sig = cardSig();
           const card = await window.FactsKit.xCardPreview(text, $x('x-card-label').value.trim() || 'Did you know?', cardFields());
           // The wording changed (or the post was cleared) while it drew.
-          if (sig !== cardSig() || !$x('x-card-on').checked) return;
+          if (sig !== cardSig() || !wantsCard()) return;
           cardUrl = card.url;
           $x('x-card').src = cardUrl;
           $x('x-card-note').hidden = !card.lineCut;
@@ -776,6 +779,8 @@
 
     function useIdea(idea) {
       if ($x('x-text').value.trim() && !window.confirm('Replace the post you are writing with this idea?')) return;
+      // Photos that went out with the last post don't join this one.
+      if (sentThisPost) dropPhotos();
       // Shortened if need be, so it never arrives over X's 280.
       $x('x-text').value = window.FactsKit.xFitText(idea.text, { products: cachedProducts, link: idea.link });
       $x('x-link').value = idea.link || '';
@@ -988,6 +993,7 @@
       composerDraft = null;
       $x('x-buffer-note').hidden = true;
       $x('x-buffer-when').hidden = true;
+      dropPhotos();
       sentThisPost = false;
       unlockFields();
       refresh();
@@ -1001,6 +1007,8 @@
       const box = $x('x-text');
       const whole = !box.value.trim() || (box.selectionStart === 0 && box.selectionEnd === box.value.length);
       if (whole) forgetPostState();
+      // Photos that went out with the last post don't join the next one.
+      if (whole && sentThisPost) dropPhotos();
     });
 
     $x('x-post-btn').addEventListener('click', () => {
@@ -1111,6 +1119,148 @@
       link.click();
     });
 
+    // --- Own photos in place of the card: up to four (X's limit),
+    // attached to the post by the Buffer buttons. X's "Post to X" link
+    // can't carry pictures, so there they are added by hand in X.
+    const MAX_X_PHOTOS = 4;
+    const PHOTO_MAX_BYTES = 4.5 * 1024 * 1024; // X takes pictures up to 5MB
+    const PHOTO_MAX_SIDE = 4096;
+    // A photo as X will take it: as it is when it's a JPG, PNG, WebP or
+    // GIF of a sensible size; otherwise (too big, or an iPhone's HEIC)
+    // redrawn smaller as a JPG. Throws when it isn't a picture the
+    // browser can read.
+    async function readyPhoto(file) {
+      const url = URL.createObjectURL(file);
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const el = new Image();
+          el.onload = () => resolve(el);
+          el.onerror = () => reject(new Error('not a picture'));
+          el.src = url;
+        });
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        if (!w || !h) throw new Error('not a picture');
+        const plain = /^image\/(jpeg|png|webp|gif)$/.test(file.type);
+        if (plain && file.size <= PHOTO_MAX_BYTES && Math.max(w, h) <= PHOTO_MAX_SIDE) return file;
+        const scale = Math.min(1, 2400 / Math.max(w, h));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(w * scale));
+        canvas.height = Math.max(1, Math.round(h * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+        if (!blob) throw new Error('not a picture');
+        return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+    function renderPhotos() {
+      const list = $x('x-photos-list');
+      const preview = $x('x-photo-preview');
+      list.innerHTML = '';
+      preview.innerHTML = '';
+      xPhotos.forEach((p, i) => {
+        const li = document.createElement('li');
+        li.className = 'x-photo';
+        const img = document.createElement('img');
+        img.src = p.preview;
+        img.alt = 'Photo ' + (i + 1);
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'x-photo-remove';
+        remove.textContent = 'Remove';
+        remove.setAttribute('aria-label', 'Remove photo ' + (i + 1));
+        remove.addEventListener('click', () => {
+          URL.revokeObjectURL(p.preview);
+          xPhotos = xPhotos.filter((x) => x !== p);
+          $x('x-photos-error').textContent = '';
+          photosChanged();
+        });
+        li.appendChild(img);
+        li.appendChild(remove);
+        list.appendChild(li);
+        const shown = document.createElement('img');
+        shown.src = p.preview;
+        shown.alt = 'Photo ' + (i + 1) + ' on the post';
+        preview.appendChild(shown);
+      });
+      const n = xPhotos.length;
+      list.hidden = !n;
+      preview.hidden = !n;
+      preview.dataset.count = String(n);
+      $x('x-photos-btn').textContent = !n ? 'Use my own photos instead' : n < MAX_X_PHOTOS ? 'Add another photo' : 'All ' + MAX_X_PHOTOS + ' photos added';
+      $x('x-photos-btn').disabled = n >= MAX_X_PHOTOS;
+      $x('x-photos-hint').textContent = n
+        ? (n === 1 ? 'This goes' : 'These go') + ' out in place of the card. Remove ' + (n === 1 ? 'it' : 'them all') + ' to use the card again.'
+        : 'Up to ' + MAX_X_PHOTOS + '. They go out in place of the card.';
+      // The card's own switch means nothing while photos take its place.
+      $x('x-card-on').closest('.x-card-toggle').hidden = n > 0;
+      $x('x-photos-send-note').hidden = !n;
+    }
+    function photosChanged() {
+      renderPhotos();
+      $x('x-buffer-note').hidden = true;
+      refresh();
+    }
+    // A new post starts without the last one's photos.
+    function dropPhotos() {
+      if (!xPhotos.length && !$x('x-photos-error').textContent) return;
+      xPhotos.forEach((p) => URL.revokeObjectURL(p.preview));
+      xPhotos = [];
+      $x('x-photos-error').textContent = '';
+      renderPhotos();
+    }
+    async function addPhotos(files) {
+      const picked = Array.from(files || []);
+      if (!picked.length) return;
+      const problems = [];
+      const room = MAX_X_PHOTOS - xPhotos.length;
+      if (picked.length > room) {
+        const over = picked.length - room;
+        problems.push('A post takes ' + MAX_X_PHOTOS + ' photos at most, so ' + (over === 1 ? 'the last one was' : 'the last ' + over + ' were') + ' left out.');
+      }
+      const btn = $x('x-photos-btn');
+      btn.disabled = true;
+      btn.textContent = 'Adding\u2026';
+      for (const file of picked.slice(0, Math.max(0, room))) {
+        try {
+          const ready = await readyPhoto(file);
+          xPhotos.push({ file: ready, preview: URL.createObjectURL(ready), url: null });
+        } catch (err) {
+          problems.push('\u201c' + file.name + '\u201d couldn\u2019t be read as a picture: use a JPG or PNG.');
+        }
+      }
+      $x('x-photos-error').textContent = problems.join(' ');
+      photosChanged();
+    }
+    $x('x-photos-btn').addEventListener('click', () => $x('x-photos-input').click());
+    $x('x-photos-input').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []);
+      // Emptied, so picking the same photo again still counts as a change.
+      e.target.value = '';
+      addPhotos(files);
+    });
+    // The photos saved to storage, as public addresses for Buffer. Each
+    // is uploaded once, however many times the post is sent.
+    async function photoUrls() {
+      const urls = [];
+      for (const p of xPhotos.slice()) {
+        if (!p.url) {
+          const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }[p.file.type] || 'jpg';
+          const path = 'x-photos/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+          const { error } = await client.storage.from('product-images').upload(path, p.file, { contentType: p.file.type || 'image/jpeg' });
+          if (error) throw new Error('a photo didn\u2019t upload (' + (error.message || 'storage error') + ')');
+          p.url = client.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+        }
+        urls.push(p.url);
+      }
+      return urls;
+    }
+
     // --- Buffer: posts go to Buffer, which publishes them to X, added to
     // its queue (the next free slot) or for a set time, with the card
     // attached as an image. The Buffer key stays on Netlify; the browser
@@ -1132,7 +1282,7 @@
       const res = await fetch('/.netlify/functions/buffer', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send', text: post.text, imageUrl: post.imageUrl || '', mode, dueAt: dueAt || null }),
+        body: JSON.stringify({ action: 'send', text: post.text, imageUrl: post.imageUrl || '', imageUrls: post.imageUrls || [], mode, dueAt: dueAt || null }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.ok) throw new Error(body.error || 'Buffer send failed (' + res.status + ')');
@@ -1173,8 +1323,10 @@
       note.textContent = 'Sending to Buffer\u2026';
       try {
         const label = $x('x-card-label').value.trim() || 'Did you know?';
-        const imageUrl = wantsCard() ? await cardImageUrl(body, label, cardFields()) : '';
-        const sent = await sendToBuffer({ text, imageUrl }, mode, dueAt);
+        // The writer's own photos when there are any, else the card.
+        const imageUrls = xPhotos.length ? await photoUrls() : [];
+        const imageUrl = !imageUrls.length && wantsCard() ? await cardImageUrl(body, label, cardFields()) : '';
+        const sent = await sendToBuffer({ text, imageUrl, imageUrls }, mode, dueAt);
         sentThisPost = true;
         note.textContent = mode === 'schedule'
           ? 'Scheduled in Buffer for ' + whenText(sent.dueAt || dueAt) + '.'
