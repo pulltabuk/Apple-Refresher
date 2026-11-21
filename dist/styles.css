@@ -4809,3 +4809,10 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
   .admin-form .dates-panel .date-trio .date-trio-day { flex: 0 0 4.2em; }
   .admin-form .dates-panel .date-trio .date-trio-year { flex: 0 0 5em; }
 }
+
+/* Dates panel: "or paste a date", beside each line's three menus. */
+.admin-form .dates-panel .dates-paste { box-sizing: border-box; width: 5.6em; min-width: 0; margin: 0; font: inherit; font-size: 14px; padding: 8px 9px; border: 1px dashed #b9d39c; border-radius: 8px; background: #f7fbf2; color: var(--text); }
+.admin-form .dates-panel .dates-paste:focus { border-style: solid; background: #fff; }
+@media (max-width: 640px) {
+  .admin-form .dates-panel .dates-paste { flex: 1 1 6em; width: auto; }
+}

@@ -4000,7 +4000,7 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
 
         <section class="admin-step" id="step-generations">
           <h3 class="admin-step-title"><span class="admin-step-num">3</span> Dates</h3>
-          <p class="admin-hint">One line for each date, in the order they happen. Pick the day, month and year. If you only know the month, leave the day on &ldquo;Day&rdquo;; if you only know the year, leave the month too. A pale date is only a starting point, copied from the line above or the last release: change it, or press &ldquo;&#10003; Use&rdquo; to keep it.</p>
+          <p class="admin-hint">One line for each date, in the order they happen. Pick the day, month and year. If you only know the month, leave the day on &ldquo;Day&rdquo;; if you only know the year, leave the month too. Or type or paste the date into the box beside the menus, written any usual way. A pale date is only a starting point, copied from the line above or the last release: change it, or press &ldquo;&#10003; Use&rdquo; to keep it.</p>
           <div class="dates-panel" id="generation-add-panel">
             <div id="dates-panel"></div>
             <div class="dates-add" id="dates-add">
