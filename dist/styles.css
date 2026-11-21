@@ -4816,3 +4816,8 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 @media (max-width: 640px) {
   .admin-form .dates-panel .dates-paste { flex: 1 1 6em; width: auto; }
 }
+
+/* Dates panel: the paste box, made to stand out from the menus. */
+.admin-form .dates-panel .dates-paste { width: 8.2em; border: 2px solid #c2540c; background: #fff6ee; font-weight: 600; }
+.admin-form .dates-panel .dates-paste::placeholder { color: #9c4009; opacity: 1; }
+.admin-form .dates-panel .dates-paste:focus { border-style: solid; background: #fff; outline: 2px solid #f0b78f; outline-offset: 1px; }
