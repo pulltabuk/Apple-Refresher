@@ -4257,7 +4257,7 @@
       const box = document.createElement('input');
       box.type = 'text';
       box.className = 'dates-paste';
-      box.placeholder = 'or paste';
+      box.placeholder = '\u2398 Paste date';
       box.autocomplete = 'off';
       box.dataset.fk = o.key + ':paste';
       box.setAttribute('aria-label', o.label + ': paste or type the date');
@@ -4355,6 +4355,7 @@
         state: uiState(u),
         className: 'dates-line--sub',
         label: 'Update ' + (i + 1),
+        paste: 'release',
         value: anyDate(u.date) ? u.date : null,
         suggestion: start,
         set: (v) => { u.date = v; },
@@ -4534,6 +4535,7 @@
         state: uiState(u),
         className: 'dates-line--sub',
         label: 'Model ' + (i + 1),
+        paste: 'discontinued',
         value: anyDate(u.date) ? u.date : null,
         suggestion: start,
         set: (v) => {
