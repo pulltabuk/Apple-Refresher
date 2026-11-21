@@ -4206,6 +4206,16 @@
     btn.type = 'button';
     return btn;
   };
+  // A date from typed or pasted words: a full date, else a month and
+  // year ("Sept 2025"), else a year by itself.
+  function typedDate(text, word) {
+    const full = pastedDate(text, word);
+    if (full) return full;
+    const month = monthInText(text);
+    if (month) return month;
+    const year = /^\D*((?:19|20)\d{2})\D*$/.exec(String(text));
+    return year ? year[1] : null;
+  }
   // Which line a pasted date goes to, by line key: { set, word }.
   let lineSetters = {};
   // One line: its name, the three menus, "✓ Use" for a pale date, Clear,
@@ -4239,6 +4249,40 @@
       use.dataset.fk = o.key + ':use';
       use.addEventListener('click', () => { o.set(o.suggestion.date); changed(); });
       body.appendChild(use);
+    }
+    // Or the date typed or pasted, written any usual way ("19 September
+    // 2025", "19/09/2025", "Sept 2025", "2025"), even inside a sentence
+    // from a press release: it fills in the three menus.
+    if (o.paste) {
+      const box = document.createElement('input');
+      box.type = 'text';
+      box.className = 'dates-paste';
+      box.placeholder = 'or paste';
+      box.autocomplete = 'off';
+      box.dataset.fk = o.key + ':paste';
+      box.setAttribute('aria-label', o.label + ': paste or type the date');
+      const take = (text) => {
+        if (!String(text || '').trim()) return;
+        const value = typedDate(text, o.paste);
+        if (!value) {
+          adminToast('No date found in that. Try 19 September 2025, 19/09/2025, Sept 2025 or just 2025.', false);
+          return;
+        }
+        box.value = '';
+        st.cleared = false;
+        o.set(value);
+        changed();
+      };
+      box.addEventListener('paste', (e) => {
+        const text = ((e.clipboardData || window.clipboardData) && (e.clipboardData || window.clipboardData).getData('text')) || '';
+        if (!text.trim()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        take(text);
+      });
+      box.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); take(box.value); } });
+      box.addEventListener('change', () => take(box.value));
+      body.appendChild(box);
     }
     (o.extras || []).forEach((node) => body.appendChild(node));
     if (!o.noClear && (o.value || st.y || st.m || st.d || suggested)) {
@@ -4451,7 +4495,9 @@
       label: 'Discontinued',
       paste: 'discontinued',
       value: currentDiscontinuedDate,
-      suggestion: last ? { date: last, from: 'the last model to go' } : null,
+      suggestion: last ? { date: last, from: 'the last model to go' }
+        : ctx.releases.length ? { date: ctx.releases[ctx.releases.length - 1], from: 'the latest release' }
+          : currentOriginalLaunchDate ? { date: currentOriginalLaunchDate, from: 'the launch' } : null,
       set: (v) => { currentDiscontinuedDate = v; updateStatusReadout(); },
       extras: [document.getElementById('end_of_line_btn')],
       problem: ctx.problems.discontinued,
@@ -4609,7 +4655,7 @@
     const text = ((e.clipboardData || window.clipboardData) && (e.clipboardData || window.clipboardData).getData('text')) || '';
     if (!text.trim()) return;
     e.preventDefault();
-    const value = pastedDate(text, lineSetters[key].word);
+    const value = typedDate(text, lineSetters[key].word);
     if (!value) {
       adminToast('No date found in what you pasted. Try 19 September 2025 or 19/09/2025.', false);
       return;
