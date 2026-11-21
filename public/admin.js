@@ -4436,11 +4436,13 @@
         label: 'Launched',
         paste: 'launch',
         value: launch,
-        suggestion: launchSuggestion(),
+        // Offered a starting date only when step 4 says this product
+        // starts a new line; on any other product it stays empty.
+        suggestion: document.getElementById('previous_model').value === NEW_LINE ? launchSuggestion() : null,
         set: (v) => setLaunch(v),
         note: launch && releases.length && releases.indexOf(launch) === -1
           ? 'Saving adds ' + formatAdminDate(launch) + ' as the first release.'
-          : !launch && !releases.length ? 'The product’s first ever release. For a new product it is the release date below.' : '',
+          : !launch ? 'Only for the first product of a line (the original Apple II, the first PowerBook G4): the day the line began. It shows as \u201cLaunch\u201d in the timeline and \u201cFirst of the line\u201d on the page. Leave it empty on every other product.' : '',
         problem: ctx.problems.launch,
       }));
     }
