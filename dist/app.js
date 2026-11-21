@@ -139,6 +139,18 @@
     return releases.length ? releases : all;
   }
 
+  // Must match releaseType() in src/templates.js: what kind of release
+  // one of a product's release dates was (its first one, with no date).
+  function releaseTypeJS(product, date) {
+    var releases = releaseDatesJS(product);
+    var first = releases[0] || null;
+    var when = date || first;
+    var startsLine = product.is_new_launch || product.previous_model === '__new__';
+    if (when && (when === product.original_launch_date || (startsLine && when === first))) return 'First of the line';
+    if (when && first && when !== first) return 'Refresh of an existing model';
+    return product.previous_model && product.previous_model !== '__new__' ? 'Successor model' : 'New model';
+  }
+
   function launchDateJS(product) {
     var h = sortedHistoryJS(product);
     return h.length ? h[0] : null;
@@ -1432,7 +1444,7 @@
       specRowJS('Category', pillJS(product.category)),
       specRowJS('Status', product.discontinued ? 'Discontinued' : 'Current'),
       product.discontinued ? specRowJS('Apple support status', appleSupportStatusJS(product)) : '',
-      sortedDates.length ? specRowJS('Release type', product.is_new_launch ? 'All-new product' : 'Refresh of an existing model') : '',
+      sortedDates.length ? specRowJS('Release type', releaseTypeJS(product)) : '',
       daysInfo && daysInfo.days >= 0 ? specRowJS('Days counted from', pluralJS(daysInfo.days, 'day', 'days') + ' (' + (product.days_basis === 'launch' ? 'first release' : 'latest release') + ')') : '',
       specRowJS('Chip', escapeHtmlJS(product.chip)),
       specRowJS('Previous model', previousModelHtml),

@@ -307,6 +307,25 @@ function releaseDates(product) {
   return releases.length ? releases : sortedHistory(product);
 }
 
+// What kind of release one of a product's release dates was. Worked out
+// from what is already recorded, nothing more: whether that date is the
+// line's launch, whether it is the product's first release, and whether
+// the product replaced another. Must match releaseTypeJS() in
+// public/app.js.
+//   the launch of a line               -> "First of the line"
+//   a later release of the same product -> "Refresh of an existing model"
+//   a first release that replaced one   -> "Successor model"
+//   a first release that replaced none  -> "New model"
+function releaseType(product, date) {
+  const releases = releaseDates(product);
+  const first = releases[0] || null;
+  const when = date || first;
+  const startsLine = product.is_new_launch || product.previous_model === '__new__';
+  if (when && (when === product.original_launch_date || (startsLine && when === first))) return 'First of the line';
+  if (when && first && when !== first) return 'Refresh of an existing model';
+  return product.previous_model && product.previous_model !== '__new__' ? 'Successor model' : 'New model';
+}
+
 function launchDate(product) {
   const h = sortedHistory(product);
   return h.length ? h[0] : null;
@@ -3548,7 +3567,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     specRow('Category', categoryPill(product.category)),
     specRow('Status', product.discontinued ? 'Discontinued' : 'Current'),
     product.discontinued ? specRow('Apple support status', appleSupportStatus(product)) : '',
-    sortedDates.length ? specRow('Release type', product.is_new_launch ? 'All-new product' : 'Refresh of an existing model') : '',
+    sortedDates.length ? specRow('Release type', releaseType(product)) : '',
     daysInfo && daysInfo.days >= 0 ? specRow('Days counted from', `${plural(daysInfo.days, 'day', 'days')} (${product.days_basis === 'launch' ? 'first release' : 'latest release'})`) : '',
     specRow('Chip', escapeHtml(product.chip)),
     specRow('Previous model', previousModelHtml),
