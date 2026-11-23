@@ -3770,7 +3770,8 @@
     btn.hidden = !show;
     btn.setAttribute('aria-pressed', box.checked ? 'true' : 'false');
     btn.classList.toggle('is-on', box.checked);
-    btn.textContent = box.checked ? '✓ End of the line' : 'End of the line';
+    btn.textContent = box.checked ? '✓ End of the line: chosen' : 'End of the line';
+    btn.title = box.checked ? 'Chosen. Tap again to undo.' : 'Tap if Apple ended the line with this product';
     if (hint) {
       hint.hidden = !show;
       const family = canonicalFamily(document.getElementById('category').value);
