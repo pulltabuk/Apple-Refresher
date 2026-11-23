@@ -4821,3 +4821,12 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 .admin-form .dates-panel .dates-paste { width: 8.2em; border: 2px solid #c2540c; background: #fff6ee; font-weight: 600; }
 .admin-form .dates-panel .dates-paste::placeholder { color: #9c4009; opacity: 1; }
 .admin-form .dates-panel .dates-paste:focus { border-style: solid; background: #fff; outline: 2px solid #f0b78f; outline-offset: 1px; }
+
+/* Admin dates: the End of the line button. Bold and orange so it is
+   noticed; once chosen it turns solid dark with a tick and a ring. */
+.admin-form .admin-end-line-btn { padding: 9px 16px; font-size: 15px; font-weight: 800; border: 2px solid #c2540c; border-radius: 10px; background: #fff6ee; color: #9c4009; box-shadow: 0 1px 0 rgba(156, 64, 9, 0.25); transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s; }
+.admin-form .admin-end-line-btn:hover { background: #fbe9db; }
+.admin-form .admin-end-line-btn:active { transform: scale(0.97); }
+.admin-form .admin-end-line-btn.is-on { background: #1d1b19; border-color: #1d1b19; color: #fff; box-shadow: 0 0 0 3px #f0b78f; }
+.admin-form .admin-end-line-btn.is-on:hover { background: #33302c; }
+.admin-form .admin-end-line-btn[hidden] { display: none; }
