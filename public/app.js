@@ -1125,8 +1125,25 @@
   }
 
   // Must stay in step with FactsKit.videoInfo() in public/facts-kit.js.
+  // Must match VIDEO_KINDS, videoPlain() and videoLabelHtml() in
+  // public/facts-kit.js: whose video it is, kept on the end of its
+  // address ("#as=official") and said under it.
+  var VIDEO_KINDS_JS = {
+    official: ['Official Apple video', 'From Apple\u2019s own channel'],
+    apple: ['Original Apple video', 'Made by Apple, from an archive copy'],
+    independent: ['Independent video', 'Not made by Apple']
+  };
+  function videoPlainJS(url) {
+    return String(url || '').replace(/([#&])as=(?:official|apple|independent)(&|$)/, function (all, a, b) { return a === '#' && b ? '#' : ''; }).replace(/#$/, '');
+  }
+  function videoLabelHtmlJS(url) {
+    var m = /#(?:[^#]*&)?as=(official|apple|independent)(?:&|$)/.exec(String(url || ''));
+    if (!m) return '';
+    var k = VIDEO_KINDS_JS[m[1]];
+    return '<p class="video-label video-label--' + m[1] + '"><span class="video-label-pill">' + (m[1] === 'independent' ? '' : '\u2713 ') + k[0] + '</span><span class="video-label-note">' + k[1] + '</span></p>';
+  }
   function videoInfoJS(url) {
-    var u = String(url || '').trim();
+    var u = videoPlainJS(String(url || '').trim());
     if (!/^https?:\/\//i.test(u)) return null;
     var m = u.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i);
     if (m) {
@@ -1383,6 +1400,8 @@
 
     // Must match productPage() in src/templates.js.
     var video = videoInfoJS(product.video_url);
+    // Whose video it is, under it (as the build's FactsKit.videoLabelHtml).
+    var videoLabel = videoLabelHtmlJS(product.video_url);
     var videoBlock = !video || video.kind === 'link'
       ? ''
       : video.kind === 'file'
@@ -1452,7 +1471,7 @@
       product.discontinued ? specRowJS('Why it went', escapeHtmlJS(product.discontinued_reason)) : '',
       appleLinkRowJS('Official Apple page', product, 'apple_url', 'apple.com', 'No longer available on Apple\u2019s website', productsBySlug),
       appleLinkRowJS('Tech specs', product, 'specs_url', 'Apple specs', 'No longer available from Apple', productsBySlug),
-      video && video.kind === 'link' ? specRowJS('Video', '<a href="' + escapeHtmlJS(video.src) + '" target="_blank" rel="noopener">Watch on ' + escapeHtmlJS(video.host) + ' &#8599;</a>') : '',
+      video && video.kind === 'link' ? specRowJS('Video', '<a href="' + escapeHtmlJS(video.src) + '" target="_blank" rel="noopener">Watch on ' + escapeHtmlJS(video.host) + ' &#8599;</a>' + videoLabel) : '',
       product.press_release_url ? specRowJS('Press release', '<a href="' + product.press_release_url + '" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>') : '',
       product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
       product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> <span class="wait-count-word">' + ((product.waiting_count || 0) === 1 ? 'person' : 'people') + '</span>'),
@@ -1469,7 +1488,7 @@
         '<li class="crumb-sep" aria-hidden="true">&rsaquo;</li><li aria-current="page">' + escapeHtmlJS(product.name) + '</li>' +
       '</ol></nav>' +
       '<div class="product-top' + (videoBlock ? ' product-top--video' : ' product-top--no-media') + '">' +
-        (videoBlock ? '<div class="product-media">' + videoBlock + '</div>' : '') +
+        (videoBlock ? '<div class="product-media">' + videoBlock + videoLabel + '</div>' : '') +
         '<div class="product-info">' +
           '<div class="product-header">' +
             '<div>' +

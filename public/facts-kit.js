@@ -1276,8 +1276,37 @@
   // in a <video>; a YouTube or Vimeo link plays in that site's player; any
   // other link becomes a "Watch on ..." link. public/app.js keeps a copy
   // (videoInfoJS) for the live page refresh. ---
+  // Whose video it is, said under it on the product page. Chosen in
+  // admin and kept on the end of the video's own address ("#as=official"),
+  // which players ignore, so it needs no place of its own in the database.
+  const VIDEO_KINDS = {
+    official: { label: 'Official Apple video', note: 'From Apple\u2019s own channel' },
+    apple: { label: 'Original Apple video', note: 'Made by Apple, from an archive copy' },
+    independent: { label: 'Independent video', note: 'Not made by Apple' },
+  };
+  function videoKind(url) {
+    const m = /#(?:[^#]*&)?as=(official|apple|independent)(?:&|$)/.exec(String(url || ''));
+    return m ? m[1] : '';
+  }
+  // The address without the mark, and with one put on.
+  function videoPlain(url) {
+    return String(url || '').replace(/([#&])as=(?:official|apple|independent)(&|$)/, (all, a, b) => (a === '#' && b ? '#' : '')).replace(/#$/, '');
+  }
+  function videoWithKind(url, kind) {
+    const plain = videoPlain(url);
+    if (!plain || !VIDEO_KINDS[kind]) return plain;
+    return plain + (plain.indexOf('#') === -1 ? '#' : '&') + 'as=' + kind;
+  }
+  // The label under a video: '' when nobody has said whose it is.
+  function videoLabelHtml(url) {
+    const kind = videoKind(url);
+    if (!kind) return '';
+    const k = VIDEO_KINDS[kind];
+    return '<p class="video-label video-label--' + kind + '"><span class="video-label-pill">' + (kind === 'independent' ? '' : '\u2713 ') + k.label + '</span><span class="video-label-note">' + k.note + '</span></p>';
+  }
+
   function videoInfo(url) {
-    const u = String(url || '').trim();
+    const u = videoPlain(String(url || '').trim());
     if (!/^https?:\/\//i.test(u)) return null;
     let m = u.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i);
     if (m) {
@@ -3110,6 +3139,11 @@
     claudeResearchPrompt,
     claudeResearchUrl,
     productVideoPrompt,
+    VIDEO_KINDS,
+    videoKind,
+    videoPlain,
+    videoWithKind,
+    videoLabelHtml,
     claudeTarget,
     claudePostTarget,
     factKey,

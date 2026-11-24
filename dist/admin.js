@@ -4805,8 +4805,17 @@
   // box is left empty for an upload).
   const videoLinkEl = document.getElementById('video_link');
   const isUploadedVideo = (url) => /\/storage\/v1\/object\/public\//.test(url || '');
+  // Whose video it is: the choice under the link, shown as a label on
+  // the product page.
+  const videoKindChosen = () => (document.querySelector('input[name="video_kind"]:checked') || {}).value || '';
+  function setVideoKind(kind) {
+    const pick = document.querySelector('input[name="video_kind"][value="' + (kind || '') + '"]');
+    if (pick) pick.checked = true;
+  }
+  document.querySelectorAll('input[name="video_kind"]').forEach((r) => r.addEventListener('change', () => { productFormDirty = true; }));
   function renderVideoStatus() {
     videoStatusEl.innerHTML = '';
+    document.getElementById('video-kind').hidden = !currentVideoUrl;
     if (videoLinkEl && document.activeElement !== videoLinkEl) videoLinkEl.value = currentVideoUrl && !isUploadedVideo(currentVideoUrl) ? currentVideoUrl : '';
     if (!currentVideoUrl) {
       videoStatusEl.textContent = 'No video yet.';
@@ -4897,7 +4906,9 @@
     pendingModelsDiscontinued = !p.discontinued_date && lastDroppedDate() ? lastDroppedDate() : null;
     currentOriginalLaunchDate = p.original_launch_date || null;
     currentIconUrl = p.icon_url || null;
-    currentVideoUrl = p.video_url || null;
+    // The video's address, and whose video it is (kept on its end).
+    currentVideoUrl = window.FactsKit.videoPlain(p.video_url || '') || null;
+    setVideoKind(window.FactsKit.videoKind(p.video_url));
     onFamilyChanged();
     setTimelineName(p.timeline_name || null);
     fillProductSelect(document.getElementById('replaced_by'), p.replaced_by || '');
@@ -4967,6 +4978,7 @@
     currentDropped = [];
     currentIconUrl = null;
     currentVideoUrl = null;
+    setVideoKind('');
     onFamilyChanged();
     setTimelineName(null);
     setTimelineMode('own');
@@ -5425,7 +5437,7 @@
         replaced_by: document.getElementById('replaced_by').value || null,
         discontinued_reason: isDiscontinued ? (document.getElementById('discontinued_reason').value.trim() || null) : null,
         // A half-typed link that isn't one yet isn't saved.
-        video_url: window.FactsKit.videoInfo(currentVideoUrl) ? currentVideoUrl : null,
+        video_url: window.FactsKit.videoInfo(currentVideoUrl) ? window.FactsKit.videoWithKind(currentVideoUrl, videoKindChosen()) : null,
       };
       // Sent when ticked, or once the column exists, so saving still works
       // before supabase-schema-update-32.sql has been run.

@@ -4830,3 +4830,17 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 .admin-form .admin-end-line-btn.is-on { background: #1d1b19; border-color: #1d1b19; color: #fff; box-shadow: 0 0 0 3px #f0b78f; }
 .admin-form .admin-end-line-btn.is-on:hover { background: #33302c; }
 .admin-form .admin-end-line-btn[hidden] { display: none; }
+
+/* Product page: whose video it is, under the video. */
+.video-label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 10px 2px 0; font-size: 13px; color: var(--text-secondary); }
+.video-label-pill { display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.01em; }
+.video-label--official .video-label-pill { background: #e6f2dc; color: #2f6115; }
+.video-label--apple .video-label-pill { background: #fbe9db; color: #9c4009; }
+.video-label--independent .video-label-pill { background: #eceae4; color: #4a4741; }
+.spec-row .video-label { margin: 6px 0 0; }
+/* Admin, step 6: the choice of whose video it is. */
+.admin-form .video-kind { display: grid; gap: 6px; margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }
+.admin-form .video-kind[hidden] { display: none; }
+.admin-form .video-kind legend { padding: 0 6px; font-size: 14px; font-weight: 700; }
+.admin-form .video-kind label { display: flex; flex-direction: row; align-items: flex-start; gap: 8px; margin: 0; font-size: 14px; font-weight: 400; cursor: pointer; }
+.admin-form .video-kind input[type="radio"] { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
