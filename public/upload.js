@@ -984,8 +984,10 @@
 
   function xUseIdea(idea) {
     if ($('up-x-text').value.trim() && !window.confirm('Replace the post you are writing with this idea?')) return;
-    // Shortened if need be, so it never arrives over X's 280.
-    $('up-x-text').value = window.FactsKit.xFitText(idea.text, { products: allProducts, link: idea.link });
+    // A fact arrives whole, exactly as written; other ideas are shortened
+    // if need be, so they never arrive over X's 280.
+    $('up-x-text').value = idea.kind === 'Did you know?' ? String(idea.text || '').trim()
+      : window.FactsKit.xFitText(idea.text, { products: allProducts, link: idea.link });
     $('up-x-link').value = idea.link || '';
     $('up-x-link-on').checked = !!idea.link;
     $('up-x-card-label').value = idea.kind || 'Did you know?';
