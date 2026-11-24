@@ -775,8 +775,11 @@
       if ($x('x-text').value.trim() && !window.confirm('Replace the post you are writing with this idea?')) return;
       // Photos that went out with the last post don't join this one.
       if (sentThisPost) dropPhotos();
-      // Shortened if need be, so it never arrives over X's 280.
-      $x('x-text').value = window.FactsKit.xFitText(idea.text, { products: cachedProducts, link: idea.link });
+      // A fact arrives whole, exactly as written (the count under the
+      // post says if it is over X's 280). Other ideas are shortened if
+      // need be, so they never arrive over it.
+      $x('x-text').value = idea.kind === 'Did you know?' ? String(idea.text || '').trim()
+        : window.FactsKit.xFitText(idea.text, { products: cachedProducts, link: idea.link });
       $x('x-link').value = idea.link || '';
       $x('x-link-on').checked = !!idea.link;
       $x('x-card-label').value = idea.kind || 'Did you know?';
@@ -6879,6 +6882,23 @@
       box.appendChild(btn);
     });
     document.getElementById('fact-helper-note').textContent = 'Tap one to use it. You can edit it in the box above.';
+  });
+
+  // "Find a video with Claude": a search for the product's video. Apple's
+  // own first; other people's are allowed, but each is marked as not
+  // official, with its link, so it can be checked before it is used.
+  document.getElementById('video-find-btn').addEventListener('click', () => {
+    const name = document.getElementById('name').value.trim();
+    const note = document.getElementById('video-find-note');
+    if (!name) {
+      note.textContent = 'Give the product a name first.';
+      return;
+    }
+    const first = currentOriginalLaunchDate || currentRefreshHistory.slice().sort()[0] || '';
+    const prompt = window.FactsKit.productVideoPrompt(name, first ? first.slice(0, 4) : '');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(prompt).catch(() => {});
+    note.textContent = 'Claude opened in a new tab (the request is also copied, in case it opens empty). It marks any video that isn\u2019t Apple\u2019s own and gives every link: watch one before pasting it above.';
+    window.open(window.FactsKit.claudeResearchUrl(prompt), '_blank', 'noopener');
   });
 
   document.getElementById('fact-research-btn').addEventListener('click', () => {

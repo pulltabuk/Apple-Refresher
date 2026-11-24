@@ -149,6 +149,8 @@
   // The card icon picker in the X composers (admin and phone app): every
   // icon and quick emoji as a button, kept in step with the select (icon
   // by name, or "auto") and the emoji box (anything else).
+  // Pickers on the page, redrawn when the families' icons arrive.
+  const iconPickers = [];
   function mountIconPicker(box, select, emojiInput, onChange) {
     if (!box || box.dataset.ready) return;
     box.dataset.ready = '1';
@@ -174,6 +176,23 @@
     };
     const svg = (shape) => '<svg viewBox="0 0 40 40" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + shape + '</svg>';
     const auto = make('auto', '<span class="icon-pick-auto">Auto</span>', 'Automatic', false);
+    // Every family's icon (value "family:<name>"), kept together straight
+    // after Automatic: its own picture when it has one, else its shape.
+    const drawFamilies = () => {
+      [...box.querySelectorAll('.icon-pick--family')].forEach((b) => b.remove());
+      let after = auto;
+      cardFamilies().forEach((name) => {
+        const value = 'family:' + name;
+        if (![...select.options].some((o) => o.value === value)) select.add(new Option(name, value));
+        const url = customCategoryIcon(name);
+        const btn = make(value, url ? '<img src="' + String(url).replace(/"/g, '&quot;') + '" alt="">' : svg(iconShapeFor(name) || CATEGORY_ICONS.Other), name + ' icon', false);
+        btn.classList.add('icon-pick--family');
+        if (url) btn.classList.add('icon-pick--image');
+        after.insertAdjacentElement('afterend', btn);
+        after = btn;
+      });
+      mark();
+    };
     Object.keys(CARD_ICONS).forEach((key) => make(key, svg(CARD_ICONS[key]), CARD_ICON_NAMES[key], false));
     CARD_EMOJI.forEach((e) => make(e, e, 'Emoji ' + e, true));
     function mark() {
@@ -184,7 +203,11 @@
     box.autoButton = auto;
     emojiInput.addEventListener('input', () => { if (emojiInput.value.trim()) select.value = 'auto'; mark(); });
     select.addEventListener('change', mark);
-    mark();
+    drawFamilies();
+    iconPickers.push(drawFamilies);
+    // The families' own pictures come with the products: fetch them now,
+    // then the picker redraws itself.
+    ensureCardProducts().then(drawFamilies).catch(() => {});
   }
 
 
@@ -275,7 +298,24 @@
   // Family icons uploaded in admin (category_icons), which win over the
   // built-in shapes, as on the site.
   let cardCategoryIcons = {};
-  function setCardCategoryIcons(map) { cardCategoryIcons = map || {}; }
+  function setCardCategoryIcons(map) {
+    cardCategoryIcons = map || {};
+    // The card icon pickers list every family's icon: redraw them.
+    iconPickers.forEach((redraw) => { try { redraw(); } catch (err) { /* a picker no longer on the page */ } });
+  }
+  // Every family with an icon: the built-in ones, then those given one
+  // in admin (Apple II, PowerBook G4...), by name.
+  function cardFamilies() {
+    const names = Object.keys(CATEGORY_ICONS).filter((k) => k !== 'Other');
+    Object.keys(cardCategoryIcons).forEach((k) => {
+      if (k && k.toLowerCase() !== 'other' && !names.some((n) => n.toLowerCase() === k.toLowerCase())) names.push(k);
+    });
+    (cardProducts || []).forEach((p) => {
+      const k = p && p.category;
+      if (k && k.toLowerCase() !== 'other' && !names.some((n) => n.toLowerCase() === k.toLowerCase())) names.push(k);
+    });
+    return names.sort((a, b) => a.localeCompare(b));
+  }
   function customCategoryIcon(category) {
     const key = Object.keys(cardCategoryIcons).find((k) => k.toLowerCase() === String(category || '').toLowerCase());
     return key ? cardCategoryIcons[key] : null;
@@ -301,7 +341,9 @@
   // A family named in the text (longest name wins), for a statistic's icon.
   function categoryNamed(text) {
     const hay = ' ' + String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ') + ' ';
-    return Object.keys(CATEGORY_ICONS).filter((k) => k !== 'Other' && hay.indexOf(' ' + k.toLowerCase() + ' ') !== -1)
+    // Any family, the ones added in admin included (so "Automatic" picks
+    // the PowerBook G4 icon for a post about the PowerBook G4).
+    return cardFamilies().filter((k) => hay.indexOf(' ' + k.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() + ' ') !== -1)
       .sort((a, b) => b.length - a.length)[0] || null;
   }
 
@@ -995,8 +1037,18 @@
     }
     // Not about one product: its family's icon, or a topic icon (the Apple
     // Sunset logo always sits small in the corner).
-    const family = plan.family;
-    return { title: plan.title, shape: family ? iconShapeFor(family) : CARD_ICONS[suggestCardIcon(plan.focus || text)], iconUrl: family ? customCategoryIcon(family) : null, big, caption, sub };
+    const family = iconFamily(plan, text);
+    return { title: plan.title, shape: family ? (iconShapeFor(family) || CATEGORY_ICONS.Other) : CARD_ICONS[suggestCardIcon(plan.focus || text)], iconUrl: family ? customCategoryIcon(family) : null, big, caption, sub };
+  }
+  // The family whose icon a post with no product gets: the one the post
+  // names, counting the families added in admin (Apple II, PowerBook G4),
+  // and the more exact of two ("MacBook Pro" over "Mac"). Only a family
+  // that has an icon to show.
+  function iconFamily(plan, text) {
+    const named = categoryNamed(plan.focus || text) || categoryNamed(text);
+    const usable = named && (customCategoryIcon(named) || iconShapeFor(named));
+    if (usable && (!plan.family || named.length > plan.family.length)) return named;
+    return plan.family || null;
   }
   function cardSubject(text) {
     return subjectOf(cardPlan(text), text);
@@ -1014,7 +1066,8 @@
   function cardAutoIconName(text) {
     const plan = cardPlan(text);
     if (plan.product) return appleName(plan.product.name) + ' icon';
-    if (plan.family) return plan.family + ' icon';
+    const family = iconFamily(plan, text);
+    if (family) return family + ' icon';
     return CARD_ICON_NAMES[suggestCardIcon(plan.focus || text)];
   }
 
@@ -1273,6 +1326,12 @@
       // name, or anything else typed, drawn as an emoji.
       const icon = String(fields.icon || 'auto').trim();
       if (CARD_ICONS[icon]) { subject.shape = CARD_ICONS[icon]; subject.iconUrl = null; }
+      // A family's icon, picked by hand: its own picture, else its shape.
+      else if (/^family:/.test(icon)) {
+        const family = icon.slice(7);
+        subject.shape = iconShapeFor(family) || CATEGORY_ICONS.Other;
+        subject.iconUrl = customCategoryIcon(family) || null;
+      }
       // An image (an event's artwork); the invitation icon if it won't load.
       else if (/^(https?:)?\/\//i.test(icon) || /^\/[^/]/.test(icon)) { subject.iconUrl = icon; subject.shape = CARD_ICONS.invite; subject.iconFill = true; }
       else if (icon && icon !== 'auto') emoji = icon;
@@ -1675,6 +1734,28 @@
       '',
       'Reply with, for each fact: the fact on its own line, then its sources as links, then how confident you are and why.',
       published ? '\nMy published facts:\n' + published : '',
+    ].join('\n');
+  }
+
+  // A request to find a product's video. Apple's own comes first; other
+  // people's may be offered, each plainly marked and with its link.
+  function productVideoPrompt(name, year) {
+    return [
+      'I run Apple Sunset (applesunset.com), a site about the history of Apple products. I need one good video to show on the page for the Apple ' + name + (year ? ' (' + year + ')' : '') + '.',
+      '',
+      'Please:',
+      '1. Search the web for a video of this exact product: its advert, its introduction at an Apple keynote, or a clear look at the product itself. It must be on YouTube or Vimeo so it can play on my page.',
+      '2. Look first for Apple\u2019s own: a video on Apple\u2019s official YouTube channel, or one plainly made by Apple (an original advert or keynote), even if someone else uploaded it.',
+      '3. If there is no good official one, you may suggest a video that isn\u2019t Apple\u2019s (a review, a museum or collector\u2019s walkthrough, a news report from the time). Only suggest ones that show this exact model, look trustworthy and have no misleading title.',
+      '4. Check each link opens and is the right product. Leave out anything you can\u2019t confirm.',
+      '',
+      'Reply with up to 4 videos, best first. For each give:',
+      '- the full link on its own line',
+      '- the title, who uploaded it, its length and the year it was made if you can tell',
+      '- one of these labels in capitals at the start: OFFICIAL (Apple\u2019s own channel), APPLE-MADE, UPLOADED BY SOMEONE ELSE, or NOT OFFICIAL',
+      '- one line on why it suits the page, and anything I should check before using it',
+      '',
+      'If every video you found is NOT OFFICIAL, say so plainly in your first line, so I know to watch them before choosing.',
     ].join('\n');
   }
 
@@ -3028,6 +3109,7 @@
     leadSentences,
     claudeResearchPrompt,
     claudeResearchUrl,
+    productVideoPrompt,
     claudeTarget,
     claudePostTarget,
     factKey,

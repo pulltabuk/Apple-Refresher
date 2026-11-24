@@ -4114,6 +4114,10 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
           <label>Or link to a video<input type="url" id="video_link" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off"></label>
           <p class="admin-hint">YouTube and Vimeo play right on the product page. A link anywhere else shows as &ldquo;Watch on &hellip;&rdquo; in the details.</p>
+          <div>
+            <button type="button" id="video-find-btn" class="admin-btn admin-btn--small">Find a video with Claude</button>
+          </div>
+          <p class="admin-hint" id="video-find-note">Claude looks for Apple&rsquo;s own video first. It may suggest someone else&rsquo;s too, but marks each as not official and gives the link, so you can watch it before using it.</p>
           <p id="video-error" class="form-error"></p>
         </section>
 
