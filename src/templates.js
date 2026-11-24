@@ -3486,6 +3486,8 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   // An uploaded file or a YouTube/Vimeo link plays beside the details;
   // any other video link is a row in the details (see FactsKit.videoInfo).
   const video = FactsKit.videoInfo(product.video_url);
+  // Whose video it is (official, Apple-made, independent), under it.
+  const videoLabel = FactsKit.videoLabelHtml(product.video_url);
   const videoBlock = !video || video.kind === 'link'
     ? ''
     : video.kind === 'file'
@@ -3575,7 +3577,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     product.discontinued ? specRow('Why it went', escapeHtml(product.discontinued_reason)) : '',
     appleLinkRow('Official Apple page', product, 'apple_url', 'apple.com', 'No longer available on Apple\u2019s website', productsBySlug),
     appleLinkRow('Tech specs', product, 'specs_url', 'Apple specs', 'No longer available from Apple', productsBySlug),
-    video && video.kind === 'link' ? specRow('Video', `<a href="${escapeHtml(video.src)}" target="_blank" rel="noopener">Watch on ${escapeHtml(video.host)} &#8599;</a>`) : '',
+    video && video.kind === 'link' ? specRow('Video', `<a href="${escapeHtml(video.src)}" target="_blank" rel="noopener">Watch on ${escapeHtml(video.host)} &#8599;</a>${videoLabel}`) : '',
     product.press_release_url ? specRow('Press release', `<a href="${product.press_release_url}" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>`) : '',
     product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(externalLinkLabel(product))} &#8599;</a>`) : '',
     product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> <span class="wait-count-word">${(product.waiting_count || 0) === 1 ? 'person' : 'people'}</span>`),
@@ -3597,7 +3599,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
   ])}
   <div class="product-top${videoBlock ? ' product-top--video' : ' product-top--no-media'}">
     ${videoBlock ? `<div class="product-media">
-      ${videoBlock}
+      ${videoBlock}${videoLabel}
     </div>` : ''}
     <div class="product-info">
       <div class="product-header">
@@ -4114,6 +4116,13 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
           <label>Or link to a video<input type="url" id="video_link" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off"></label>
           <p class="admin-hint">YouTube and Vimeo play right on the product page. A link anywhere else shows as &ldquo;Watch on &hellip;&rdquo; in the details.</p>
+          <fieldset class="video-kind" id="video-kind">
+            <legend>Whose video is it? <span class="admin-optional">Shown as a label under the video</span></legend>
+            <label><input type="radio" name="video_kind" value="official"> <span><strong>Official Apple video</strong> from Apple&rsquo;s own channel</span></label>
+            <label><input type="radio" name="video_kind" value="apple"> <span><strong>Original Apple video</strong> made by Apple, uploaded by someone else</span></label>
+            <label><input type="radio" name="video_kind" value="independent"> <span><strong>Independent video</strong> not made by Apple (a review, a collector&rsquo;s walkthrough)</span></label>
+            <label><input type="radio" name="video_kind" value="" checked> <span>No label</span></label>
+          </fieldset>
           <div>
             <button type="button" id="video-find-btn" class="admin-btn admin-btn--small">Find a video with Claude</button>
           </div>
