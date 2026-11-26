@@ -902,6 +902,24 @@ function spanText(days) {
   return `about ${years % 1 ? whole + '½' : whole} years`;
 }
 
+// A date written out in full for a sentence: "29 April 1985", "June
+// 1983", "1983". (formatDate's short months suit tables and labels.)
+function formatDateLong(str) {
+  if (!str) return '';
+  const precision = datePrecision(str);
+  if (precision === 'year') return str;
+  if (precision === 'month') {
+    const [y, m] = str.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { year: 'numeric', month: 'long' });
+  }
+  return new Date(str).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+// "on 29 April 1985", or "in June 1983" / "in 1983".
+function onDateLong(str) {
+  if (!str) return '';
+  return `${datePrecision(str) === 'day' ? 'on' : 'in'} ${formatDateLong(str)}`;
+}
+
 function categoryStatsSentence(category, items) {
   // Measured across the whole family, since that is where the real
   // history lives: one product usually has a single release date, and a
@@ -926,19 +944,19 @@ function categoryStatsSentence(category, items) {
     const parts = [];
     if (ending.ended) {
       parts.push(ending.date
-        ? `Apple ended the ${cat} line ${onDate(ending.date)}, when it discontinued the ${name}, the last one.`
+        ? `Apple ended the ${cat} line ${onDateLong(ending.date)}, when it discontinued the ${name}, the last one.`
         : `Apple has ended the ${cat} line. The ${name} was the last one.`);
     } else if (ending.date) {
       const many = ending.names.length > 1;
       const who = ending.names.length > 2 ? `the ${ending.names[0]} and others` : `the ${ending.names.join(' and the ')}`;
-      parts.push(`No ${cat} is on sale now. The last ${many ? 'ones' : 'one'}, ${escapeHtml(who)}, ${many ? 'were' : 'was'} discontinued ${onDate(ending.date)}.`);
+      parts.push(`No ${cat} is on sale now. The last ${many ? 'ones' : 'one'}, ${escapeHtml(who)}, ${many ? 'were' : 'was'} discontinued ${onDateLong(ending.date)}.`);
     } else {
       parts.push(`No ${cat} is on sale now.`);
     }
     if (past.length) {
       const end = ending.date && ending.date >= past[past.length - 1] ? ending.date : past[past.length - 1];
       const ran = ending.ended ? 'The line ran' : 'The family ran';
-      const span = past[0] < end ? `${ran} for ${spanText(toDays(past[0], end))}, from ${formatDate(past[0])}` : `${ran} from ${formatDate(past[0])}`;
+      const span = past[0] < end ? `${ran} for ${spanText(toDays(past[0], end))}, from ${formatDateLong(past[0])}` : `${ran} from ${formatDateLong(past[0])}`;
       parts.push(avg != null
         ? `${span}, and across the ${past.length} release dates recorded here Apple updated it ${cadence(avg)}.`
         : `${span}.`);
