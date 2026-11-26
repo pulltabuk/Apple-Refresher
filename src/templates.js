@@ -3390,15 +3390,34 @@ function heroCycle(product, status, sortedDates, allProducts) {
   return { days: fam.avg, family: product.category || null };
 }
 
-// The last product of its line: a dark pill inside the Discontinued
-// box, beside the date where there is room and under it where there
-// isn't (it was a tile among the key facts). Must match
-// endOfLinePillHtmlJS() in public/app.js.
-function endOfLinePillHtml(product) {
-  return `<span class="end-line-pill"><span class="end-line-pill-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${KEY_FACT_ICONS.end}</svg></span><span class="end-line-pill-words"><span class="end-line-pill-label">End of the line</span><span class="end-line-pill-text">The last ${escapeHtml(product.category || 'of its line')}</span></span></span>`;
+// The years a line ran, for its last product: from the family's first
+// release to the year this one went. null when either isn't known.
+// Must match lineYearsJS() in public/app.js.
+function lineYears(product, allProducts) {
+  const family = (product.category || '').trim().toLowerCase();
+  const starts = (allProducts || []).filter((p) => (p.category || '').trim().toLowerCase() === family)
+    .flatMap((p) => [p.original_launch_date].concat(p.refresh_history || []))
+    .filter(Boolean).map((d) => String(d).slice(0, 4)).filter((y) => /^\d{4}$/.test(y)).sort();
+  const end = String(product.discontinued_date || '').slice(0, 4);
+  if (!starts.length || !/^\d{4}$/.test(end) || starts[0] > end) return null;
+  return { from: starts[0], to: end };
 }
 
-function heroStatHtml(product, statusInfo, cycleDays, endOfLine) {
+// The last product of its line: the dark half of the Discontinued box,
+// with the setting sun as its emblem (the sun going down on the line),
+// who it was the last of, and the years the line ran. Must match
+// endOfLineHalfHtmlJS() in public/app.js.
+const END_LINE_EMBLEM = '<svg viewBox="0 0 64 64" width="64" height="64" focusable="false"><defs><linearGradient id="eol-sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7c653"/><stop offset="0.5" stop-color="#ee8130"/><stop offset="1" stop-color="#de4f3a"/></linearGradient></defs><circle cx="32" cy="27" r="24" fill="url(#eol-sun)"/><g fill="#1d1b19"><rect x="4" y="25" width="56" height="1.8"/><rect x="4" y="31" width="56" height="2.8"/><rect x="4" y="37.5" width="56" height="3.8"/><rect x="4" y="44.5" width="56" height="8"/></g><g fill="none" stroke-linecap="round" stroke-width="2.4"><path d="M6 50h52" stroke="#ee8130"/><path d="M17 56h30" stroke="#de4f3a" opacity="0.75"/><path d="M26 61.5h12" stroke="#de4f3a" opacity="0.45"/></g></svg>';
+function endOfLineHalfHtml(product, allProducts) {
+  const family = escapeHtml(product.category || '');
+  const years = lineYears(product, allProducts);
+  const ran = !years ? '' : years.from === years.to
+    ? `The ${family} line began and ended in ${years.to}.`
+    : `The ${family} line ran from ${years.from} to&nbsp;${years.to}.`;
+  return `<span class="end-line-half"><span class="end-line-emblem" aria-hidden="true">${END_LINE_EMBLEM}</span><span class="end-line-words"><span class="end-line-label">End of the line</span><span class="end-line-title">The last ${family || 'of its line'}</span>${ran ? `<span class="end-line-sub">${ran}</span>` : ''}</span></span>`;
+}
+
+function heroStatHtml(product, statusInfo, cycleDays, endOfLine, allProducts) {
   // Discontinued: a tile like the others (never a stretched pill): the
   // date, and how long it was on sale. Keep in step with heroStatHtmlJS().
   if (product.discontinued) {
@@ -3412,7 +3431,7 @@ function heroStatHtml(product, statusInfo, cycleDays, endOfLine) {
       : first ? `First released ${formatDate(first)}.` : '';
     const words = `<span class="days-hero-label">Discontinued</span>${end ? ` <span class="days-hero-soon">${formatDate(end)}</span>` : ''}${caption ? `<span class="days-hero-caption">${caption}</span>` : ''}`;
     return endOfLine
-      ? `<p class="days-hero days-hero--discontinued days-hero--end"><span class="days-hero-main">${words}</span>${endOfLinePillHtml(product)}</p>`
+      ? `<p class="days-hero days-hero--discontinued days-hero--end"><span class="days-hero-main">${words}</span>${endOfLineHalfHtml(product, allProducts)}</p>`
       : `<p class="days-hero days-hero--discontinued">${words}</p>`;
   }
   if (!statusInfo) return '';
@@ -3642,7 +3661,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
         </div>
       </div>
 
-      <div class="product-facts">${heroStatHtml(product, status, cycle, isEndOfLine(product, allProducts))}
+      <div class="product-facts">${heroStatHtml(product, status, cycle, isEndOfLine(product, allProducts), allProducts)}
         <div class="key-facts-row" data-facts="${(keyFacts.match(/key-fact-label/g) || []).length}">${keyFacts}</div>
       </div>
 
