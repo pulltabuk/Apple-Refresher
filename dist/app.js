@@ -1299,12 +1299,35 @@
     return { days: avg, family: product.category || null };
   }
 
-  // Must match endOfLinePillHtml() in src/templates.js.
-  function endOfLinePillHtmlJS(product) {
-    return '<span class="end-line-pill"><span class="end-line-pill-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + KEY_FACT_ICONS_JS.end + '</svg></span><span class="end-line-pill-words"><span class="end-line-pill-label">End of the line</span><span class="end-line-pill-text">The last ' + escapeHtmlJS(product.category || 'of its line') + '</span></span></span>';
+  // Must match lineYears(), END_LINE_EMBLEM and endOfLineHalfHtml() in
+  // src/templates.js: the dark half of the Discontinued box for the last
+  // product of its line.
+  function lineYearsJS(product, allProducts) {
+    var family = (product.category || '').trim().toLowerCase();
+    var starts = [];
+    (allProducts || []).forEach(function (p) {
+      if ((p.category || '').trim().toLowerCase() !== family) return;
+      [p.original_launch_date].concat(p.refresh_history || []).forEach(function (d) {
+        var y = d ? String(d).slice(0, 4) : '';
+        if (/^\d{4}$/.test(y)) starts.push(y);
+      });
+    });
+    starts.sort();
+    var end = String(product.discontinued_date || '').slice(0, 4);
+    if (!starts.length || !/^\d{4}$/.test(end) || starts[0] > end) return null;
+    return { from: starts[0], to: end };
+  }
+  var END_LINE_EMBLEM_JS = '<svg viewBox="0 0 64 64" width="64" height="64" focusable="false"><defs><linearGradient id="eol-sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7c653"/><stop offset="0.5" stop-color="#ee8130"/><stop offset="1" stop-color="#de4f3a"/></linearGradient></defs><circle cx="32" cy="27" r="24" fill="url(#eol-sun)"/><g fill="#1d1b19"><rect x="4" y="25" width="56" height="1.8"/><rect x="4" y="31" width="56" height="2.8"/><rect x="4" y="37.5" width="56" height="3.8"/><rect x="4" y="44.5" width="56" height="8"/></g><g fill="none" stroke-linecap="round" stroke-width="2.4"><path d="M6 50h52" stroke="#ee8130"/><path d="M17 56h30" stroke="#de4f3a" opacity="0.75"/><path d="M26 61.5h12" stroke="#de4f3a" opacity="0.45"/></g></svg>';
+  function endOfLineHalfHtmlJS(product, allProducts) {
+    var family = escapeHtmlJS(product.category || '');
+    var years = lineYearsJS(product, allProducts);
+    var ran = !years ? '' : years.from === years.to
+      ? 'The ' + family + ' line began and ended in ' + years.to + '.'
+      : 'The ' + family + ' line ran from ' + years.from + ' to&nbsp;' + years.to + '.';
+    return '<span class="end-line-half"><span class="end-line-emblem" aria-hidden="true">' + END_LINE_EMBLEM_JS + '</span><span class="end-line-words"><span class="end-line-label">End of the line</span><span class="end-line-title">The last ' + (family || 'of its line') + '</span>' + (ran ? '<span class="end-line-sub">' + ran + '</span>' : '') + '</span></span>';
   }
 
-  function heroStatHtmlJS(product, statusInfo, cycleDays, endOfLine) {
+  function heroStatHtmlJS(product, statusInfo, cycleDays, endOfLine, allProducts) {
     if (product.discontinued) {
       // Must match heroStatHtml() in src/templates.js.
       var end = product.discontinued_date || null;
@@ -1320,7 +1343,7 @@
         (end ? ' <span class="days-hero-soon">' + formatDateJS(end) + '</span>' : '') +
         (caption ? '<span class="days-hero-caption">' + caption + '</span>' : '');
       return endOfLine
-        ? '<p class="days-hero days-hero--discontinued days-hero--end"><span class="days-hero-main">' + words + '</span>' + endOfLinePillHtmlJS(product) + '</p>'
+        ? '<p class="days-hero days-hero--discontinued days-hero--end"><span class="days-hero-main">' + words + '</span>' + endOfLineHalfHtmlJS(product, allProducts) + '</p>'
         : '<p class="days-hero days-hero--discontinued">' + words + '</p>';
     }
     if (!statusInfo) return '';
@@ -1509,7 +1532,7 @@
               '<button type="button" class="admin-edit-link tweet-btn" data-slug="' + product.slug + '" style="display:none;" data-admin-label="Draft a post for X"></button>' +
             '</div>' +
           '</div>' +
-          '<div class="product-facts">' + heroStatHtmlJS(product, status, cycle, endOfLine) +
+          '<div class="product-facts">' + heroStatHtmlJS(product, status, cycle, endOfLine, familyAll) +
             '<div class="key-facts-row" data-facts="' + (keyFacts.match(/key-fact-label/g) || []).length + '">' + keyFacts + '</div>' +
           '</div>' +
           (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">' + sanitizeRichTextJS(product.did_you_know) + '</div>' + (product.did_you_know_date ? '<p class="did-you-know-date">As of ' + formatDateJS(String(product.did_you_know_date).slice(0, 7)) + '</p>' : '') + '</aside>' : '') +
