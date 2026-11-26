@@ -1299,7 +1299,12 @@
     return { days: avg, family: product.category || null };
   }
 
-  function heroStatHtmlJS(product, statusInfo, cycleDays) {
+  // Must match endOfLinePillHtml() in src/templates.js.
+  function endOfLinePillHtmlJS(product) {
+    return '<span class="end-line-pill"><span class="end-line-pill-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + KEY_FACT_ICONS_JS.end + '</svg></span><span class="end-line-pill-words"><span class="end-line-pill-label">End of the line</span><span class="end-line-pill-text">The last ' + escapeHtmlJS(product.category || 'of its line') + '</span></span></span>';
+  }
+
+  function heroStatHtmlJS(product, statusInfo, cycleDays, endOfLine) {
     if (product.discontinued) {
       // Must match heroStatHtml() in src/templates.js.
       var end = product.discontinued_date || null;
@@ -1311,9 +1316,12 @@
       var caption = span
         ? 'On sale for ' + lived.toLocaleString('en-GB') + (lived === 1 ? ' day' : ' days') + ' (' + span + ')' + (releases.length > 1 ? ' across ' + releases.length + ' releases' : '') + ', from ' + formatDateJS(first) + '.'
         : first ? 'First released ' + formatDateJS(first) + '.' : '';
-      return '<p class="days-hero days-hero--discontinued"><span class="days-hero-label">Discontinued</span>' +
+      var words = '<span class="days-hero-label">Discontinued</span>' +
         (end ? ' <span class="days-hero-soon">' + formatDateJS(end) + '</span>' : '') +
-        (caption ? '<span class="days-hero-caption">' + caption + '</span>' : '') + '</p>';
+        (caption ? '<span class="days-hero-caption">' + caption + '</span>' : '');
+      return endOfLine
+        ? '<p class="days-hero days-hero--discontinued days-hero--end"><span class="days-hero-main">' + words + '</span>' + endOfLinePillHtmlJS(product) + '</p>'
+        : '<p class="days-hero days-hero--discontinued">' + words + '</p>';
     }
     if (!statusInfo) return '';
     var info = badgeDaysInfoJS(product, statusInfo);
@@ -1456,8 +1464,7 @@
     // Must match productPage() in src/templates.js.
     var familyAll = productsBySlug ? Object.keys(productsBySlug).map(function (k) { return productsBySlug[k]; }) : [product];
     var endOfLine = isEndOfLineJS(product, familyAll);
-    keyFacts = keyFacts.slice(0, endOfLine ? 5 : 6).concat(endOfLine
-      ? ['<div class="key-fact key-fact--end"><div class="key-fact-body">' + keyFactIconJS('end') + '<div class="key-fact-text"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ' + escapeHtmlJS(product.category || 'of its line') + '</p></div></div></div>'] : []).join('');
+    keyFacts = keyFacts.slice(0, 6).join('');
 
     var specs = [
       specRowJS('Category', pillJS(product.category)),
@@ -1502,7 +1509,7 @@
               '<button type="button" class="admin-edit-link tweet-btn" data-slug="' + product.slug + '" style="display:none;" data-admin-label="Draft a post for X"></button>' +
             '</div>' +
           '</div>' +
-          '<div class="product-facts">' + heroStatHtmlJS(product, status, cycle) +
+          '<div class="product-facts">' + heroStatHtmlJS(product, status, cycle, endOfLine) +
             '<div class="key-facts-row" data-facts="' + (keyFacts.match(/key-fact-label/g) || []).length + '">' + keyFacts + '</div>' +
           '</div>' +
           (product.did_you_know ? '<aside class="did-you-know"><p class="did-you-know-label">Did you know?</p><div class="did-you-know-text">' + sanitizeRichTextJS(product.did_you_know) + '</div>' + (product.did_you_know_date ? '<p class="did-you-know-date">As of ' + formatDateJS(String(product.did_you_know_date).slice(0, 7)) + '</p>' : '') + '</aside>' : '') +

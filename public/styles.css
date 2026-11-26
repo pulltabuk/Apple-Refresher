@@ -4844,3 +4844,19 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 .admin-form .video-kind legend { padding: 0 6px; font-size: 14px; font-weight: 700; }
 .admin-form .video-kind label { display: flex; flex-direction: row; align-items: flex-start; gap: 8px; margin: 0; font-size: 14px; font-weight: 400; cursor: pointer; }
 .admin-form .video-kind input[type="radio"] { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
+
+/* Product page: the last of its line. A dark pill inside the
+   Discontinued box: beside the date where there is room, under it where
+   there isn't (a phone, or the narrow box beside a video). It was a
+   tile among the key facts. */
+.days-hero--end { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; }
+.days-hero-main { display: flex; flex-direction: column; gap: 8px; flex: 1 1 270px; min-width: 0; }
+.end-line-pill { flex: none; display: inline-flex; align-items: center; gap: 12px; max-width: 100%; padding: 10px 24px 10px 10px; border-radius: 999px; background: #1d1b19; color: #fff; box-shadow: 0 6px 16px rgba(29, 27, 25, 0.18); }
+.end-line-pill-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); }
+.end-line-pill-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.end-line-pill-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; line-height: 1.2; text-transform: uppercase; color: rgba(255, 255, 255, 0.72); }
+.end-line-pill-text { font-size: 17px; font-weight: 700; line-height: 1.2; }
+@media (max-width: 480px) {
+  .end-line-pill { padding: 8px 20px 8px 8px; }
+  .end-line-pill-text { font-size: 16px; }
+}
