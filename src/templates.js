@@ -3390,7 +3390,15 @@ function heroCycle(product, status, sortedDates, allProducts) {
   return { days: fam.avg, family: product.category || null };
 }
 
-function heroStatHtml(product, statusInfo, cycleDays) {
+// The last product of its line: a dark pill inside the Discontinued
+// box, beside the date where there is room and under it where there
+// isn't (it was a tile among the key facts). Must match
+// endOfLinePillHtmlJS() in public/app.js.
+function endOfLinePillHtml(product) {
+  return `<span class="end-line-pill"><span class="end-line-pill-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${KEY_FACT_ICONS.end}</svg></span><span class="end-line-pill-words"><span class="end-line-pill-label">End of the line</span><span class="end-line-pill-text">The last ${escapeHtml(product.category || 'of its line')}</span></span></span>`;
+}
+
+function heroStatHtml(product, statusInfo, cycleDays, endOfLine) {
   // Discontinued: a tile like the others (never a stretched pill): the
   // date, and how long it was on sale. Keep in step with heroStatHtmlJS().
   if (product.discontinued) {
@@ -3402,7 +3410,10 @@ function heroStatHtml(product, statusInfo, cycleDays) {
     const caption = span
       ? `On sale for ${days.toLocaleString('en-GB')} ${days === 1 ? 'day' : 'days'} (${span})${releases.length > 1 ? ` across ${releases.length} releases` : ''}, from ${formatDate(first)}.`
       : first ? `First released ${formatDate(first)}.` : '';
-    return `<p class="days-hero days-hero--discontinued"><span class="days-hero-label">Discontinued</span>${end ? ` <span class="days-hero-soon">${formatDate(end)}</span>` : ''}${caption ? `<span class="days-hero-caption">${caption}</span>` : ''}</p>`;
+    const words = `<span class="days-hero-label">Discontinued</span>${end ? ` <span class="days-hero-soon">${formatDate(end)}</span>` : ''}${caption ? `<span class="days-hero-caption">${caption}</span>` : ''}`;
+    return endOfLine
+      ? `<p class="days-hero days-hero--discontinued days-hero--end"><span class="days-hero-main">${words}</span>${endOfLinePillHtml(product)}</p>`
+      : `<p class="days-hero days-hero--discontinued">${words}</p>`;
   }
   if (!statusInfo) return '';
   const info = badgeDaysInfo(product, statusInfo);
@@ -3578,9 +3589,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
       return keyFact(label, due.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }), 'expected');
     })(),
     keyFact('Releases recorded', sortedDates.length > 1 ? String(sortedDates.length) : null, 'count'),
-  ].filter(Boolean).slice(0, isEndOfLine(product, allProducts) ? 5 : 6)
-    // The last of its line always gets a tile, in the grid's last place.
-    .concat(isEndOfLine(product, allProducts) ? [`<div class="key-fact key-fact--end"><div class="key-fact-body">${keyFactIcon('end')}<div class="key-fact-text"><p class="key-fact-label">End of the line</p><p class="key-fact-value">The last ${escapeHtml(product.category || 'of its line')}</p></div></div></div>`] : [])
+  ].filter(Boolean).slice(0, 6)
     .join('\n');
 
   const specs = [
@@ -3633,7 +3642,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
         </div>
       </div>
 
-      <div class="product-facts">${heroStatHtml(product, status, cycle)}
+      <div class="product-facts">${heroStatHtml(product, status, cycle, isEndOfLine(product, allProducts))}
         <div class="key-facts-row" data-facts="${(keyFacts.match(/key-fact-label/g) || []).length}">${keyFacts}</div>
       </div>
 
