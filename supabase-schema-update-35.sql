@@ -29,4 +29,9 @@ create policy "Owner changes drafts" on x_drafts for all to authenticated
   using (lower(coalesce(auth.jwt() ->> 'email', '')) = 'jgprice@mac.com')
   with check (lower(coalesce(auth.jwt() ->> 'email', '')) = 'jgprice@mac.com');
 
+-- A new table needs its access granted (see SUPABASE-NOTES.md): the
+-- owner's login in the admin, and the morning job's service key.
+grant select, insert, update, delete on public.x_drafts to authenticated;
+grant select, insert, update, delete on public.x_drafts to service_role;
+
 notify pgrst, 'reload schema';
