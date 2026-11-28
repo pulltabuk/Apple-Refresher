@@ -45,10 +45,14 @@ function siteDrafts(products) {
   const ideas = FactsKit.xPostIdeas(products, ORIGIN);
   const day = Math.floor(Date.now() / 86400000);
   const rotate = (list, n) => { const out = []; for (let i = 0; i < list.length && out.length < n; i++) out.push(list[(day + i) % list.length]); return out; };
+  // A fact whose card has a figure for its headline comes first: the
+  // card's big text is always a number where there is one to show.
+  const facts = ideas.filter((i) => i.kind === 'Did you know?');
+  const withFigure = facts.filter((i) => /\d/.test(cardFor(i.text).headline));
   return [].concat(
     ideas.filter((i) => i.kind === 'On this day').slice(0, 2),
     rotate(ideas.filter((i) => i.kind === 'Still waiting'), 1),
-    rotate(ideas.filter((i) => i.kind === 'Did you know?'), 1),
+    rotate(withFigure.length ? withFigure : facts, 1),
   ).map((i) => ({ kind: i.kind, origin: 'site', text: i.text, link: i.link || null, sources: [], card: cardFor(i.text) }));
 }
 
@@ -105,6 +109,7 @@ async function researchedDrafts(recentTexts) {
     'Rules:',
     '- Use web search. Confirm every date, number and name in at least two independent, reliable sources (for example Apple Newsroom, Apple Support pages, major news outlets). Leave out anything you can\'t confirm. If you can\'t find two real events for ' + dayMonth + ', write fewer posts rather than stretching a date.',
     '- Each post must be 200 characters or fewer, spaces included.',
+    '- Write every number in figures (25 years, not twenty-five years; $399, not four hundred dollars).',
     '- Where you can, give each post one striking figure (a price, a count, a span of days or years): it becomes the big headline on the post\'s image card.',
     '- Don\'t repeat any of these recent posts:',
     recentTexts.length ? recentTexts.map((t) => '  - ' + t).join('\n') : '  (none yet)',
