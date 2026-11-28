@@ -439,7 +439,10 @@
     let text = String(line || '').replace(/\s+/g, ' ').trim();
     if (!text) return '';
     const figure = (String(headline || '').match(/[$£€]?\d[\d,.]*\d|\d/) || [''])[0];
-    const has = (part) => !!figure && numbersAsFigures(part).indexOf(figure) !== -1;
+    // The figure itself, not the same digits inside another number (the
+    // "5" of "5x" is not in "iPhone 15").
+    const figureRe = figure ? new RegExp('(?<![\\d.,])' + figure.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?!\\d)') : null;
+    const has = (part) => !!figureRe && figureRe.test(numbersAsFigures(part));
     const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z0-9"'‘“$£])/);
     text = (sentences.find(has) || sentences[0]).replace(/[.!?]+$/, '');
     const clauses = text.split(/\s*[,;:–—]\s+/).map((c) => c.trim()).filter(Boolean);
@@ -461,7 +464,8 @@
     // A clause lifted from mid-sentence doesn't start on its joining word.
     text = text.replace(/^(?:and|but|which|who|that|while|so)\s+/i, '').trim();
     if (!text) return '';
-    return text.charAt(0).toUpperCase() + text.slice(1) + '.';
+    // (iPhone, iPad and iMac keep their small "i".)
+    return (/^[a-z][A-Z]/.test(text) ? text : text.charAt(0).toUpperCase() + text.slice(1)) + '.';
   }
 
   // Links say nothing the card should show: a date in a MacRumors
@@ -1116,7 +1120,12 @@
     const tens = /\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[-\s]$/i.exec(before);
     if (tens && new RegExp('^(?:' + NUMBER_UNITS.slice(1, 10).join('|') + ')\\b', 'i').test(big)) big = tens[1] + '-' + big;
     const headline = numbersAsFigures(big);
-    return { headline, line: shortCardLine(subject.caption || '', headline), title: subject.title || '', icon: 'auto', label: plan.label || 'Did you know?' };
+    // The product's name put in front of a fact for context ("iPhone 15
+    // Pro Max: Only the Pro Max...") is the card's title already.
+    const named = String(subject.title || '').trim();
+    let caption = String(subject.caption || '');
+    if (named && caption.toLowerCase().indexOf(named.toLowerCase() + ':') === 0) caption = caption.slice(named.length + 1).trim();
+    return { headline, line: shortCardLine(caption, headline), title: subject.title || '', icon: 'auto', label: plan.label || 'Did you know?' };
   }
 
   // What "Automatic" will show, in words, for the composer.
@@ -2240,16 +2249,26 @@
   // so ticking them later doesn't push it over.
   function xFitText(text, opts) {
     const o = Object.assign({}, opts || {}, { hashtags: true });
-    return shortenToFit(text, (t) => xPostLength(xPostText(t, o)) <= 280);
+    const fits = (t) => xPostLength(xPostText(t, o)) <= 280;
+    // A fact a little too long keeps all it says and loses its "Did you
+    // know?" instead, before any sentence is dropped.
+    const body = String(text || '').trim();
+    const bare = body.replace(/^did you know\?\s*/i, '');
+    if (!fits(body) && bare !== body && fits(bare)) return bare;
+    return shortenToFit(text, fits);
   }
 
   // The text that goes to X: the post, then hashtags and a link if wanted.
+  // It opens with an emoji picked for it (leadEmoji), unless the writer
+  // put one there already or opts.emoji is false.
   function xPostText(text, opts) {
     const o = opts || {};
     const extras = [];
     if (o.hashtags) extras.push(hashtagsFor(text, o.products).join(' '));
     if (o.link) extras.push(o.link);
-    return String(text || '').trim() + (extras.length ? '\n\n' + extras.join('\n') : '');
+    let body = String(text || '').trim();
+    if (body && o.emoji !== false && !startsWithEmoji(body)) body = leadEmoji(body + (o.link ? ' ' + o.link : ''), o.products) + ' ' + body;
+    return body + (extras.length ? '\n\n' + extras.join('\n') : '');
   }
 
   // --- The card under an X post. X can't be handed an image, only a
@@ -2368,6 +2387,52 @@
 
   // Post ideas from the products: on this day, coming soon, the longest
   // waits, each product's "Did you know?", and the site-wide statistics.
+  // A product's fact, made to stand alone. On its own page "Only the Pro
+  // Max got the 5x zoom" or "this computer" is clear; as a post it says
+  // nothing about which product. When the fact doesn't name its product,
+  // the name goes in front: "Did you know? iPhone 15 Pro Max: Only the
+  // Pro Max got the 5x zoom."
+  function namesProduct(text, product) {
+    const squash = (str) => String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const hay = squash(text);
+    const full = squash(product && product.name);
+    // The name without its bracketed part ("MacBook Pro (15-inch, Early
+    // 2011)" is named by "the MacBook Pro"), when that is still telling.
+    const base = squash(String((product && product.name) || '').replace(/\s*\(.*$/, ''));
+    return (full.length > 2 && hay.indexOf(full) !== -1) || (base.length >= 6 && /\d|pro|air|mini|max|plus|ultra|nano|shuffle|touch|classic/.test(base) && hay.indexOf(base) !== -1);
+  }
+  function factWithContext(text, product) {
+    const body = String(text || '').trim();
+    if (!body || !product || !product.name || namesProduct(body, product)) return body;
+    const opener = /^did you know\?\s*/i.exec(body);
+    const rest = opener ? body.slice(opener[0].length) : body;
+    return (opener ? 'Did you know? ' : '') + appleName(product.name) + ': ' + rest;
+  }
+
+  // The emoji a post opens with, to catch the eye: by what kind of post
+  // it is, else by the product line it is about.
+  const FAMILY_EMOJI = [['vision pro', '\ud83e\udd7d'], ['apple tv', '\ud83d\udcfa'], ['siri remote', '\ud83d\udcfa'], ['airtag', '\ud83d\udccd'], ['apple pencil', '\u270f\ufe0f'],
+    ['airpods', '\ud83c\udfa7'], ['homepod', '\ud83d\udd0a'], ['ipod', '\ud83c\udfb5'], ['iphone', '\ud83d\udcf1'], ['ipad', '\ud83d\udcf1'], ['watch', '\u231a'],
+    ['display', '\ud83d\udda5\ufe0f'], ['imac', '\ud83d\udda5\ufe0f'], ['mac', '\ud83d\udcbb'], ['powerbook', '\ud83d\udcbb'], ['ibook', '\ud83d\udcbb'],
+    ['apple ii', '\ud83d\udda5\ufe0f'], ['apple i', '\ud83d\udda5\ufe0f'], ['lisa', '\ud83d\udda5\ufe0f'], ['newton', '\ud83d\udcdf']];
+  const startsWithEmoji = (text) => /^\s*(?:\p{Extended_Pictographic}|[\u{1F1E6}-\u{1F1FF}])/u.test(String(text || ''));
+  function xWithoutLead(text) {
+    return String(text || '').replace(/^\s*(?:(?:\p{Extended_Pictographic}|[\u{1F1E6}-\u{1F1FF}])[\ufe0f\u200d]*\s*)+/u, '');
+  }
+  function leadEmoji(text, products) {
+    const s = String(text || '');
+    const family = (words) => { const lower = String(words || '').toLowerCase(); const hit = FAMILY_EMOJI.find(([word]) => lower.indexOf(word) !== -1); return hit ? hit[1] : ''; };
+    const product = productNamed(s, products);
+    const mine = (product && (family(product.category) || family(product.name))) || family(s);
+    if (/^on this day\b/i.test(s)) return '\ud83d\udcc5';
+    if (/\bapple event\b|\bkeynote\b/i.test(s)) return '\ud83c\udf4e';
+    if (/\bit\u2019s been [\d,]+ days? since\b|\bit's been [\d,]+ days? since\b|\bstill waiting\b/i.test(s)) return '\u23f3';
+    if (/\bdays? to go\b|\barrives (?:on|in)\b|\bcoming soon\b/i.test(s)) return '\ud83d\ude80';
+    if (/(^|\s)via\s+@?\w/i.test(s) && /https?:\/\//i.test(s)) return '\ud83d\uddde\ufe0f';
+    if (/^did you know\b/i.test(s)) return mine || '\ud83d\udca1';
+    return mine || '\ud83c\udf4e';
+  }
+
   function xPostIdeas(products, siteOrigin) {
     const list = products || [];
     const origin = siteOrigin || 'https://applesunset.com';
@@ -2390,7 +2455,7 @@
         }
       }
       const fact = plainText(p.did_you_know).replace(/\s+/g, ' ');
-      if (fact) ideas.push({ kind: 'Did you know?', text: 'Did you know? ' + fact, link: productLink(p) });
+      if (fact) ideas.push({ kind: 'Did you know?', text: factWithContext('Did you know? ' + fact, p), link: productLink(p) });
     });
     // The longest waits for an update among products still on sale.
     list.filter((p) => p.slug && !p.discontinued)
@@ -3205,6 +3270,9 @@
     productVideoPrompt,
     numbersAsFigures,
     shortCardLine,
+    factWithContext,
+    leadEmoji,
+    xWithoutLead,
     VIDEO_KINDS,
     videoKind,
     videoPlain,

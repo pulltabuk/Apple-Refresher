@@ -1664,7 +1664,11 @@
       // The whole post as it will go out: the words, two hashtags and the
       // link. What is in this box is exactly what is sent.
       const link = d.link || '';
-      text.value = window.FactsKit.xPostText(window.FactsKit.xFitText(d.text, { products: cachedProducts, link }), { hashtags: true, products: cachedProducts, link });
+      // A fact that doesn't say which product it is about gets the name
+      // in front (the product is the one its link goes to).
+      const about = cachedProducts.find((p) => p.slug && link.indexOf('/products/' + p.slug + '/') !== -1);
+      const draftWords = d.kind === 'Did you know?' && d.origin !== 'claude' && about ? window.FactsKit.factWithContext(d.text, about) : d.text;
+      text.value = window.FactsKit.xPostText(window.FactsKit.xFitText(draftWords, { products: cachedProducts, link }), { hashtags: true, products: cachedProducts, link });
       text.setAttribute('aria-label', 'The post as it will go out');
       main.appendChild(text);
       const count = document.createElement('p');
@@ -1678,7 +1682,7 @@
       showCount();
       main.appendChild(count);
       // The words alone (no hashtags, no link), for the card and the composer.
-      const wordsOnly = () => window.FactsKit.xWithoutHashtags(link ? text.value.split(link).join('') : text.value).trim();
+      const wordsOnly = () => window.FactsKit.xWithoutLead(window.FactsKit.xWithoutHashtags(link ? text.value.split(link).join('') : text.value)).trim();
       if (Array.isArray(d.sources) && d.sources.length) {
         const src = document.createElement('p');
         src.className = 'x-draft-sources';
@@ -1716,7 +1720,7 @@
       item.appendChild(body);
 
       // The card, drawn here as it will go out.
-      window.FactsKit.xCardPreview(d.text, label, fields).then((p) => { img.src = p.url; }).catch(() => { img.hidden = true; });
+      window.FactsKit.xCardPreview(draftWords, label, fields).then((p) => { img.src = p.url; }).catch(() => { img.hidden = true; });
 
       const busy = (on) => { [queueBtn, schedBtn, editBtn, rejectBtn].forEach((b) => { b.disabled = on; }); };
       async function send(mode, dueAt) {
