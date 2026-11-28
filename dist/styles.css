@@ -4903,9 +4903,12 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 .family-end-sub { font-size: 14px; font-weight: 500; line-height: 1.45; color: rgba(255, 255, 255, 0.76); }
 .family-end-track { position: relative; height: 96px; margin-top: 10px; }
 .family-end-sun { position: absolute; right: 0; top: 24px; display: block; width: 120px; height: 72px; }
-/* The rail runs from the first release to the middle of the sun, which
-   sits on it, half below the horizon. */
-.family-end-rail { position: absolute; left: 5px; right: 60px; top: 69px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.38), rgba(241, 166, 90, 0.75) 70%, #ee8130); }
+/* The rail runs from the first release to the middle of the sun (where
+   the dots' positions are measured to) and carries on to the sun's far
+   edge, so the horizon is whole. It sits midway between the sun's
+   lowest band and the first line of its reflection. */
+.family-end-rail { position: absolute; left: 5px; right: 60px; top: 71px; height: 2px; border-radius: 2px 0 0 2px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.38), rgba(241, 166, 90, 0.75) 70%, #ee8130); }
+.family-end-rail::after { content: ""; position: absolute; left: 100%; top: 0; width: 36px; height: 100%; border-radius: 0 2px 2px 0; background: #ee8130; }
 .family-end-dot { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; }
 /* Each dot's date, in a small box above it on a thin stem. Two rows: the
    lower just above the dot, the upper clear of the sun. Which row a box
@@ -4956,7 +4959,8 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
   .family-end-title { font-size: 24px; }
   .family-end-track { height: 84px; }
   .family-end-sun { top: 26px; width: 96px; height: 58px; }
-  .family-end-rail { right: 48px; top: 62px; }
+  .family-end-rail { right: 48px; top: 63.4px; }
+  .family-end-rail::after { width: 29px; }
   .family-end-dot { width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; }
   .family-end-dot--end .family-end-date { bottom: calc(100% + 33px); }
   .family-end-year { font-size: 20px; }
