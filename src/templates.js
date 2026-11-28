@@ -3330,7 +3330,6 @@ function categoryPage({ category, items, pageContent, siteUrl, supabaseUrl, supa
   const countPills = `<ul class="family-counts">
   <li class="count-pill count-pill--current${currentCount ? '' : ' is-none'}"><strong>${currentCount}</strong> current product${currentCount === 1 ? '' : 's'}</li>
   ${discontinuedCount ? `<li class="count-pill count-pill--gone"><strong>${discontinuedCount}</strong> discontinued</li>` : ''}
-  <li class="count-pill count-pill--order">Newest first</li>
 </ul>`;
   // A finished family: the dusk banner, with the sentence built from
   // its dates straight under it, then the counts. Otherwise the counts
