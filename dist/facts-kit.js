@@ -1109,7 +1109,21 @@
 
   // The card's heading, title, headline and line as the composer
   // pre-fills them: the best guess from the post, to keep or change.
-  function cardGuess(text) {
+  // A bare multiple or percentage says nothing alone ("5x", "18%"): it
+  // takes the word it measures from the post ("5x zoom", "18% thinner").
+  const FIGURE_STOP = /^(?:and|or|the|a|an|of|for|to|in|on|at|by|with|than|from|was|were|is|are|as|it|its|that|this|which|when|while|but|so)$/i;
+  function figureWithUnit(headline, text) {
+    const figure = String(headline || '').trim();
+    if (!/^[\d][\d.,]*\s?(?:x|\u00d7|%)$/i.test(figure)) return figure;
+    const m = new RegExp('(?<![\\d.,])' + figure.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+([A-Za-z][A-Za-z-]{2,})').exec(String(text || ''));
+    return m && !FIGURE_STOP.test(m[1]) ? figure + ' ' + m[1] : figure;
+  }
+
+  // opts.about: the product the post is about when the caller knows it
+  // (a draft made from that product's fact, a post linking to its page).
+  // It is the card's title when the words alone don't give one, so a card
+  // never shows a figure with nothing to say whose it is.
+  function cardGuess(text, opts) {
     const plan = cardPlan(text);
     const subject = subjectOf(plan, text);
     // The headline's numbers as figures, and as little text under it as
@@ -1119,13 +1133,14 @@
     const before = big ? String(text || '').slice(0, Math.max(0, String(text || '').toLowerCase().indexOf(big.toLowerCase()))) : '';
     const tens = /\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[-\s]$/i.exec(before);
     if (tens && new RegExp('^(?:' + NUMBER_UNITS.slice(1, 10).join('|') + ')\\b', 'i').test(big)) big = tens[1] + '-' + big;
-    const headline = numbersAsFigures(big);
+    const headline = figureWithUnit(numbersAsFigures(big), text);
     // The product's name put in front of a fact for context ("iPhone 15
     // Pro Max: Only the Pro Max...") is the card's title already.
     const named = String(subject.title || '').trim();
     let caption = String(subject.caption || '');
     if (named && caption.toLowerCase().indexOf(named.toLowerCase() + ':') === 0) caption = caption.slice(named.length + 1).trim();
-    return { headline, line: shortCardLine(caption, headline), title: subject.title || '', icon: 'auto', label: plan.label || 'Did you know?' };
+    const about = opts && opts.about ? appleName(String(opts.about)) : '';
+    return { headline, line: shortCardLine(caption, headline), title: subject.title || about, icon: 'auto', label: plan.label || 'Did you know?' };
   }
 
   // What "Automatic" will show, in words, for the composer.
@@ -2444,18 +2459,18 @@
       pastReleases(p).forEach((d) => {
         if (d.slice(5) === today.slice(5) && d.slice(0, 4) !== today.slice(0, 4)) {
           const years = Number(today.slice(0, 4)) - Number(d.slice(0, 4));
-          ideas.push({ kind: 'On this day', text: 'On this day in ' + d.slice(0, 4) + ', Apple released the ' + p.name + '. That was ' + years + ' year' + (years === 1 ? '' : 's') + ' ago.', link: productLink(p) });
+          ideas.push({ kind: 'On this day', text: 'On this day in ' + d.slice(0, 4) + ', Apple released the ' + p.name + '. That was ' + years + ' year' + (years === 1 ? '' : 's') + ' ago.', link: productLink(p), about: p.name });
         }
       });
       if (!p.discontinued) {
         const next = (p.refresh_history || []).filter((d) => d > today).sort()[0];
         if (next) {
           const days = daysBetweenDates(today, next);
-          ideas.push({ kind: 'Coming soon', text: days + ' day' + (days === 1 ? '' : 's') + ' to go until the ' + p.name + ' arrives ' + onLongDate(next) + '.', link: productLink(p) });
+          ideas.push({ kind: 'Coming soon', text: days + ' day' + (days === 1 ? '' : 's') + ' to go until the ' + p.name + ' arrives ' + onLongDate(next) + '.', link: productLink(p), about: p.name });
         }
       }
       const fact = plainText(p.did_you_know).replace(/\s+/g, ' ');
-      if (fact) ideas.push({ kind: 'Did you know?', text: factWithContext('Did you know? ' + fact, p), link: productLink(p) });
+      if (fact) ideas.push({ kind: 'Did you know?', text: factWithContext('Did you know? ' + fact, p), link: productLink(p), about: p.name });
     });
     // The longest waits for an update among products still on sale.
     list.filter((p) => p.slug && !p.discontinued)
@@ -2471,7 +2486,7 @@
           const avg = gaps.length ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length) : 0;
           if (avg) text += days > avg ? ' Its usual gap between updates is about ' + avg.toLocaleString('en-GB') + ' days.' : ' Its usual gap is about ' + avg.toLocaleString('en-GB') + ' days, so it isn’t due yet.';
         }
-        ideas.push({ kind: 'Still waiting', text, link: productLink(p) });
+        ideas.push({ kind: 'Still waiting', text, link: productLink(p), about: p.name });
       });
     if (list.length) generateFactCandidates(list).forEach((t) => ideas.push({ kind: 'By the numbers', text: t, link: origin + '/facts/' }));
     return ideas;
@@ -3269,6 +3284,7 @@
     claudeResearchUrl,
     productVideoPrompt,
     numbersAsFigures,
+    figureWithUnit,
     shortCardLine,
     factWithContext,
     leadEmoji,

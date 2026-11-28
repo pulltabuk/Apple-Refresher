@@ -563,7 +563,11 @@
       const text = $x('x-text').value.trim();
       $x('x-card-icon-auto').textContent = text ? 'Auto uses: ' + window.FactsKit.cardAutoIconName(text) : '';
       if (cardFieldsOwn && cardLabelOwn) return;
-      const guess = window.FactsKit.cardGuess(text);
+      // A post linking to a product's page is about that product: its
+      // name is the card's title when the words don't give one.
+      const linkNow = $x('x-link-on').checked ? $x('x-link').value.trim() : '';
+      const linkedTo = linkNow ? cachedProducts.find((p) => p.slug && linkNow.indexOf('/products/' + p.slug + '/') !== -1) : null;
+      const guess = window.FactsKit.cardGuess(text, { about: linkedTo ? linkedTo.name : '' });
       if (!cardLabelOwn) $x('x-card-label').value = text ? guess.label : 'Did you know?';
       if (cardFieldsOwn) return;
       $x('x-card-headline').value = guess.headline;
@@ -1640,7 +1644,11 @@
       const fields = { headline: card.headline || '', line: card.line || '', title: card.title || '', icon: card.icon || 'auto', source: card.source || '' };
       // The card as drafts are drawn now, whenever this one was written:
       // its headline's numbers as figures, and as little text as will do.
-      fields.headline = window.FactsKit.numbersAsFigures(fields.headline);
+      // It also says whose figure it is: the product the draft links to is
+      // its title when it had none, and a bare "5x" takes its word ("5x zoom").
+      const linked = cachedProducts.find((p) => p.slug && String(d.link || '').indexOf('/products/' + p.slug + '/') !== -1);
+      if (!fields.title && linked) fields.title = window.FactsKit.appleName(linked.name);
+      fields.headline = window.FactsKit.figureWithUnit(window.FactsKit.numbersAsFigures(fields.headline), d.text);
       fields.line = window.FactsKit.shortCardLine(fields.line, fields.headline);
       const item = document.createElement('article');
       item.className = 'x-draft';
