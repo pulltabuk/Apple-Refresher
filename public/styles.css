@@ -4924,3 +4924,15 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
   .family-end-dot { width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; }
   .family-end-year { font-size: 20px; }
 }
+
+/* Family page with the dusk banner: the sentence box runs the banner's
+   full width instead of stopping at a reading width. */
+.family-end ~ .page-stats { max-width: none; }
+
+/* Product page: a small tag beside the press release link when it is
+   not Apple Newsroom: an archive copy of Apple's release, or someone
+   else's coverage. Colours match the video labels. */
+.source-tag { display: inline-block; margin-left: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; vertical-align: 1px; }
+.source-tag--apple { background: #fbe9db; color: #7a3206; }
+.source-tag--independent { background: #fff3cf; color: #5c4300; box-shadow: inset 0 0 0 1px #e6b93c; }
+.admin-form .video-kind .admin-hint { margin: 2px 0 0; }

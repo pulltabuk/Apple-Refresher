@@ -1386,6 +1386,53 @@
     return '<p class="video-label video-label--' + kind + '"><span class="video-label-pill">' + (kind === 'independent' ? '' : '\u2713 ') + k.label + '</span><span class="video-label-note">' + k.note + '</span></p>';
   }
 
+  // --- A product's press release link. Most are Apple's own, in Apple
+  // Newsroom. An older product often has only an archive copy of Apple's
+  // release, or someone else's coverage (TechRadar, say), and the page
+  // must not pass those off as Apple Newsroom. Which it is is chosen in
+  // admin and rides on the link the way a video's does ("#as=official");
+  // unmarked, the site it points to decides. public/app.js keeps a copy
+  // (pressRowJS) for the live page refresh. ---
+  const PRESS_SITES = {
+    'techradar.com': 'TechRadar', 'macrumors.com': 'MacRumors', '9to5mac.com': '9to5Mac', 'theverge.com': 'The Verge',
+    'appleinsider.com': 'AppleInsider', 'macworld.com': 'Macworld', 'engadget.com': 'Engadget', 'cnet.com': 'CNET',
+    'wired.com': 'Wired', 'arstechnica.com': 'Ars Technica', 'techcrunch.com': 'TechCrunch', 'bbc.co.uk': 'BBC', 'bbc.com': 'BBC',
+    'theguardian.com': 'The Guardian', 'nytimes.com': 'The New York Times', 'wikipedia.org': 'Wikipedia', 'everymac.com': 'EveryMac',
+    'lowendmac.com': 'Low End Mac', 'archive.org': 'the Internet Archive', 'tech-insider.org': 'Tech Insider', 'apple.com': 'Apple',
+  };
+  // "www.techradar.com" -> "TechRadar"; a site not listed keeps its address.
+  function linkSite(url) {
+    let host = '';
+    try { host = new URL(videoPlain(String(url || '').trim())).hostname.toLowerCase().replace(/^www\./, ''); } catch (e) { return ''; }
+    const known = Object.keys(PRESS_SITES).filter((d) => host === d || host.slice(-d.length - 1) === '.' + d)[0];
+    return known ? PRESS_SITES[known] : host;
+  }
+  // The kind a link has been given, or the one its site suggests:
+  // apple.com is Apple's own, a known archive holds a copy of Apple's
+  // release, and anywhere else is someone else's coverage.
+  function pressKind(url) {
+    const marked = videoKind(url);
+    if (marked) return marked;
+    let host = '';
+    try { host = new URL(String(url || '').trim()).hostname.toLowerCase(); } catch (e) { return ''; }
+    if (/(^|\.)apple\.com$/.test(host)) return 'official';
+    if (/(^|\.)(archive\.org|tech-insider\.org)$/.test(host)) return 'apple';
+    return 'independent';
+  }
+  // The row on the product page: { label, html }, or null for no link.
+  function pressRow(url) {
+    const href = videoPlain(String(url || '').trim());
+    const kind = pressKind(url);
+    if (!/^https?:\/\//i.test(href) || !kind) return null;
+    const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const link = (words) => '<a href="' + esc(href) + '" target="_blank" rel="noopener">' + esc(words) + ' &#8599;</a>';
+    const site = linkSite(href);
+    const ownSite = site === 'Apple';
+    if (kind === 'official') return { label: 'Press release', html: link(ownSite ? 'Apple Newsroom' : 'Apple press release') };
+    if (kind === 'apple') return { label: 'Press release', html: link('Apple press release') + (ownSite ? '' : ' <span class="source-tag source-tag--apple">Archive copy' + (site ? ' on ' + esc(site) : '') + '</span>') };
+    return { label: 'Launch coverage', html: link(site || 'Read the coverage') + ' <span class="source-tag source-tag--independent">Not from Apple</span>' };
+  }
+
   function videoInfo(url) {
     const u = videoPlain(String(url || '').trim());
     if (!/^https?:\/\//i.test(u)) return null;
@@ -3294,6 +3341,9 @@
     videoPlain,
     videoWithKind,
     videoLabelHtml,
+    linkSite,
+    pressKind,
+    pressRow,
     claudeTarget,
     claudePostTarget,
     factKey,

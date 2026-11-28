@@ -3576,6 +3576,9 @@ function externalLinkLabel(product) {
 }
 
 function productPage({ product, status, history, productsBySlug, statusBySlug, galleryPhotos, ogImage, siteUrl, supabaseUrl, supabaseAnonKey }) {
+  // Apple's own release, an archive copy of it, or someone else's
+  // coverage: the row says which (FactsKit.pressRow).
+  const pressRow = FactsKit.pressRow(product.press_release_url);
   const sortedDates = history.slice().sort();
   const launch = product.original_launch_date || sortedDates[0] || null;
   const latest = sortedDates[sortedDates.length - 1] || null;
@@ -3686,7 +3689,7 @@ function productPage({ product, status, history, productsBySlug, statusBySlug, g
     appleLinkRow('Official Apple page', product, 'apple_url', 'apple.com', 'No longer available on Apple\u2019s website', productsBySlug),
     appleLinkRow('Tech specs', product, 'specs_url', 'Apple specs', 'No longer available from Apple', productsBySlug),
     video && video.kind === 'link' ? specRow('Video', `<a href="${escapeHtml(video.src)}" target="_blank" rel="noopener">Watch on ${escapeHtml(video.host)} &#8599;</a>${videoLabel}`) : '',
-    product.press_release_url ? specRow('Press release', `<a href="${product.press_release_url}" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>`) : '',
+    pressRow ? specRow(pressRow.label, pressRow.html) : '',
     product.external_link ? specRow('More information', `<a href="${product.external_link}" target="_blank" rel="noopener">${escapeHtml(externalLinkLabel(product))} &#8599;</a>`) : '',
     product.discontinued ? '' : specRow('Waiting for a refresh', `<span class="wait-count-value">${product.waiting_count || 0}</span> <span class="wait-count-word">${(product.waiting_count || 0) === 1 ? 'person' : 'people'}</span>`),
   ].filter(Boolean).join('\n');
@@ -4211,8 +4214,15 @@ function adminPage({ siteUrl, supabaseUrl, supabaseAnonKey }) {
           </div>
           <p class="admin-hint" id="wikipedia-auto-status"></p>
           <label>Press release<input type="url" id="press_release_url" placeholder="https://www.apple.com/newsroom/..." autocomplete="off"></label>
+          <fieldset class="video-kind" id="press-kind" hidden>
+            <legend>Whose page is it? <span class="admin-optional">Shown beside the link</span></legend>
+            <label><input type="radio" name="press_kind" value="official"> <span><strong>Apple&rsquo;s press release</strong> on Apple&rsquo;s own site</span></label>
+            <label><input type="radio" name="press_kind" value="apple"> <span><strong>Apple&rsquo;s press release, an archive copy</strong> kept on someone else&rsquo;s site</span></label>
+            <label><input type="radio" name="press_kind" value="independent"> <span><strong>Not from Apple</strong> news coverage of the launch (TechRadar, MacRumors&hellip;)</span></label>
+            <p class="admin-hint" id="press-kind-note"></p>
+          </fieldset>
           <div><button type="button" class="admin-btn admin-btn--small admin-btn--ghost" data-find-link="newsroom">Find in Apple Newsroom</button></div>
-          <p class="admin-hint">Press releases usually only exist for recent products. Leave it blank otherwise.</p>
+          <p class="admin-hint">Apple&rsquo;s own press releases usually only exist for recent products. With none, a link to coverage elsewhere is fine: the page then names the site and says it is not from Apple.</p>
         </section>
 
         <section class="admin-step" id="step-extras">
