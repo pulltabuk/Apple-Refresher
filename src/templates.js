@@ -958,7 +958,7 @@ function categoryStatsSentence(category, items) {
       const ran = ending.ended ? 'The line ran' : 'The family ran';
       const span = past[0] < end ? `${ran} for ${spanText(toDays(past[0], end))}, from ${formatDateLong(past[0])}` : `${ran} from ${formatDateLong(past[0])}`;
       parts.push(avg != null
-        ? `${span}, and across the ${past.length} release dates recorded here Apple updated it ${cadence(avg)}.`
+        ? `${span}, and across the ${past.length} release dates recorded here, Apple updated it ${cadence(avg)}.`
         : `${span}.`);
     }
     return `<p class="page-stats">${parts.join(' ')}</p>`;
