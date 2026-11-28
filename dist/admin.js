@@ -4835,6 +4835,60 @@
 
   // One video per product: an upload, or a link typed in the box (the
   // box is left empty for an upload).
+  // The press release link, and whose page it is: Apple's own, an
+  // archive copy of Apple's release, or someone else's coverage. The
+  // site the link points to picks one until you choose; the choice is
+  // kept on the end of the link ("#as=independent"), as a video's is.
+  const pressLinkEl = document.getElementById('press_release_url');
+  let pressKindPicked = false;
+  let pressHost = '';
+  const hostOf = (url) => { try { return new URL(url).hostname.toLowerCase(); } catch (e) { return ''; } };
+  const pressKindChosen = () => (document.querySelector('input[name="press_kind"]:checked') || {}).value || '';
+  function paintPressKind() {
+    const url = pressLinkEl.value.trim();
+    const box = document.getElementById('press-kind');
+    const valid = /^https?:\/\/\S+\.\S+/i.test(url);
+    box.hidden = !valid;
+    if (!valid) return;
+    // A link to a different site is a different page: start again from
+    // what that site suggests.
+    if (hostOf(url) !== pressHost) { pressHost = hostOf(url); pressKindPicked = false; }
+    if (!pressKindPicked) {
+      const guess = document.querySelector('input[name="press_kind"][value="' + window.FactsKit.pressKind(url) + '"]');
+      if (guess) guess.checked = true;
+    }
+    const row = window.FactsKit.pressRow(window.FactsKit.videoWithKind(url, pressKindChosen()));
+    const note = document.getElementById('press-kind-note');
+    const plain = document.createElement('div');
+    plain.innerHTML = row ? row.html : '';
+    note.textContent = row ? 'On the page: ' + row.label + ' → ' + plain.textContent.replace(/\s*↗\s*/, ' · ').replace(/\s*·\s*$/, '').trim() : '';
+  }
+  function setPressLink(url) {
+    const stored = String(url || '');
+    pressLinkEl.value = window.FactsKit.videoPlain(stored);
+    // A choice saved on the link is yours; otherwise the site decides.
+    pressKindPicked = !!window.FactsKit.videoKind(stored);
+    pressHost = hostOf(pressLinkEl.value.trim());
+    const pick = document.querySelector('input[name="press_kind"][value="' + window.FactsKit.videoKind(stored) + '"]');
+    if (pick) pick.checked = true;
+    paintPressKind();
+  }
+  function pressLinkToSave() {
+    const url = window.FactsKit.videoPlain(pressLinkEl.value.trim());
+    if (!url) return null;
+    // Only a choice that differs from what the site suggests is written
+    // on the link, so an ordinary Apple Newsroom link is saved as it is.
+    const kind = pressKindChosen();
+    return !kind || kind === window.FactsKit.pressKind(url) ? url : window.FactsKit.videoWithKind(url, kind);
+  }
+  pressLinkEl.addEventListener('input', paintPressKind);
+  pressLinkEl.addEventListener('change', paintPressKind);
+  document.querySelectorAll('input[name="press_kind"]').forEach((r) => r.addEventListener('change', () => {
+    pressKindPicked = true;
+    productFormDirty = true;
+    paintPressKind();
+  }));
+
   const videoLinkEl = document.getElementById('video_link');
   const isUploadedVideo = (url) => /\/storage\/v1\/object\/public\//.test(url || '');
   // Whose video it is: the choice under the link, shown as a label on
@@ -4913,7 +4967,7 @@
     document.getElementById('external_link').value = p.external_link || '';
     document.getElementById('apple_url').value = p.apple_url || '';
     document.getElementById('specs_url').value = p.specs_url || '';
-    document.getElementById('press_release_url').value = p.press_release_url || '';
+    setPressLink(p.press_release_url);
     document.getElementById('apple_url_unavailable').checked = !!p.apple_url_unavailable;
     document.getElementById('specs_url_unavailable').checked = !!p.specs_url_unavailable;
     document.getElementById('rumor_note_editor').innerHTML = p.rumor_note || '';
@@ -5011,6 +5065,7 @@
     currentIconUrl = null;
     currentVideoUrl = null;
     setVideoKind('');
+    setPressLink('');
     onFamilyChanged();
     setTimelineName(null);
     setTimelineMode('own');
@@ -5445,7 +5500,7 @@
         })(),
         external_link: document.getElementById('external_link').value.trim() || null,
         specs_url: document.getElementById('specs_url').value.trim() || null,
-        press_release_url: document.getElementById('press_release_url').value.trim() || null,
+        press_release_url: pressLinkToSave(),
         apple_url: document.getElementById('apple_url').value.trim() || null,
         apple_url_unavailable: document.getElementById('apple_url_unavailable').checked,
         refresh_history: refreshHistoryWithLaunch,

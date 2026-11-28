@@ -1142,6 +1142,33 @@
     var k = VIDEO_KINDS_JS[m[1]];
     return '<p class="video-label video-label--' + m[1] + '"><span class="video-label-pill">' + (m[1] === 'independent' ? '' : '\u2713 ') + k[0] + '</span><span class="video-label-note">' + k[1] + '</span></p>';
   }
+  // Must match PRESS_SITES, linkSite(), pressKind() and pressRow() in
+  // public/facts-kit.js: a press release link says whether it is Apple's
+  // own, an archive copy of Apple's, or someone else's coverage.
+  var PRESS_SITES_JS = {
+    'techradar.com': 'TechRadar', 'macrumors.com': 'MacRumors', '9to5mac.com': '9to5Mac', 'theverge.com': 'The Verge',
+    'appleinsider.com': 'AppleInsider', 'macworld.com': 'Macworld', 'engadget.com': 'Engadget', 'cnet.com': 'CNET',
+    'wired.com': 'Wired', 'arstechnica.com': 'Ars Technica', 'techcrunch.com': 'TechCrunch', 'bbc.co.uk': 'BBC', 'bbc.com': 'BBC',
+    'theguardian.com': 'The Guardian', 'nytimes.com': 'The New York Times', 'wikipedia.org': 'Wikipedia', 'everymac.com': 'EveryMac',
+    'lowendmac.com': 'Low End Mac', 'archive.org': 'the Internet Archive', 'tech-insider.org': 'Tech Insider', 'apple.com': 'Apple'
+  };
+  function pressRowJS(url) {
+    var raw = String(url || '').trim();
+    var href = videoPlainJS(raw);
+    if (!/^https?:\/\//i.test(href)) return null;
+    var host = '';
+    try { host = new URL(href).hostname.toLowerCase(); } catch (e) { return null; }
+    var m = /#(?:[^#]*&)?as=(official|apple|independent)(?:&|$)/.exec(raw);
+    var kind = m ? m[1] : /(^|\.)apple\.com$/.test(host) ? 'official' : /(^|\.)(archive\.org|tech-insider\.org)$/.test(host) ? 'apple' : 'independent';
+    var bare = host.replace(/^www\./, '');
+    var known = Object.keys(PRESS_SITES_JS).filter(function (d) { return bare === d || bare.slice(-d.length - 1) === '.' + d; })[0];
+    var site = known ? PRESS_SITES_JS[known] : bare;
+    var ownSite = site === 'Apple';
+    var link = function (words) { return '<a href="' + escapeHtmlJS(href) + '" target="_blank" rel="noopener">' + escapeHtmlJS(words) + ' &#8599;</a>'; };
+    if (kind === 'official') return { label: 'Press release', html: link(ownSite ? 'Apple Newsroom' : 'Apple press release') };
+    if (kind === 'apple') return { label: 'Press release', html: link('Apple press release') + (ownSite ? '' : ' <span class="source-tag source-tag--apple">Archive copy' + (site ? ' on ' + escapeHtmlJS(site) : '') + '</span>') };
+    return { label: 'Launch coverage', html: link(site || 'Read the coverage') + ' <span class="source-tag source-tag--independent">Not from Apple</span>' };
+  }
   function videoInfoJS(url) {
     var u = videoPlainJS(String(url || '').trim());
     if (!/^https?:\/\//i.test(u)) return null;
@@ -1433,6 +1460,7 @@
     var video = videoInfoJS(product.video_url);
     // Whose video it is, under it (as the build's FactsKit.videoLabelHtml).
     var videoLabel = videoLabelHtmlJS(product.video_url);
+    var pressRow = pressRowJS(product.press_release_url);
     var videoBlock = !video || video.kind === 'link'
       ? ''
       : video.kind === 'file'
@@ -1502,7 +1530,7 @@
       appleLinkRowJS('Official Apple page', product, 'apple_url', 'apple.com', 'No longer available on Apple\u2019s website', productsBySlug),
       appleLinkRowJS('Tech specs', product, 'specs_url', 'Apple specs', 'No longer available from Apple', productsBySlug),
       video && video.kind === 'link' ? specRowJS('Video', '<a href="' + escapeHtmlJS(video.src) + '" target="_blank" rel="noopener">Watch on ' + escapeHtmlJS(video.host) + ' &#8599;</a>' + videoLabel) : '',
-      product.press_release_url ? specRowJS('Press release', '<a href="' + product.press_release_url + '" target="_blank" rel="noopener">Apple Newsroom &#8599;</a>') : '',
+      pressRow ? specRowJS(pressRow.label, pressRow.html) : '',
       product.external_link ? specRowJS('More information', '<a href="' + product.external_link + '" target="_blank" rel="noopener">' + escapeHtmlJS(externalLinkLabelJS(product)) + ' &#8599;</a>') : '',
       product.discontinued ? '' : specRowJS('Waiting for a refresh', '<span class="wait-count-value">' + (product.waiting_count || 0) + '</span> <span class="wait-count-word">' + ((product.waiting_count || 0) === 1 ? 'person' : 'people') + '</span>'),
     ].filter(Boolean).join('');
