@@ -4972,6 +4972,8 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
    Solid and unclickable, so they don't pass for the outlined filter
    buttons further down. */
 .family-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 1.25rem; padding: 0; list-style: none; }
+/* Straight under the heading (no banner above), they need room. */
+.category-page-heading + .family-counts { margin-top: 1rem; }
 .count-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px 7px 12px; border-radius: 999px; background: #f1efe9; color: var(--text); font-size: 13px; font-weight: 600; line-height: 1.2; }
 .count-pill strong { margin-right: -3px; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .count-pill::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
