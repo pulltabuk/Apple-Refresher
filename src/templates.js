@@ -953,12 +953,46 @@ function familyEndBannerHtml(category, items) {
     // Releases too close to tell apart share a dot, and one that would
     // sit under the sun is left to the sun.
     let lastAt = -100;
-    dots = starts.map((x) => {
+    const shown = [];
+    starts.forEach((x) => {
       const at = length > 0 ? Math.round(((time(x.date) - from) / length) * 1000) / 10 : 0;
-      if (at - lastAt < 3.5 || at > 93) return '';
+      if (at - lastAt < 3.5 || at > 93) return;
       lastAt = at;
-      return `<span class="family-end-dot" style="left:${at}%"></span>`;
-    }).join('');
+      shown.push({ at, date: x.date, name: x.product.name });
+    });
+    // Each dot's date sits in a small box above it. Boxes that would
+    // run into each other take turns on two rows (the upper row clears
+    // the sun), and one with no room on either is left out: its dot
+    // still shows. Worked out three times, as a phone has room for far
+    // fewer: "w" classes for wide screens, "d" for a tablet, "m" for a
+    // phone, where only the year is shown. width: a box as a share of the line; late: where a box
+    // would meet the sun, so it hangs back from its dot on the upper
+    // row; endHalf: half the end date's box, which sits over the sun.
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dateBox = (d) => {
+      const m = /^(\d{4})(?:-(\d{2}))?/.exec(d);
+      return m[2] ? `<span class="family-end-date-month">${MONTHS[Number(m[2]) - 1]} </span>${m[1]}` : m[1];
+    };
+    const place = (mode, width, late, endHalf) => {
+      const last = [-100, -100];
+      let lastStem = -100;
+      shown.forEach((dot, i) => {
+        const hangs = dot.at > late;
+        const span = i === 0 ? [dot.at - 1, dot.at + width] : hangs ? [dot.at - width, dot.at + 1] : [dot.at - width / 2, dot.at + width / 2];
+        // A lower box keeps clear of the stem of an upper one before
+        // it, and an upper box's stem drops clear of the lower boxes.
+        const fits = (row) => span[0] >= last[row] + 1 && (row === 0 ? span[0] >= lastStem + 1 : dot.at >= last[0] + 1 && span[1] <= 100 - endHalf - 1);
+        const row = !hangs && fits(0) ? 0 : fits(1) ? 1 : -1;
+        if (row !== -1) last[row] = span[1];
+        if (row === 1) lastStem = dot.at;
+        dot[mode] = (row === -1 ? `${mode}x` : `${mode}${row}`) + (hangs ? ` ${mode}l` : '');
+      });
+    };
+    place('w', 9.5, 88, 5.5);
+    place('d', 13.5, 86, 7);
+    place('m', 20, 70, 13);
+    dots = shown.map((dot, i) => `<span class="family-end-dot ${dot.w} ${dot.d} ${dot.m}${i === 0 ? ' is-first' : ''}" style="left:${dot.at}%" title="${escapeHtml(dot.name)}, ${escapeHtml(formatDate(dot.date))}"><span class="family-end-date">${dateBox(dot.date)}</span></span>`).join('')
+      + `<span class="family-end-dot family-end-dot--end" style="left:100%"><span class="family-end-date">${dateBox(end)}</span></span>`;
     const days = Math.round(length / 86400000);
     if (days > 0) sub = `${products.length === 1 ? 'One product, sold for' : `${products.length} products over`} ${spanText(days)}.`;
     const lastOnes = ending.names.map((n) => products.find((p) => p.name === n)).filter(Boolean);
@@ -3291,6 +3325,18 @@ function categoryPage({ category, items, pageContent, siteUrl, supabaseUrl, supa
     ? `<h2>${releaseHistoryHeading(category)}</h2>
   ${verticalTimelineHtml(seedProduct, allProductsInCategory)}`
     : '';
+  // How many are on sale and how many have gone, as pills: green for
+  // on sale (grey when there are none), dark for discontinued.
+  const countPills = `<ul class="family-counts">
+  <li class="count-pill count-pill--current${currentCount ? '' : ' is-none'}"><strong>${currentCount}</strong> current product${currentCount === 1 ? '' : 's'}</li>
+  ${discontinuedCount ? `<li class="count-pill count-pill--gone"><strong>${discontinuedCount}</strong> discontinued</li>` : ''}
+  <li class="count-pill count-pill--order">Newest first</li>
+</ul>`;
+  // A finished family: the dusk banner, with the sentence built from
+  // its dates straight under it, then the counts. Otherwise the counts
+  // come first and the sentence follows the intro, as before.
+  const endBanner = familyEndBannerHtml(category, items);
+  const statsSentence = !pageContent || pageContent.show_stats !== false ? categoryStatsSentence(category, items) : '';
   const body = `
 ${breadcrumbsHtml([
   { label: 'Home', href: '/' },
@@ -3298,10 +3344,11 @@ ${breadcrumbsHtml([
   { label: category },
 ])}
 <div class="category-page-heading" data-category="${escapeHtml(category)}">${categoryIcon(category, 36)}<h1>${pageHeading(pageContent, category)}</h1></div>
-${familyEndBannerHtml(category, items)}
-${pageStandardLine(pageContent, `<p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}. Newest first.</p>`)}
+${endBanner}
+${endBanner ? statsSentence : ''}
+${pageStandardLine(pageContent, countPills)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
-${!pageContent || pageContent.show_stats !== false ? categoryStatsSentence(category, items) : ''}
+${endBanner ? '' : statsSentence}
 <div class="controls-row">
   <input type="search" id="search-input" class="search-input" placeholder="Search ${escapeHtml(category)} or any product…" aria-label="Search">
   ${sortSelect(PRODUCT_SORT_OPTIONS)}
