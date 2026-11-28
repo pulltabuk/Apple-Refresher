@@ -920,6 +920,67 @@ function onDateLong(str) {
   return `${datePrecision(str) === 'day' ? 'on' : 'in'} ${formatDateLong(str)}`;
 }
 
+// A family with nothing left on sale: a dusk banner near the top of its
+// page. The line is drawn as a line: a dot for each release, running
+// from the first product to a sun setting where the last one went. It
+// echoes the black half of a last product's Discontinued box (the same
+// sun and colours) without repeating it.
+const FAMILY_END_SUN = '<svg class="family-end-sun" viewBox="0 0 120 72" width="120" height="72" focusable="false"><defs><linearGradient id="fam-sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7c653"/><stop offset="0.55" stop-color="#ee8130"/><stop offset="1" stop-color="#de4f3a"/></linearGradient><mask id="fam-sun-cut"><rect x="0" y="0" width="120" height="46" fill="#fff"/><rect x="0" y="22" width="120" height="1.6" fill="#000"/><rect x="0" y="28.5" width="120" height="2.4" fill="#000"/><rect x="0" y="35.5" width="120" height="3.4" fill="#000"/><rect x="0" y="43" width="120" height="3" fill="#000"/></mask></defs><circle cx="60" cy="46" r="36" fill="url(#fam-sun)" mask="url(#fam-sun-cut)"/><g fill="none" stroke-linecap="round" stroke-width="2.6"><path d="M32 54h56" stroke="#ee8130" opacity="0.9"/><path d="M43 61h34" stroke="#de4f3a" opacity="0.7"/><path d="M52 68h16" stroke="#de4f3a" opacity="0.45"/></g></svg>';
+function familyEndBannerHtml(category, items) {
+  const ending = familyEnding(items);
+  if (!ending) return '';
+  const cat = escapeHtml(category);
+  const products = items.map((i) => i.product || i);
+  // A vague date ("1983", "1983-06") counts from its start.
+  const time = (d) => {
+    const m = /^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?/.exec(String(d || ''));
+    return m ? Date.UTC(Number(m[1]), Number(m[2] || 1) - 1, Number(m[3] || 1)) : NaN;
+  };
+  const firstOf = (p) => [p.original_launch_date].concat(p.refresh_history || []).filter(Boolean).map(String).sort()[0] || null;
+  const starts = products.map((p) => ({ product: p, date: firstOf(p) })).filter((x) => x.date && !isNaN(time(x.date)))
+    .sort((a, b) => time(a.date) - time(b.date) || a.product.name.localeCompare(b.product.name));
+  const first = starts[0] || null;
+  const end = ending.date && !isNaN(time(ending.date)) ? ending.date : null;
+  const dated = !!(first && end && time(first.date) <= time(end));
+  const link = (p) => `<a href="/products/${p.slug}/">${escapeHtml(p.name)}</a>`;
+
+  let dots = '';
+  let ends = '';
+  let sub = `${products.length === 1 ? 'One product' : `${products.length} products`}.`;
+  if (dated) {
+    const from = time(first.date);
+    const length = time(end) - from;
+    // Releases too close to tell apart share a dot, and one that would
+    // sit under the sun is left to the sun.
+    let lastAt = -100;
+    dots = starts.map((x) => {
+      const at = length > 0 ? Math.round(((time(x.date) - from) / length) * 1000) / 10 : 0;
+      if (at - lastAt < 3.5 || at > 93) return '';
+      lastAt = at;
+      return `<span class="family-end-dot" style="left:${at}%"></span>`;
+    }).join('');
+    const days = Math.round(length / 86400000);
+    if (days > 0) sub = `${products.length === 1 ? 'One product, sold for' : `${products.length} products over`} ${spanText(days)}.`;
+    const lastOnes = ending.names.map((n) => products.find((p) => p.name === n)).filter(Boolean);
+    const lastLinks = lastOnes.length > 2 ? `${link(lastOnes[0])} and others` : lastOnes.map(link).join(' and ');
+    ends = `<div class="family-end-ends">
+    <p class="family-end-end"><span class="family-end-year">${first.date.slice(0, 4)}</span><span class="family-end-what">${products.length === 1 ? link(first.product) : `First: ${link(first.product)}`}</span></p>
+    <p class="family-end-end family-end-end--last"><span class="family-end-year">${end.slice(0, 4)}</span><span class="family-end-what">${products.length === 1 ? 'Discontinued' : `Last: ${lastLinks}`}</span></p>
+  </div>`;
+  }
+  const label = ending.ended ? 'End of the line' : 'No longer on sale';
+  const title = ending.ended ? `The sun has set on the ${cat} line` : `No ${cat} is on sale now`;
+  return `<section class="family-end${dated ? '' : ' family-end--undated'}" aria-label="${escapeHtml(label)}">
+  <div class="family-end-words">
+    <p class="family-end-label">${label}</p>
+    <p class="family-end-title">${title}</p>
+    <p class="family-end-sub">${sub}</p>
+  </div>
+  <div class="family-end-track" aria-hidden="true"><span class="family-end-rail">${dots}</span>${FAMILY_END_SUN}</div>
+  ${ends}
+</section>`;
+}
+
 function categoryStatsSentence(category, items) {
   // Measured across the whole family, since that is where the real
   // history lives: one product usually has a single release date, and a
@@ -3237,6 +3298,7 @@ ${breadcrumbsHtml([
   { label: category },
 ])}
 <div class="category-page-heading" data-category="${escapeHtml(category)}">${categoryIcon(category, 36)}<h1>${pageHeading(pageContent, category)}</h1></div>
+${familyEndBannerHtml(category, items)}
 ${pageStandardLine(pageContent, `<p class="page-intro">${currentCount} current product${currentCount === 1 ? '' : 's'}${discontinuedCount ? `, ${discontinuedCount} discontinued` : ''}. Newest first.</p>`)}
 ${pageIntroHtml(pageContent, siteUrl, 'intro')}
 ${!pageContent || pageContent.show_stats !== false ? categoryStatsSentence(category, items) : ''}
