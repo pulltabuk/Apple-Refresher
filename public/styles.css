@@ -4901,12 +4901,48 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 .family-end-label { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; line-height: 1.2; text-transform: uppercase; color: #f1a65a; }
 .family-end-title { font-size: 30px; font-weight: 800; line-height: 1.12; letter-spacing: -0.015em; text-wrap: balance; }
 .family-end-sub { font-size: 14px; font-weight: 500; line-height: 1.45; color: rgba(255, 255, 255, 0.76); }
-.family-end-track { position: relative; height: 72px; margin-top: 6px; }
-.family-end-sun { position: absolute; right: 0; top: 0; display: block; width: 120px; height: 72px; }
+.family-end-track { position: relative; height: 96px; margin-top: 10px; }
+.family-end-sun { position: absolute; right: 0; top: 24px; display: block; width: 120px; height: 72px; }
 /* The rail runs from the first release to the middle of the sun, which
    sits on it, half below the horizon. */
-.family-end-rail { position: absolute; left: 5px; right: 60px; top: 45px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.38), rgba(241, 166, 90, 0.75) 70%, #ee8130); }
+.family-end-rail { position: absolute; left: 5px; right: 60px; top: 69px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.38), rgba(241, 166, 90, 0.75) 70%, #ee8130); }
 .family-end-dot { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; }
+/* Each dot's date, in a small box above it on a thin stem. Two rows: the
+   lower just above the dot, the upper clear of the sun. Which row a box
+   takes (or whether there is room for it at all) is worked out when the
+   page is built: w0/w1/wx on wide screens, d0/d1/dx on a tablet,
+   m0/m1/mx on a phone. */
+.family-end-date { position: absolute; left: 50%; bottom: calc(100% + 9px); transform: translateX(-50%); display: none; padding: 3px 7px; border: 1px solid rgba(255, 255, 255, 0.26); border-radius: 7px; background: rgba(255, 255, 255, 0.1); color: #fff; font-size: 11px; font-weight: 700; line-height: 1.3; letter-spacing: 0.01em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.family-end-date::after { content: ""; position: absolute; left: 50%; top: 100%; width: 1px; height: 8px; margin-top: 1px; background: rgba(255, 255, 255, 0.4); }
+.family-end-dot.is-first .family-end-date { left: 0; transform: none; }
+.family-end-dot.is-first .family-end-date::after { left: 4px; }
+/* The end date sits over the sun, in the sun's colours, with no dot. */
+.family-end-dot--end { background: none; }
+.family-end-dot--end .family-end-date { display: block; bottom: calc(100% + 39px); border-color: rgba(247, 198, 83, 0.6); background: rgba(238, 129, 48, 0.24); color: #ffe2b0; }
+.family-end-dot--end .family-end-date::after { display: none; }
+@media (min-width: 1000px) {
+  .family-end-dot.w0 .family-end-date, .family-end-dot.w1 .family-end-date { display: block; }
+  .family-end-dot.w1 .family-end-date { bottom: calc(100% + 39px); }
+  .family-end-dot.w1 .family-end-date::after { height: 38px; }
+  .family-end-dot.wl .family-end-date { left: auto; right: 0; transform: none; }
+  .family-end-dot.wl .family-end-date::after { left: auto; right: 4px; }
+}
+@media (min-width: 700px) and (max-width: 999.98px) {
+  .family-end-dot.d0 .family-end-date, .family-end-dot.d1 .family-end-date { display: block; }
+  .family-end-dot.d1 .family-end-date { bottom: calc(100% + 39px); }
+  .family-end-dot.d1 .family-end-date::after { height: 38px; }
+  .family-end-dot.dl .family-end-date { left: auto; right: 0; transform: none; }
+  .family-end-dot.dl .family-end-date::after { left: auto; right: 4px; }
+}
+@media (max-width: 699.98px) {
+  .family-end-date-month { display: none; }
+  .family-end-dot--end .family-end-date-month { display: inline; }
+  .family-end-dot.m0 .family-end-date, .family-end-dot.m1 .family-end-date { display: block; }
+  .family-end-dot.m1 .family-end-date { bottom: calc(100% + 33px); }
+  .family-end-dot.m1 .family-end-date::after { height: 32px; }
+  .family-end-dot.ml .family-end-date { left: auto; right: 0; transform: none; }
+  .family-end-dot.ml .family-end-date::after { left: auto; right: 3px; }
+}
 .family-end-ends { display: flex; justify-content: space-between; gap: 20px; margin-top: 8px; }
 .family-end-end { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 48%; }
 .family-end-end--last { align-items: flex-end; text-align: right; }
@@ -4918,16 +4954,35 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 @media (max-width: 600px) {
   .family-end { padding: 20px 20px 18px; border-radius: 16px; }
   .family-end-title { font-size: 24px; }
-  .family-end-track { height: 58px; }
-  .family-end-sun { width: 96px; height: 58px; }
-  .family-end-rail { right: 48px; top: 36px; }
+  .family-end-track { height: 84px; }
+  .family-end-sun { top: 26px; width: 96px; height: 58px; }
+  .family-end-rail { right: 48px; top: 62px; }
   .family-end-dot { width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; }
+  .family-end-dot--end .family-end-date { bottom: calc(100% + 33px); }
   .family-end-year { font-size: 20px; }
 }
 
-/* Family page with the dusk banner: the sentence box runs the banner's
-   full width instead of stopping at a reading width. */
-.family-end ~ .page-stats { max-width: none; }
+/* Family page with the dusk banner: the sentence box sits straight
+   under it and runs its full width instead of stopping at a reading
+   width. */
+.family-end { margin-bottom: 1rem; }
+.family-end ~ .page-stats { max-width: none; margin-bottom: 1rem; padding: 14px 18px; border-radius: 14px; }
+
+/* Family page: how many are on sale and how many have gone, as pills.
+   Solid and unclickable, so they don't pass for the outlined filter
+   buttons further down. */
+.family-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 1.25rem; padding: 0; list-style: none; }
+.count-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px 7px 12px; border-radius: 999px; background: #f1efe9; color: var(--text); font-size: 13px; font-weight: 600; line-height: 1.2; }
+.count-pill strong { margin-right: -3px; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.count-pill::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.count-pill--current { background: #e6f2dc; color: #23490f; }
+.count-pill--current::before { background: #3d8a1a; }
+.count-pill--current.is-none { background: #f1efe9; color: var(--text-secondary); }
+.count-pill--current.is-none::before { background: none; box-shadow: inset 0 0 0 2px #a7a39a; }
+.count-pill--gone { background: #1d1b19; color: #fff; }
+.count-pill--gone::before { background: linear-gradient(180deg, #f7c653, #ee8130 55%, #de4f3a); }
+.count-pill--order { background: none; box-shadow: inset 0 0 0 1px var(--border); color: var(--text-secondary); }
+.count-pill--order::before { content: "\2193"; width: auto; height: auto; border-radius: 0; background: none; font-size: 13px; font-weight: 800; line-height: 1; }
 
 /* Product page: a small tag beside the press release link when it is
    not Apple Newsroom: an archive copy of Apple's release, or someone
@@ -4936,3 +4991,7 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 .source-tag--apple { background: #fbe9db; color: #7a3206; }
 .source-tag--independent { background: #fff3cf; color: #5c4300; box-shadow: inset 0 0 0 1px #e6b93c; }
 .admin-form .video-kind .admin-hint { margin: 2px 0 0; }
+/* The narrowest phones: smaller date boxes, so the same ones still fit. */
+@media (max-width: 360px) {
+  .family-end-date { padding: 2px 5px; border-radius: 6px; font-size: 10px; }
+}
