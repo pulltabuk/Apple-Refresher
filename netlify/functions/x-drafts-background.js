@@ -34,8 +34,8 @@ async function rest(path, opts) {
 
 // The card a draft gets: worked out from its text the same way the
 // composer does, so it can be changed there before sending.
-function cardFor(text) {
-  const g = FactsKit.cardGuess(text);
+function cardFor(text, about) {
+  const g = FactsKit.cardGuess(text, { about });
   return { label: g.label, title: g.title, headline: g.headline, line: g.line, icon: 'auto', source: '' };
 }
 
@@ -48,12 +48,12 @@ function siteDrafts(products) {
   // A fact whose card has a figure for its headline comes first: the
   // card's big text is always a number where there is one to show.
   const facts = ideas.filter((i) => i.kind === 'Did you know?');
-  const withFigure = facts.filter((i) => /\d/.test(cardFor(i.text).headline));
+  const withFigure = facts.filter((i) => /\d/.test(cardFor(i.text, i.about).headline));
   return [].concat(
     ideas.filter((i) => i.kind === 'On this day').slice(0, 2),
     rotate(ideas.filter((i) => i.kind === 'Still waiting'), 1),
     rotate(withFigure.length ? withFigure : facts, 1),
-  ).map((i) => ({ kind: i.kind, origin: 'site', text: i.text, link: i.link || null, sources: [], card: cardFor(i.text) }));
+  ).map((i) => ({ kind: i.kind, origin: 'site', text: i.text, link: i.link || null, sources: [], card: cardFor(i.text, i.about) }));
 }
 
 // The tool Claude hands its finished posts to: a fixed shape, so nothing

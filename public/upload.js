@@ -844,7 +844,11 @@
     const text = $('up-x-text').value.trim();
     $('up-x-card-icon-auto').textContent = text ? 'Auto uses: ' + window.FactsKit.cardAutoIconName(text) : '';
     if (xCardFieldsOwn && xCardLabelOwn) return;
-    const guess = window.FactsKit.cardGuess(text);
+    // A post linking to a product's page is about that product: its name
+    // is the card's title when the words don't give one.
+    const linkNow = $('up-x-link-on').checked ? $('up-x-link').value.trim() : '';
+    const linkedTo = linkNow ? allProducts.find((p) => p.slug && linkNow.indexOf('/products/' + p.slug + '/') !== -1) : null;
+    const guess = window.FactsKit.cardGuess(text, { about: linkedTo ? linkedTo.name : '' });
     if (!xCardLabelOwn) $('up-x-card-label').value = text ? guess.label : 'Did you know?';
     if (xCardFieldsOwn) return;
     $('up-x-card-headline').value = guess.headline;
