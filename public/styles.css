@@ -4885,3 +4885,42 @@ button.x-sched-tool { width: 34px; padding: 0; font-size: 18px; line-height: 1; 
 .video-label--independent .video-label-pill { background: #1d1b19; color: #fff; }
 .video-label--independent .video-label-pill::before { content: "i"; display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: #f5b942; color: #1d1b19; font-size: 12px; font-weight: 900; font-style: normal; line-height: 1; }
 .spec-row .video-label { margin: 8px 0 0; }
+
+/* Family page: a family with nothing left on sale. A dusk banner under
+   the heading: the line drawn as a line, a dot for each release, with
+   the sun setting where the last product went. Same sun and colours as
+   the black half of a last product's Discontinued box. */
+.family-end {
+  position: relative; overflow: hidden; margin: 1.1rem 0 1.4rem; padding: 26px 30px 22px; border-radius: 18px; color: #fff;
+  background:
+    radial-gradient(120% 150% at 100% 78%, rgba(238, 129, 48, 0.34) 0%, rgba(222, 79, 58, 0.14) 32%, rgba(29, 27, 25, 0) 62%),
+    #1d1b19;
+}
+.family-end p { margin: 0; }
+.family-end-words { display: flex; flex-direction: column; gap: 6px; max-width: 46ch; }
+.family-end-label { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; line-height: 1.2; text-transform: uppercase; color: #f1a65a; }
+.family-end-title { font-size: 30px; font-weight: 800; line-height: 1.12; letter-spacing: -0.015em; text-wrap: balance; }
+.family-end-sub { font-size: 14px; font-weight: 500; line-height: 1.45; color: rgba(255, 255, 255, 0.76); }
+.family-end-track { position: relative; height: 72px; margin-top: 6px; }
+.family-end-sun { position: absolute; right: 0; top: 0; display: block; width: 120px; height: 72px; }
+/* The rail runs from the first release to the middle of the sun, which
+   sits on it, half below the horizon. */
+.family-end-rail { position: absolute; left: 5px; right: 60px; top: 45px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.38), rgba(241, 166, 90, 0.75) 70%, #ee8130); }
+.family-end-dot { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; }
+.family-end-ends { display: flex; justify-content: space-between; gap: 20px; margin-top: 8px; }
+.family-end-end { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 48%; }
+.family-end-end--last { align-items: flex-end; text-align: right; }
+.family-end-year { font-size: 22px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.family-end-what { font-size: 13px; font-weight: 500; line-height: 1.4; color: rgba(255, 255, 255, 0.76); }
+.family-end-what a { color: #fff; font-weight: 600; text-decoration: underline; text-decoration-color: rgba(255, 255, 255, 0.45); text-underline-offset: 2px; }
+.family-end-what a:hover { text-decoration-color: #f1a65a; }
+.family-end--undated .family-end-rail { left: 0; background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(241, 166, 90, 0.75) 70%, #ee8130); }
+@media (max-width: 600px) {
+  .family-end { padding: 20px 20px 18px; border-radius: 16px; }
+  .family-end-title { font-size: 24px; }
+  .family-end-track { height: 58px; }
+  .family-end-sun { width: 96px; height: 58px; }
+  .family-end-rail { right: 48px; top: 36px; }
+  .family-end-dot { width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; }
+  .family-end-year { font-size: 20px; }
+}
