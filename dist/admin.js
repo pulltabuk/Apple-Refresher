@@ -1638,6 +1638,10 @@
       const card = d.card || {};
       const label = card.label || d.kind || 'Did you know?';
       const fields = { headline: card.headline || '', line: card.line || '', title: card.title || '', icon: card.icon || 'auto', source: card.source || '' };
+      // The card as drafts are drawn now, whenever this one was written:
+      // its headline's numbers as figures, and as little text as will do.
+      fields.headline = window.FactsKit.numbersAsFigures(fields.headline);
+      fields.line = window.FactsKit.shortCardLine(fields.line, fields.headline);
       const item = document.createElement('article');
       item.className = 'x-draft';
       const meta = document.createElement('div');
@@ -1656,10 +1660,25 @@
       main.className = 'x-draft-main';
       const text = document.createElement('textarea');
       text.className = 'x-draft-text';
-      text.rows = 4;
-      text.value = d.text;
-      text.setAttribute('aria-label', 'Post text');
+      text.rows = 6;
+      // The whole post as it will go out: the words, two hashtags and the
+      // link. What is in this box is exactly what is sent.
+      const link = d.link || '';
+      text.value = window.FactsKit.xPostText(window.FactsKit.xFitText(d.text, { products: cachedProducts, link }), { hashtags: true, products: cachedProducts, link });
+      text.setAttribute('aria-label', 'The post as it will go out');
       main.appendChild(text);
+      const count = document.createElement('p');
+      count.className = 'admin-hint x-count x-draft-count';
+      const showCount = () => {
+        const len = window.FactsKit.xPostLength(text.value.trim());
+        count.textContent = len + ' / 280 characters, hashtags and link included';
+        count.classList.toggle('is-over', len > 280);
+      };
+      text.addEventListener('input', showCount);
+      showCount();
+      main.appendChild(count);
+      // The words alone (no hashtags, no link), for the card and the composer.
+      const wordsOnly = () => window.FactsKit.xWithoutHashtags(link ? text.value.split(link).join('') : text.value).trim();
       if (Array.isArray(d.sources) && d.sources.length) {
         const src = document.createElement('p');
         src.className = 'x-draft-sources';
@@ -1705,10 +1724,11 @@
         note.classList.remove('x-card-note');
         note.textContent = 'Sending to Buffer\u2026';
         try {
-          const words = text.value.trim();
-          const fitted = window.FactsKit.xFitText(words, { products: cachedProducts, link: d.link || '' });
-          const postBody = window.FactsKit.xPostText(fitted, { hashtags: true, products: cachedProducts, link: d.link || '' });
-          const imageUrl = await cardImageUrl(fitted, label, fields);
+          const postBody = text.value.trim();
+          const words = wordsOnly();
+          if (!postBody) throw new Error('the post is empty');
+          if (window.FactsKit.xPostLength(postBody) > 280) throw new Error('it is over X\u2019s 280 characters: shorten it a little');
+          const imageUrl = await cardImageUrl(words, label, fields);
           const sent = await sendToBuffer({ text: postBody, imageUrl }, mode, dueAt);
           await markDraft(d.id, { status: mode === 'schedule' ? 'scheduled' : 'queued', buffer_post_id: sent.id || null, scheduled_for: sent.dueAt || dueAt || null, text: words });
           item.classList.add('is-done');
@@ -1734,7 +1754,7 @@
         send('schedule', at);
       });
       editBtn.addEventListener('click', () => {
-        useIdea({ kind: label, text: text.value.trim(), link: d.link || '' });
+        useIdea({ kind: label, text: wordsOnly(), link: d.link || '' });
         // Its card comes with it, to change there.
         $x('x-card-headline').value = fields.headline;
         $x('x-card-line').value = fields.line;

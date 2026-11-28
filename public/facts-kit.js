@@ -415,6 +415,55 @@
     return String(text || '').trim().replace(/[\s,.;:!?\u2013\u2014-]+$/, '');
   }
 
+  // A number written in words, as figures: "Fifty years" is "50 years",
+  // "Nearly eleven years" is "Nearly 11 years". The card's big headline
+  // is always a figure where the post has a number.
+  const NUMBER_UNITS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  const NUMBER_TENS = ['twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+  const NUMBER_WORDS_RE = new RegExp('\\b(?:(' + NUMBER_TENS.join('|') + ')(?:[-\\s](' + NUMBER_UNITS.slice(1, 10).join('|') + '))?|(' + NUMBER_UNITS.slice().reverse().join('|') + '))(?:\\s+(hundred|thousand|million|billion))?\\b', 'gi');
+  function numbersAsFigures(text) {
+    return String(text || '').replace(NUMBER_WORDS_RE, (all, tens, unit, small, big) => {
+      let n = tens ? (NUMBER_TENS.indexOf(tens.toLowerCase()) + 2) * 10 + (unit ? NUMBER_UNITS.indexOf(unit.toLowerCase()) : 0) : NUMBER_UNITS.indexOf(small.toLowerCase());
+      const scale = String(big || '').toLowerCase();
+      if (scale === 'hundred') return String(n * 100);
+      if (scale === 'thousand') return (n * 1000).toLocaleString('en-GB');
+      return scale ? n + ' ' + scale : String(n);
+    });
+  }
+
+  // The card's line, kept as short as it can be: only the sentence, and
+  // within it the clause (between commas), that the headline's figure
+  // sits in. The full wording is in the post itself; the card only needs
+  // enough to place the figure. With no figure the first sentence stays whole.
+  function shortCardLine(line, headline) {
+    let text = String(line || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    const figure = (String(headline || '').match(/[$£€]?\d[\d,.]*\d|\d/) || [''])[0];
+    const has = (part) => !!figure && numbersAsFigures(part).indexOf(figure) !== -1;
+    const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z0-9"'‘“$£])/);
+    text = (sentences.find(has) || sentences[0]).replace(/[.!?]+$/, '');
+    const clauses = text.split(/\s*[,;:–—]\s+/).map((c) => c.trim()).filter(Boolean);
+    const at = clauses.findIndex(has);
+    if (clauses.length > 1 && at !== -1) {
+      let pick = clauses[at];
+      // A clause that is only figures ("$159 and $199") needs the words before it.
+      if (!/[a-z]{3,}\s+[a-z]{2,}/i.test(pick.replace(/[$£€]?\d[\d,.]*/g, '')) && at > 0) pick = clauses[at - 1] + ', ' + pick;
+      if (pick.length >= 12) text = pick;
+    }
+    // What follows "when", "where", "which" and the like is detail: it
+    // goes, as long as the figure stays and enough is left to read.
+    const tail = /\s+(?:when|where|while|because|which|who|after|before|until|although|though|so that|and (?=(?:it|said|was|were|did|had|came|dropped|left|kept|sold)\b))\s*/gi;
+    let m;
+    while ((m = tail.exec(text))) {
+      const head = text.slice(0, m.index);
+      if (head.length >= 20 && (!figure || has(head))) { text = head; break; }
+    }
+    // A clause lifted from mid-sentence doesn't start on its joining word.
+    text = text.replace(/^(?:and|but|which|who|that|while|so)\s+/i, '').trim();
+    if (!text) return '';
+    return text.charAt(0).toUpperCase() + text.slice(1) + '.';
+  }
+
   // Links say nothing the card should show: a date in a MacRumors
   // address ("/2026/10/18/") was being read as the card's big figure.
   // Nor do @names: "via @9to5mac" was becoming a headline of "9".
@@ -1059,7 +1108,15 @@
   function cardGuess(text) {
     const plan = cardPlan(text);
     const subject = subjectOf(plan, text);
-    return { headline: cardHeadline(subject.big), line: subject.caption || '', title: subject.title || '', icon: 'auto', label: plan.label || 'Did you know?' };
+    // The headline's numbers as figures, and as little text under it as
+    // will place the figure.
+    // ("Twenty-five years": the figure is read whole, not as "five years".)
+    let big = cardHeadline(subject.big);
+    const before = big ? String(text || '').slice(0, Math.max(0, String(text || '').toLowerCase().indexOf(big.toLowerCase()))) : '';
+    const tens = /\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[-\s]$/i.exec(before);
+    if (tens && new RegExp('^(?:' + NUMBER_UNITS.slice(1, 10).join('|') + ')\\b', 'i').test(big)) big = tens[1] + '-' + big;
+    const headline = numbersAsFigures(big);
+    return { headline, line: shortCardLine(subject.caption || '', headline), title: subject.title || '', icon: 'auto', label: plan.label || 'Did you know?' };
   }
 
   // What "Automatic" will show, in words, for the composer.
@@ -2151,7 +2208,11 @@
   // iPhone 14 Pro: the broad tags people follow and search, never one
   // made from a model's full name.
   const FAMILY_HASHTAGS = [['vision pro', '#VisionPro'], ['apple tv', '#AppleTV'], ['airtag', '#AirTag'], ['apple pencil', '#ApplePencil'],
-    ['airpods', '#AirPods'], ['homepod', '#HomePod'], ['ipod', '#iPod'], ['iphone', '#iPhone'], ['ipad', '#iPad'], ['watch', '#AppleWatch'], ['mac', '#Mac']];
+    ['airpods', '#AirPods'], ['homepod', '#HomePod'], ['ipod', '#iPod'], ['iphone', '#iPhone'], ['ipad', '#iPad'], ['watch', '#AppleWatch'],
+    ['mac', '#Mac'], ['powerbook', '#Mac'], ['ibook', '#Mac'], ['performa', '#Mac'], ['quadra', '#Mac'], ['centris', '#Mac'],
+    // Older lines with no tag of their own that people follow.
+    ['apple ii', '#RetroComputing'], ['apple i', '#RetroComputing'], ['lisa', '#RetroComputing'], ['newton', '#RetroComputing'],
+    ['siri remote', '#AppleTV'], ['studio display', '#Mac'], ['pro display', '#Mac'], ['magsafe', '#iPhone']];
   function familyHashtag(words) {
     const lower = String(words || '').toLowerCase();
     const hit = FAMILY_HASHTAGS.find(([word]) => lower.indexOf(word) !== -1);
@@ -2167,7 +2228,10 @@
     // then whatever product line the text mentions.
     const product = productNamed(text, products);
     const tag = (product && (familyHashtag(product.category) || familyHashtag(product.name))) || familyHashtag(text);
-    if (tag) tags.push(tag);
+    // Always two: #Apple and the product line's own tag, or, with no
+    // line to name, the widest tag that still fits (old kit or tech).
+    const old = product && product.discontinued && String(product.discontinued_date || '') < '2008';
+    tags.push(tag || (old ? '#RetroComputing' : '#Tech'));
     return tags;
   }
 
@@ -3139,6 +3203,8 @@
     claudeResearchPrompt,
     claudeResearchUrl,
     productVideoPrompt,
+    numbersAsFigures,
+    shortCardLine,
     VIDEO_KINDS,
     videoKind,
     videoPlain,
